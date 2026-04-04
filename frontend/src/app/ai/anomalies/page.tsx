@@ -246,7 +246,7 @@ export default function AIAnomaliesPage() {
               size="large"
               icon={<WarningOutlined />}
               style={{
-                background: "#F59E0B",
+                background: "#0066CC",
                 border: "none",
                 borderRadius: "4px",
                 fontWeight: 600,

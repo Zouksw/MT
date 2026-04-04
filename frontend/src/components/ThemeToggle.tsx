@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useSyncExternalStore } from "react";
 import { ColorModeContext } from "@/contexts/color-mode";
+
+const emptySubscribe = () => () => {};
 
 export function ThemeToggle() {
   const { mode, setMode } = useContext(ColorModeContext);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   const toggleTheme = () => {
     setMode(mode === "light" ? "dark" : "light");

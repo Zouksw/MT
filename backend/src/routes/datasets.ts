@@ -41,7 +41,7 @@ const serializeDatasets = (datasets: any[]) =>
 
 // GET /api/datasets - Get all datasets (public access)
 // Cache for 5 minutes - datasets list changes infrequently
-router.get('/', cacheRoute('datasets:list', 300), asyncHandler(async (req, res) => {
+router.get('/', authenticate, cacheRoute('datasets:list', 300), asyncHandler(async (req: AuthRequest, res) => {
   const { search } = req.query;
   const { skip, take } = getPagination(req.query);
   const params = paginationSchema.parse(req.query);

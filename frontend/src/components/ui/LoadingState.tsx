@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, Button, Space, Spin } from "antd";
 import { ReloadOutlined, CloseOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { StatsCardSkeleton } from "./Skeleton";
@@ -47,12 +47,21 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   className,
 }) => {
   const [timedOut, setTimedOut] = useState(false);
+  const [loadingId, setLoadingId] = useState(0);
+
+  // When loading transitions to false, increment loadingId to reset timeout state
+  const prevLoadingRef = useRef(loading);
+  if (prevLoadingRef.current !== loading) {
+    prevLoadingRef.current = loading;
+    if (!loading) {
+      setLoadingId(prev => prev + 1);
+    }
+  }
+
+  const effectiveTimedOut = loading ? timedOut : false;
 
   useEffect(() => {
-    if (!loading) {
-      setTimedOut(false);
-      return;
-    }
+    if (!loading) return;
 
     const timer = setTimeout(() => {
       setTimedOut(true);
@@ -60,7 +69,8 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
     }, timeout);
 
     return () => clearTimeout(timer);
-  }, [loading, timeout, onTimeout]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadingId, timeout]);
 
   // Not loading - show children
   if (!loading) {
@@ -68,7 +78,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   }
 
   // Loading but not timed out - show skeleton
-  if (loading && !timedOut) {
+  if (loading && !effectiveTimedOut) {
     return (
       <div className={className}>
         {skeletonType === "stats" && <StatsCardSkeleton />}

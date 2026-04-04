@@ -125,7 +125,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 
   // Combine historical and prediction data
   const chartData = React.useMemo(() => {
-    const historical = historicalData.map(d => ({
+    const historical: DataPoint[] = historicalData.map(d => ({
       timestamp: d.timestamp,
       value: d.value,
       isPrediction: false,
@@ -254,9 +254,9 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
             <p style={{ margin: "4px 0 0 0", fontSize: 11, color: chartColors.gray600 }}>
               <span style={{
                 padding: "2px 6px",
-                background: chartColors.primaryBg,
+                background: chartColors.primaryLight,
                 borderRadius: 4,
-                color: chartColors.primaryText,
+                color: chartColors.primaryDark,
               }}>
                 Prediction
               </span>

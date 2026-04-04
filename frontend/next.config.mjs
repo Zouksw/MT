@@ -1,11 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@refinedev/antd"],
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { ignoreBuildErrors: false },
   // Allow external access
   experimental: {
     serverComponentsExternalPackages: [],
     // Enable Ant Design tree-shaking
-    esmExternals: "lazy",
+    esmExternals: "loose",
     // Optimize imports for Ant Design
     optimizePackageImports: ["@ant-design/icons", "antd"],
   },
@@ -45,7 +47,7 @@ const nextConfig = {
     }
 
     // frame-src: allow development tools in development mode
-    const frameSrc = isDev ? "'self'" : "'none'";
+    const frameSrc = isDev ? "'self' http://localhost:5001" : "'none'";
 
     return [
       {
@@ -85,7 +87,7 @@ const nextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               `connect-src ${connectSrc.join(' ')}`,
               `frame-src ${frameSrc}`,
-              "object-src 'none'",
+              "object-src 'self' data:",
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'self'",

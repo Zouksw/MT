@@ -212,8 +212,6 @@ export const authProviderClient: AuthProvider = {
     if (!auth) {
       return {
         authenticated: false,
-        logout: true,
-        redirectTo: "/login",
       };
     }
 
@@ -222,8 +220,6 @@ export const authProviderClient: AuthProvider = {
     if (!token) {
       return {
         authenticated: false,
-        logout: true,
-        redirectTo: "/login",
       };
     }
 
@@ -233,8 +229,6 @@ export const authProviderClient: AuthProvider = {
       tokenManager.removeToken();
       return {
         authenticated: false,
-        logout: true,
-        redirectTo: "/login",
       };
     }
 
@@ -245,7 +239,7 @@ export const authProviderClient: AuthProvider = {
         authenticated: true,
       };
     } catch (error) {
-      // Backend verification failed
+      // Backend verification failed - clear tokens but don't force redirect
       const safeError = errorHandler.handleApiError(error);
       if (safeError.statusCode === 401) {
         tokenManager.removeToken();
@@ -253,8 +247,6 @@ export const authProviderClient: AuthProvider = {
       }
       return {
         authenticated: false,
-        logout: true,
-        redirectTo: "/login",
       };
     }
   },

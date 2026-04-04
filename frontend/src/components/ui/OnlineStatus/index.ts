@@ -2,4 +2,4 @@ export {
   OnlineStatus,
   OnlineStatusCompact,
   OnlineStatusText,
-} from "./OnlineStatus";
+} from "../OnlineStatus";

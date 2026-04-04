@@ -6,6 +6,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   fullWidth?: boolean;
+  icon?: React.ReactNode;
   "aria-label"?: string;
   children: React.ReactNode;
 }
@@ -15,6 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = "md",
   isLoading = false,
   fullWidth = false,
+  icon,
   disabled,
   className = "",
   children,
@@ -62,7 +64,10 @@ export const Button: React.FC<ButtonProps> = ({
           Loading...
         </>
       ) : (
-        children
+        <>
+          {icon && <span className="mr-1.5 inline-flex">{icon}</span>}
+          {children}
+        </>
       )}
     </button>
   );

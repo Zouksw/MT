@@ -208,9 +208,7 @@ export async function captureMessage(
  */
 export async function flushSentry(): Promise<boolean> {
   if (!SENTRY_ENABLED) return true;
-  // @ts-ignore - Sentry is only available when package is installed
   if (typeof sentryModule !== 'undefined' && (sentryModule as any).flush) {
-    // @ts-ignore
     return await (sentryModule as any).flush(2000);
   }
   return true;

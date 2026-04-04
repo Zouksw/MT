@@ -169,11 +169,8 @@ export const MobileFilterPanel: React.FC<MobileFilterPanelProps> = ({
           </div>
         }
         styles={{
-          body: { padding: "16px" },
-          header: { borderBottom: "1px solid #E5E7EB" },
-        }}
-        styles={{
           body: { padding: 0 },
+          header: { borderBottom: "1px solid #E5E7EB" },
         }}
         footer={
           <div

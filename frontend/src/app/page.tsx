@@ -2,8 +2,10 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { verifyAuthentication } from "@/utils/auth";
-import LandingPage from "./landing/page";
+
+const LandingPage = dynamic(() => import("./landing/page"), { ssr: false });
 
 export default function IndexPage() {
   const router = useRouter();

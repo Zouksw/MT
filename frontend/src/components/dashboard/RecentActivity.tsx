@@ -19,11 +19,11 @@ interface RecentActivityProps {
   loading?: boolean;
 }
 
-export const RecentActivity = React.memo<RecentActivityProps>(({
+export const RecentActivity = React.memo<RecentActivityProps>(function RecentActivity({
   recentAlerts = [],
   recentForecasts = [],
   loading = false,
-}) => {
+}) {
   const go = useGo();
   const [activeTab, setActiveTab] = useState("alerts");
 
@@ -208,5 +208,6 @@ export const RecentActivity = React.memo<RecentActivityProps>(({
     prevProps.loading === nextProps.loading
   );
 });
+RecentActivity.displayName = 'RecentActivity';
 
 export default RecentActivity;

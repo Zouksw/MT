@@ -111,8 +111,8 @@ export default function AlertList() {
 
       if (!response.ok) throw new Error("Failed to fetch stats");
 
-      const data = await response.json();
-      setStats(data);
+      const result = await response.json();
+      setStats(result.data || result);
     } catch (error) {
       // Stats are optional, don't show error to user
     }
@@ -369,7 +369,7 @@ export default function AlertList() {
                 onClick={handleMarkAllAsRead}
                 type="primary"
                 style={{
-                  background: "#F59E0B",
+                  background: "#0066CC",
                   border: "none",
                   borderRadius: "4px",
                   fontWeight: 600,

@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { breakpointValues, type Breakpoint } from "./breakpoints";
 
 /**
@@ -58,32 +58,26 @@ function getCurrentBreakpointFromWidth(width: number): Breakpoint {
  * const isDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
  */
 export function useMediaQuery(query: { minWidth?: number; maxWidth?: number; query?: string }): boolean {
-  const [matches, setMatches] = useState(false);
+  // Build media query string
+  let mediaQuery = query.query;
+  if (!mediaQuery) {
+    const parts: string[] = [];
+    if (query.minWidth) parts.push(`(min-width: ${query.minWidth}px)`);
+    if (query.maxWidth) parts.push(`(max-width: ${query.maxWidth}px)`);
+    mediaQuery = parts.join(" and ");
+  }
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const subscribe = useCallback((callback: () => void) => {
+    const mediaQueryList = window.matchMedia(mediaQuery!);
+    mediaQueryList.addEventListener("change", callback);
+    return () => mediaQueryList.removeEventListener("change", callback);
+  }, [mediaQuery]);
 
-    // Build media query string
-    let mediaQuery = query.query;
-    if (!mediaQuery) {
-      const parts = [];
-      if (query.minWidth) parts.push(`(min-width: ${query.minWidth}px)`);
-      if (query.maxWidth) parts.push(`(max-width: ${query.maxWidth}px)`);
-      mediaQuery = parts.join(" and ");
-    }
-
-    const mediaQueryList = window.matchMedia(mediaQuery);
-    setMatches(mediaQueryList.matches);
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      setMatches(event.matches);
-    };
-
-    mediaQueryList.addEventListener("change", handleChange);
-    return () => mediaQueryList.removeEventListener("change", handleChange);
-  }, [query]);
-
-  return matches;
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(mediaQuery!).matches,
+    () => false
+  );
 }
 
 /**

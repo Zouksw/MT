@@ -24,6 +24,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { Button } from "@/components/ui";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 export default function ForecastList() {
@@ -317,7 +318,7 @@ export default function ForecastList() {
               <CreateButton
                 icon={<PlusOutlined />}
                 style={{
-                  background: "#F59E0B",
+                  background: "#0066CC",
                   border: "none",
                   height: "40px",
                   borderRadius: "4px",

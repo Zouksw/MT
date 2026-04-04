@@ -12,8 +12,10 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore, useState } from "react";
 import { shouldReduceMotion } from "@/lib/animations";
+
+const emptySubscribe = () => () => {};
 
 export interface PageTransitionProps {
   children: React.ReactNode;
@@ -26,24 +28,23 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
   className = "",
   variant = "fade",
 }) => {
+  const respectMotionPreference = useSyncExternalStore(
+    emptySubscribe,
+    () => shouldReduceMotion(),
+    () => false
+  );
+
   const [isVisible, setIsVisible] = useState(false);
-  const [respectMotionPreference, setRespectMotionPreference] = useState(false);
 
   useEffect(() => {
-    // Check if user prefers reduced motion
-    if (shouldReduceMotion()) {
-      setRespectMotionPreference(true);
-      setIsVisible(true);
-      return;
-    }
+    if (respectMotionPreference) return;
 
-    // Trigger animation on mount
     const animationTimer = setTimeout(() => {
       setIsVisible(true);
-    }, 50); // Small delay to ensure animation plays
+    }, 50);
 
     return () => clearTimeout(animationTimer);
-  }, []);
+  }, [respectMotionPreference]);
 
   // If user prefers reduced motion, just show content without animation
   if (respectMotionPreference) {

@@ -30,7 +30,7 @@ interface TimeseriesWithIoTDB extends Timeseries {
 }
 
 // GET /api/timeseries - Get all timeseries with filters
-router.get('/', asyncHandler(async (req: Request, res: Response) => {
+router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { datasetId, search } = req.query;
   const { skip, take } = getPagination(req.query);
   const params = paginationSchema.parse(req.query);

@@ -15,7 +15,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '@/lib/logger';
-import { getRedisClient } from '@/lib/redisPool';
+import { redis } from '@/lib/redis';
 
 /**
  * Add jitter to TTL to prevent cache avalanche
@@ -62,15 +62,10 @@ interface CachedResponse {
 }
 
 /**
- * Get Redis client (singleton pattern)
+ * Get Redis client via the shared redis.ts module
  */
-let redisClient: ReturnType<typeof getRedisClient> extends Promise<infer T> ? T : never;
-
 async function getRedis() {
-  if (!redisClient) {
-    redisClient = await getRedisClient();
-  }
-  return redisClient;
+  return await redis();
 }
 
 /**

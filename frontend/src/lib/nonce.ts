@@ -24,8 +24,9 @@ function generateNonce(): string {
       result += NONCE_ALPHABET[array[i] % NONCE_ALPHABET.length];
     }
     return result;
-  } else if (typeof require !== 'undefined') {
-    // Node.js environment
+  } else if (typeof globalThis.process !== 'undefined' && globalThis.process.versions?.node) {
+    // Node.js environment - use dynamic import for crypto
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require('crypto');
     return crypto.randomBytes(NONCE_LENGTH).toString('base64')
       .replace(/[^a-zA-Z0-9]/g, '')

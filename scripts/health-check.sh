@@ -210,24 +210,29 @@ check_iotdb() {
   fi
 }
 
-check_docker_containers() {
+check_pm2_services() {
   increment_total
-  local check_name="Docker Containers Running"
+  local check_name="PM2 Services Running"
 
   log_info "Checking $check_name..."
 
-  local running_containers=$(docker ps --format '{{.Names}}' | grep -c "iotdb" || echo "0")
+  if ! command -v pm2 &>/dev/null; then
+    log_error "$check_name: pm2 not installed"
+    return 1
+  fi
 
-  if [ "$running_containers" -ge 2 ]; then
-    log_success "$check_name: $running_containers containers running"
+  local online_services=$(pm2 jlist 2>/dev/null | grep -c '"status":"online"' || echo "0")
+
+  if [ "$online_services" -ge 2 ]; then
+    log_success "$check_name: $online_services services online"
 
     if [ "$VERBOSE" = true ]; then
-      docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep iotdb || true
+      pm2 list
     fi
 
     return 0
   else
-    log_error "$check_name: Only $running_containers containers running"
+    log_error "$check_name: Only $online_services services online"
     return 1
   fi
 }
@@ -321,7 +326,7 @@ main() {
     check_database || true
     check_redis || true
     check_iotdb || true
-    check_docker_containers || true
+    check_pm2_services || true
 
     # System resource checks
     check_disk_space || true

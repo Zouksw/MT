@@ -18,18 +18,7 @@ interface CachedUser {
   roles?: string[];
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || (
-  process.env.NODE_ENV === 'production'
-    ? undefined  // Force error in production if not set
-    : "http://localhost:8000"
-);
-
-if (!API_BASE) {
-  throw new Error(
-    "NEXT_PUBLIC_API_URL environment variable is not set. " +
-    "Please create a .env.local file with NEXT_PUBLIC_API_URL=http://your-api-url"
-  );
-}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /**
  * Get the authentication token

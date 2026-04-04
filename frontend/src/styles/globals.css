@@ -4,6 +4,13 @@
  */
 
 /* ==========================================================================
+   IMPORTS - Must precede all other rules (CSS spec requirement)
+   ========================================================================== */
+
+@import "./desktop.css";
+@import "./mobile.css";
+
+/* ==========================================================================
    FONTS - Google Fonts (Bunny Fonts - Privacy Friendly)
    ========================================================================== */
 
@@ -14,10 +21,10 @@
 
 :root {
   /* Primary Colors */
-  --color-primary: #F59E0B;
-  --color-primary-hover: #D97706;
-  --color-primary-active: #B45309;
-  --color-primary-light: #FEF3C7;
+  --color-primary: #0066CC;
+  --color-primary-hover: #0055A3;
+  --color-primary-active: #004080;
+  --color-primary-light: #EEF2FF;
 
   /* Secondary Colors */
   --color-secondary: #475569;
@@ -73,7 +80,7 @@
   /* Shadows */
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.08);
-  --shadow-button-hover: 0 4px 12px rgba(245, 158, 11, 0.3);
+  --shadow-button-hover: 0 4px 12px rgba(0, 102, 204, 0.3);
 
   /* Transitions */
   --ease-enter: cubic-bezier(0, 0, 0.2, 1);
@@ -89,7 +96,7 @@
 
 /* Dark mode overrides */
 .dark {
-  --color-primary-light: rgba(245, 158, 11, 0.1);
+  --color-primary-light: rgba(0, 102, 204, 0.1);
 
   --gray-50: #0F172A;
   --gray-100: #1E293B;
@@ -102,13 +109,6 @@
   --gray-800: #0F172A;
   --gray-900: #020617;
 }
-
-/* ==========================================================================
-   IMPORT RESPONSIVE STYLES
-   ========================================================================== */
-
-@import "./desktop.css";
-@import "./mobile.css";
 
 /* ==========================================================================
    CSS RESET & BASE STYLES
@@ -143,9 +143,9 @@ body {
    TYPOGRAPHY - Design System Fonts
    ========================================================================== */
 
-/* Display/Hero - Satoshi Bold */
+/* Display/Hero - Outfit Bold */
 h1, h2, .text-display {
-  font-family: "Satoshi", sans-serif;
+  font-family: "Outfit", sans-serif;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -160,13 +160,13 @@ h2 {
   line-height: 1.3;
 }
 
-/* Data/Tables - Geist Mono with tabular nums */
+/* Data/Tables - Roboto Mono with tabular nums */
 .data-text,
 .data-value,
 .table-data,
 .metric-value,
 .code-snippet {
-  font-family: "Geist Mono", monospace;
+  font-family: "Roboto Mono", monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }
@@ -182,7 +182,7 @@ code, pre, .code-block {
 
 /* Data text helper class */
 .data-text {
-  font-family: "Geist Mono", monospace;
+  font-family: "Roboto Mono", monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -196,6 +196,7 @@ code, pre, .code-block {
   transition: all 150ms var(--ease-move);
   border: none;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 102, 204, 0.2);
 }
 
 .btn-primary:hover {
@@ -273,7 +274,7 @@ code, pre, .code-block {
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
 }
 
 .dark .input {
@@ -283,7 +284,7 @@ code, pre, .code-block {
 
 .dark .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 /* Table */
@@ -313,7 +314,7 @@ code, pre, .code-block {
 .table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--gray-100);
-  font-family: "Geist Mono", monospace;
+  font-family: "Roboto Mono", monospace;
   font-size: 14px;
   color: var(--gray-600);
   font-variant-numeric: tabular-nums;
@@ -475,33 +476,6 @@ code, pre, .code-block {
 }
 
 /* ==========================================================================
-   BUTTON STYLES
-   ========================================================================== */
-
-.ant-btn-primary {
-  background-color: #0066cc;
-  border-color: #0066cc;
-  box-shadow: 0 1px 2px rgba(0, 102, 204, 0.2);
-  transition: all 0.2s ease;
-}
-
-.ant-btn-primary:hover {
-  background-color: #0055a3;
-  border-color: #0055a3;
-  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
-}
-
-.dark .ant-btn-primary {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
-}
-
-.dark .ant-btn-primary:hover {
-  background-color: #2563eb;
-  border-color: #2563eb;
-}
-
-/* ==========================================================================
    FORM STYLES
    ========================================================================== */
 
@@ -514,41 +488,11 @@ code, pre, .code-block {
   color: #d1d5db;
 }
 
-.ant-input:focus,
-.ant-input-focused,
-.ant-select-focused .ant-select-selector {
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
-}
-
-.dark .ant-input:focus,
-.dark .ant-input-focused,
-.dark .ant-select-focused .ant-select-selector {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
 /* ==========================================================================
    TAG/BADGE STYLES
    ========================================================================== */
 
-.ant-tag {
-  border-radius: 3px;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 500;
-  border: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 /* Status badge */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
 .status-badge--active {
   background-color: #ecfdf5;
   color: #10b981;
@@ -593,43 +537,6 @@ code, pre, .code-block {
 
 .dark .ant-pagination-item:hover {
   border-color: #3B82F6;
-}
-
-.ant-pagination-item-active {
-  background-color: #0066cc;
-  border-color: #0066cc;
-}
-
-.dark .ant-pagination-item-active {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
-}
-
-/* ==========================================================================
-   MODAL STYLES
-   ========================================================================== */
-
-.ant-modal-content {
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.ant-modal-header {
-  border-bottom: 1px solid #e5e7eb;
-  padding: 24px 24px 16px;
-}
-
-.dark .ant-modal-header {
-  border-bottom-color: #374151;
-}
-
-.ant-modal-footer {
-  border-top: 1px solid #e5e7eb;
-  padding: 16px 24px 24px;
-}
-
-.dark .ant-modal-footer {
-  border-top-color: #374151;
 }
 
 /* ==========================================================================
@@ -1313,28 +1220,6 @@ textarea {
   background: #64748b;
 }
 
-/* Loading States */
-.loading-skeleton {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 25%,
-    #e0e0e0 50%,
-    #f0f0f0 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-}
-
-.dark .loading-skeleton {
-  background: linear-gradient(
-    90deg,
-    #334155 25%,
-    #475569 50%,
-    #334155 75%
-  );
-}
-
 /* Badge Pulse Effect */
 .badge-pulse {
   position: relative;
@@ -1359,16 +1244,6 @@ textarea {
   }
 }
 
-/* Focus Visible Styles for Accessibility - Professional Blue */
-*:focus-visible {
-  outline: 2px solid #0066cc;
-  outline-offset: 2px;
-}
-
-.dark *:focus-visible {
-  outline-color: #3b82f6;
-}
-
 /* Text Wrap Balance for Better Headings */
 h1, h2, h3, h4, h5, h6 {
   text-wrap: balance;
@@ -1383,15 +1258,6 @@ h1, h2, h3, h4, h5, h6 {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 
@@ -1436,15 +1302,6 @@ html {
 /* ==========================================================================
    SKELETON SHIMMER ANIMATION
    ========================================================================== */
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
 
 /* Apply shimmer animation to skeleton components */
 .ant-skeleton-active {
@@ -1962,15 +1819,17 @@ html {
 
 /* Add visible focus ring to all interactive elements */
 *:focus-visible {
-  outline: 3px solid #F59E0B !important;
+  outline: 3px solid #0066CC !important;
   outline-offset: 2px !important;
   border-radius: 2px;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.3);
 }
 
 /* Dark mode focus ring */
 .dark *:focus-visible {
-  outline-color: #F59E0B !important;
+  outline-color: #3B82F6 !important;
   outline-width: 3px !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
 }
 
 /* Remove default focus outline, use focus-visible only */
@@ -1978,42 +1837,12 @@ html {
   outline: none;
 }
 
-/* Ensure focus rings are visible on all backgrounds */
-*:focus-visible {
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
-}
-
-.dark *:focus-visible {
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.5);
-}
-
-/* Specific focus styles for different elements */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 3px solid #F59E0B !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
-}
-
-.dark button:focus-visible,
-.dark a:focus-visible,
-.dark input:focus-visible,
-.dark textarea:focus-visible,
-.dark select:focus-visible {
-  outline: 3px solid #F59E0B !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.5);
-}
-
 /* Skip links for accessibility */
 .skip-link {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #F59E0B;
+  background: #0066CC;
   color: white;
   padding: 8px 16px;
   text-decoration: none;
@@ -2060,32 +1889,6 @@ select:focus-visible {
   overflow: visible;
   clip: auto;
   white-space: normal;
-}
-
-/* Hide visually but keep accessible to screen readers (alternative to sr-only) */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* Focusable element that's visually hidden until focused */
-.visually-hidden-focusable:not(:focus):not(:focus-within) {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 /* Live regions for screen reader announcements */

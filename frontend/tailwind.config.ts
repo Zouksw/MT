@@ -9,12 +9,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary - Amber
+        // Primary - Blue
         primary: {
-          DEFAULT: "#F59E0B",
-          hover: "#D97706",
-          active: "#B45309",
-          light: "#FEF3C7",
+          DEFAULT: "#0066CC",
+          hover: "#0055A3",
+          active: "#004080",
+          light: "#EEF2FF",
         },
 
         // Secondary - Slate Blue
@@ -31,7 +31,7 @@ const config: Config = {
           dark: "#047857",
         },
         warning: {
-          DEFAULT: "#F59E0B", // Same as primary
+          DEFAULT: "#F59E0B",
           light: "#FEF3C7",
           dark: "#B45309",
         },
@@ -63,8 +63,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["DM Sans", "sans-serif"],
-        display: ["Satoshi", "sans-serif"],
-        mono: ["Geist Mono", "monospace"],
+        display: ["Outfit", "sans-serif"],
+        mono: ["Roboto Mono", "monospace"],
         code: ["JetBrains Mono", "monospace"],
       },
       fontSize: {
@@ -96,7 +96,7 @@ const config: Config = {
         "card": "0 1px 3px rgba(0, 0, 0, 0.06)",
         "card-hover": "0 2px 6px rgba(0, 0, 0, 0.08)",
         "card-hover-dark": "0 2px 6px rgba(0, 0, 0, 0.4)",
-        "button-hover": "0 4px 12px rgba(245, 158, 11, 0.3)",
+        "button-hover": "0 4px 12px rgba(0, 102, 204, 0.3)",
       },
       animation: {
         "skeleton-pulse": "skeleton-pulse 1.5s ease-in-out infinite",

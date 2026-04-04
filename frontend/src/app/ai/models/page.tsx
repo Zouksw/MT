@@ -121,7 +121,7 @@ export default function AIModelsPage() {
           icon={<RocketOutlined />}
           onClick={() => window.location.href = "/forecasts/create"}
           style={{
-            background: "#F59E0B",
+            background: "#0066CC",
             border: "none",
             borderRadius: "4px",
             fontWeight: 600,
@@ -186,7 +186,7 @@ export default function AIModelsPage() {
             disabled={AI_DISABLED}
             icon={<ReloadOutlined />}
             style={{
-              background: "#F59E0B",
+              background: "#0066CC",
               border: "none",
               borderRadius: "4px",
               fontWeight: 600,

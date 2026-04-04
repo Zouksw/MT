@@ -109,12 +109,15 @@ export function useFocusManagement(dependencies: any[] = []) {
   const [announcement, setAnnouncement] = useState<string>("");
 
   const announceChange = useCallback((message: string) => {
-    setAnnouncement(message);
-
-    // Clear announcement after it's been read
+    // Use setTimeout to avoid synchronous setState which can trigger cascading renders
     setTimeout(() => {
-      setAnnouncement("");
-    }, 1000);
+      setAnnouncement(message);
+
+      // Clear announcement after it's been read
+      setTimeout(() => {
+        setAnnouncement("");
+      }, 1000);
+    }, 0);
   }, []);
 
   useEffect(() => {

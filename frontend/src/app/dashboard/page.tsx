@@ -87,7 +87,7 @@ export default function DashboardPage() {
             size={isMobile ? 40 : 48}
             src={user?.avatar}
             icon={<UserOutlined />}
-            style={{ border: "2px solid #F59E0B" }}
+            style={{ border: "2px solid #0066CC" }}
           />
         </div>
 

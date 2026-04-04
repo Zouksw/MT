@@ -11,7 +11,7 @@
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  LayoutDashboardOutlined,
+  DashboardOutlined,
   DatabaseOutlined,
   AlertOutlined,
   ExperimentOutlined,
@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     key: "dashboard",
     label: "Dashboard",
-    icon: <LayoutDashboardOutlined />,
+    icon: <DashboardOutlined />,
     path: "/",
   },
   {

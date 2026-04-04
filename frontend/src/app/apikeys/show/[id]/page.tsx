@@ -236,7 +236,7 @@ export default function ApiKeyDetailPage() {
             </Descriptions.Item>
             <Descriptions.Item label="Key Preview">
               <Space>
-                <code className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-300" copyable>{apiKey.keyPreview}</code>
+                <code className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-300">{apiKey.keyPreview}</code>
                 <Button
                   size="small"
                   icon={<CopyOutlined />}

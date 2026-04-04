@@ -55,8 +55,10 @@ axiosInstance.interceptors.response.use(
       // Clear invalid token
       tokenManager.removeToken();
 
-      // Redirect to login page if not already there
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+      // Only redirect for authenticated pages, not for initial data fetches
+      // that happen on public pages like the landing page
+      const isDataFetch = originalRequest.method === 'get';
+      if (!isDataFetch && typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
         window.location.href = "/login?reason=unauthorized";
       }
 
@@ -107,7 +109,16 @@ export const dataProvider: DataProvider = {
       });
     }
 
-    const response = await axiosInstance.get(url, { params });
+    let response;
+    try {
+      response = await axiosInstance.get(url, { params });
+    } catch (error: any) {
+      // Return empty data for unauthenticated requests (e.g. landing page)
+      if (error?.response?.status === 401) {
+        return { data: [], total: 0 };
+      }
+      throw error;
+    }
     const data = response.data;
 
     // Adapt backend response to Refine format
@@ -119,6 +130,8 @@ export const dataProvider: DataProvider = {
       items = data.blog_posts || data.data || data.items || [];
     } else if (resource === 'categories') {
       items = data.categories || data.data || data.items || [];
+    } else if (resource === 'datasets') {
+      items = data.datasets || data.data || data.items || [];
     } else {
       // Default format for our resources
       items = data.data || data.items || [];

@@ -38,6 +38,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Removed - Docker Dependency Removal
+
+- **Deleted Docker files** - Removed all Docker configuration
+  - `docker-compose.yml` - Replaced by native services (PostgreSQL, Redis) + PM2
+  - `backend/Dockerfile` - Backend runs via PM2 directly
+  - `frontend/Dockerfile` - Frontend runs via PM2 directly
+  - `.docker/` directory - Docker buildx cache no longer needed
+- **Updated CI/CD Pipeline** - Replaced Docker-based steps
+  - Replaced Docker service containers with native PostgreSQL/Redis installation
+  - Replaced Docker image build/push with native build + artifact upload
+  - Replaced Docker pull deployment with PM2-based SSH deployment
+- **Updated Health Check Script** - Replaced Docker container check with PM2 service check
+- **Updated Backup Script** - Replaced `docker-compose.yml` backup with `ecosystem.config.cjs`
+
+> **Why**: Server environment cannot access Docker registries. All services (PostgreSQL, Redis, backend, frontend) run natively via systemd + PM2.
+
+---
+
 ## [1.3.0] - 2026-03-21
 
 ### Added - Phase 3.1: Observability & Monitoring

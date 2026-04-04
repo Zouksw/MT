@@ -251,7 +251,7 @@ The IoTDB Enhanced Platform is currently at **v1.1.0** with Phase 1 (Infrastruct
   - Auto-generated from OpenAPI spec
 
 - [ ] **Development Tools**
-  - Docker Compose dev environment
+  - PM2-based dev environment (native services)
   - Hot reload for backend
   - Mock data generators
   - API testing collection (Postman/Insomnia)
@@ -323,7 +323,7 @@ The IoTDB Enhanced Platform is currently at **v1.1.0** with Phase 1 (Infrastruct
 **Priority**: Medium
 
 - [ ] **AI Service Refactoring**
-  - Secure Python execution (Docker/sandbox)
+  - Secure Python execution (process isolation/sandbox)
   - Model versioning
   - A/B testing for models
   - Model performance monitoring

@@ -203,7 +203,7 @@ class SecurityErrorHandler {
     }
 
     // Remove any potential file paths
-    sanitized = sanitized.replace(/\/[a-zA-Z0-9_\-\.\/]+\.(js|ts|tsx|jsx)/g, '[file]');
+    sanitized = sanitized.replace(/\/[a-zA-Z0-9_.\-/]+\.(js|ts|tsx|jsx)/g, '[file]');
 
     // Remove stack traces
     sanitized = sanitized.split(/\n\s*at /)[0];

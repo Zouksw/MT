@@ -27,6 +27,11 @@ async function getUserIdFromToken(authHeader: string | undefined): Promise<strin
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.substring(7);
   try {
+    // Check if token is blacklisted (e.g. after logout)
+    const { isTokenBlacklisted } = await import('@/services/tokenBlacklist');
+    if (await isTokenBlacklisted(token)) {
+      return null;
+    }
     const payload = jwtUtils.verifyToken(token);
     return payload.userId;
   } catch {

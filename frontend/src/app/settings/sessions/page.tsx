@@ -278,14 +278,14 @@ export default function SessionsSettingsPage() {
         />
       </ContentCard>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .current-session-row {
           background-color: rgba(82, 196, 26, 0.05) !important;
         }
         .current-session-row:hover td {
           background-color: rgba(82, 196, 26, 0.1) !important;
         }
-      `}</style>
+      `}} />
     </PageContainer>
   );
 }

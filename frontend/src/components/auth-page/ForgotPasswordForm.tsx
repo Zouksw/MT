@@ -14,7 +14,7 @@ import { sanitizer } from "@/lib/sanitizer";
 import { errorHandler } from "@/lib/errorHandler";
 import { csrfProtection } from "@/lib/csrf";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export function ForgotPasswordForm() {
   const [form] = Form.useForm();

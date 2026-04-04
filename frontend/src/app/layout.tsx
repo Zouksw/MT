@@ -1,26 +1,15 @@
-import { DevtoolsProvider } from "@/providers/devtools";
-import { useNotificationProvider } from "@refinedev/antd";
-import { Refine } from "@refinedev/core";
-import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
-import routerProvider from "@refinedev/nextjs-router";
+import { RefineKbarProvider } from "@refinedev/kbar";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import React, { Suspense, useEffect } from "react";
-import { App as AntdApp } from "antd";
+import React from "react";
 import { Outfit, DM_Sans, Roboto_Mono, JetBrains_Mono } from "next/font/google";
-
-import { ColorModeContextProvider } from "@/contexts/color-mode";
-import { authProviderClient } from "@/providers/auth-provider/auth-provider.client";
-import { dataProvider } from "@/providers/data-provider";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import ErrorBoundaryWrapper from "@/components/ErrorBoundaryWrapper";
-import { ToastProvider } from "@/components/ui/Toast";
+import AppProviders from "@/components/AppProviders";
 import { WebVitals } from "@/components/WebVitals";
 import "@ant-design/v5-patch-for-react-19";
 import "@refinedev/antd/dist/reset.css";
 import "@/styles/globals.css";
 
-// Configure fonts with automatic subsetting
 const outfit = Outfit({
   weight: '700',
   subsets: ['latin'],
@@ -48,24 +37,6 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
   variable: '--font-jetbrains-mono',
 });
-
-// Import icons for better navigation
-import {
-  DashboardOutlined,
-  DatabaseOutlined,
-  LineChartOutlined,
-  AlertOutlined,
-  ApiOutlined,
-  ThunderboltOutlined,
-  RocketOutlined,
-  EyeOutlined,
-  SettingOutlined,
-  SafetyOutlined,
-  BellOutlined,
-  KeyOutlined,
-  UserOutlined,
-  ClockCircleOutlined,
-} from "@ant-design/icons";
 
 export const metadata: Metadata = {
   title: {
@@ -114,7 +85,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfit.variable} ${dmSans.variable} ${robotoMono.variable} ${jetbrainsMono.variable}`}>
       <head>
-        {/* Skip to main content link for accessibility */}
         <style>{`
           .skip-to-content {
             position: absolute;
@@ -135,179 +105,13 @@ export default function RootLayout({
         <a href="#main-content" className="skip-to-content">
           Skip to main content
         </a>
-        <Suspense>
-          <AntdRegistry>
-            <AntdApp>
-              <ToastProvider>
-              <RefineKbarProvider>
-                <ColorModeContextProvider defaultMode={theme?.value}>
-                  <DevtoolsProvider>
-                    <Refine
-                      routerProvider={routerProvider}
-                      dataProvider={dataProvider}
-                      notificationProvider={useNotificationProvider}
-                      authProvider={authProviderClient}
-                      resources={[
-                      // Dashboard
-                      {
-                        name: "dashboard",
-                        list: "/dashboard",
-                        meta: {
-                          canDelete: false,
-                          label: "Dashboard",
-                          icon: <DashboardOutlined aria-label="Dashboard" />,
-                        },
-                      },
+        <AntdRegistry>
+          <AppProviders defaultMode={theme?.value}>
+            {children}
+          </AppProviders>
+        </AntdRegistry>
 
-                      // Data Management
-                      {
-                        name: "timeseries",
-                        list: "/timeseries",
-                        create: "/timeseries/create",
-                        meta: {
-                          canDelete: true,
-                          label: "Time Series",
-                          icon: <LineChartOutlined aria-label="LineChart" />,
-                        },
-                      },
-
-                      // AI & Analytics
-                      {
-                        name: "forecasts",
-                        list: "/forecasts",
-                        create: "/forecasts/create",
-                        meta: {
-                          canDelete: true,
-                          label: "Forecasts",
-                          icon: <LineChartOutlined aria-label="LineChart" />,
-                        },
-                      },
-                      {
-                        name: "anomalies",
-                        list: "/anomalies",
-                        create: "/anomalies/create",
-                        meta: {
-                          canDelete: true,
-                          label: "Anomalies",
-                          icon: <AlertOutlined aria-label="Alert" />,
-                        },
-                      },
-
-                      // AI Features
-                      {
-                        name: "ai-models",
-                        list: "/ai/models",
-                        meta: {
-                          canDelete: false,
-                          label: "AI Models",
-                          icon: <ThunderboltOutlined aria-label="Thunderbolt" />,
-                        },
-                      },
-                      {
-                        name: "ai-anomalies",
-                        list: "/ai/anomalies",
-                        meta: {
-                          canDelete: false,
-                          label: "AI Anomaly Detection",
-                          icon: <EyeOutlined aria-label="Eye" />,
-                        },
-                      },
-                      {
-                        name: "ai-predict",
-                        list: "/ai/predict",
-                        meta: {
-                          canDelete: false,
-                          label: "AI Prediction",
-                          icon: <RocketOutlined aria-label="Rocket" />,
-                        },
-                      },
-
-                      // Alerts & Monitoring
-                      {
-                        name: "alerts",
-                        list: "/alerts",
-                        create: "/alerts/create",
-                        meta: {
-                          canDelete: true,
-                          label: "Alerts",
-                          icon: <BellOutlined aria-label="Bell" />,
-                        },
-                      },
-                      {
-                        name: "alert-rules",
-                        list: "/alerts/rules",
-                        meta: {
-                          canDelete: false,
-                          label: "Alert Rules",
-                          icon: <AlertOutlined aria-label="Alert" />,
-                        },
-                      },
-
-                      // Developer Tools
-                      {
-                        name: "apikeys",
-                        list: "/apikeys",
-                        create: "/apikeys/create",
-                        meta: {
-                          canDelete: true,
-                          label: "API Keys",
-                          icon: <KeyOutlined aria-label="Key" />,
-                        },
-                      },
-
-                      // Settings
-                      {
-                        name: "settings",
-                        list: "/settings",
-                        meta: {
-                          canDelete: false,
-                          label: "Settings",
-                          icon: <SettingOutlined aria-label="Settings" />,
-                        },
-                      },
-                    ]}
-                    options={{
-                      syncWithLocation: true,
-                      warnWhenUnsavedChanges: true,
-                      disableTelemetry: true,
-                    }}
-                  >
-                    <main id="main-content">
-                      <ErrorBoundaryWrapper>
-                        {children}
-                      </ErrorBoundaryWrapper>
-                    </main>
-                    <RefineKbar />
-                  </Refine>
-                </DevtoolsProvider>
-              </ColorModeContextProvider>
-            </RefineKbarProvider>
-              </ToastProvider>
-            </AntdApp>
-          </AntdRegistry>
-        </Suspense>
-
-        {/* Web Vitals Monitoring */}
         <WebVitals />
-
-        {/* Initialize CSRF protection on client side */}
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            if (typeof window !== 'undefined') {
-              // CSRF protection will be initialized by the csrf module
-              // This script ensures it loads early
-
-              // Register service worker for PWA support
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js').then((registration) => {
-                  console.log('Service Worker registered with scope:', registration.scope);
-                }).catch((error) => {
-                  console.log('Service Worker registration failed:', error);
-                });
-              }
-            }
-          `
-        }} />
       </body>
     </html>
   );

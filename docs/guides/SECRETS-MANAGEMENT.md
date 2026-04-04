@@ -65,28 +65,17 @@ git push origin --force --all
 
 ### 1. 使用环境变量注入
 
-#### Docker Secrets
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  backend:
-    secrets:
-      - jwt_secret
-      - iotdb_password
-      - redis_password
-    environment:
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
-      IOTDB_PASSWORD_FILE: /run/secrets/iotdb_password
+#### PM2 Environment Variables
+```bash
+# ecosystem.config.cjs reads environment variables directly
+# Secrets should be stored in encrypted .env files
+gpg --symmetric --cipher-algo AES256 /root/backend/.env
 
-secrets:
-  jwt_secret:
-    file: ./secrets/jwt_secret.txt
-  iotdb_password:
-    file: ./secrets/iotdb_password.txt
+# On deployment, decrypt:
+gpg --decrypt /root/backend/.env.gpg > /root/backend/.env
 ```
 
-#### Kubernetes Secrets
+#### Kubernetes Secrets (for cloud deployment)
 ```yaml
 apiVersion: v1
 kind: Secret

@@ -17,7 +17,7 @@ import { errorHandler } from "@/lib/errorHandler";
 import { csrfProtection } from "@/lib/csrf";
 import { tokenManager } from "@/lib/tokenManager";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export function RegisterForm() {
   const [form] = Form.useForm();
@@ -91,7 +91,7 @@ export function RegisterForm() {
         name: sanitizedName,
       });
 
-      const { user, token: authToken } = response.data;
+      const { user, token: authToken } = response.data.data || response.data;
 
       // Store token securely
       tokenManager.setToken(authToken);

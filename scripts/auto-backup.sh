@@ -232,7 +232,7 @@ backup_configurations() {
     ".env.production"
     "backend/.env"
     "frontend/.env.local"
-    "docker-compose.yml"
+    "ecosystem.config.cjs"
     "nginx/nginx.conf"
   )
 

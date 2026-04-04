@@ -84,7 +84,8 @@ export const MobileActionBar: React.FC<MobileActionBarProps> = ({
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             <Button
               block
-              type={primary.type || "primary"}
+              type={primary.type === "danger" ? "primary" : (primary.type || "primary")}
+              danger={primary.type === "danger"}
               icon={primary.icon}
               onClick={primary.onClick}
               disabled={primary.disabled}
@@ -107,7 +108,8 @@ export const MobileActionBar: React.FC<MobileActionBarProps> = ({
                 {secondary.map((action) => (
                   <Button
                     key={action.key}
-                    type={action.type || "default"}
+                    type={action.type === "danger" ? "primary" : (action.type || "default")}
+                    danger={action.type === "danger"}
                     icon={action.icon}
                     onClick={action.onClick}
                     disabled={action.disabled}
@@ -143,7 +145,8 @@ export const MobileActionBar: React.FC<MobileActionBarProps> = ({
           // Primary action only (full width)
           <Button
             block
-            type={primary.type || "primary"}
+            type={primary.type === "danger" ? "primary" : (primary.type || "primary")}
+            danger={primary.type === "danger"}
             icon={primary.icon}
             onClick={primary.onClick}
             disabled={primary.disabled}
@@ -165,7 +168,8 @@ export const MobileActionBar: React.FC<MobileActionBarProps> = ({
             {secondary.map((action) => (
               <Button
                 key={action.key}
-                type={action.type || "default"}
+                type={action.type === "danger" ? "primary" : (action.type || "default")}
+                danger={action.type === "danger"}
                 icon={action.icon}
                 onClick={action.onClick}
                 disabled={action.disabled}

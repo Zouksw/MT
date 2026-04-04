@@ -79,7 +79,7 @@ export const useDashboardStats = () => {
   );
 
   const { data: forecastsData, error: forecastsError, isLoading: forecastsLoading } = useRetryableFetch(
-    () => (getAuthToken() ? `${API_BASE}/forecasts?page=1&limit=1` : null),
+    () => (getAuthToken() ? `${API_BASE}/models?page=1&limit=1` : null),
     fetcher,
     {
       maxRetries: 3,
@@ -109,7 +109,7 @@ export const useDashboardStats = () => {
   );
 
   const { data: recentForecastsData } = useRetryableFetch(
-    () => (getAuthToken() ? `${API_BASE}/forecasts?limit=5` : null),
+    () => (getAuthToken() ? `${API_BASE}/models?limit=5` : null),
     fetcher,
     {
       maxRetries: 3,
@@ -141,14 +141,20 @@ export const useDashboardStats = () => {
     low: 0,
   };
 
-  alertsData?.data?.forEach((alert: Alert) => {
+  const alertsList: Alert[] = Array.isArray(alertsData?.data)
+    ? alertsData.data
+    : Array.isArray(alertsData?.data?.alerts)
+      ? alertsData.data.alerts
+      : [];
+
+  alertsList.forEach((alert: Alert) => {
     const severity = alert.severity?.toLowerCase();
     if (severity in alertsBySeverity) {
       alertsBySeverity[severity as keyof typeof alertsBySeverity]++;
     }
   });
 
-  const stats: DashboardStats | null = datasetsData && timeseriesData && forecastsData && alertsData ? {
+  const stats: DashboardStats | null = datasetsData && timeseriesData && alertsData ? {
     datasets: {
       total: datasetsData.total || datasetsData.data?.length || 0,
       trend: mockTrends.datasets,
@@ -170,8 +176,8 @@ export const useDashboardStats = () => {
       active: 5, // Mock data
       total: 7,
     },
-    recentAlerts: recentAlertsData?.data || recentAlertsData?.items || [],
-    recentForecasts: recentForecastsData?.data || recentForecastsData?.items || [],
+    recentAlerts: Array.isArray(recentAlertsData?.data) ? recentAlertsData.data : (recentAlertsData?.data?.alerts || recentAlertsData?.items || []),
+    recentForecasts: Array.isArray(recentForecastsData?.data) ? recentForecastsData.data : (recentForecastsData?.data?.models || recentForecastsData?.items || []),
   } : null;
 
   // Create a manual retry function that retries all requests

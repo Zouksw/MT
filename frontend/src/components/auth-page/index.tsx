@@ -143,6 +143,7 @@ export function AuthPage(props: AuthPageProps) {
     >
       {/* Left Side - Branding */}
       <div
+        className="auth-page-left"
         style={{
           flex: "1",
           display: "flex",
@@ -364,7 +365,7 @@ export function AuthPage(props: AuthPageProps) {
 
         @media (max-width: 968px) {
           @media (min-width: 769px) {
-            div[style*="flex: 1"] {
+            .auth-page-left {
               flex: 0 0 50% !important;
             }
           }

@@ -4,8 +4,8 @@
 # - Automated testing on every push/PR
 # - Security vulnerability scanning
 # - Code quality checks (ESLint, TypeScript)
-# - Docker image building and pushing
-# - Automatic deployment on main branch
+# - Build artifact generation
+# - PM2-based deployment on main branch
 # - Rollback on failure
 
 name: CI/CD Pipeline
@@ -22,8 +22,6 @@ on:
 
 env:
   NODE_VERSION: '18'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # ============================================================================
@@ -56,11 +54,9 @@ jobs:
 
       - name: Run npm audit (backend)
         run: cd backend && pnpm audit --audit-level=moderate
-        # SECURITY: Don't ignore audit failures - they represent known vulnerabilities
 
       - name: Run npm audit (frontend)
         run: cd frontend && pnpm audit --audit-level=moderate
-        # SECURITY: Don't ignore audit failures - they represent known vulnerabilities
 
       - name: Run security audit with Snyk
         uses: snyk/actions/node@master
@@ -120,34 +116,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: iotdb_enhanced_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install PostgreSQL and Redis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql redis-server
+          sudo systemctl start postgresql
+          sudo systemctl start redis-server
+          sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" || true
+          sudo -u postgres createdb iotdb_enhanced_test || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -168,13 +148,8 @@ jobs:
         run: cd backend && pnpm test
         env:
           NODE_ENV: test
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: iotdb_enhanced_test
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iotdb_enhanced_test?schema=public
+          REDIS_URL: redis://localhost:6379
 
       - name: Generate coverage report
         run: cd backend && pnpm run test:coverage
@@ -227,80 +202,58 @@ jobs:
           retention-days: 7
 
   # ============================================================================
-  # Build and Push Docker Images
+  # Build Artifacts
   # ============================================================================
   build:
-    name: Build Docker Images
+    name: Build Artifacts
     runs-on: ubuntu-latest
     needs: [security-scan, lint-and-typecheck, test-backend, test-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    timeout-minutes: 30
-    outputs:
-      backend-tag: ${{ steps.meta-backend.outputs.tags }}
-      frontend-tag: ${{ steps.meta-frontend.outputs.tags }}
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-      - name: Extract metadata for backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
+          version: 8
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
+      - name: Install and build backend
+        run: |
+          cd backend
+          pnpm install
+          pnpm run build
 
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
+      - name: Install and build frontend
+        run: |
+          cd frontend
+          pnpm install
+          pnpm run build
 
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
+      - name: Upload backend build
+        uses: actions/upload-artifact@v3
         with:
-          context: ./frontend
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
+          name: backend-build
+          path: backend/dist/
+          retention-days: 7
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/.next/
+          retention-days: 7
 
   # ============================================================================
-  # Deploy to Production
+  # Deploy to Production (PM2-based)
   # ============================================================================
   deploy:
     name: Deploy to Production
@@ -313,9 +266,6 @@ jobs:
       url: https://iotdb.example.com
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -328,21 +278,29 @@ jobs:
             set -e
 
             # Navigate to project directory
-            cd /root/iotdb-enhanced
+            cd ${{ secrets.PROJECT_PATH || '/root' }}
 
             # Pull latest changes
             git pull origin main
 
-            # Pull new Docker images
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:main
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:main
+            # Install dependencies
+            cd backend && pnpm install --frozen-lockfile
+            cd ../frontend && pnpm install --frozen-lockfile
+
+            # Build backend
+            cd ../backend && pnpm run build
+
+            # Build frontend
+            cd ../frontend && pnpm run build
 
             # Run database migrations
-            cd backend
-            pnpm migrate
+            cd ../backend
+            npx prisma migrate deploy
 
-            # Restart services with zero-downtime
-            ./scripts/deploy-zero-downtime.sh
+            # Restart services with PM2 (zero-downtime reload)
+            cd ${{ secrets.PROJECT_PATH || '/root' }}
+            pm2 reload ecosystem.config.cjs --env production
+            pm2 save
 
             # Run health checks
             ./scripts/health-check.sh
@@ -351,12 +309,8 @@ jobs:
 
       - name: Verify deployment
         run: |
-          # Wait for services to start
           sleep 30
-
-          # Health check
           curl -f ${{ secrets.APP_URL }}/api/health || exit 1
-
           echo "Deployment verification successful!"
 
       - name: Notify deployment success
@@ -411,10 +365,19 @@ jobs:
           script: |
             set -e
 
-            cd /root/iotdb-enhanced
+            cd ${{ secrets.PROJECT_PATH || '/root' }}
 
-            # Rollback to previous version
-            ./scripts/rollback.sh
+            # Revert to previous commit
+            git revert HEAD --no-edit
+
+            # Rebuild and restart
+            cd backend && pnpm install && pnpm run build
+            cd ../frontend && pnpm install && pnpm run build
+
+            # Restart with PM2
+            cd ${{ secrets.PROJECT_PATH || '/root' }}
+            pm2 reload ecosystem.config.cjs --env production
+            pm2 save
 
             echo "Rollback completed!"
 

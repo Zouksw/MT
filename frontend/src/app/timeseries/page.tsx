@@ -52,9 +52,9 @@ export default function TimeseriesList() {
     0
   ) ?? 0;
 
-  // Calculate trends
-  const timeseriesTrend = Math.floor(Math.random() * 25) - 5;
-  const anomaliesTrend = Math.floor(Math.random() * 40) - 15;
+  // Calculate trends (placeholder values - replace with real trend calculation)
+  const timeseriesTrend: number | undefined = undefined;
+  const anomaliesTrend: number | undefined = undefined;
 
   // Define table columns
   const columns = [
@@ -176,7 +176,7 @@ export default function TimeseriesList() {
           actions={
             <CreateButton
               style={{
-                background: "#F59E0B",
+                background: "#0066CC",
                 border: "none",
                 height: "40px",
                 borderRadius: "4px",
@@ -209,10 +209,11 @@ export default function TimeseriesList() {
                 trend: anomaliesTrend,
                 color: totalAnomalies > 0 ? "#EF4444" : undefined,
               },
+              // TODO: Replace with real storage usage data from API
               {
                 label: "Storage",
-                value: "2.4",
-                suffix: "GB",
+                value: "-",
+                suffix: "",
               },
             ]}
             featuredIndex={0}

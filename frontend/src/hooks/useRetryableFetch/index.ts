@@ -3,4 +3,4 @@ export {
   useRetryableFetchSimple,
   type RetryableFetchOptions,
   type UseRetryableFetchResult,
-} from "./useRetryableFetch";
+} from "../useRetryableFetch";

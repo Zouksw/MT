@@ -224,7 +224,7 @@ export default function DatasetDetailPage() {
             icon={<PlusOutlined />}
             href={`/timeseries/create?dataset=${dataset.id}`}
             style={{
-              background: "#F59E0B",
+              background: "#0066CC",
               border: "none",
               borderRadius: "4px",
               fontWeight: 600,

@@ -13,7 +13,7 @@ const router = Router();
 const getUser = (req: AuthRequest) => req.userId || '00000000-0000-0000-0000-000000000001';
 
 // GET /api/anomalies - Get all anomalies
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res) => {
   const { timeseriesId, severity } = req.query;
   const { skip, take } = getPagination(req.query);
   const params = anomaliesQuerySchema.parse(req.query);

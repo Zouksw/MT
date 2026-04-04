@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import useSWR, { SWRResponse, Key } from "swr";
+import useSWR, { SWRResponse, Key, KeyedMutator } from "swr";
 import { errorHandler } from "@/lib/errorHandler";
 
 export interface RetryableFetchOptions {
@@ -19,9 +19,7 @@ export interface UseRetryableFetchResult<T> {
   isRetrying: boolean;
   retryCount: number;
   manualRetry: () => void;
-  mutate: (
-    data?: T | Promise<T> | ((data?: T) => T | Promise<T>)
-  ) => Promise<SWRResponse<T>> | undefined;
+  mutate: KeyedMutator<T>;
 }
 
 /**

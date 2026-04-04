@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Table, theme } from "antd";
 import type { TableProps as AntTableProps } from "antd";
 import { EmptyState, EmptyStateType } from "@/components/ui/EmptyState";
@@ -43,6 +43,56 @@ export const DataTable = <T extends Record<string, any>>({
 }: DataTableProps<T>) => {
   const { token } = theme.useToken();
 
+  // Memoize style content to avoid re-creating on every render
+  const styleContent = useMemo(() => `
+    .data-table .ant-table {
+      border-radius: ${token.borderRadiusLG}px;
+      overflow: hidden;
+    }
+
+    .data-table--striped .ant-table-tbody > tr.ant-table-row:nth-child(even) {
+      background-color: ${token.colorBgLayout};
+    }
+
+    .data-table-row-zebra {
+      background-color: ${token.colorBgLayout};
+    }
+
+    .data-table .ant-table-tbody > tr.ant-table-row:hover > td {
+      background-color: ${token.colorPrimaryBg} !important;
+    }
+
+    .data-table .ant-table-thead > tr > th {
+      font-weight: 600;
+      font-size: ${token.fontSizeSM}px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: ${token.colorTextSecondary};
+      background-color: transparent !important;
+      border-bottom: 1px solid ${token.colorBorder};
+    }
+
+    .data-table .ant-table-tbody > tr > td {
+      border-bottom: 1px solid ${token.colorBorderSecondary};
+    }
+
+    .data-table .ant-pagination {
+      padding: ${token.paddingLG}px ${token.paddingLG}px 0;
+      border-top: 1px solid ${token.colorBorder};
+      margin: 0;
+    }
+
+    .data-table--compact .ant-table-tbody > tr > td {
+      padding: ${token.paddingSM}px ${token.paddingMD}px;
+    }
+
+    .data-table--compact .ant-table-thead > tr > th {
+      padding: ${token.paddingSM}px ${token.paddingMD}px;
+    }
+  `, [token.borderRadiusLG, token.colorBgLayout, token.colorPrimaryBg,
+      token.fontSizeSM, token.colorTextSecondary, token.colorBorder,
+      token.colorBorderSecondary, token.paddingLG, token.paddingSM, token.paddingMD]);
+
   // Check if data source is empty
   const dataSource = props.dataSource as T[] | undefined;
   const isEmpty = !dataSource || dataSource.length === 0;
@@ -51,7 +101,6 @@ export const DataTable = <T extends Record<string, any>>({
   const getRowClassName = (
     record: T,
     index: number | undefined,
-    // Third argument is required by Ant Design's rowClassName signature
     _?: any,
   ): string => {
     const classes: string[] = [];
@@ -106,53 +155,7 @@ export const DataTable = <T extends Record<string, any>>({
           }}
         />
       )}
-      <style jsx global>{`
-        /* Data table specific styles */
-        .data-table .ant-table {
-          border-radius: ${token.borderRadiusLG}px;
-          overflow: hidden;
-        }
-
-        .data-table--striped .ant-table-tbody > tr.ant-table-row:nth-child(even) {
-          background-color: ${token.colorBgLayout};
-        }
-
-        .data-table-row-zebra {
-          background-color: ${token.colorBgLayout};
-        }
-
-        .data-table .ant-table-tbody > tr.ant-table-row:hover > td {
-          background-color: ${token.colorPrimaryBg} !important;
-        }
-
-        .data-table .ant-table-thead > tr > th {
-          font-weight: 600;
-          font-size: ${token.fontSizeSM};
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: ${token.colorTextSecondary};
-          background-color: transparent !important;
-          border-bottom: 1px solid ${token.colorBorder};
-        }
-
-        .data-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid ${token.colorBorderSecondary};
-        }
-
-        .data-table .ant-pagination {
-          padding: ${token.paddingLG}px ${token.paddingLG}px 0;
-          border-top: 1px solid ${token.colorBorder};
-          margin: 0;
-        }
-
-        .data-table--compact .ant-table-tbody > tr > td {
-          padding: ${token.paddingSM}px ${token.paddingMD}px;
-        }
-
-        .data-table--compact .ant-table-thead > tr > th {
-          padding: ${token.paddingSM}px ${token.paddingMD}px;
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{ __html: styleContent }} />
     </>
   );
 };

@@ -4,11 +4,10 @@ import React from "react";
 import { Badge, Space } from "antd";
 import {
   CloudServerOutlined,
-  CloudDisconnectOutlined,
   WifiOutlined,
   DisconnectOutlined,
 } from "@ant-design/icons";
-import { useOnlineStatusWithCallbacks } from "@/hooks/useOnlineStatus";
+import { useOnlineStatusWithCallbacks, useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export interface OnlineStatusProps {
   /**
@@ -160,7 +159,7 @@ export const OnlineStatus: React.FC<OnlineStatusProps> = ({
           </>
         ) : (
           <>
-            <CloudDisconnectOutlined style={{ color: "#ff4d4f" }} />
+            <DisconnectOutlined style={{ color: "#ff4d4f" }} />
             <span>{offlineMessage}</span>
           </>
         )}

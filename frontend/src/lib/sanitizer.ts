@@ -114,7 +114,9 @@ class InputSanitizer {
     }
 
     // Remove control characters (except newline, tab, carriage return)
-    let cleaned = value.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
+    // eslint-disable-next-line no-control-regex -- intentionally matching control characters for sanitization
+    const controlCharRegex = new RegExp('[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]', 'g');
+    let cleaned = value.replace(controlCharRegex, '');
 
     // Limit length
     if (cleaned.length > maxLength) {
@@ -175,7 +177,7 @@ class InputSanitizer {
 
     // Remove path separators and dangerous characters
     let sanitized = filename
-      .replace(/[\/\\]/g, '') // Remove path separators
+      .replace(/[/\\]/g, '') // Remove path separators
       .replace(/\.\./g, '') // Remove parent directory references
       .replace(/[<>:"|?*]/g, '') // Remove invalid filename characters
       .replace(/\s+/g, '_'); // Replace spaces with underscores
@@ -218,7 +220,7 @@ class InputSanitizer {
     const sanitized: any = {};
 
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const sanitizedKey = this.sanitizeString(key, 100);
         sanitized[sanitizedKey] = typeof obj[key] === 'object' && obj[key] !== null
           ? this.sanitizeObjectKeys(obj[key])

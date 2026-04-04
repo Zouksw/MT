@@ -1,12 +1,11 @@
 "use client";
 
-import { RefineThemes } from "@refinedev/antd";
 import { App as AntdApp, ConfigProvider, theme } from "antd";
 import React, {
   type PropsWithChildren,
   createContext,
-  useEffect,
-  useLayoutEffect,
+  useCallback,
+  useSyncExternalStore,
   useState,
 } from "react";
 
@@ -25,33 +24,34 @@ type ColorModeContextProviderProps = {
   defaultMode?: string;
 };
 
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
 export const ColorModeContextProvider: React.FC<
   PropsWithChildren<ColorModeContextProviderProps>
 > = ({ children, defaultMode }) => {
-  const [isMounted, setIsMounted] = useState(false);
-  const [mode, setMode] = useState(defaultMode || "dark");
+  const savedTheme = useSyncExternalStore(
+    subscribeToStorage,
+    () => localStorage.getItem("theme") || defaultMode || "dark",
+    () => defaultMode || "dark"
+  );
 
-  useEffect(() => {
-    setIsMounted(true);
+  const [localMode, setLocalMode] = useState<string | null>(null);
+
+  const mode = localMode ?? savedTheme;
+
+  const setColorMode = useCallback((newMode: string) => {
+    setLocalMode(newMode);
+    localStorage.setItem("theme", newMode);
+    document.documentElement.classList.toggle("dark", newMode === "dark");
   }, []);
 
-  useLayoutEffect(() => {
-    if (isMounted) {
-      // Read from localStorage (syncs with ThemeToggle component)
-      const savedTheme = localStorage.getItem("theme") || "dark";
-      setMode(savedTheme);
-      // Apply Tailwind dark mode class
-      document.documentElement.classList.toggle("dark", savedTheme === "dark");
-    }
-  }, [isMounted]);
-
-  const setColorMode = (newMode: string) => {
-    setMode(newMode);
-    // Update localStorage (syncs with ThemeToggle component)
-    localStorage.setItem("theme", newMode);
-    // Apply Tailwind dark mode class
-    document.documentElement.classList.toggle("dark", newMode === "dark");
-  };
+  // Apply dark mode class on mount
+  React.useLayoutEffect(() => {
+    document.documentElement.classList.toggle("dark", mode === "dark");
+  }, [mode]);
 
   const { darkAlgorithm, defaultAlgorithm } = theme;
 

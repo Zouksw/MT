@@ -9,6 +9,8 @@ import {
   ApiOutlined,
   LockOutlined,
   ExperimentOutlined,
+  FundOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
@@ -56,28 +58,6 @@ const features = [
     details: ["OpenAPI spec", "SDK support", "Webhook alerts"],
     gradient: "sunset" as const,
   },
-  // Temporarily hidden to reduce landing page length
-  // {
-  //   icon: <DatabaseOutlined />,
-  //   title: "Scalable Storage",
-  //   description: "Efficiently store and compress time series data with automatic partitioning. Support for petabyte-scale datasets.",
-  //   details: ["10x compression ratio", "Auto partitioning", "Petabyte scale"],
-  //   gradient: "sunset" as const,
-  // },
-  // {
-  //   icon: <CloudServerOutlined />,
-  //   title: "Cloud Native",
-  //   description: "Built for the cloud with support for AWS, GCP, and Azure deployments. Kubernetes-ready with Helm charts included.",
-  //   details: ["AWS/GCP/Azure", "Kubernetes ready", "Auto-scaling"],
-  //   gradient: "blue" as const,
-  // },
-  // {
-  //   icon: <NodeIndexOutlined />,
-  //   title: "Data Pipelines",
-  //   description: "Built-in ETL capabilities with support for batch and streaming data. Native integrations with Kafka, MQTT, and more.",
-  //   details: ["Kafka, MQTT", "Batch & streaming", "Data transformation"],
-  //   gradient: "sunset" as const,
-  // },
 ];
 
 const metrics = [

@@ -49,10 +49,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const method = methods[type as keyof typeof methods];
 
-    if (description) {
-      method(msg, description, duration, onClick ? { onClick } : duration);
+    if (description || onClick) {
+      method({ content: msg, duration });
     } else {
-      method(msg, duration, onClick ? { onClick } : duration);
+      method(msg, duration);
     }
   }, [messageApi]);
 

@@ -102,12 +102,14 @@ export function MobileTableCard<T extends Record<string, any>>({
             {/* Render each visible column as a field */}
             <Space direction="vertical" size={8} style={{ width: "100%" }}>
               {visibleColumns.map((col, colIndex) => {
-                if (!col.dataIndex) return null;
+                // Type guard: only process columns with dataIndex (ColumnType, not ColumnGroupType)
+                const colDataIndex = 'dataIndex' in col ? (col as any).dataIndex : undefined;
+                if (!colDataIndex) return null;
                 if (col.key === "actions") return null; // Skip actions column
 
-                const dataIndex = Array.isArray(col.dataIndex)
-                  ? col.dataIndex
-                  : [col.dataIndex as string];
+                const dataIndex = Array.isArray(colDataIndex)
+                  ? colDataIndex
+                  : [colDataIndex as string];
                 const value = getKeyValue(record, dataIndex.join("."));
 
                 return (

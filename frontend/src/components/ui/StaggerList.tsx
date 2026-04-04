@@ -13,8 +13,10 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore, useState } from "react";
 import { createStaggerDelay, shouldReduceMotion } from "@/lib/animations";
+
+const emptySubscribe = () => () => {};
 
 export interface StaggerListProps {
   children: React.ReactNode[];
@@ -29,24 +31,23 @@ export const StaggerList: React.FC<StaggerListProps> = ({
   staggerDelay = 50,
   variant = "slide-up",
 }) => {
+  const respectMotionPreference = useSyncExternalStore(
+    emptySubscribe,
+    () => shouldReduceMotion(),
+    () => false
+  );
+
   const [isVisible, setIsVisible] = useState(false);
-  const [respectMotionPreference, setRespectMotionPreference] = useState(false);
 
   useEffect(() => {
-    // Check if user prefers reduced motion
-    if (shouldReduceMotion()) {
-      setRespectMotionPreference(true);
-      setIsVisible(true);
-      return;
-    }
+    if (respectMotionPreference) return;
 
-    // Trigger animations on mount
     const animationTimer = setTimeout(() => {
       setIsVisible(true);
     }, 50);
 
     return () => clearTimeout(animationTimer);
-  }, []);
+  }, [respectMotionPreference]);
 
   // If user prefers reduced motion, just show content without animation
   if (respectMotionPreference) {
@@ -112,24 +113,23 @@ export const StaggerGrid: React.FC<StaggerGridProps> = ({
   },
   gap = "16px",
 }) => {
+  const respectMotionPreference = useSyncExternalStore(
+    emptySubscribe,
+    () => shouldReduceMotion(),
+    () => false
+  );
+
   const [isVisible, setIsVisible] = useState(false);
-  const [respectMotionPreference, setRespectMotionPreference] = useState(false);
 
   useEffect(() => {
-    // Check if user prefers reduced motion
-    if (shouldReduceMotion()) {
-      setRespectMotionPreference(true);
-      setIsVisible(true);
-      return;
-    }
+    if (respectMotionPreference) return;
 
-    // Trigger animations on mount
     const animationTimer = setTimeout(() => {
       setIsVisible(true);
     }, 50);
 
     return () => clearTimeout(animationTimer);
-  }, []);
+  }, [respectMotionPreference]);
 
   // If user prefers reduced motion, just show content without animation
   if (respectMotionPreference) {

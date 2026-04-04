@@ -61,9 +61,9 @@ export const StatCard = React.memo<StatCardProps>(({
       bgLight: "#F1F5F9",
     },
     primary: {
-      border: "#F59E0B",
-      text: "#F59E0B",
-      bgLight: "#FEF3C7",
+      border: "#0066CC",
+      text: "#0066CC",
+      bgLight: "#EEF2FF",
     },
     success: {
       border: "#10B981",
@@ -72,7 +72,7 @@ export const StatCard = React.memo<StatCardProps>(({
     },
     warning: {
       border: "#F59E0B",
-      text: "#F59E0B",
+      text: "#D97706",
       bgLight: "#FEF3C7",
     },
     error: {
@@ -166,6 +166,7 @@ export const StatCard = React.memo<StatCardProps>(({
     prevProps.loading === nextProps.loading
   );
 });
+StatCard.displayName = 'StatCard';
 
 interface TrendIconProps {
   value: number;

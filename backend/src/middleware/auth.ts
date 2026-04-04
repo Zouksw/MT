@@ -21,7 +21,7 @@ export const authenticate = async (
     const authHeader = req.headers.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
+      return res.status(401).json({ success: false, error: { message: 'No token provided', code: 'UNAUTHORIZED' } });
     }
 
     const token = authHeader.substring(7);
@@ -29,7 +29,7 @@ export const authenticate = async (
     // Check if token is blacklisted
     if (await isTokenBlacklisted(token)) {
       logger.warn(`Blacklisted token used from IP: ${req.ip}`);
-      return res.status(401).json({ error: 'Token has been revoked' });
+      return res.status(401).json({ success: false, error: { message: 'Token has been revoked', code: 'UNAUTHORIZED' } });
     }
 
     try {
@@ -43,7 +43,7 @@ export const authenticate = async (
       });
 
       if (!user) {
-        return res.status(401).json({ error: 'User not found' });
+        return res.status(401).json({ success: false, error: { message: 'User not found', code: 'UNAUTHORIZED' } });
       }
 
       req.user = user;
@@ -66,11 +66,11 @@ export const authenticate = async (
 
       next();
     } catch (error) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return res.status(401).json({ success: false, error: { message: 'Invalid or expired token', code: 'UNAUTHORIZED' } });
     }
   } catch (error) {
     logger.error(`Authentication error: ${error} from IP: ${req.ip}`);
-    res.status(500).json({ error: 'Authentication failed' });
+    res.status(500).json({ success: false, error: { message: 'Authentication failed', code: 'INTERNAL_ERROR' } });
   }
 };
 
@@ -119,26 +119,25 @@ export const authorize = (...roles: string[]) => {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.userId) {
-        return res.status(401).json({ error: 'Authentication required' });
+        return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'UNAUTHORIZED' } });
       }
 
       if (!req.user) {
-        return res.status(401).json({ error: 'User information not found' });
+        return res.status(401).json({ success: false, error: { message: 'User information not found', code: 'UNAUTHORIZED' } });
       }
 
       // Check if user's role is in the allowed roles list
       if (!roles.includes(req.user.role)) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: roles,
-          userRole: req.user.role,
+          success: false,
+          error: { message: 'Insufficient permissions', code: 'FORBIDDEN', required: roles, userRole: req.user.role },
         });
       }
 
       next();
     } catch (error) {
       logger.error(`Authorization error for user ${req.userId} (${req.user?.role}): ${error}`);
-      res.status(500).json({ error: 'Authorization failed' });
+      res.status(500).json({ success: false, error: { message: 'Authorization failed', code: 'INTERNAL_ERROR' } });
     }
   };
 };

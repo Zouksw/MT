@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -16,7 +16,8 @@ export const Input: React.FC<InputProps> = ({
   id,
   ...props
 }) => {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const reactId = useId();
+  const inputId = id || `input-${reactId}`;
 
   const baseStyles = "block px-3 py-2 rounded-md text-body bg-white dark:bg-gray-800 border transition-all duration-150 ease-move focus:outline-none";
 
@@ -69,7 +70,8 @@ export const Textarea: React.FC<TextareaProps> = ({
   id,
   ...props
 }) => {
-  const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
+  const reactId = useId();
+  const textareaId = id || `textarea-${reactId}`;
 
   const baseStyles = "block px-3 py-2 rounded-md text-body bg-white dark:bg-gray-800 border transition-all duration-150 ease-move focus:outline-none";
 
