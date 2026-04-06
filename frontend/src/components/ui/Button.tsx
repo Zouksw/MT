@@ -1,5 +1,5 @@
 import React from "react";
-import { TRANSITIONS, DURATION, EASING } from "@/lib/animations";
+import { TRANSITIONS } from "@/lib/animations";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost" | "danger";

@@ -37,7 +37,7 @@ export const StaggerList: React.FC<StaggerListProps> = ({
     () => false
   );
 
-  const [isVisible, setIsVisible] = useState(false);
+  const [, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (respectMotionPreference) return;
@@ -55,9 +55,7 @@ export const StaggerList: React.FC<StaggerListProps> = ({
   }
 
   // Animation variants
-  const getAnimationClass = (index: number) => {
-    const delay = createStaggerDelay(index, staggerDelay);
-
+  const getAnimationClass = (_index: number) => {
     switch (variant) {
       case "fade":
         return `stagger-fade-in`;
@@ -119,7 +117,7 @@ export const StaggerGrid: React.FC<StaggerGridProps> = ({
     () => false
   );
 
-  const [isVisible, setIsVisible] = useState(false);
+  const [, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (respectMotionPreference) return;

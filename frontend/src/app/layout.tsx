@@ -1,4 +1,3 @@
-import { RefineKbarProvider } from "@refinedev/kbar";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import React from "react";

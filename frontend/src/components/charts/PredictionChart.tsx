@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Card, Button, Space, Typography, Spin, Alert, message, Tooltip as AntTooltip } from "antd";
+import { Card, Button, Space, Typography, Spin, message } from "antd";
 import {
-  DownloadOutlined,
   FileImageOutlined,
   FileExcelOutlined,
   ExpandOutlined,
@@ -23,18 +22,6 @@ import {
 const { Text } = Typography;
 
 // Dynamic imports for Recharts components to reduce initial bundle size
-const LineChart = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.LineChart })),
-  {
-    loading: () => (
-      <div className="flex items-center justify-center h-full">
-        <Spin size="large" />
-      </div>
-    ),
-    ssr: false,
-  }
-) as React.ComponentType<any>;
-
 const Line = dynamic(
   () => import("recharts").then((mod) => ({ default: mod.Line })),
   { ssr: false }
@@ -70,18 +57,13 @@ const ResponsiveContainer = dynamic(
   { ssr: false }
 ) as React.ComponentType<any>;
 
-const Area = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Area })),
-  { ssr: false }
-) as React.ComponentType<any>;
-
-const AreaChart = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.AreaChart })),
-  { ssr: false }
-) as React.ComponentType<any>;
-
 const ComposedChart = dynamic(
   () => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
+  { ssr: false }
+) as React.ComponentType<any>;
+
+const Area = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.Area })),
   { ssr: false }
 ) as React.ComponentType<any>;
 
@@ -131,9 +113,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
       isPrediction: false,
     }));
 
-    const lastHistoricalTimestamp = historical.length > 0
-      ? historical[historical.length - 1].timestamp
-      : Date.now();
+    // Determine last historical timestamp for forecast alignment
 
     const predictions = predictionData.timestamps.map((ts, i) => {
       const point: DataPoint = {
@@ -192,7 +172,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 
       message.success('Chart exported as PNG');
       onExport?.('png');
-    } catch (error) {
+    } catch {
       message.error('Failed to export chart');
     } finally {
       setExporting(false);
@@ -223,7 +203,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 
       message.success('Data exported as CSV');
       onExport?.('csv');
-    } catch (error) {
+    } catch {
       message.error('Failed to export data');
     }
   };

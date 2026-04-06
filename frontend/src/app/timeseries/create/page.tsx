@@ -17,7 +17,7 @@ export default function TimeseriesCreate() {
   });
 
   return (
-    <Create saveButtonProps={saveButtonProps} title="Create Time Series">
+    <Create saveButtonProps={saveButtonProps} title="Create Time Series" breadcrumb={false}>
       <Form {...formProps} layout="vertical">
         <ContentCard
           title="Basic Information"

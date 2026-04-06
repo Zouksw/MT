@@ -1,7 +1,7 @@
 "use client";
 
 import { Create, useForm } from "@refinedev/antd";
-import { Form, Input, Select, DatePicker, Typography } from "antd";
+import { Form, Input, Select, Typography, DatePicker } from "antd";
 
 import { ContentCard } from "@/components/layout/ContentCard";
 
@@ -11,7 +11,7 @@ export default function ApiKeyCreate() {
   const { formProps, saveButtonProps } = useForm({});
 
   return (
-    <Create saveButtonProps={saveButtonProps} title="Create API Key">
+    <Create saveButtonProps={saveButtonProps} title="Create API Key" breadcrumb={false}>
       <Form {...formProps} layout="vertical">
         <ContentCard
           title="API Key Information"

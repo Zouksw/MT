@@ -2,6 +2,7 @@
 
 import React from "react";
 import { theme } from "antd";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 export interface PageContainerProps {
   children: React.ReactNode;
@@ -11,10 +12,12 @@ export interface PageContainerProps {
 /**
  * PageContainer - Consistent page wrapper with spacing
  *
- * Provides a consistent container for page content with:
+ * Provides:
  * - Responsive padding
- * - Appropriate background color
- * - Maximum width constraint
+ * - Background color from Ant Design theme
+ * - Max-width constraint for ultrawide monitors (1440px)
+ * - Subtle dot pattern in light mode
+ * - Automatic slide-up page transition animation
  */
 export const PageContainer: React.FC<PageContainerProps> = ({
   children,
@@ -29,11 +32,12 @@ export const PageContainer: React.FC<PageContainerProps> = ({
   };
 
   return (
-    <div
-      className={`page-container ${className}`}
-      style={containerStyle}
-    >
-      {children}
+    <div className={`page-container bg-pattern-dots ${className}`} style={containerStyle}>
+      <PageTransition variant="slide-up">
+        <div className="mx-auto max-w-[1440px]">
+          {children}
+        </div>
+      </PageTransition>
     </div>
   );
 };

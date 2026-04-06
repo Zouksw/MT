@@ -11,7 +11,7 @@ import React from "react";
 import { Card, Space, Typography, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 export interface MobileTableCardProps<T = any> {
   dataSource: T[];
@@ -171,7 +171,7 @@ export interface MobileTableCompactProps<T = any> extends MobileTableCardProps<T
 
 export function MobileTableCompact<T extends Record<string, any>>({
   dataSource,
-  columns,
+  columns: _columns,
   rowKey = "id",
   emptyText = "No data",
   renderActions,
@@ -292,7 +292,7 @@ export interface UseMobileTableOptions {
   variant?: "card" | "compact";
 }
 
-export function useMobileTable<T = any>(
+export function useMobileTable(
   options: UseMobileTableOptions = {}
 ) {
   const { isMobile = false, variant = "card" } = options;

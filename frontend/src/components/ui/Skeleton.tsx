@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Skeleton, Card, theme } from "antd";
+import { Skeleton, Card } from "antd";
 
 /**
  * Skeleton loading states for async content
@@ -12,13 +12,6 @@ import { Skeleton, Card, theme } from "antd";
  * - Form skeleton
  * - List skeleton
  */
-
-interface SkeletonProps {
-  rows?: number;
-  width?: string | number;
-  height?: number;
-  style?: React.CSSProperties;
-}
 
 /**
  * Statistics Card Skeleton - Matches 4-column stats layout

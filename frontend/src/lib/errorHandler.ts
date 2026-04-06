@@ -264,6 +264,7 @@ class SecurityErrorHandler {
   handleUnexpectedError(error: unknown): SafeError {
     // Log full error for debugging (in development)
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.error('Unexpected error:', error);
     }
 
@@ -374,7 +375,7 @@ export async function withErrorHandling<T>(
     fallbackMessage?: string;
   } = {}
 ): Promise<T | null> {
-  const { showNotification = true, notificationApi, fallbackMessage } = options;
+  const { showNotification = true, notificationApi } = options;
 
   try {
     return await operation();
@@ -389,6 +390,7 @@ export async function withErrorHandling<T>(
 
     // Log for debugging
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.error('Operation failed:', safeError);
     }
 

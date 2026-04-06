@@ -5,7 +5,6 @@ import { Card, Typography, List, Tag, Button, Space, Tabs, Empty } from "antd";
 import {
   BellOutlined,
   ThunderboltOutlined,
-  EyeOutlined,
   RightOutlined,
 } from "@ant-design/icons";
 import { useGo } from "@refinedev/core";
@@ -29,16 +28,11 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
 
   const getSeverityColor = (severity: string) => {
     switch (severity?.toLowerCase()) {
-      case "critical":
-        return "error";
-      case "high":
-        return "warning";
-      case "medium":
-        return "processing";
-      case "low":
-        return "default";
-      default:
-        return "default";
+      case "critical": return "error";
+      case "high": return "warning";
+      case "medium": return "processing";
+      case "low": return "default";
+      default: return "default";
     }
   };
 
@@ -67,12 +61,13 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
       <List
         itemLayout="horizontal"
         dataSource={alertsItems}
-        renderItem={(item) => (
+        renderItem={(item, i) => (
           <List.Item
             role="button"
             tabIndex={0}
             aria-label={`View alert: ${item.title}`}
-            style={{ cursor: "pointer" }}
+            className="stagger-slide-up cursor-pointer !transition-all !duration-200 hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] hover:pl-1 rounded-md"
+            style={{ animationDelay: `${i * 50}ms` }}
             onClick={() => go({ to: `/alerts/show/${item.id}`, type: "push" })}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -82,19 +77,21 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
             }}
           >
             <List.Item.Meta
-              avatar={<BellOutlined style={{ fontSize: 20, color: "#1890ff" }} />}
+              avatar={
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
+                  <BellOutlined className="text-base text-primary" />
+                </div>
+              }
               title={
                 <Space size={8}>
-                  <Text ellipsis style={{ maxWidth: 200 }}>{item.title}</Text>
-                  <Tag color={getSeverityColor(item.severity)}>
+                  <Text ellipsis className="!max-w-[200px] !text-sm">{item.title}</Text>
+                  <Tag color={getSeverityColor(item.severity)} className="!text-xs">
                     {item.severity || "UNKNOWN"}
                   </Tag>
                 </Space>
               }
               description={
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {item.time}
-                </Text>
+                <Text type="secondary" className="!text-xs">{item.time}</Text>
               }
             />
           </List.Item>
@@ -112,11 +109,13 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
       <List
         itemLayout="horizontal"
         dataSource={forecastsItems}
-        renderItem={(item) => (
+        renderItem={(item, i) => (
           <List.Item
             role="button"
             tabIndex={0}
             aria-label={`View forecast: ${item.title}`}
+            className="stagger-slide-up cursor-pointer !transition-all !duration-200 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 hover:pl-1 rounded-md"
+            style={{ animationDelay: `${i * 50}ms` }}
             onClick={() => go({ to: "/forecasts", type: "push" })}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -126,17 +125,19 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
             }}
           >
             <List.Item.Meta
-              avatar={<ThunderboltOutlined style={{ fontSize: 20, color: "#722ed1" }} />}
+              avatar={
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30">
+                  <ThunderboltOutlined className="text-base text-purple-500" />
+                </div>
+              }
               title={
                 <Space size={8}>
-                  <Text ellipsis style={{ maxWidth: 200 }}>{item.title}</Text>
-                  <Tag color="purple">{item.status}</Tag>
+                  <Text ellipsis className="!max-w-[200px] !text-sm">{item.title}</Text>
+                  <Tag color="purple" className="!text-xs">{item.status}</Tag>
                 </Space>
               }
               description={
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {item.description} • {item.time}
-                </Text>
+                <Text type="secondary" className="!text-xs">{item.description} &middot; {item.time}</Text>
               }
             />
           </List.Item>
@@ -149,18 +150,14 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
     {
       key: "alerts",
       label: (
-        <span>
-          <BellOutlined /> Alerts
-        </span>
+        <span><BellOutlined /> Alerts</span>
       ),
       children: renderAlertsList(),
     },
     {
       key: "forecasts",
       label: (
-        <span>
-          <ThunderboltOutlined /> Forecasts
-        </span>
+        <span><ThunderboltOutlined /> Forecasts</span>
       ),
       children: renderForecastsList(),
     },
@@ -170,11 +167,11 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
     <Card
       loading={loading}
       variant="borderless"
-      style={{ height: "100%" }}
+      className="!h-full"
       styles={{ body: { padding: "16px" } }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={5} style={{ fontSize: "16px", margin: 0 }}>
+      <div className="flex items-center justify-between mb-4">
+        <Title level={5} className="!text-base !mb-0">
           Recent Activity
         </Title>
         <Button
@@ -201,7 +198,6 @@ export const RecentActivity = React.memo<RecentActivityProps>(function RecentAct
     </Card>
   );
 }, (prevProps, nextProps) => {
-  // Memoize to prevent re-renders when parent updates
   return (
     prevProps.recentAlerts === nextProps.recentAlerts &&
     prevProps.recentForecasts === nextProps.recentForecasts &&

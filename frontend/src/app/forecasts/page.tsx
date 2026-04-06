@@ -8,23 +8,23 @@ import {
   useTable,
   CreateButton,
 } from "@refinedev/antd";
-import { Space, Table, Tag, Badge, Row, Col } from "antd";
+import { Space, Tag, Badge } from "antd";
 import type { Breakpoint } from "antd";
 import { useList } from "@refinedev/core";
 import {
   LineChartOutlined,
   ThunderboltOutlined,
   ClockCircleOutlined,
+  WarningOutlined,
   PlusOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { Button } from "@/components/ui";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { DataPageStats } from "@/components/data/DataPageStats";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 export default function ForecastList() {
@@ -45,6 +45,7 @@ export default function ForecastList() {
 
   const forecastStats = forecastStatsResult?.result?.data ?? [];
   const totalForecasts = forecastStats?.length ?? 0;
+  const statsLoading = forecastStatsResult?.query?.isLoading ?? false;
 
   // Calculate unique models and timeseries
   const uniqueModels = new Set(forecastStats.map((f: any) => f.modelId)).size;
@@ -300,7 +301,7 @@ export default function ForecastList() {
 
   return (
     <PageContainer>
-      <List>
+      <List breadcrumb={false}>
         <PageHeader
           title="Forecasts"
           description="AI-powered time series forecasting and predictions"
@@ -331,92 +332,36 @@ export default function ForecastList() {
           }
         />
 
-        {/* Statistics Cards with Glassmorphism */}
-        <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]} style={{ marginBottom: isMobile ? 16 : 24 }}>
-          <Col xs={12} sm={12} md={6}>
-            <GlassCard intensity="medium" style={{ padding: isMobile ? "16px" : "20px" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-md bg-primary flex items-center justify-center"
-                >
-                  <LineChartOutlined style={{ fontSize: "20px", color: "#fff" }} />
-                </div>
-                <span className="text-body-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Forecasts
-                </span>
-              </div>
-              <div className="text-[28px] font-bold text-gray-900 dark:text-gray-50 mb-1 data-text">
-                {totalForecasts}
-              </div>
-              <span className="text-body-sm text-gray-500 dark:text-gray-400">
-                AI predictions generated
-              </span>
-            </GlassCard>
-          </Col>
-
-          <Col xs={12} sm={12} md={6}>
-            <GlassCard intensity="medium" style={{ padding: isMobile ? "16px" : "20px" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-md bg-info flex items-center justify-center"
-                >
-                  <ThunderboltOutlined style={{ fontSize: "20px", color: "#fff" }} />
-                </div>
-                <span className="text-body-sm font-medium text-gray-600 dark:text-gray-400">
-                  Active Models
-                </span>
-              </div>
-              <div className="text-[28px] font-bold text-gray-900 dark:text-gray-50 mb-1 data-text">
-                {uniqueModels}
-              </div>
-              <span className="text-body-sm text-success dark:text-success-light">
-                AI algorithms
-              </span>
-            </GlassCard>
-          </Col>
-
-          <Col xs={12} sm={12} md={6}>
-            <GlassCard intensity="medium" style={{ padding: isMobile ? "16px" : "20px" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center"
-                >
-                  <ClockCircleOutlined style={{ fontSize: "20px", color: "#fff" }} />
-                </div>
-                <span className="text-body-sm font-medium text-gray-600 dark:text-gray-400">
-                  Time Series
-                </span>
-              </div>
-              <div className="text-[28px] font-bold text-gray-900 dark:text-gray-50 mb-1 data-text">
-                {uniqueTimeseries}
-              </div>
-              <span className="text-body-sm text-gray-500 dark:text-gray-400">
-                Being forecasted
-              </span>
-            </GlassCard>
-          </Col>
-
-          <Col xs={12} sm={12} md={6}>
-            <GlassCard intensity="medium" style={{ padding: isMobile ? "16px" : "20px" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-md bg-warning flex items-center justify-center"
-                >
-                  <LineChartOutlined style={{ fontSize: "20px", color: "#fff" }} />
-                </div>
-                <span className="text-body-sm font-medium text-gray-600 dark:text-gray-400">
-                  Anomalies Detected
-                </span>
-              </div>
-              <div className="text-[28px] font-bold text-gray-900 dark:text-gray-50 mb-1 data-text">
-                {anomalyCount}
-              </div>
-              <span className={`text-body-sm ${anomalyCount > 0 ? "text-warning dark:text-warning-light" : "text-success dark:text-success-light"}`}>
-                {anomalyCount > 0 ? "Need attention" : "All normal"}
-              </span>
-            </GlassCard>
-          </Col>
-        </Row>
+        {/* Statistics Cards */}
+        <DataPageStats
+          items={[
+            {
+              label: "Total Forecasts",
+              value: totalForecasts,
+              icon: <LineChartOutlined />,
+              variant: "primary",
+            },
+            {
+              label: "Active Models",
+              value: uniqueModels,
+              icon: <ThunderboltOutlined />,
+              variant: "success",
+            },
+            {
+              label: "Time Series",
+              value: uniqueTimeseries,
+              icon: <ClockCircleOutlined />,
+            },
+            {
+              label: "Anomalies Detected",
+              value: anomalyCount,
+              icon: <WarningOutlined />,
+              variant: anomalyCount > 0 ? "warning" : "default",
+            },
+          ]}
+          featuredIndex={0}
+          loading={statsLoading}
+        />
 
         {/* Data Table */}
         <DataTable

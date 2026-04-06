@@ -129,7 +129,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   color: var(--gray-600);
 }
@@ -145,7 +145,7 @@ body {
 
 /* Display/Hero - Outfit Bold */
 h1, h2, .text-display {
-  font-family: "Outfit", sans-serif;
+  font-family: var(--font-outfit), sans-serif;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -166,14 +166,14 @@ h2 {
 .table-data,
 .metric-value,
 .code-snippet {
-  font-family: "Roboto Mono", monospace;
+  font-family: var(--font-roboto-mono), monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }
 
 /* Code - JetBrains Mono */
 code, pre, .code-block {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
 }
 
 /* ==========================================================================
@@ -182,110 +182,12 @@ code, pre, .code-block {
 
 /* Data text helper class */
 .data-text {
-  font-family: "Roboto Mono", monospace;
+  font-family: var(--font-roboto-mono), monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* Primary button */
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  transition: all 150ms var(--ease-move);
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 102, 204, 0.2);
-}
-
-.btn-primary:hover {
-  background-color: var(--color-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-button-hover);
-}
-
-.btn-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Secondary button */
-.btn-secondary {
-  background-color: var(--color-secondary);
-  color: white;
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  transition: all 150ms var(--ease-move);
-  border: none;
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-secondary-hover);
-}
-
-/* Ghost button */
-.btn-ghost {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  transition: all 150ms var(--ease-move);
-  cursor: pointer;
-}
-
-.btn-ghost:hover {
-  background: var(--color-primary-light);
-}
-
-/* Card */
-.card {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-  transition: all 200ms var(--ease-move);
-}
-
-.dark .card {
-  background: var(--gray-800);
-  border-color: var(--gray-700);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
-}
-
-/* Input */
-.input {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font-family: "DM Sans", sans-serif;
-  font-size: 14px;
-  transition: all 150ms var(--ease-move);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-}
-
-.dark .input {
-  background: var(--gray-800);
-  border-color: var(--gray-700);
-}
-
-.dark .input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
+/* Button / Card / Input utilities are handled by Tailwind + custom Button component.
+ * See: components/ui/Button.tsx and Tailwind config. */
 
 /* Table */
 .table-container {
@@ -314,7 +216,7 @@ code, pre, .code-block {
 .table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--gray-100);
-  font-family: "Roboto Mono", monospace;
+  font-family: var(--font-roboto-mono), monospace;
   font-size: 14px;
   color: var(--gray-600);
   font-variant-numeric: tabular-nums;
@@ -362,6 +264,27 @@ code, pre, .code-block {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
+}
+
+/* ==========================================================================
+   BREADCRUMB RESET - Override browser default ol styling
+   ========================================================================== */
+
+nav.ant-breadcrumb ol,
+.ant-breadcrumb ol {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+nav.ant-breadcrumb ol li,
+.ant-breadcrumb ol li {
+  list-style: none !important;
+}
+
+nav.ant-breadcrumb ol li::before,
+.ant-breadcrumb ol li::before {
+  content: none !important;
 }
 
 /* ==========================================================================
@@ -427,53 +350,7 @@ code, pre, .code-block {
   border-color: #374151;
 }
 
-/* Stat card left border */
-.stat-card {
-  border-left-width: 3px;
-  border-left-style: solid;
-  transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-  transform: translateY(-1px);
-}
-
-.dark .stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-}
-
-.stat-card--primary {
-  border-left-color: #0066cc;
-}
-
-.dark .stat-card--primary {
-  border-left-color: #3b82f6;
-}
-
-.stat-card--success {
-  border-left-color: #10b981;
-}
-
-.dark .stat-card--success {
-  border-left-color: #34d399;
-}
-
-.stat-card--warning {
-  border-left-color: #f59e0b;
-}
-
-.dark .stat-card--warning {
-  border-left-color: #fbbf24;
-}
-
-.stat-card--error {
-  border-left-color: #ef4444;
-}
-
-.dark .stat-card--error {
-  border-left-color: #f87171;
-}
+/* Stat card styles are now defined in the Enhanced Stat Card section below */
 
 /* ==========================================================================
    FORM STYLES
@@ -1858,6 +1735,267 @@ html {
 @media (prefers-reduced-motion: reduce) {
   *:focus-visible {
     transition: none;
+  }
+}
+
+/* ============================================================================
+   BACKGROUND PATTERNS
+   Subtle visual depth for page backgrounds and hero sections
+   ============================================================================ */
+
+/* Dot grid pattern - light mode only, for page backgrounds */
+.bg-pattern-dots {
+  background-image: radial-gradient(circle, rgba(0, 102, 204, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .bg-pattern-dots {
+  background-image: none;
+}
+
+/* Mesh gradient overlay for hero/welcome sections */
+.bg-mesh-gradient {
+  position: relative;
+}
+
+.bg-mesh-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(0, 102, 204, 0.06), transparent),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(59, 130, 246, 0.04), transparent);
+}
+
+.dark .bg-mesh-gradient::before {
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(59, 130, 246, 0.08), transparent),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(96, 165, 250, 0.05), transparent);
+}
+
+/* ============================================================================
+   MICRO-INTERACTION KEYFRAMES & UTILITIES
+   Pulse glow, shimmer slide, and counter animations
+   ============================================================================ */
+
+/* Pulse glow - for attention-drawing elements (unread badges, CTAs) */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 102, 204, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 102, 204, 0);
+  }
+}
+
+.dark @keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Shimmer slide - for progress bars and loading overlays */
+@keyframes shimmerSlide {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-slide {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSlide 2s ease-in-out infinite;
+}
+
+/* Scale-in animation for empty state illustrations */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.scale-in {
+  animation: scaleIn 400ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* ============================================================================
+   ENHANCED STAT CARD STYLES
+   Gradient top-edge strip, background tint, enhanced hover
+   ============================================================================ */
+
+/* Stat card gradient top accent - replaces left border */
+.stat-card {
+  border-left: none !important;
+  border-top: 3px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.stat-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+.dark .stat-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+.stat-card--primary::before {
+  background: linear-gradient(90deg, #0066CC, #3B82F6);
+}
+
+.stat-card--success::before {
+  background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+.stat-card--warning::before {
+  background: linear-gradient(90deg, #F59E0B, #FBBF24);
+}
+
+.stat-card--error::before {
+  background: linear-gradient(90deg, #EF4444, #F87171);
+}
+
+.stat-card--default::before {
+  background: linear-gradient(90deg, #64748B, #94A3B8);
+}
+
+/* Stat card subtle background tint */
+.stat-card--primary { background-color: rgba(0, 102, 204, 0.04); }
+.stat-card--success { background-color: rgba(16, 185, 129, 0.04); }
+.stat-card--warning { background-color: rgba(245, 158, 11, 0.04); }
+.stat-card--error { background-color: rgba(239, 68, 68, 0.04); }
+
+.dark .stat-card--primary { background-color: rgba(59, 130, 246, 0.06); }
+.dark .stat-card--success { background-color: rgba(52, 211, 153, 0.06); }
+.dark .stat-card--warning { background-color: rgba(251, 191, 36, 0.06); }
+.dark .stat-card--error { background-color: rgba(248, 113, 113, 0.06); }
+
+/* ============================================================================
+   ENHANCED TABLE STYLES
+   Row hover accent border, header shadow, pagination background
+   ============================================================================ */
+
+/* Row hover with left accent border */
+.ant-table-tbody > tr.ant-table-row:hover > td:first-child {
+  box-shadow: inset 3px 0 0 0 #0066CC;
+}
+
+.dark .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
+  box-shadow: inset 3px 0 0 0 #3B82F6;
+}
+
+/* Table header subtle bottom shadow */
+.ant-table-thead > tr > th {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .ant-table-thead > tr > th {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Pagination background for visual separation */
+.ant-table-wrapper .ant-pagination {
+  background-color: #F9FAFB;
+  border-radius: 0 0 8px 8px;
+}
+
+.dark .ant-table-wrapper .ant-pagination {
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+/* ============================================================================
+   ENHANCED PAGE HEADER
+   Gradient bottom border and Outfit font for titles
+   ============================================================================ */
+
+.page-header::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: linear-gradient(to right, #0066CC, rgba(0, 102, 204, 0.2), transparent);
+  margin-top: 16px;
+}
+
+.dark .page-header::after {
+  background: linear-gradient(to right, #3B82F6, rgba(59, 130, 246, 0.2), transparent);
+}
+
+.page-header h3,
+.page-header .ant-typography {
+  font-family: var(--font-outfit), sans-serif;
+}
+
+/* ============================================================================
+   ENHANCED CONTENT CARD
+   Larger border radius, optional accent strip
+   ============================================================================ */
+
+.content-card {
+  border-radius: 8px;
+}
+
+.content-card--accent {
+  position: relative;
+}
+
+.content-card--accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0066CC, #3B82F6);
+  border-radius: 8px 8px 0 0;
+}
+
+.dark .content-card--accent::before {
+  background: linear-gradient(90deg, #3B82F6, #60A5FA);
+}
+
+/* ============================================================================
+   FLOATING ANIMATION
+   For decorative elements in hero/gradient sections
+   ============================================================================ */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
   }
 }
 

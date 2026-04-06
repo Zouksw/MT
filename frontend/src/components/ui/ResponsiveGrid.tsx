@@ -9,7 +9,6 @@
 
 import React from "react";
 import { useBreakpoint } from "@/lib/responsive-utils";
-import { BREAKPOINT } from "@/lib/responsive-constants";
 
 export interface ResponsiveGridProps {
   children: React.ReactNode;
@@ -26,7 +25,7 @@ export interface ResponsiveGridProps {
 export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   children,
   className = "",
-  minColumnWidth = 300,
+  minColumnWidth: _minColumnWidth = 300,
   gap = "16px",
   columns = {
     mobile: 1,

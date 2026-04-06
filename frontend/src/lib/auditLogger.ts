@@ -112,6 +112,7 @@ class SecurityAuditLogger {
 
     // Development logging
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log('[Security Audit]', log);
     }
   }
@@ -146,6 +147,7 @@ class SecurityAuditLogger {
       this.logs = [...logsToSend, ...this.logs];
 
       if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
         console.error('[Security Audit] Failed to send logs:', error);
       }
     }

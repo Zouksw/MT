@@ -8,7 +8,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Drawer, Space, Typography, Divider } from "antd";
+import { Button, Drawer, Space, Typography } from "antd";
 import { FilterOutlined, CloseOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;

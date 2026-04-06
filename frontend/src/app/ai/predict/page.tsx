@@ -130,14 +130,6 @@ export default function AIPredictPage() {
     { title: "AI Prediction" },
   ];
 
-  const formatTimestamp = (ts: number) => {
-    return new Date(ts).toLocaleString();
-  };
-
-  const formatValue = (val: number) => {
-    return val.toFixed(4);
-  };
-
   return (
     <PageContainer>
       {/* AI Feature Disabled Warning */}
@@ -367,8 +359,8 @@ export default function AIPredictPage() {
                 historicalData={result.historical}
                 predictionData={result.prediction}
                 algorithm={result.algorithm}
-                onExport={(format) => {
-                  console.log(`Exported as ${format}`);
+                onExport={(_format) => {
+                  // Export handled by PredictionChart component
                 }}
               />
 

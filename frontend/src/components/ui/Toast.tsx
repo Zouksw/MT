@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useCallback, useState } from "react";
-import { message, theme } from "antd";
+import React, { createContext, useContext, useCallback } from "react";
+import { message } from "antd";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -37,7 +37,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
   const [messageApi, messageContextHolder] = message.useMessage();
 
   const showToast = useCallback((msg: string, options: ToastOptions = {}) => {
-    const { type = "info", duration = 3, description, onClick } = options;
+    const { type = "info", duration = 3, description, onClick: _onClick } = options;
 
     // Map types to Ant Design methods
     const methods = {
@@ -49,7 +49,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const method = methods[type as keyof typeof methods];
 
-    if (description || onClick) {
+    if (description || _onClick) {
       method({ content: msg, duration });
     } else {
       method(msg, duration);
@@ -64,7 +64,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const showError = useCallback(
-    (msg: string, description?: string) => {
+    (msg: string, _description?: string) => {
       showToast(msg, { type: "error", duration: 5 });
     },
     [showToast]

@@ -10,7 +10,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const SEVERITY_LEVELS = [
   { value: "LOW", label: "Low", color: "green", description: "Minor deviation from expected values" },

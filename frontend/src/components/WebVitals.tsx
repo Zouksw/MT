@@ -11,19 +11,19 @@
 
 "use client";
 
+import React from "react";
 import { useReportWebVitals } from "next/web-vitals";
 
 export function WebVitals() {
   useReportWebVitals((metric) => {
     // Log to console in development
     if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
       console.log("Web Vital:", metric);
     }
 
-    // Send to analytics endpoint
-    if (process.env.NODE_ENV === "production") {
-      sendToAnalytics(metric);
-    }
+    // Send to backend metrics API for dashboard (both dev and prod)
+    sendToAnalytics(metric);
 
     // Send to Google Analytics if available
     if (typeof window !== "undefined" && (window as any).gtag) {
@@ -42,12 +42,14 @@ export function WebVitals() {
 
 /**
  * Send metric to analytics endpoint
+ * Persists data to Redis via the backend metrics API for dashboard consumption
  */
-async function sendToAnalytics(metric: any) {
+async function sendToAnalytics(metric: { name: string; value: number; id: string; delta: number }) {
   try {
-    const endpoint = "/api/web-vitals";
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-    await fetch(endpoint, {
+    // Send to the backend metrics endpoint (stored in Redis for dashboard)
+    await fetch(`${apiBase}/api/metrics/web-vitals`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -55,18 +57,12 @@ async function sendToAnalytics(metric: any) {
       body: JSON.stringify({
         name: metric.name,
         value: metric.value,
-        id: metric.id,
-        delta: metric.delta,
-        rating: getRating(metric.name, metric.value),
-        navigationType: (performance as any)?.navigation?.type,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
+        path: window.location.pathname,
+        timestamp: Date.now(),
       }),
     });
-  } catch (error) {
+  } catch {
     // Silent fail - don't let analytics errors break the app
-    console.error("Failed to send web vitals:", error);
   }
 }
 
@@ -108,14 +104,10 @@ export function useWebVitals() {
       return;
     }
 
-    const observeMetric = (name: string, threshold: number) => {
-      let metricValue: number;
-
+    const observeMetric = (name: string, _threshold: number) => {
       const observer = new (PerformanceObserver as any)((list: any) => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
-          metricValue = entry.value;
-
           setVitals((prev: any) => ({
             ...prev,
             [name]: {
@@ -145,8 +137,6 @@ export function useWebVitals() {
 
   return vitals;
 }
-
-import React from "react";
 
 /**
  * Web Vitals Display Component (for development)

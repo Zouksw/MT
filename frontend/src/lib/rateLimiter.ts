@@ -181,11 +181,13 @@ class RateLimiter {
 export const rateLimiter = new RateLimiter({
   onLimitReached: (key) => {
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.warn(`[RateLimiter] Limit exceeded for: ${key}`);
     }
   },
   onLimitReset: (key) => {
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log(`[RateLimiter] Limit reset for: ${key}`);
     }
   },

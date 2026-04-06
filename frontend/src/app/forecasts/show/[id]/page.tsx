@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Row,
@@ -21,9 +21,7 @@ import {
   Tag,
   Button,
   Space,
-  Tabs,
   Alert,
-  Spin,
 } from "antd";
 import {
   EditOutlined,
@@ -36,7 +34,6 @@ import type { ColumnsType } from "antd/es/table";
 import type { Forecast } from "@/types/api";
 import { authFetch } from "@/utils/auth";
 import { DetailPageLayout, DetailSection } from "@/components/layout/DetailPageLayout";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 interface ForecastDetailParams {
@@ -60,11 +57,7 @@ export default function ForecastDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchForecast();
-  }, [params.id]);
-
-  const fetchForecast = async () => {
+  const fetchForecast = useCallback(async () => {
     if (!params.id) {
       setError("Forecast ID is required");
       setLoading(false);
@@ -84,7 +77,11 @@ export default function ForecastDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchForecast();
+  }, [fetchForecast]);
 
   const handleDelete = async () => {
     // TODO: Implement delete with confirmation

@@ -85,13 +85,18 @@ export function getEnvVarOrDefault(name: string, defaultValue: string): string {
 export function logEnvValidation(result: ValidationResult): void {
   if (typeof window === "undefined") {
     // Server-side only logging
+    // eslint-disable-next-line no-console
     if (result.warnings.length > 0) {
+      // eslint-disable-next-line no-console
       console.warn("Environment Variable Warnings:");
+      // eslint-disable-next-line no-console
       result.warnings.forEach((warning) => console.warn(`  - ${warning}`));
     }
 
     if (result.errors.length > 0) {
+      // eslint-disable-next-line no-console
       console.error("Environment Variable Errors:");
+      // eslint-disable-next-line no-console
       result.errors.forEach((error) => console.error(`  - ${error}`));
     }
   }

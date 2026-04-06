@@ -9,101 +9,70 @@ interface GlassCardProps extends CardProps {
    * @default "medium"
    */
   intensity?: "light" | "medium" | "heavy";
+  /**
+   * Shadow depth level (1-3). Higher = deeper shadow.
+   * @default 1
+   */
+  depth?: 1 | 2 | 3;
 }
 
-const intensityStyles = {
-  light: {
-    background: "rgba(255, 255, 255, 0.8)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-  },
-  medium: {
-    background: "rgba(255, 255, 255, 0.7)",
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-  },
-  heavy: {
-    background: "rgba(255, 255, 255, 0.6)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-  },
+const blurMap = {
+  light: "backdrop-blur-[10px]",
+  medium: "backdrop-blur-[16px]",
+  heavy: "backdrop-blur-[20px]",
 };
 
-const darkIntensityStyles = {
-  light: {
-    background: "rgba(30, 41, 59, 0.8)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-  },
-  medium: {
-    background: "rgba(30, 41, 59, 0.7)",
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-  },
-  heavy: {
-    background: "rgba(30, 41, 59, 0.6)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-  },
+const bgMapLight = {
+  light: "bg-white/80",
+  medium: "bg-white/70",
+  heavy: "bg-white/60",
+};
+
+const bgMapDark = {
+  light: "bg-slate-700/80",
+  medium: "bg-slate-700/70",
+  heavy: "bg-slate-700/60",
+};
+
+const depthShadows = {
+  1: "shadow-[0_1px_3px_rgba(0,0,0,0.06)]",
+  2: "shadow-[0_4px_12px_rgba(0,0,0,0.08)]",
+  3: "shadow-[0_8px_24px_rgba(0,0,0,0.12)]",
 };
 
 /**
  * GlassCard - A card component with subtle glassmorphism effect
  *
+ * Uses Tailwind dark: variants instead of MutationObserver for dark mode.
+ *
  * NOTE: Use sparingly. For most cases, use Ant Design Card with
  * variant="borderless" instead. GlassCard is best for hero sections
  * or special emphasis areas where visual distinction is needed.
- *
- * @example
- * ```tsx
- * <GlassCard intensity="medium">
- *   <p>Your content here</p>
- * </GlassCard>
- * ```
  */
 export const GlassCard: React.FC<GlassCardProps> = ({
   intensity = "medium",
+  depth = 1,
   children,
   className = "",
   style,
   ...props
 }) => {
-  const [isDark, setIsDark] = React.useState(false);
-
-  React.useEffect(() => {
-    // Check if dark mode is active
-    const checkDarkMode = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-
-    checkDarkMode();
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  const cardStyle: React.CSSProperties = {
-    background: isDark ? "rgba(30, 41, 59, 0.8)" : "rgba(255, 255, 255, 0.8)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    border: isDark
-      ? "1px solid rgba(255, 255, 255, 0.1)"
-      : "1px solid rgba(0, 0, 0, 0.06)",
-    borderRadius: 4,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
-    overflow: "hidden",
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-    ...style,
-  };
-
-  const cardClassName = `glass-card glass-card--${intensity} ${className}`.trim();
+  const classes = [
+    "glass-card",
+    `glass-card--${intensity}`,
+    "rounded-lg overflow-hidden border",
+    "border-black/[0.06] dark:border-white/10",
+    bgMapLight[intensity],
+    bgMapDark[intensity],
+    blurMap[intensity],
+    depthShadows[depth],
+    "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+    "hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)]",
+    className,
+  ].join(" ");
 
   return (
-    <Card className={cardClassName} style={cardStyle} {...props}>
+    <Card className={classes} style={style} variant="borderless" {...props}>
       {children}
     </Card>
   );

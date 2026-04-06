@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Button, Typography, Col, Row, Divider } from "antd";
-import { ArrowUpOutlined, GithubOutlined, TwitterOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, GithubOutlined, TwitterOutlined, MenuOutlined, CloseOutlined } from "@ant-design/icons";
 import dynamic from "next/dynamic";
 
 // Lazy load sections for better performance
@@ -22,6 +22,10 @@ const FAQ = dynamic(() => import("@/components/landing/FAQ"), {
   loading: () => <div style={{ height: "200px" }} />,
   ssr: false,
 });
+const SocialProof = dynamic(() => import("@/components/landing/SocialProof"), {
+  loading: () => <div style={{ height: "60px" }} />,
+  ssr: false,
+});
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -32,13 +36,14 @@ const { Title, Text, Paragraph } = Typography;
  * with hero section, features, pricing, FAQ, and getting started guide.
  */
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div style={{ overflowX: "hidden" }}>
-      {/* Navigation (simple) */}
+      {/* Navigation */}
       <header
         style={{
           position: "fixed",
@@ -53,6 +58,33 @@ export default function LandingPage() {
           padding: "16px 24px",
         }}
       >
+        <style>{`
+          @media (max-width: 768px) {
+            .landing-nav-links { display: none !important; }
+            .landing-nav-toggle { display: flex !important; }
+            .landing-nav-links.open {
+              display: flex !important;
+              position: absolute;
+              top: 100%;
+              left: 0;
+              right: 0;
+              background: rgba(255, 255, 255, 0.98);
+              backdrop-filter: blur(10px);
+              flex-direction: column;
+              padding: 16px 24px;
+              gap: 12px;
+              border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            }
+            .landing-nav-links.open a {
+              padding: 12px 0;
+              font-size: 16px;
+              display: block;
+            }
+          }
+          @media (min-width: 769px) {
+            .landing-nav-toggle { display: none !important; }
+          }
+        `}</style>
         <div
           style={{
             maxWidth: "1200px",
@@ -85,22 +117,21 @@ export default function LandingPage() {
             </Text>
           </div>
 
-          <nav style={{ display: "flex", gap: "32px", alignItems: "center" }}>
+          <nav
+            className={`landing-nav-links${mobileMenuOpen ? " open" : ""}`}
+            style={{ display: "flex", gap: "32px", alignItems: "center" }}
+          >
             <a
               href="#features"
-              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500 }}
+              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500, fontSize: "15px" }}
+              onClick={() => setMobileMenuOpen(false)}
             >
               Features
             </a>
             <a
-              href="#pricing"
-              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500 }}
-            >
-              Pricing
-            </a>
-            <a
               href="#faq"
-              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500 }}
+              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500, fontSize: "15px" }}
+              onClick={() => setMobileMenuOpen(false)}
             >
               FAQ
             </a>
@@ -118,11 +149,28 @@ export default function LandingPage() {
               Get Started
             </Button>
           </nav>
+
+          <Button
+            type="text"
+            className="landing-nav-toggle"
+            icon={mobileMenuOpen ? <CloseOutlined /> : <MenuOutlined />}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            style={{
+              display: "none",
+              minWidth: "44px",
+              minHeight: "44px",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          />
         </div>
       </header>
 
       {/* Hero Section */}
       <Hero />
+
+      {/* Social Proof Marquee */}
+      <SocialProof />
 
       {/* Features Section */}
       <Features />
@@ -138,13 +186,19 @@ export default function LandingPage() {
 
       {/* CTA Section */}
       <section
+        className="relative overflow-hidden"
         style={{
           padding: "clamp(60px, 8vw, 100px) 24px",
-          background: "#0066CC",
+          background: "linear-gradient(135deg, #0066CC 0%, #0077E6 50%, #3B82F6 100%)",
           textAlign: "center",
         }}
       >
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        {/* Decorative blurred circles */}
+        <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute bottom-10 right-20 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-white/3 blur-2xl" />
+
+        <div className="relative z-10" style={{ maxWidth: "800px", margin: "0 auto" }}>
           <Title
             level={2}
             style={{
@@ -173,15 +227,19 @@ export default function LandingPage() {
               padding: "0 40px",
               fontSize: "16px",
               fontWeight: 600,
-              borderRadius: "4px",
+              borderRadius: "8px",
               background: "#fff",
               color: "#0066cc",
               border: "none",
+              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.15)",
             }}
             href="/register"
           >
             Start Free Trial
           </Button>
+          <p className="mt-4 text-sm text-white/60">
+            No credit card required. Free 14-day trial.
+          </p>
         </div>
       </section>
 
@@ -273,7 +331,14 @@ export default function LandingPage() {
               type="text"
               icon={<ArrowUpOutlined />}
               onClick={scrollToTop}
-              style={{ color: "#94a3b8" }}
+              style={{
+                color: "#94a3b8",
+                minWidth: "44px",
+                minHeight: "44px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
             >
               Back to Top
             </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Form, Select, InputNumber, Input, Row, Col, Alert, Space, Divider, Card, Button, Collapse, Tag } from "antd";
+import { Form, Select, InputNumber, Input, Row, Col, Alert, Space, Divider, Button, Collapse, Tag, Card } from "antd";
 import {
   RobotOutlined,
   ThunderboltOutlined,
@@ -15,8 +15,6 @@ import { useList } from "@refinedev/core";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
-
-const { Panel } = Collapse;
 
 // IoTDB AI Node 原生支持的算法
 const AI_NODE_ALGORITHMS = [

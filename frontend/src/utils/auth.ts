@@ -110,6 +110,7 @@ export const isAuthenticated = (): boolean => {
 
   // Warn in development that this function is deprecated
   if (process.env.NODE_ENV === 'development' && !valid) {
+    // eslint-disable-next-line no-console
     console.warn('[DEPRECATED] isAuthenticated() only checks memory. Use verifyAuthentication() instead.');
   }
 
@@ -127,7 +128,7 @@ export async function verifyAuthentication(): Promise<boolean> {
       method: 'GET',
     });
     return response.ok;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

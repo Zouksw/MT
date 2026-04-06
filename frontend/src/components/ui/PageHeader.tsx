@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Typography, Breadcrumb, Space } from "antd";
+import { Typography, Breadcrumb } from "antd";
 import type { BreadcrumbProps } from "antd";
-import { HomeOutlined } from "@ant-design/icons";
+import { HomeOutlined, RightOutlined } from "@ant-design/icons";
 import { theme } from "antd";
 
 const { Title, Text } = Typography;
@@ -26,11 +26,12 @@ export interface PageHeaderProps {
  * PageHeader - Consistent page headers with title, description, and actions
  *
  * Provides a standardized header for pages with:
- * - Page title
+ * - Page title using Outfit display font
  * - Optional description
  * - Optional action buttons
- * - Optional breadcrumbs
- * - Consistent spacing and typography
+ * - Optional breadcrumbs with chevron separator
+ * - Gradient bottom border
+ * - Fade-in animation on mount
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
@@ -51,6 +52,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     lineHeight: 1.25,
     color: token.colorText,
     margin: "0 0 8px 0",
+    fontFamily: "var(--font-outfit), sans-serif",
+    letterSpacing: "-0.02em",
   };
 
   const descriptionStyle: React.CSSProperties = {
@@ -74,10 +77,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     : breadcrumbs;
 
   return (
-    <div className="page-header" style={headerStyle}>
+    <div className="page-header page-transition-fade-in" style={headerStyle}>
       {breadcrumbItems && breadcrumbItems.length > 0 && (
         <Breadcrumb
           items={breadcrumbItems}
+          separator={<RightOutlined style={{ fontSize: 10, color: "#94A3B8" }} />}
           style={{ marginBottom: token.marginMD }}
         />
       )}

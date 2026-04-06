@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Card, Button, Space, Typography, Spin, Tooltip as AntTooltip, Alert, Tag } from "antd";
+import { Card, Button, Space, Typography, Spin, Alert, Tag, Tooltip as AntTooltip } from "antd";
 import {
-    DownloadOutlined,
     FileImageOutlined,
     FileExcelOutlined,
     ExpandOutlined,
@@ -75,21 +74,6 @@ const Scatter = dynamic(
   { ssr: false }
 ) as React.ComponentType<any>;
 
-const ScatterChart = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ScatterChart })),
-  { ssr: false }
-) as React.ComponentType<any>;
-
-const ZAxis = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ZAxis })),
-  { ssr: false }
-) as React.ComponentType<any>;
-
-const ReferenceArea = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ReferenceArea })),
-  { ssr: false }
-) as React.ComponentType<any>;
-
 const Cell = dynamic(
   () => import("recharts").then((mod) => ({ default: mod.Cell })),
   { ssr: false }
@@ -138,7 +122,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
     timeseries,
     anomalies,
     historicalData = [],
-    threshold,
+    threshold: _threshold,
     method = "statistical",
     height = 450,
     onExport,
@@ -177,8 +161,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
         return data.sort((a, b) => a.timestamp - b.timestamp);
     }, [historicalData, anomalies]);
 
-    // Separate data for line chart and scatter plot
-    const lineData = chartData.filter(d => !d.isAnomaly);
+    // Separate data for scatter plot (anomalies)
     const anomalyScatterData = chartData.filter(d => d.isAnomaly);
 
     // Calculate statistics
@@ -243,6 +226,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 
             onExport?.('png');
         } catch (error) {
+            // eslint-disable-next-line no-console
             console.error('Failed to export chart:', error);
         } finally {
             setExporting(false);
@@ -273,6 +257,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 
             onExport?.('csv');
         } catch (error) {
+            // eslint-disable-next-line no-console
             console.error('Failed to export data:', error);
         }
     };

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Button,
-  Card,
   Form,
   Switch,
   Space,
@@ -15,14 +14,13 @@ import {
 import {
   MailOutlined,
   CheckCircleOutlined,
-  BellOutlined,
 } from "@ant-design/icons";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 interface NotificationPreferences {
   email: {
@@ -44,27 +42,27 @@ const defaultPreferences: NotificationPreferences = {
 
 export default function NotificationsSettingsPage() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  const loadPreferences = async () => {
+  const loadPreferences = useCallback(async () => {
     setLoading(true);
     try {
       // For now, use default preferences
       // In the future, this would fetch from the backend
       setPreferences(defaultPreferences);
       form.setFieldsValue(defaultPreferences);
-    } catch (error) {
+    } catch {
       message.error("Failed to load notification preferences");
     } finally {
       setLoading(false);
     }
-  };
+  }, [form]);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
 
   const handleSave = async (values: NotificationPreferences) => {
     setSaving(true);
@@ -74,7 +72,7 @@ export default function NotificationsSettingsPage() {
       localStorage.setItem("notificationPreferences", JSON.stringify(values));
       setPreferences(values);
       message.success("Notification preferences saved successfully");
-    } catch (error) {
+    } catch {
       message.error("Failed to save preferences");
     } finally {
       setSaving(false);

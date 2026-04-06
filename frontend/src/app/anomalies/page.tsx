@@ -6,7 +6,7 @@ import {
   ShowButton,
   useTable,
 } from "@refinedev/antd";
-import { Space, Tag, Typography } from "antd";
+import { Space, Tag } from "antd";
 import type { Breakpoint } from "antd";
 import { DateField, NumberField } from "@refinedev/antd";
 import { useList } from "@refinedev/core";
@@ -19,12 +19,9 @@ import {
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { ResponsiveStats } from "@/components/ui/MobileStatsCard";
 import { useIsMobile } from "@/lib/responsive-utils";
-
-const { Text } = Typography;
 
 export default function AnomalyList() {
   const { tableProps } = useTable({
@@ -159,7 +156,7 @@ export default function AnomalyList() {
 
   return (
     <PageContainer>
-      <List>
+      <List breadcrumb={false}>
         <PageHeader
           title="Detected Anomalies"
           description="AI-powered anomaly detection for your time series data"

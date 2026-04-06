@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Card,
   Space,
-  Typography,
   Table,
   Tag,
   Popconfirm,
@@ -20,15 +19,12 @@ import {
   SafetyOutlined,
   ExclamationCircleOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
-
-const { Title, Text } = Typography;
 
 interface Session {
   id: string;
@@ -91,11 +87,7 @@ export default function SessionsSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     setLoading(true);
     try {
       // In production, fetch from backend
@@ -107,11 +99,15 @@ export default function SessionsSettingsPage() {
         setSessions(mockSessions);
         setLoading(false);
       }, 500);
-    } catch (error) {
+    } catch {
       message.error("Failed to load sessions");
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   const handleRevokeSession = async (sessionId: string) => {
     setRevoking(sessionId);
@@ -124,7 +120,7 @@ export default function SessionsSettingsPage() {
         s.id === sessionId ? { ...s, isActive: false } : s
       ));
       message.success("Session revoked successfully");
-    } catch (error) {
+    } catch {
       message.error("Failed to revoke session");
     } finally {
       setRevoking(null);
@@ -141,13 +137,14 @@ export default function SessionsSettingsPage() {
         s.isCurrent ? s : { ...s, isActive: false }
       ));
       message.success("All other sessions revoked successfully");
-    } catch (error) {
+    } catch {
       message.error("Failed to revoke sessions");
     }
   };
 
   const activeSessions = sessions.filter(s => s.isActive);
-  const currentSession = sessions.find(s => s.isCurrent);
+  // Current session identified by isCurrent flag
+  sessions.find(s => s.isCurrent);
 
   const columns: ColumnsType<Session> = [
     {

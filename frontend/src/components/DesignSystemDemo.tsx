@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button, Input, Card, CardHeader, CardTitle, CardBody, CardFooter, Table } from "./ui";
+import { Button, Input, Card, CardHeader, CardTitle, CardBody, Table } from "./ui";
 
 interface DemoTableData {
   id: number;
@@ -273,7 +273,7 @@ export default function DesignSystemDemo() {
               <div>
                 <div className="h-20 bg-primary rounded-md mb-2"></div>
                 <p className="text-body font-medium">Primary</p>
-                <p className="text-body-sm text-gray-500 dark:text-gray-400">#F59E0B</p>
+                <p className="text-body-sm text-gray-500 dark:text-gray-400">#0066CC</p>
               </div>
               <div>
                 <div className="h-20 bg-secondary rounded-md mb-2"></div>

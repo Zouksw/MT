@@ -25,8 +25,6 @@ import {
 import {
   DownloadOutlined,
   FileTextOutlined,
-  FileExcelOutlined,
-  FilePdfOutlined,
   FileOutlined,
   CloudDownloadOutlined,
   CheckCircleOutlined,
@@ -252,7 +250,7 @@ export const DataExport: React.FC<DataExportProps> = ({
       }
 
       exportData(config);
-    } catch (error) {
+    } catch {
       // Validation failed
     }
   };

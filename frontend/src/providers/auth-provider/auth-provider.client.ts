@@ -78,6 +78,7 @@ export const authProviderClient: AuthProvider = {
       };
     } catch (error) {
       const safeError = errorHandler.handleApiError(error);
+      // eslint-disable-next-line no-console
       console.error("Login error:", safeError);
       return {
         success: false,
@@ -124,6 +125,7 @@ export const authProviderClient: AuthProvider = {
       };
     } catch (error) {
       const safeError = errorHandler.handleApiError(error);
+      // eslint-disable-next-line no-console
       console.error("Registration error:", safeError);
       return {
         success: false,
@@ -193,6 +195,7 @@ export const authProviderClient: AuthProvider = {
       await axiosInstance.post("/auth/logout");
     } catch (error) {
       // Log but don't block logout
+      // eslint-disable-next-line no-console
       console.error("Logout error:", errorHandler.handleApiError(error));
     } finally {
       // Always clear local tokens
@@ -257,7 +260,7 @@ export const authProviderClient: AuthProvider = {
       try {
         const parsedAuth = JSON.parse(auth);
         return parsedAuth.roles || [];
-      } catch (e) {
+      } catch {
         return [];
       }
     }
@@ -276,7 +279,7 @@ export const authProviderClient: AuthProvider = {
           avatar: parsedAuth.avatar,
           roles: parsedAuth.roles,
         };
-      } catch (e) {
+      } catch {
         return null;
       }
     }

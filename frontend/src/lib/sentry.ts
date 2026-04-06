@@ -38,7 +38,7 @@ async function loadSentry(): Promise<void> {
     // @ts-expect-error - @sentry/nextjs is an optional package
     const module = await import('@sentry/nextjs');
     sentryModule = module.default || module;
-  } catch (error) {
+  } catch {
     logger.warn('Sentry package not installed. Run: pnpm add @sentry/nextjs');
     sentryModule = null;
   }
@@ -53,25 +53,6 @@ interface SentryConfig {
   tracesSampleRate: number;
   enabled: boolean;
 }
-
-/**
- * Sensitive data patterns to filter from error reports
- */
-const SENSITIVE_PATTERNS = [
-  /password/i,
-  /token/i,
-  /secret/i,
-  /api[_-]?key/i,
-  /authorization/i,
-  /cookie/i,
-  /session/i,
-  /credit[_-]?card/i,
-  /ssn/i,
-  /social[_-]?security/i,
-  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, // Email addresses
-  /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, // Credit card numbers
-  /\b\d{3}-\d{2}-\d{4}\b/g, // SSN
-];
 
 /**
  * Initialize Sentry for error monitoring

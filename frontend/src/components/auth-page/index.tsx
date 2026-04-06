@@ -1,24 +1,12 @@
-/**
- * Modern Auth Page Component
- * Features:
- * - Split-screen layout with gradient background
- * - Modern glassmorphism effects
- * - Responsive design
- * - Smooth animations
- */
-
 "use client";
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Typography, Divider } from "antd";
 import {
   ThunderboltOutlined,
   LineChartOutlined,
   SafetyOutlined,
-  RocketOutlined,
   GithubOutlined,
-  TwitterOutlined,
 } from "@ant-design/icons";
 
 import { LoginForm } from "./LoginForm";
@@ -27,8 +15,6 @@ import { ForgotPasswordForm } from "./ForgotPasswordForm";
 import { UpdatePasswordForm } from "./UpdatePasswordForm";
 import type { AuthPageProps } from "./auth-types";
 
-const { Text, Link, Title } = Typography;
-
 export function AuthPage(props: AuthPageProps) {
   const router = useRouter();
 
@@ -36,49 +22,38 @@ export function AuthPage(props: AuthPageProps) {
     switch (props.type) {
       case "login":
         return (
-          <div style={{ textAlign: "center", marginTop: "24px" }}>
-            <Text style={{ fontSize: "14px", color: "#64748b" }}>
-              Don&apos;t have an account?{" "}
-              <Link
-                onClick={() => router.push("/register")}
-                style={{ cursor: "pointer", fontWeight: 600, color: "#0066CC" }}
-              >
-                Sign up
-              </Link>
-            </Text>
-            <br />
-            <Link
-              onClick={() => router.push("/forgot-password")}
-              style={{ cursor: "pointer", fontSize: "14px", color: "#64748b" }}
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Don&apos;t have an account?{" "}
+            <button
+              onClick={() => router.push("/register")}
+              className="font-semibold text-primary hover:text-primary-hover"
             >
-              Forgot password?
-            </Link>
-          </div>
+              Sign up
+            </button>
+          </p>
         );
       case "register":
         return (
-          <div style={{ textAlign: "center", marginTop: "24px" }}>
-            <Text style={{ fontSize: "14px", color: "#64748b" }}>
-              Already have an account?{" "}
-              <Link
-                onClick={() => router.push("/login")}
-                style={{ cursor: "pointer", fontWeight: 600, color: "#0066CC" }}
-              >
-                Sign in
-              </Link>
-            </Text>
-          </div>
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Already have an account?{" "}
+            <button
+              onClick={() => router.push("/login")}
+              className="font-semibold text-primary hover:text-primary-hover"
+            >
+              Sign in
+            </button>
+          </p>
         );
       case "forgotPassword":
       case "updatePassword":
         return (
-          <div style={{ textAlign: "center", marginTop: "24px" }}>
-            <Link
+          <div className="mt-6 text-center">
+            <button
               onClick={() => router.push("/login")}
-              style={{ cursor: "pointer", fontSize: "14px", color: "#64748b" }}
+              className="text-sm text-gray-500 hover:text-gray-700"
             >
               ← Back to login
-            </Link>
+            </button>
           </div>
         );
       default:
@@ -88,289 +63,120 @@ export function AuthPage(props: AuthPageProps) {
 
   const renderTitle = () => {
     switch (props.type) {
-      case "login":
-        return "Welcome back";
-      case "register":
-        return "Create your account";
-      case "forgotPassword":
-        return "Reset your password";
-      case "updatePassword":
-        return "Create new password";
-      default:
-        return "Welcome";
+      case "login": return "Welcome back";
+      case "register": return "Create your account";
+      case "forgotPassword": return "Reset your password";
+      case "updatePassword": return "Create new password";
+      default: return "Welcome";
     }
   };
 
   const renderDescription = () => {
     switch (props.type) {
-      case "login":
-        return "Enter your credentials to access your account";
-      case "register":
-        return "Start your 14-day free trial today. No credit card required.";
-      case "forgotPassword":
-        return "Enter your email and we'll send you a reset link";
-      case "updatePassword":
-        return "Create a strong password for your account";
-      default:
-        return "";
+      case "login": return "Enter your credentials to access your account";
+      case "register": return "Start your 14-day free trial. No credit card required.";
+      case "forgotPassword": return "Enter your email and we'll send you a reset link";
+      case "updatePassword": return "Create a strong password for your account";
+      default: return "";
     }
   };
 
   const renderForm = () => {
     switch (props.type) {
-      case "login":
-        return <LoginForm />;
-      case "register":
-        return <RegisterForm />;
-      case "forgotPassword":
-        return <ForgotPasswordForm />;
-      case "updatePassword":
-        return <UpdatePasswordForm token={(props as { token?: string }).token || ""} />;
-      default:
-        return <LoginForm />;
+      case "login": return <LoginForm />;
+      case "register": return <RegisterForm />;
+      case "forgotPassword": return <ForgotPasswordForm />;
+      case "updatePassword": return <UpdatePasswordForm token={(props as { token?: string }).token || ""} />;
+      default: return <LoginForm />;
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        background: `
-          linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-        `,
-      }}
-    >
-      {/* Left Side - Branding */}
-      <div
-        className="auth-page-left"
-        style={{
-          flex: "1",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "60px 40px",
-          background: `
-            linear-gradient(135deg, rgba(0, 102, 204, 0.95) 0%, rgba(0, 168, 232, 0.95) 100%)
-          `,
-          color: "#fff",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Animated background elements */}
+    <div className="flex min-h-screen">
+      {/* Left Side — Deep brand gradient with noise texture */}
+      <div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-gradient-to-br from-primary to-blue-700 text-white p-12">
+        {/* Subtle mesh gradient overlay */}
         <div
+          className="pointer-events-none absolute inset-0 opacity-30"
           style={{
-            position: "absolute",
-            width: "600px",
-            height: "600px",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)",
-            top: "-200px",
-            left: "-200px",
-            filter: "blur(60px)",
-            animation: "float 20s ease-in-out infinite",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: "500px",
-            height: "500px",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%)",
-            bottom: "-150px",
-            right: "-150px",
-            filter: "blur(60px)",
-            animation: "float 25s ease-in-out infinite reverse",
+            backgroundImage:
+              "radial-gradient(at 30% 20%, rgba(255,255,255,0.15), transparent 50%), radial-gradient(at 70% 80%, rgba(14,165,233,0.2), transparent 50%)",
           }}
         />
 
         {/* Content */}
-        <div style={{ position: "relative", zIndex: 1, maxWidth: "480px" }}>
+        <div className="relative z-10">
           {/* Logo */}
-          <div
-            style={{
-              width: "80px",
-              height: "80px",
-              borderRadius: "16px",
-              background: "rgba(255, 255, 255, 0.2)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: "32px",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <ThunderboltOutlined style={{ fontSize: "40px", color: "#fff" }} />
+          <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+            <ThunderboltOutlined className="text-3xl text-white" />
           </div>
 
-          <Title level={1} style={{ color: "#fff", fontSize: "42px", fontWeight: 700, marginBottom: "16px", lineHeight: 1.2 }}>
+          <h1 className="font-display text-4xl font-bold leading-tight">
             IoTDB Enhanced
-          </Title>
-
-          <Text style={{ fontSize: "18px", color: "rgba(255, 255, 255, 0.9)", display: "block", marginBottom: "48px", lineHeight: 1.6 }}>
+          </h1>
+          <p className="mt-4 max-w-sm text-lg leading-relaxed text-white/80">
             Enterprise-grade time series database platform with AI-powered forecasting and real-time analytics
-          </Text>
-
-          {/* Features */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  backdropFilter: "blur(10px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ThunderboltOutlined style={{ fontSize: "24px", color: "#fff" }} />
-              </div>
-              <div>
-                <Text style={{ fontSize: "16px", fontWeight: 600, color: "#fff", display: "block" }}>
-                  Lightning Fast
-                </Text>
-                <Text style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.8)" }}>
-                  Process millions of data points per second
-                </Text>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  backdropFilter: "blur(10px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <LineChartOutlined style={{ fontSize: "24px", color: "#fff" }} />
-              </div>
-              <div>
-                <Text style={{ fontSize: "16px", fontWeight: 600, color: "#fff", display: "block" }}>
-                  AI-Powered Insights
-                </Text>
-                <Text style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.8)" }}>
-                  Built-in forecasting and anomaly detection
-                </Text>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  backdropFilter: "blur(10px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <SafetyOutlined style={{ fontSize: "24px", color: "#fff" }} />
-              </div>
-              <div>
-                <Text style={{ fontSize: "16px", fontWeight: 600, color: "#fff", display: "block" }}>
-                  Enterprise Security
-                </Text>
-                <Text style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.8)" }}>
-                  End-to-end encryption and access control
-                </Text>
-              </div>
-            </div>
-          </div>
+          </p>
         </div>
 
-        {/* Social Links */}
-        <div style={{ position: "absolute", bottom: "40px", left: "40px", zIndex: 1 }}>
-          <Text style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.7)", display: "block", marginBottom: "16px" }}>
-            Follow us
-          </Text>
-          <div style={{ display: "flex", gap: "16px" }}>
-            <GithubOutlined style={{ fontSize: "24px", color: "rgba(255, 255, 255, 0.8)", cursor: "pointer" }} />
-            <TwitterOutlined style={{ fontSize: "24px", color: "rgba(255, 255, 255, 0.8)", cursor: "pointer" }} />
-          </div>
+        {/* Features */}
+        <div className="relative z-10 space-y-6">
+          {[
+            { icon: <ThunderboltOutlined />, title: "Lightning Fast", desc: "Millions of data points per second" },
+            { icon: <LineChartOutlined />, title: "AI-Powered Insights", desc: "Built-in forecasting and anomaly detection" },
+            { icon: <SafetyOutlined />, title: "Enterprise Security", desc: "End-to-end encryption and access control" },
+          ].map((f, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+                <span className="text-xl">{f.icon}</span>
+              </div>
+              <div>
+                <p className="font-semibold">{f.title}</p>
+                <p className="text-sm text-white/70">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Social */}
+        <div className="relative z-10 flex items-center gap-4 text-white/60">
+          <span className="text-sm">Follow us</span>
+          <GithubOutlined className="cursor-pointer text-xl text-white/70 transition-colors hover:text-white" />
         </div>
       </div>
 
-      {/* Right Side - Form */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "60px 40px",
-          background: "#fff",
-        }}
-      >
-        <div style={{ width: "100%", maxWidth: "440px" }}>
-          {/* Header */}
-          <div style={{ marginBottom: "40px" }}>
-            <Title level={2} style={{ fontSize: "32px", fontWeight: 700, color: "#111827", marginBottom: "12px" }}>
-              {renderTitle()}
-            </Title>
-            <Text style={{ fontSize: "16px", color: "#64748b", lineHeight: 1.6 }}>
-              {renderDescription()}
-            </Text>
-          </div>
+      {/* Right Side — Clean form */}
+      <div className="flex flex-1 items-center justify-center bg-white dark:bg-gray-900 px-6 py-12 md:px-12">
+        <div className="w-full max-w-md">
+          {/* Blue accent bar */}
+          <div className="mb-8 h-1 w-12 rounded-full bg-primary" />
+
+          <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white">
+            {renderTitle()}
+          </h2>
+          <p className="mt-3 text-base text-gray-500 dark:text-gray-400">
+            {renderDescription()}
+          </p>
 
           {/* Form */}
-          {renderForm()}
+          <div className="mt-8">
+            {renderForm()}
+          </div>
 
           {/* Footer */}
           {renderFooter()}
 
-          {/* Bottom branding */}
-          <Divider style={{ margin: "32px 0 24px", borderColor: "#e5e7eb" }} />
-          <div style={{ textAlign: "center" }}>
-            <Text style={{ fontSize: "13px", color: "#94a3b8" }}>
+          {/* Terms */}
+          <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-6 text-center">
+            <p className="text-xs text-gray-400">
               By continuing, you agree to our{" "}
-              <Link href="#" style={{ color: "#64748b" }}>
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="#" style={{ color: "#64748b" }}>
-                Privacy Policy
-              </Link>
-            </Text>
+              <a href="#" className="text-gray-500 hover:text-gray-700">Terms of Service</a>
+              {" "}and{" "}
+              <a href="#" className="text-gray-500 hover:text-gray-700">Privacy Policy</a>
+            </p>
           </div>
         </div>
       </div>
-
-      {/* Add animation keyframes */}
-      <style>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(30px, -30px);
-          }
-        }
-
-        @media (max-width: 968px) {
-          @media (min-width: 769px) {
-            .auth-page-left {
-              flex: 0 0 50% !important;
-            }
-          }
-        }
-      `}</style>
     </div>
   );
 }

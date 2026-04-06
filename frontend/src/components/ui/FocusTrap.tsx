@@ -130,6 +130,7 @@ export function useFocusManagement(dependencies: any[] = []) {
     if (hasChanged && dependencies.length > 0) {
       announceChange("Content updated");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 
   const moveToElement = useCallback((element: HTMLElement | null) => {
@@ -159,7 +160,6 @@ export interface LiveRegionProps {
 
 export const LiveRegion: React.FC<LiveRegionProps> = ({
   message,
-  role = "status",
   polite = true,
 }) => {
   if (!message) return null;

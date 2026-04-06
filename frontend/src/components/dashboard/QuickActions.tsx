@@ -1,9 +1,8 @@
 "use client";
 
 import React from "react";
-import { Card, Typography, Button, Space, Row, Col } from "antd";
+import { Card, Typography, Row, Col } from "antd";
 import {
-  PlusOutlined,
   DatabaseOutlined,
   ThunderboltOutlined,
   EyeOutlined,
@@ -19,7 +18,7 @@ interface QuickAction {
   description: string;
   icon: React.ReactNode;
   path: string;
-  type?: "primary" | "default" | "dashed";
+  primary?: boolean;
 }
 
 const quickActions: QuickAction[] = [
@@ -29,7 +28,7 @@ const quickActions: QuickAction[] = [
     description: "Create a new time series",
     icon: <DatabaseOutlined />,
     path: "/timeseries",
-    type: "primary",
+    primary: true,
   },
   {
     key: "create-forecast",
@@ -37,7 +36,6 @@ const quickActions: QuickAction[] = [
     description: "Generate AI predictions",
     icon: <ThunderboltOutlined />,
     path: "/forecasts/create",
-    type: "default",
   },
   {
     key: "view-alerts",
@@ -45,7 +43,6 @@ const quickActions: QuickAction[] = [
     description: "Check active alerts",
     icon: <EyeOutlined />,
     path: "/alerts",
-    type: "default",
   },
   {
     key: "detect-anomalies",
@@ -53,53 +50,52 @@ const quickActions: QuickAction[] = [
     description: "Run anomaly detection",
     icon: <ExperimentOutlined />,
     path: "/ai/anomalies",
-    type: "default",
   },
 ];
 
 export const QuickActions: React.FC = () => {
   const router = useRouter();
 
-  const handleAction = (action: QuickAction) => {
-    router.push(action.path);
-  };
-
   return (
     <Card
       variant="borderless"
       styles={{ body: { padding: "16px" } }}
     >
-      <Title level={5} style={{ fontSize: "16px", marginBottom: 16 }}>
+      <Title level={5} className="!text-base !mb-4">
         Quick Actions
       </Title>
       <Row gutter={[12, 12]}>
-        {quickActions.map((action) => (
+        {quickActions.map((action, i) => (
           <Col xs={12} sm={12} md={12} lg={12} key={action.key}>
-            <Button
-              block
-              type={action.type || "default"}
-              size="large"
-              icon={action.icon}
-              onClick={() => handleAction(action)}
-              style={{
-                height: "auto",
-                padding: "16px 12px",
-                textAlign: "left",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-              }}
+            <button
+              onClick={() => router.push(action.path)}
+              className={`
+                group relative w-full flex items-center gap-3 p-4 rounded-lg
+                text-left transition-all duration-200
+                stagger-slide-up
+                ${action.primary
+                  ? "bg-primary text-white hover:bg-primary-hover shadow-[0_1px_3px_rgba(0,102,204,0.2)] hover:shadow-[0_4px_12px_rgba(0,102,204,0.3)] hover:-translate-y-0.5 pulse-glow"
+                  : "bg-white dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 hover:border-primary/30 dark:hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5"
+                }
+              `}
+              style={{ animationDelay: `${i * 50}ms` }}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110 ${
+                action.primary
+                  ? "bg-white/20"
+                  : "bg-gray-50 dark:bg-gray-700 text-primary"
+              }`}>
+                <span className="text-lg">{action.icon}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className={`font-semibold text-sm leading-tight ${!action.primary ? "text-gray-900 dark:text-white" : ""}`}>
                   {action.title}
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>
+                <div className={`text-xs mt-0.5 ${action.primary ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
                   {action.description}
                 </div>
               </div>
-              <PlusOutlined style={{ fontSize: 12 }} />
-            </Button>
+            </button>
           </Col>
         ))}
       </Row>

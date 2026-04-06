@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback, Suspense } from "react";
-import { Card, Typography, Button, Space, Select, Tag, Spin, Alert, theme } from "antd";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Card, Typography, Button, Space, Tag, Spin, Alert } from "antd";
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -21,7 +21,6 @@ import {
 } from "@/lib/chart-config";
 
 const { Text } = Typography;
-const { useToken } = theme;
 
 // Dynamic imports for Recharts components to reduce initial bundle size
 const LineChart = dynamic(
@@ -93,14 +92,13 @@ interface RealTimeChartProps {
 
 export const RealTimeChart: React.FC<RealTimeChartProps> = ({
   timeseries = "root.test2",
-  autoScroll = true,
+  autoScroll: _autoScroll = true,
   maxPoints = 100,
   refreshInterval = 2000,
   showStatistics = true,
   height = 400,
   onDisconnect,
 }) => {
-  const { token } = useToken();
   const [data, setData] = useState<DataPoint[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);

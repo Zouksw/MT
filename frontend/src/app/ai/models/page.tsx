@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Table, Tag, Button, message, Card, Row, Col, Alert } from "antd";
+import { useState, useEffect, useCallback } from "react";
+import { Tag, Button, message, Card, Row, Col, Alert } from "antd";
 import type { Breakpoint } from "antd";
 import {
   ThunderboltOutlined,
@@ -33,15 +33,10 @@ interface AIModel {
 export default function AIModelsPage() {
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState<AIModel[]>([]);
-  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchModels();
-  }, []);
-
-  const fetchModels = async () => {
+  const fetchModels = useCallback(async () => {
     setLoading(true);
     setPermissionError(null);
     try {
@@ -62,7 +57,12 @@ export default function AIModelsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
 
   const columns = [
     {
@@ -115,7 +115,7 @@ export default function AIModelsPage() {
       key: "action",
       width: isMobile ? 80 : 120,
       fixed: "right" as const,
-      render: (_: any, record: AIModel) => (
+      render: (_: any, _record: AIModel) => (
         <Button
           type="primary"
           icon={<RocketOutlined />}

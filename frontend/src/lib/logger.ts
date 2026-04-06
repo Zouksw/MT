@@ -6,8 +6,6 @@
  * In development, all logs are shown.
  */
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
 interface LoggerInterface {
   debug(message: string, ...args: unknown[]): void;
   info(message: string, ...args: unknown[]): void;
@@ -24,23 +22,27 @@ class Logger implements LoggerInterface {
 
   debug(message: string, ...args: unknown[]): void {
     if (this.isDev) {
+      // eslint-disable-next-line no-console
       console.log(`[DEBUG] ${message}`, ...args);
     }
   }
 
   info(message: string, ...args: unknown[]): void {
     if (this.isDev) {
+      // eslint-disable-next-line no-console
       console.log(`[INFO] ${message}`, ...args);
     }
   }
 
   warn(message: string, ...args: unknown[]): void {
     // Always log warnings
+    // eslint-disable-next-line no-console
     console.warn(`[WARN] ${message}`, ...args);
   }
 
   error(message: string, ...args: unknown[]): void {
     // Always log errors
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] ${message}`, ...args);
   }
 }

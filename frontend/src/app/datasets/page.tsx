@@ -9,11 +9,10 @@ import {
   useTable,
   CreateButton,
 } from "@refinedev/antd";
-import { Space, Table, Tag } from "antd";
+import { Space, Tag } from "antd";
 import type { Breakpoint } from "antd";
 import { useList } from "@refinedev/core";
 import {
-  DatabaseOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 
@@ -145,7 +144,7 @@ export default function DatasetsList() {
 
   return (
     <PageContainer>
-      <List>
+      <List breadcrumb={false}>
         <PageHeader
           title="Datasets"
           description="Manage your time series datasets"

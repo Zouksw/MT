@@ -102,6 +102,7 @@ export function useErrorHandler() {
     const errorMessage = parseErrorMessage(error);
 
     if (logError) {
+      // eslint-disable-next-line no-console
       console.error("Error handled:", error);
     }
 

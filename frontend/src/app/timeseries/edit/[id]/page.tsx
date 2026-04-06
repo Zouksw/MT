@@ -15,7 +15,7 @@ export default function TimeseriesEdit() {
   });
 
   return (
-    <Edit saveButtonProps={saveButtonProps}>
+    <Edit saveButtonProps={saveButtonProps} breadcrumb={false}>
       <Form {...formProps} layout="vertical">
         <Form.Item
           label="Dataset"

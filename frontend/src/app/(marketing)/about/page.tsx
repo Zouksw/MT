@@ -8,11 +8,11 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Navigation */}
-      <nav className="border-b border-gray-200 dark:border-gray-800">
+      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-500 rounded-md flex items-center justify-center shadow-sm">
                 <span className="text-white font-bold text-lg">I</span>
               </div>
               <span className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50">
@@ -21,14 +21,14 @@ export default function AboutPage() {
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/" className="text-body text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">
-                首页
+                Home
               </Link>
               <a href="/pricing" className="text-body text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">
-                定价
+                Pricing
               </a>
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">
-                  登录
+                  Sign In
                 </Button>
               </Link>
             </div>
@@ -37,69 +37,89 @@ export default function AboutPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 bg-pattern-dots">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-display text-gray-900 dark:text-gray-50 mb-6">
-            关于我们
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium text-primary mb-6">
+            About Us
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-gray-50 mb-6 tracking-tight">
+            Building the Future of
+            <br />
+            <span className="text-primary">Time Series Analytics</span>
           </h1>
-          <p className="text-body-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-            我们致力于为工业物联网领域提供最强大的时序数据分析平台
+          <p className="text-body-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto">
+            We are dedicated to providing the most powerful time series data analytics platform
+            for the industrial IoT domain, empowering teams to make data-driven decisions at scale.
           </p>
         </div>
       </section>
 
-      {/* Mission Section */}
+      {/* Stats Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { number: "2024", label: "Founded", icon: "📅" },
+              { number: "500+", label: "Enterprise Users", icon: "🏢" },
+              { number: "50+", label: "Countries", icon: "🌍" },
+              { number: "1B+", label: "Data Points/Day", icon: "📊" },
+            ].map((stat, idx) => (
+              <div
+                key={idx}
+                className="stagger-slide-up bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center relative overflow-hidden group hover:-translate-y-1 transition-all duration-200"
+                style={{ animationDelay: `${idx * 80}ms` }}
+              >
+                {/* Subtle gradient top border */}
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-blue-400" />
+                <div className="text-2xl mb-3">{stat.icon}</div>
+                <div className="text-3xl md:text-4xl font-display font-bold text-primary mb-2">
+                  {stat.number}
+                </div>
+                <div className="text-body-sm text-gray-500 dark:text-gray-400 font-medium">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mission Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-h1 text-gray-900 dark:text-gray-50 mb-6">
-                我们的使命
+              <h2 className="text-h1 font-display text-gray-900 dark:text-gray-50 mb-6">
+                Our Mission
               </h2>
               <p className="text-body text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-                IoTDB Enhanced 致力于让时序数据分析变得简单、强大、可访问。
-                我们相信，每一个工业设备产生的数据都蕴含着巨大的价值，
-                而我们的任务是帮助您发现并利用这些价值。
+                IoTDB Enhanced is dedicated to making time series data analytics simple, powerful,
+                and accessible. We believe that every piece of data generated by industrial devices
+                contains immense value — our mission is to help you discover and leverage that value.
               </p>
               <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
-                通过集成最先进的 AI 技术，我们不仅提供数据存储和查询能力，
-                更提供预测、预警和智能分析功能，帮助企业在问题发生前就发现并解决它们。
+                By integrating cutting-edge AI technology, we provide not only data storage and query
+                capabilities, but also prediction, early warning, and intelligent analysis features —
+                helping enterprises identify and solve problems before they occur.
               </p>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <div className="text-4xl font-display font-bold text-primary mb-2">
-                    2024
+            <div className="bg-mesh-gradient rounded-xl p-8 border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-2 gap-8">
+                {[
+                  { value: "99.99%", label: "Platform Uptime" },
+                  { value: "<1ms", label: "Query Latency" },
+                  { value: "10M+", label: "Points per Second" },
+                  { value: "24/7", label: "Expert Support" },
+                ].map((stat, idx) => (
+                  <div key={idx} className="text-center">
+                    <div className="text-2xl font-display font-bold text-primary mb-1">
+                      {stat.value}
+                    </div>
+                    <div className="text-body-sm text-gray-500 dark:text-gray-400">
+                      {stat.label}
+                    </div>
                   </div>
-                  <div className="text-body-sm text-gray-500 dark:text-gray-400">
-                    成立年份
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-display font-bold text-primary mb-2">
-                    500+
-                  </div>
-                  <div className="text-body-sm text-gray-500 dark:text-gray-400">
-                    企业用户
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-display font-bold text-primary mb-2">
-                    50+
-                  </div>
-                  <div className="text-body-sm text-gray-500 dark:text-gray-400">
-                    国家地区
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-display font-bold text-primary mb-2">
-                    1B+
-                  </div>
-                  <div className="text-body-sm text-gray-500 dark:text-gray-400">
-                    数据点/天
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -107,111 +127,137 @@ export default function AboutPage() {
       </section>
 
       {/* Values Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-h1 text-gray-900 dark:text-gray-50 mb-4">
-              我们的核心价值观
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-primary-light dark:bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-3">
-                安全第一
-              </h3>
-              <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
-                数据安全是我们的首要任务。我们采用企业级加密、访问控制和审计机制，
-                确保您的数据始终安全。
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-success-light dark:bg-success/10 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-3">
-                追求卓越
-              </h3>
-              <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
-                我们不断优化性能、改进用户体验、引入最新技术，
-                确保平台始终保持行业领先水平。
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-info-light dark:bg-info/10 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-3">
-                用户至上
-              </h3>
-              <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
-                我们倾听用户的声音，快速响应需求，持续改进产品，
-                确保每个用户都能获得最佳体验。
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Team Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-h1 text-gray-900 dark:text-gray-50 mb-4">
-              领导团队
+            <h2 className="text-h1 font-display text-gray-900 dark:text-gray-50 mb-4">
+              Core Values
             </h2>
             <p className="text-body-lg text-gray-600 dark:text-gray-400">
-              来自世界顶级科技公司的资深专家
+              The principles that guide everything we build
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                name: "张明",
-                role: "CEO & 联合创始人",
-                bio: "前阿里云资深架构师，15年分布式系统经验",
+                number: "01",
+                title: "Security First",
+                description: "Data security is our top priority. We employ enterprise-grade encryption, access control, and audit mechanisms to keep your data safe at all times.",
+                color: "from-primary to-blue-400",
+                iconPath: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
               },
               {
-                name: "李娜",
-                role: "CTO & 联合创始人",
-                bio: "前Google AI研究员，专注于时序数据和机器学习",
+                number: "02",
+                title: "Pursuit of Excellence",
+                description: "We continuously optimize performance, improve user experience, and introduce the latest technologies to keep our platform at the industry's leading edge.",
+                color: "from-emerald-500 to-teal-400",
+                iconPath: "M13 10V3L4 14h7v7l9-11h-7z",
               },
               {
-                name: "王强",
+                number: "03",
+                title: "Customer First",
+                description: "We listen to our users, respond quickly to needs, and continuously improve our product to ensure every user gets the best possible experience.",
+                color: "from-blue-500 to-cyan-400",
+                iconPath: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
+              },
+            ].map((value, idx) => (
+              <div
+                key={idx}
+                className="stagger-slide-up relative bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 group hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+                style={{ animationDelay: `${idx * 80}ms` }}
+              >
+                {/* Faded number background */}
+                <div className="absolute top-4 right-4 text-7xl font-display font-bold text-gray-100 dark:text-gray-700/50 select-none leading-none">
+                  {value.number}
+                </div>
+
+                <div className="relative z-10">
+                  <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${value.color} flex items-center justify-center mb-4 shadow-sm transition-transform duration-200 group-hover:scale-110`}>
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={value.iconPath} />
+                    </svg>
+                  </div>
+                  <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-3">
+                    {value.title}
+                  </h3>
+                  <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {value.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-h1 font-display text-gray-900 dark:text-gray-50 mb-4">
+              Leadership Team
+            </h2>
+            <p className="text-body-lg text-gray-600 dark:text-gray-400">
+              Seasoned experts from world-class technology companies
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Ming Zhang",
+                nameZh: "张明",
+                role: "CEO & Co-Founder",
+                bio: "Former senior architect at Alibaba Cloud with 15 years of distributed systems experience",
+                gradient: "from-primary to-blue-400",
+              },
+              {
+                name: "Na Li",
+                nameZh: "李娜",
+                role: "CTO & Co-Founder",
+                bio: "Former Google AI researcher specializing in time series data and machine learning",
+                gradient: "from-purple-500 to-indigo-400",
+              },
+              {
+                name: "Qiang Wang",
+                nameZh: "王强",
                 role: "VP of Engineering",
-                bio: "前微软首席工程师，负责核心平台架构",
+                bio: "Former principal engineer at Microsoft responsible for core platform architecture",
+                gradient: "from-emerald-500 to-teal-400",
               },
             ].map((member, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700 text-center"
+                className="stagger-slide-up bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-center overflow-hidden group hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+                style={{ animationDelay: `${idx * 80}ms` }}
               >
-                <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary-hover rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <span className="text-3xl font-display font-bold text-white">
-                    {member.name[0]}
-                  </span>
+                {/* Gradient top strip */}
+                <div className={`h-20 bg-gradient-to-r ${member.gradient} opacity-80`} />
+
+                {/* Avatar overlapping gradient */}
+                <div className="relative -mt-10 mb-4">
+                  <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-br ${member.gradient} flex items-center justify-center ring-4 ring-white dark:ring-gray-800 shadow-lg transition-transform duration-200 group-hover:scale-105`}>
+                    <span className="text-2xl font-display font-bold text-white">
+                      {member.name[0]}
+                    </span>
+                  </div>
                 </div>
-                <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-1">
-                  {member.name}
-                </h3>
-                <p className="text-body-sm text-primary font-medium mb-3">
-                  {member.role}
-                </p>
-                <p className="text-body text-gray-600 dark:text-gray-400">
-                  {member.bio}
-                </p>
+
+                <div className="px-6 pb-6">
+                  <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-0.5">
+                    {member.name}
+                  </h3>
+                  <p className="text-body-sm text-gray-500 dark:text-gray-400 mb-0.5">
+                    {member.nameZh}
+                  </p>
+                  <p className="text-body-sm text-primary font-medium mb-3">
+                    {member.role}
+                  </p>
+                  <p className="text-body text-gray-600 dark:text-gray-400">
+                    {member.bio}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -219,22 +265,33 @@ export default function AboutPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-h1 text-gray-900 dark:text-gray-50 mb-6">
-            加入我们的旅程
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-600 to-blue-500" />
+        <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute bottom-10 right-20 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
+
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <h2 className="text-h1 font-display text-white mb-6">
+            Join Our Journey
           </h2>
-          <p className="text-body-lg text-gray-600 dark:text-gray-400 mb-10">
-            我们正在寻找有才华的人才加入我们的团队
+          <p className="text-body-lg text-white/90 mb-10">
+            We are looking for talented individuals to join our team
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/dashboard">
-              <Button variant="primary" size="lg" className="min-w-[160px]">
-                查看职位
+              <Button
+                className="bg-white text-primary hover:bg-gray-50 border-0 shadow-lg"
+                size="lg"
+              >
+                View Open Positions
               </Button>
             </Link>
-            <Button variant="ghost" size="lg" className="min-w-[160px]">
-              联系我们
+            <Button
+              variant="ghost"
+              size="lg"
+              className="!text-white !border-white/30 hover:!bg-white/10"
+            >
+              Contact Us
             </Button>
           </div>
         </div>
@@ -244,7 +301,7 @@ export default function AboutPage() {
       <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-body-sm text-gray-500 dark:text-gray-400">
-            © 2026 IoTDB Enhanced. All rights reserved.
+            &copy; 2026 IoTDB Enhanced. All rights reserved.
           </p>
         </div>
       </footer>

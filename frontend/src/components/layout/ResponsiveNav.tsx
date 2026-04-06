@@ -22,9 +22,8 @@ import {
   MenuFoldOutlined,
   BellOutlined,
 } from "@ant-design/icons";
-import { useBreakpoint, useIsMobile } from "@/lib/responsive-utils";
-import { BREAKPOINT, COMPONENT_BREAKPOINTS } from "@/lib/responsive-constants";
-import { Avatar, Dropdown, Badge, Space } from "antd";
+import { useIsMobile } from "@/lib/responsive-utils";
+import { Dropdown, Badge } from "antd";
 
 export interface NavItem {
   key: string;
@@ -101,7 +100,7 @@ interface DesktopSidebarProps {
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   collapsed = false,
-  onCollapse,
+  onCollapse: _onCollapse,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -235,7 +234,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 export const MobileTabBar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState(pathname);
+  const [, setActiveTab] = useState(pathname);
 
   const handleTabClick = (item: NavItem) => {
     setActiveTab(item.path);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Form,
@@ -32,10 +32,9 @@ import {
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
-import { StatCard } from "@/components/ui/StatCard";
-import { authFetch, getAuthToken, getCachedUser, setCachedUser } from "@/utils/auth";
+import { authFetch, getAuthToken, setCachedUser } from "@/utils/auth";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface UserProfile {
   id: string;
@@ -60,11 +59,7 @@ export default function ProfileSettingsPage() {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
 
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     setLoading(true);
     try {
       const token = getAuthToken();
@@ -81,12 +76,16 @@ export default function ProfileSettingsPage() {
         name: data.user.name,
         avatarUrl: data.user.avatarUrl || "",
       });
-    } catch (error) {
+    } catch {
       message.error("Failed to load profile");
     } finally {
       setLoading(false);
     }
-  };
+  }, [form]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
 
   const handleProfileUpdate = async (values: { name: string; avatarUrl: string }) => {
     setSaving(true);
@@ -110,7 +109,7 @@ export default function ProfileSettingsPage() {
       setUser(data.user);
       setCachedUser(data.user);
       message.success("Profile updated successfully");
-    } catch (error) {
+    } catch {
       message.error("Failed to update profile");
     } finally {
       setSaving(false);

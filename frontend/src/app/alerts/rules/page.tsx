@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Space,
   Typography,
@@ -37,8 +37,6 @@ import { authFetch } from "@/utils/auth";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 const { Text } = Typography;
-const { Option } = Select;
-const { TextArea } = Input;
 
 interface AlertRule {
   id: string;
@@ -88,12 +86,7 @@ export default function AlertRules() {
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchRules();
-    fetchTimeseries();
-  }, []);
-
-  const fetchRules = async () => {
+  const fetchRules = useCallback(async () => {
     setLoading(true);
     try {
       // Since rules are stored in user preferences, we need to get user data
@@ -106,14 +99,14 @@ export default function AlertRules() {
       const alertRules = preferences.alertRules || [];
 
       setRules(alertRules);
-    } catch (error) {
+    } catch {
       message.error("Failed to load alert rules");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTimeseries = async () => {
+  const fetchTimeseries = useCallback(async () => {
     try {
       const response = await authFetch(`${API_BASE}/api/timeseries`);
 
@@ -121,10 +114,15 @@ export default function AlertRules() {
 
       const data = await response.json();
       setTimeseries(data.timeseries || data.data || []);
-    } catch (error) {
+    } catch {
       message.error("Failed to fetch timeseries");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchRules();
+    fetchTimeseries();
+  }, [fetchRules, fetchTimeseries]);
 
   const handleCreate = () => {
     setEditingRule(null);
@@ -146,15 +144,13 @@ export default function AlertRules() {
 
       message.success("Alert rule deleted");
       fetchRules();
-    } catch (error) {
+    } catch {
       message.error("Failed to delete alert rule");
     }
   };
 
   const handleToggleEnabled = async (rule: AlertRule) => {
     try {
-      const updatedRule = { ...rule, enabled: !rule.enabled };
-
       await authFetch(`${API_BASE}/api/alerts/rules/${rule.id}`, {
         method: "PATCH",
         body: JSON.stringify({ enabled: !rule.enabled }),
@@ -162,7 +158,7 @@ export default function AlertRules() {
 
       fetchRules();
       message.success(`Alert rule ${!rule.enabled ? "enabled" : "disabled"}`);
-    } catch (error) {
+    } catch {
       message.error("Failed to update alert rule");
     }
   };
@@ -467,7 +463,7 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
 
       message.success(editingRule ? "Alert rule updated" : "Alert rule created");
       onSave();
-    } catch (error) {
+    } catch {
       message.error("Failed to save alert rule");
     } finally {
       setLoading(false);
@@ -499,9 +495,9 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
         >
           <Select placeholder="Select a timeseries" showSearch optionFilterProp="children">
             {timeseries.map((ts) => (
-              <Option key={ts.id} value={ts.id}>
+              <Select.Option key={ts.id} value={ts.id}>
                 {ts.name} ({ts.dataset.name})
-              </Option>
+              </Select.Option>
             ))}
           </Select>
         </Form.Item>
@@ -512,9 +508,9 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
           rules={[{ required: true, message: "Please select alert type" }]}
         >
           <Select>
-            <Option value="ANOMALY">Anomaly Detection</Option>
-            <Option value="FORECAST_READY">Forecast Ready</Option>
-            <Option value="SYSTEM">System Event</Option>
+            <Select.Option value="ANOMALY">Anomaly Detection</Select.Option>
+            <Select.Option value="FORECAST_READY">Forecast Ready</Select.Option>
+            <Select.Option value="SYSTEM">System Event</Select.Option>
           </Select>
         </Form.Item>
 
@@ -529,9 +525,9 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
                 style={{ width: "40%" }}
                 onChange={(value) => setConditionType(value)}
               >
-                <Option value="threshold">Threshold</Option>
-                <Option value="anomaly">Anomaly</Option>
-                <Option value="forecast">Forecast Ready</Option>
+                <Select.Option value="threshold">Threshold</Select.Option>
+                <Select.Option value="anomaly">Anomaly</Select.Option>
+                <Select.Option value="forecast">Forecast Ready</Select.Option>
               </Select>
             </Form.Item>
 
@@ -539,11 +535,11 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
               <>
                 <Form.Item name={["condition", "operator"]} noStyle initialValue=">">
                   <Select style={{ width: "30%" }}>
-                    <Option value=">">Greater than</Option>
-                    <Option value="<">Less than</Option>
-                    <Option value="=">Equals</Option>
-                    <Option value=">=">Greater or equal</Option>
-                    <Option value="<=">Less or equal</Option>
+                    <Select.Option value=">">Greater than</Select.Option>
+                    <Select.Option value="<">Less than</Select.Option>
+                    <Select.Option value="=">Equals</Select.Option>
+                    <Select.Option value=">=">Greater or equal</Select.Option>
+                    <Select.Option value="<=">Less or equal</Select.Option>
                   </Select>
                 </Form.Item>
                 <Form.Item
@@ -564,9 +560,9 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
           rules={[{ required: true, message: "Please select severity" }]}
         >
           <Select>
-            <Option value="INFO">Info</Option>
-            <Option value="WARNING">Warning</Option>
-            <Option value="ERROR">Error</Option>
+            <Select.Option value="INFO">Info</Select.Option>
+            <Select.Option value="WARNING">Warning</Select.Option>
+            <Select.Option value="ERROR">Error</Select.Option>
           </Select>
         </Form.Item>
 
@@ -591,9 +587,9 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
                       setNotificationChannels(newChannels);
                     }}
                   >
-                    <Option value="email">Email</Option>
-                    <Option value="webhook">Webhook</Option>
-                    <Option value="slack">Slack</Option>
+                    <Select.Option value="email">Email</Select.Option>
+                    <Select.Option value="webhook">Webhook</Select.Option>
+                    <Select.Option value="slack">Slack</Select.Option>
                   </Select>
                 </Form.Item>
 

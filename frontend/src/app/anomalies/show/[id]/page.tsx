@@ -10,11 +10,9 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  Row,
-  Col,
   Statistic,
   Tag,
   Button,
@@ -23,7 +21,6 @@ import {
   Alert,
   Timeline,
   Card,
-  Steps,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -69,11 +66,7 @@ export default function AnomalyDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchAnomaly();
-  }, [params.id]);
-
-  const fetchAnomaly = async () => {
+  const fetchAnomaly = useCallback(async () => {
     if (!params.id) {
       setError("Anomaly ID is required");
       setLoading(false);
@@ -93,7 +86,11 @@ export default function AnomalyDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchAnomaly();
+  }, [fetchAnomaly]);
 
   const handleResolve = async () => {
     // TODO: Implement resolve functionality

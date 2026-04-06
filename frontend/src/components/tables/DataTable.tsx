@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { Table, theme } from "antd";
 import type { TableProps as AntTableProps } from "antd";
 import { EmptyState, EmptyStateType } from "@/components/ui/EmptyState";
+import { useIsMobile } from "@/lib/responsive-utils";
 
 export interface DataTableProps<T = any> extends Omit<AntTableProps<T>, "className"> {
   enableZebraStriping?: boolean;
@@ -19,14 +20,10 @@ export interface DataTableProps<T = any> extends Omit<AntTableProps<T>, "classNa
 /**
  * DataTable - Enhanced table wrapper with consistent styling
  *
- * Provides a standardized table component with:
- * - Consistent cell padding
- * - Optional zebra striping
- * - Optional sticky header
- * - Enhanced pagination styling
- * - Responsive design
- * - Loading state support
- * - Empty state support
+ * Provides:
+ * - Desktop: standard table with zebra striping
+ * - Mobile: automatic card view per row
+ * - Consistent styling and pagination
  */
 export const DataTable = <T extends Record<string, any>>({
   enableZebraStriping = true,
@@ -39,11 +36,13 @@ export const DataTable = <T extends Record<string, any>>({
   emptyStateDescription,
   emptyStateActionText,
   emptyStateOnAction,
+  columns,
   ...props
 }: DataTableProps<T>) => {
   const { token } = theme.useToken();
+  const styleRef = useRef<HTMLStyleElement | null>(null);
+  const isMobile = useIsMobile();
 
-  // Memoize style content to avoid re-creating on every render
   const styleContent = useMemo(() => `
     .data-table .ant-table {
       border-radius: ${token.borderRadiusLG}px;
@@ -93,32 +92,38 @@ export const DataTable = <T extends Record<string, any>>({
       token.fontSizeSM, token.colorTextSecondary, token.colorBorder,
       token.colorBorderSecondary, token.paddingLG, token.paddingSM, token.paddingMD]);
 
-  // Check if data source is empty
+  useEffect(() => {
+    if (!styleRef.current) {
+      const el = document.createElement("style");
+      el.setAttribute("data-data-table", "");
+      document.head.appendChild(el);
+      styleRef.current = el;
+    }
+    styleRef.current.textContent = styleContent;
+    return () => {
+      if (styleRef.current && !document.querySelector(".data-table")) {
+        styleRef.current.remove();
+        styleRef.current = null;
+      }
+    };
+  }, [styleContent]);
+
   const dataSource = props.dataSource as T[] | undefined;
   const isEmpty = !dataSource || dataSource.length === 0;
 
-  // Enhanced row class name for zebra striping
-  const getRowClassName = (
-    record: T,
-    index: number | undefined,
-    _?: any,
-  ): string => {
+  const getRowClassName = (record: T, index: number | undefined, _?: any): string => {
     const classes: string[] = [];
-
     if (enableZebraStriping && index !== undefined && index % 2 === 1) {
       classes.push("data-table-row-zebra");
     }
-
     if (typeof rowClassName === "function") {
       classes.push(rowClassName(record, index ?? -1, _));
     } else if (typeof rowClassName === "string") {
       classes.push(rowClassName);
     }
-
     return classes.join(" ");
   };
 
-  // Default pagination configuration
   const defaultPagination = pagination || false;
 
   const paginationConfig = {
@@ -130,33 +135,75 @@ export const DataTable = <T extends Record<string, any>>({
     ...defaultPagination,
   };
 
+  // Mobile card view
+  if (isMobile && !isEmpty && dataSource) {
+    const visibleColumns = (columns || []).filter(
+      (col) => col.title && col.key !== "actions"
+    );
+
+    return (
+      <div className="space-y-3">
+        {dataSource.map((record, rowIndex) => (
+          <div
+            key={rowIndex}
+            className="rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/80 p-4 transition-all duration-200 active:scale-[0.98]"
+          >
+            {visibleColumns.map((col) => {
+              const value = record[(col as any).dataIndex as string];
+              if (value === undefined || value === null) return null;
+
+              return (
+                <div key={col.key as string} className="flex items-center justify-between py-1.5">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    {col.title as string}
+                  </span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white data-text">
+                    {col.render
+                      ? (col.render(value, record, rowIndex) as React.ReactNode)
+                      : String(value)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {/* Mobile pagination — simplified for card view */}
+        {pagination && defaultPagination && (
+          <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700">
+            {dataSource.length} items shown
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <EmptyState
+        type={emptyStateType}
+        title={emptyStateTitle}
+        description={emptyStateDescription}
+        actionText={emptyStateActionText}
+        onAction={emptyStateOnAction}
+      />
+    );
+  }
+
   return (
-    <>
-      {isEmpty ? (
-        <EmptyState
-          type={emptyStateType}
-          title={emptyStateTitle}
-          description={emptyStateDescription}
-          actionText={emptyStateActionText}
-          onAction={emptyStateOnAction}
-        />
-      ) : (
-        <Table<T>
-          {...props}
-          rowClassName={getRowClassName}
-          sticky={stickyHeader ? { offsetHeader: 64 } : undefined}
-          pagination={paginationConfig}
-          size={compact ? "small" : "middle"}
-          className={`data-table ${enableZebraStriping ? "data-table--striped" : ""} ${compact ? "data-table--compact" : ""}`}
-          style={{
-            fontSize: token.fontSize,
-            borderRadius: token.borderRadiusLG,
-            overflow: "hidden",
-          }}
-        />
-      )}
-      <style dangerouslySetInnerHTML={{ __html: styleContent }} />
-    </>
+    <Table<T>
+      {...props}
+      columns={columns}
+      rowClassName={getRowClassName}
+      sticky={stickyHeader ? { offsetHeader: 64 } : undefined}
+      pagination={paginationConfig}
+      size={compact ? "small" : "middle"}
+      className={`data-table ${enableZebraStriping ? "data-table--striped" : ""} ${compact ? "data-table--compact" : ""}`}
+      style={{
+        fontSize: token.fontSize,
+        borderRadius: token.borderRadiusLG,
+        overflow: "hidden",
+      }}
+    />
   );
 };
 

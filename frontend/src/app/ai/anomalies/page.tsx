@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Form, Input, InputNumber, Select, Button, Table, message, Spin, Row, Col, Statistic, Tag } from "antd";
+import { Form, Input, InputNumber, Select, Button, message, Spin, Row, Col, Tag } from "antd";
 import { AlertOutlined, WarningOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -29,16 +29,6 @@ interface Anomaly {
   value: number;
   score: number;
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-}
-
-interface AnomalyDetectionResult {
-  anomalies: Anomaly[];
-  statistics: {
-    total: number;
-    bySeverity: Record<string, number>;
-  };
-  ainode?: boolean;
-  method?: string;
 }
 
 interface VisualizationResult {
@@ -272,8 +262,8 @@ export default function AIAnomaliesPage() {
             historicalData={result.historical}
             anomalies={result.anomalies}
             method={result.method}
-            onExport={(format) => {
-              console.log(`Exported as ${format}`);
+            onExport={(_format) => {
+              // Export handled by AnomalyChart component
             }}
           />
 

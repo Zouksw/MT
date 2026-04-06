@@ -136,10 +136,10 @@ if (typeof window !== 'undefined') {
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      csrfProtection.initialize().catch(console.error);
+      csrfProtection.initialize().catch(() => { /* CSRF init failed */ });
     });
   } else {
     // Already loaded
-    csrfProtection.initialize().catch(console.error);
+    csrfProtection.initialize().catch(() => { /* CSRF init failed */ });
   }
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Typography, Row, Col, Button } from "antd";
 import {
   CheckCircleOutlined,
   RocketOutlined,
@@ -10,8 +9,8 @@ import {
   ThunderboltOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
-
-const { Title, Text } = Typography;
+import { Button } from "@/components/ui/Button";
+import { useIsMobile } from "@/lib/responsive-utils";
 
 interface Step {
   number: number;
@@ -25,272 +24,117 @@ const steps: Step[] = [
   {
     number: 1,
     title: "Create Your Account",
-    description: "Sign up for a free account and set up your organization. No credit card required for the trial period.",
+    description: "Sign up for a free account and set up your organization. No credit card required.",
     icon: <RocketOutlined />,
-    color: "#0066cc",
+    color: "bg-primary",
   },
   {
     number: 2,
     title: "Connect Your Data",
-    description: "Connect your existing IoTDB instance or start fresh. Import data from CSV, JSON, or use our REST API.",
+    description: "Connect your IoTDB instance or start fresh. Import from CSV, JSON, or use the REST API.",
     icon: <CloudServerOutlined />,
-    color: "#3b82f6",
+    color: "bg-blue-500",
   },
   {
     number: 3,
     title: "Configure & Customize",
-    description: "Set up alerts, create dashboards, and configure AI models for forecasting and anomaly detection.",
+    description: "Set up alerts, create dashboards, and configure AI models for forecasting and detection.",
     icon: <SettingOutlined />,
-    color: "#8b5cf6",
+    color: "bg-violet-500",
   },
   {
     number: 4,
     title: "Scale & Automate",
-    description: "Enable automated monitoring, set up API integrations, and scale your infrastructure as needed.",
+    description: "Enable automated monitoring, API integrations, and scale your infrastructure as needed.",
     icon: <ThunderboltOutlined />,
-    color: "#f59e0b",
+    color: "bg-amber-500",
   },
 ];
 
 const features = [
-  "5-minute quick start setup",
-  "Interactive tutorials and guides",
-  "Pre-built dashboard templates",
-  "Sample datasets to explore",
-  "24/7 community support",
-  "Comprehensive API documentation",
+  "5-minute quick start",
+  "Interactive tutorials",
+  "Dashboard templates",
+  "Sample datasets",
+  "Community support",
+  "API documentation",
 ];
 
 export default function GettingStarted() {
-  return (
-    <section
-      style={{
-        padding: "clamp(40px, 6vw, 100px) 24px",
-        background: "#fff",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Background decoration */}
-      <div
-        style={{
-          position: "absolute",
-          top: "-50%",
-          right: "-10%",
-          width: "600px",
-          height: "600px",
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #0066cc10 0%, #0077e610 100%)",
-          filter: "blur(80px)",
-          pointerEvents: "none",
-        }}
-      />
+  const isMobile = useIsMobile();
 
-      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative" }}>
+  return (
+    <section className="bg-white dark:bg-gray-900 px-6 py-16 md:py-24 lg:py-32">
+      <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "clamp(40px, 6vw, 80px)" }}>
-          <div
-            style={{
-              display: "inline-block",
-              padding: "8px 20px",
-              background: "linear-gradient(135deg, #0066cc15 0%, #0077e615 100%)",
-              borderRadius: "3px",
-              marginBottom: "16px",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: "14px",
-                fontWeight: 600,
-                background: "linear-gradient(135deg, #0066cc 0%, #0077e6 50%, #0088ff 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              QUICK START
-            </Text>
+        <div className="mb-12 text-center md:mb-16 lg:mb-20">
+          <div className="mb-4 inline-block rounded border border-primary/20 bg-primary/8 px-4 py-1.5">
+            <span className="text-sm font-semibold text-primary uppercase tracking-wide">
+              Quick Start
+            </span>
           </div>
-          <Title
-            level={2}
-            style={{
-              fontSize: "clamp(28px, 4vw, 42px)",
-              fontWeight: 700,
-              marginBottom: "16px",
-              background: "linear-gradient(135deg, #1e293b 0%, #475569 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
+          <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white md:text-4xl lg:text-5xl">
             Get Started in Minutes
-          </Title>
-          <Text style={{ fontSize: "18px", color: "#64748b" }}>
-            Set up your time series database platform quickly with our streamlined onboarding process
-          </Text>
+          </h2>
+          <p className="mx-auto mt-4 max-w-lg text-lg text-gray-500 dark:text-gray-400">
+            Set up your time series database platform with our streamlined onboarding
+          </p>
         </div>
 
         {/* Steps */}
-        <Row gutter={[16, 24]} style={{ marginBottom: "clamp(40px, 6vw, 80px)" }}>
+        <div className="relative mb-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0">
           {steps.map((step, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
-              <div
-                style={{
-                  position: "relative",
-                  height: "100%",
-                }}
-              >
-                {/* Step Number */}
+            <div key={index} className="relative">
+              {/* Dashed connector — only between steps on desktop */}
+              {!isMobile && index < steps.length - 1 && (
+                <div className="absolute right-0 top-1/2 hidden h-px w-8 -translate-y-1/2 border-t-2 border-dashed border-gray-200 dark:border-gray-700 lg:block" />
+              )}
+
+              <div className="group rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 p-6 pt-10 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                {/* Step number badge */}
                 <div
-                  style={{
-                    position: "absolute",
-                    top: "-20px",
-                    left: "20px",
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    background: `linear-gradient(135deg, ${step.color} 0%, ${step.color}dd 100%)`,
-                    color: "#fff",
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 1,
-                    boxShadow: `0 4px 12px ${step.color}40`,
-                  }}
+                  className={`absolute -top-4 left-6 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white shadow-md ${step.color}`}
                 >
                   {step.number}
                 </div>
 
-                {/* Step Card */}
-                <div
-                  style={{
-                    padding: "clamp(20px, 3vw, 32px) clamp(16px, 3vw, 24px) clamp(16px, 3vw, 24px)",
-                    borderRadius: "6px",
-                    background: "#fff",
-                    border: "1px solid #f1f5f9",
-                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-                    height: "100%",
-                    transition: "all 0.3s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = `0 8px 30px ${step.color}20`;
-                    e.currentTarget.style.borderColor = `${step.color}30`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.05)";
-                    e.currentTarget.style.borderColor = "#f1f5f9";
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "56px",
-                      height: "56px",
-                      borderRadius: "4px",
-                      background: `linear-gradient(135deg, ${step.color}15 0%, ${step.color}10 100%)`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <span style={{
-                      fontSize: "24px",
-                      color: step.color,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}>
-                      {step.icon}
-                    </span>
-                  </div>
-                  <Title
-                    level={4}
-                    style={{
-                      fontSize: "18px",
-                      fontWeight: 600,
-                      marginBottom: "12px",
-                      color: "#1e293b",
-                    }}
-                  >
-                    {step.title}
-                  </Title>
-                  <Text style={{ color: "#64748b", fontSize: "14px", lineHeight: "1.6" }}>
-                    {step.description}
-                  </Text>
+                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-700 text-xl ${step.color.replace("bg-", "text-").replace("500", "400")}`}>
+                  {step.icon}
                 </div>
-
-                {/* Arrow connector */}
-                {index < steps.length - 1 && window.innerWidth >= 992 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: "-16px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "#cbd5e1",
-                      fontSize: "20px",
-                    }}
-                  >
-                    <ArrowRightOutlined />
-                  </div>
-                )}
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                  {step.description}
+                </p>
               </div>
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
 
-        {/* Features List */}
-        <Row gutter={[8, 8]} style={{ maxWidth: "900px", margin: "0 auto clamp(32px, 5vw, 48px)" }}>
+        {/* Feature List */}
+        <div className="mx-auto mb-12 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           {features.map((feature, index) => (
-            <Col xs={24} sm={12} md={8} key={index}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "16px 20px",
-                  borderRadius: "4px",
-                  background: "#f8fafc",
-                  border: "1px solid #f1f5f9",
-                }}
-              >
-                <CheckCircleOutlined style={{ color: "#10b981", fontSize: "18px" }} />
-                <Text style={{ color: "#475569", fontSize: "15px", fontWeight: 500 }}>
-                  {feature}
-                </Text>
-              </div>
-            </Col>
+            <div
+              key={index}
+              className="flex items-center gap-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-5 py-4"
+            >
+              <CheckCircleOutlined className="text-lg text-green-500" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {feature}
+              </span>
+            </div>
           ))}
-        </Row>
+        </div>
 
         {/* CTA */}
-        <div style={{ textAlign: "center" }}>
-          <Button
-            size="large"
-            type="primary"
-            style={{
-              height: "56px",
-              padding: "0 48px",
-              fontSize: "16px",
-              fontWeight: 600,
-              borderRadius: "4px",
-              background: "linear-gradient(135deg, #0066cc 0%, #0077e6 50%, #0088ff 100%)",
-              border: "none",
-              boxShadow: "0 4px 20px rgba(0, 102, 204, 0.35)",
-            }}
-            href="/register"
-          >
-            Start Your Free Trial
+        <div className="text-center">
+          <Button size="lg" icon={<ArrowRightOutlined />}>
+            <a href="/register">Start Your Free Trial</a>
           </Button>
-          <div style={{ marginTop: "16px" }}>
-            <Text style={{ color: "#64748b", fontSize: "14px" }}>
-              No credit card required • 14-day free trial • Cancel anytime
-            </Text>
-          </div>
+          <p className="mt-4 text-sm text-gray-400">
+            No credit card required &middot; 14-day free trial &middot; Cancel anytime
+          </p>
         </div>
       </div>
     </section>

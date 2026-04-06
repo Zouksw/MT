@@ -5,6 +5,7 @@ export async function POST(request: NextRequest) {
     const metric = await request.json();
 
     // Log web vitals for monitoring
+    // eslint-disable-next-line no-console
     console.log("Web Vital:", {
       name: metric.name,
       value: metric.value,
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Failed to process web vital:", error);
     return NextResponse.json(
       { success: false, error: "Failed to process web vital" },

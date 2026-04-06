@@ -1,3 +1,8 @@
+import withBundleAnalyzer from '@next/bundle-analyzer';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@refinedev/antd"],
@@ -15,6 +20,13 @@ const nextConfig = {
   // Performance optimizations
   swcMinify: true,
   compress: true,
+
+  // Image optimization
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+  },
 
   // API Proxy - Rewrite API requests to backend server
   async rewrites() {
@@ -148,4 +160,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(
+  withBundleAnalyzer({
+    enabled: process.env.ANALYZE === 'true',
+  })(nextConfig)
+);

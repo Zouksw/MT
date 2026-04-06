@@ -25,7 +25,6 @@ interface TokenStorage {
 
 class SecureTokenManager implements TokenStorage {
   private readonly TOKEN_KEY = 'auth_token';
-  private readonly REFRESH_KEY = 'refresh_token';
 
   // Memory storage for immediate access
   private memoryToken: string | null = null;
@@ -57,6 +56,7 @@ class SecureTokenManager implements TokenStorage {
         // SessionStorage might be disabled (e.g., private browsing)
         // Token is still in HttpOnly cookie, so this is non-fatal
         if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
           console.warn('[TokenManager] SessionStorage unavailable:', e);
         }
       }
@@ -73,7 +73,7 @@ class SecureTokenManager implements TokenStorage {
    * NOTE: The backend sets the HttpOnly cookie. This method stores in memory/session
    * for immediate use during SPA navigation without additional API calls.
    */
-  setToken(token: string, rememberMe: boolean = false): void {
+  setToken(token: string, _rememberMe: boolean = false): void {
     // Store in memory for immediate use
     this.memoryToken = token;
 
@@ -85,6 +85,7 @@ class SecureTokenManager implements TokenStorage {
         // SessionStorage might be disabled or unavailable
         // Token is still in HttpOnly cookie, so this is non-fatal
         if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
           console.warn('[TokenManager] SessionStorage unavailable:', e);
         }
       }
@@ -107,6 +108,7 @@ class SecureTokenManager implements TokenStorage {
         // SessionStorage might be disabled
         // This is non-fatal as token will expire naturally
         if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
           console.warn('[TokenManager] SessionStorage unavailable:', e);
         }
       }

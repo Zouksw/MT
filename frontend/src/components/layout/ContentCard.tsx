@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Card, theme } from "antd";
-import type { CardProps as AntCardProps } from "antd";
 
 export interface ContentCardProps {
   className?: string;
@@ -13,16 +12,19 @@ export interface ContentCardProps {
   style?: React.CSSProperties;
   loading?: boolean;
   hoverable?: boolean;
+  /** Show a gradient accent strip at the top of the card */
+  accent?: boolean;
 }
 
 /**
  * ContentCard - Card with consistent styling
  *
  * Provides a standardized card component with:
- * - Consistent border radius
+ * - 8px border radius
  * - Subtle shadow
- * - Optional title and subtitle
+ * - Optional title with colored dot prefix
  * - Optional header actions
+ * - Optional gradient accent strip at top
  * - Loading state support
  */
 export const ContentCard: React.FC<ContentCardProps> = ({
@@ -31,14 +33,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   actions,
   children,
   className = "",
+  accent = false,
   ...props
 }) => {
   const { token } = theme.useToken();
 
   const cardStyle: React.CSSProperties = {
-    borderRadius: 4,
+    borderRadius: 8,
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
     marginBottom: token.marginLG,
+    transition: "box-shadow 0.2s ease",
   };
 
   const header = title || actions ? (
@@ -58,8 +62,22 @@ export const ContentCard: React.FC<ContentCardProps> = ({
               fontWeight: 600,
               color: token.colorText,
               margin: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
+            {/* Colored dot prefix */}
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#0066CC",
+                flexShrink: 0,
+                display: "inline-block",
+              }}
+            />
             {title}
           </div>
         )}
@@ -81,7 +99,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   return (
     <Card
-      className={`content-card ${className}`}
+      className={`content-card ${accent ? "content-card--accent" : ""} ${className}`}
       style={cardStyle}
       title={header}
       variant="borderless"

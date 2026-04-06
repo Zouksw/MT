@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { verifyAuthentication } from "@/utils/auth";
@@ -18,6 +18,7 @@ export default function IndexPage() {
           router.push("/dashboard");
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Auth check failed:', error);
       }
     };

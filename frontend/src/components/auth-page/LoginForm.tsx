@@ -90,6 +90,7 @@ export function LoginForm() {
     fontSize: "15px",
     border: "1px solid #e5e7eb",
     transition: "all 0.2s",
+    minWidth: 0,
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -144,7 +145,7 @@ export function LoginForm() {
       <Form.Item>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Form.Item name="remember" valuePropName="checked" noStyle>
-            <Checkbox style={{ fontSize: "14px" }}>Remember me</Checkbox>
+            <Checkbox style={{ fontSize: "14px", color: "#374151" }}>Remember me</Checkbox>
           </Form.Item>
           <a
             href="/forgot-password"

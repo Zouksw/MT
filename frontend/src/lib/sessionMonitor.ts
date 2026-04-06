@@ -88,6 +88,7 @@ class SessionMonitor {
     }, 'low');
 
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log('[SessionMonitor] Started monitoring');
     }
   }
@@ -104,6 +105,7 @@ class SessionMonitor {
     this.detachActivityListeners();
 
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log('[SessionMonitor] Stopped monitoring');
     }
   }
@@ -206,13 +208,14 @@ class SessionMonitor {
         try {
           const currentUrl = window.location.href;
           window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(currentUrl)}`;
-        } catch (error) {
+        } catch {
           // Navigation failed - ignore in tests
         }
       }
     }, 1000);
 
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log('[SessionMonitor] Session expired due to inactivity');
     }
   }
@@ -233,6 +236,7 @@ class SessionMonitor {
     window.dispatchEvent(event);
 
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log('[SessionMonitor] Session timeout warning triggered');
     }
   }

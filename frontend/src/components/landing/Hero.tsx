@@ -1,266 +1,237 @@
 "use client";
 
-import React from "react";
-import { Button, Space, Typography } from "antd";
+import React, { useEffect, useRef } from "react";
 import {
   ArrowRightOutlined,
   ThunderboltOutlined,
   LineChartOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
+import { Button } from "@/components/ui/Button";
 import GlassCard from "@/components/ui/GlassCard";
 
-const { Title, Paragraph, Text } = Typography;
+/**
+ * Animated sparkline — a tiny live-data visualization that communicates
+ * "this is a serious data product" at first glance.
+ */
+const DATA_STREAM = [
+  12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45, 42, 50, 48, 55, 52, 60,
+  58, 65, 62, 70, 68, 75, 72, 80, 78, 85, 82, 90,
+];
+
+function SparklineHero() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
+  const offsetRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const W = rect.width;
+    const H = rect.height;
+
+    function draw() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, W, H);
+
+      const offset = offsetRef.current;
+      const visiblePoints = 60;
+      const step = W / visiblePoints;
+
+      // Draw multiple data lines for richness
+      const lines = [
+        { data: DATA_STREAM, color: "rgba(0, 102, 204, 0.6)", width: 2 },
+        { data: DATA_STREAM.map((v) => v * 0.7 + 10), color: "rgba(59, 130, 246, 0.35)", width: 1.5 },
+        { data: DATA_STREAM.map((v) => v * 0.5 + 20), color: "rgba(14, 165, 233, 0.2)", width: 1 },
+      ];
+
+      lines.forEach(({ data, color, width: lw }) => {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        for (let i = 0; i < visiblePoints; i++) {
+          const idx = Math.floor((i + offset) % data.length);
+          const nextIdx = (idx + 1) % data.length;
+          const progress = (i + offset) % 1;
+          const value = data[idx] * (1 - progress) + data[nextIdx] * progress;
+          const x = i * step;
+          const y = H - (value / 100) * H * 0.8 - H * 0.1;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+
+      // Draw a subtle glow dot at the leading edge
+      const lastIdx = Math.floor((visiblePoints - 1 + offset) % DATA_STREAM.length);
+      const lastY = H - (DATA_STREAM[lastIdx] / 100) * H * 0.8 - H * 0.1;
+      const lastX = (visiblePoints - 1) * step;
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0, 102, 204, 0.9)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 8, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0, 102, 204, 0.15)";
+      ctx.fill();
+
+      offsetRef.current += 0.15;
+      animRef.current = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => cancelAnimationFrame(animRef.current);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="w-full h-48 md:h-64 lg:h-80 opacity-80"
+      style={{ display: "block" }}
+    />
+  );
+}
+
+const features = [
+  {
+    icon: <ThunderboltOutlined />,
+    title: "Lightning Fast",
+    description: "Millions of data points per second with sub-millisecond latency",
+    color: "bg-primary",
+  },
+  {
+    icon: <LineChartOutlined />,
+    title: "AI-Powered Insights",
+    description: "Built-in anomaly detection and forecasting with ML",
+    color: "bg-indigo-500",
+  },
+  {
+    icon: <SafetyOutlined />,
+    title: "Enterprise Security",
+    description: "End-to-end encryption, RBAC, and comprehensive audit logs",
+    color: "bg-sky-500",
+  },
+];
 
 /**
- * Hero Section - Commercial SaaS Landing Page Hero
+ * Hero Section — Data-product-first design
  *
- * Features a large headline, gradient text, CTAs, and feature highlights.
+ * Replaces generic gradient orbs with a live data stream visualization.
+ * Uses Tailwind utilities and the design system Button component.
  */
 export const Hero: React.FC = () => {
   return (
-    <section
-      style={{
-        minHeight: "auto",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        overflow: "hidden",
-        padding: "clamp(40px, 8vw, 60px) 24px",
-        background: `
-          radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 102, 204, 0.25), transparent),
-          radial-gradient(ellipse 60% 40% at 80% 50%, rgba(0, 168, 232, 0.15), transparent),
-          radial-gradient(ellipse 60% 40% at 20% 80%, rgba(0, 136, 255, 0.15), transparent)
-        `,
-      }}
-    >
-      {/* Animated gradient orbs */}
+    <section className="relative overflow-hidden bg-white dark:bg-gray-900">
+      {/* Subtle radial gradient for depth — NOT floating orbs */}
       <div
+        className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-20"
         style={{
-          position: "absolute",
-          width: "600px",
-          height: "600px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(0, 102, 204, 0.15) 0%, transparent 70%)",
-          top: "-200px",
-          left: "-200px",
-          filter: "blur(60px)",
-          animation: "float 20s ease-in-out infinite",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          width: "500px",
-          height: "500px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(0, 168, 232, 0.15) 0%, transparent 70%)",
-          bottom: "-150px",
-          right: "-150px",
-          filter: "blur(60px)",
-          animation: "float 25s ease-in-out infinite reverse",
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 102, 204, 0.2), transparent)",
         }}
       />
 
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          position: "relative",
-          zIndex: 1,
-          textAlign: "center",
-        }}
-      >
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-16 md:py-24 lg:py-32">
         {/* Badge */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "clamp(4px, 1vw, 6px) clamp(10px, 2vw, 16px)",
-            borderRadius: "3px",
-            background: "rgba(0, 102, 204, 0.08)",
-            border: "1px solid rgba(0, 102, 204, 0.2)",
-            marginBottom: "clamp(16px, 3vw, 24px)",
-          }}
-        >
-          <ThunderboltOutlined style={{ color: "#0066cc", marginRight: "8px" }} />
-          <Text style={{ color: "#0066cc", fontWeight: 500 }}>
-            Enterprise-Grade Time Series Database
-          </Text>
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium text-primary">
+          <ThunderboltOutlined className="text-xs" />
+          Enterprise-Grade Time Series Platform
         </div>
 
-        {/* Main Headline */}
-        <Title
-          level={1}
-          style={{
-            fontSize: "clamp(40px, 6vw, 72px)",
-            fontWeight: 700,
-            lineHeight: 1.25,
-            marginBottom: "24px",
-            color: "#111827",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          IoTDB Enhanced
-        </Title>
+        {/* Headline */}
+        <h1 className="font-display text-4xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white md:text-5xl lg:text-7xl">
+          Real-Time Analytics
+          <br />
+          <span className="text-primary">at Any Scale</span>
+        </h1>
 
-        <Title
-          level={2}
-          style={{
-            fontSize: "clamp(24px, 4vw, 42px)",
-            fontWeight: 600,
-            lineHeight: 1.2,
-            marginBottom: "24px",
-            color: "#1e293b",
-          }}
-        >
-          Real-Time Analytics at
-          <span style={{ color: "#0066cc" }}> Any Scale</span>
-        </Title>
-
-        <Paragraph
-          style={{
-            fontSize: "clamp(15px, 2.2vw, 18px)",
-            color: "#64748b",
-            maxWidth: "600px",
-            margin: "0 auto clamp(24px, 4vw, 40px)",
-            lineHeight: 1.5,
-          }}
-        >
+        <p className="mt-6 max-w-xl text-lg text-gray-500 dark:text-gray-400 md:text-xl">
           High-performance time series data platform with built-in anomaly detection,
-          forecasting, and real-time monitoring. Trusted by enterprises worldwide.
-        </Paragraph>
+          forecasting, and real-time monitoring.
+        </p>
 
         {/* CTA Buttons */}
-        <Space size="middle" style={{ marginBottom: "clamp(32px, 5vw, 60px)" }}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<ArrowRightOutlined />}
-            style={{
-              height: "52px",
-              padding: "0 32px",
-              fontSize: "16px",
-              fontWeight: 600,
-              borderRadius: "4px",
-              background: "#0066CC",
-              border: "none",
-              boxShadow: "0 2px 8px rgba(0, 102, 204, 0.15)",
-            }}
-            href="/register"
-          >
-            Get Started Free
+        <div className="mt-8 flex flex-wrap gap-4">
+          <Button size="lg" icon={<ArrowRightOutlined />}>
+            <a href="/register">Get Started Free</a>
           </Button>
-          <Button
-            size="large"
-            style={{
-              height: "52px",
-              padding: "0 32px",
-              fontSize: "16px",
-              fontWeight: 600,
-              borderRadius: "4px",
-              border: "2px solid #e2e8f0",
-              background: "rgba(255, 255, 255, 0.8)",
-            }}
-            href="#features"
-          >
-            View Demo
-          </Button>
-        </Space>
+          <a href="#features">
+            <Button variant="ghost" size="lg">
+              View Demo
+            </Button>
+          </a>
+        </div>
+
+        {/* Floating Metrics Bar */}
+        <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-400 dark:text-gray-500 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="text-primary font-bold text-base">10M+</span>
+            <span>Data Points/sec</span>
+          </div>
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+          <div className="flex items-center gap-2">
+            <span className="text-primary font-bold text-base">&lt;1ms</span>
+            <span>Latency</span>
+          </div>
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+          <div className="flex items-center gap-2">
+            <span className="text-primary font-bold text-base">99.99%</span>
+            <span>Uptime</span>
+          </div>
+        </div>
+
+        {/* Data Stream Visualization */}
+        <div className="mt-16 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 md:p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Live Data Stream
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Streaming</span>
+            </div>
+          </div>
+          <SparklineHero />
+        </div>
 
         {/* Feature Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: "clamp(12px, 2vw, 24px)",
-            marginTop: "clamp(24px, 4vw, 40px)",
-          }}
-        >
-          <GlassCard intensity="medium" style={{ padding: "24px" }}>
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "4px",
-                background: "#0066CC",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "16px",
-              }}
+        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+          {features.map((feature, i) => (
+            <GlassCard
+              key={i}
+              intensity="light"
+              className="group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover relative"
             >
-              <ThunderboltOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            </div>
-            <Title level={4} style={{ fontSize: "18px", marginBottom: "8px" }}>
-              Lightning Fast
-            </Title>
-            <Paragraph style={{ color: "#64748b", margin: 0 }}>
-              Millions of data points processed per second with sub-millisecond latency
-            </Paragraph>
-          </GlassCard>
-
-          <GlassCard intensity="medium" style={{ padding: "24px" }}>
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "4px",
-                background: "#6366F1",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <LineChartOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            </div>
-            <Title level={4} style={{ fontSize: "18px", marginBottom: "8px" }}>
-              AI-Powered Insights
-            </Title>
-            <Paragraph style={{ color: "#64748b", margin: 0 }}>
-              Built-in anomaly detection and forecasting powered by machine learning
-            </Paragraph>
-          </GlassCard>
-
-          <GlassCard intensity="medium" style={{ padding: "24px" }}>
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "4px",
-                background: "#0EA5E9",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <SafetyOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            </div>
-            <Title level={4} style={{ fontSize: "18px", marginBottom: "8px" }}>
-              Enterprise Security
-            </Title>
-            <Paragraph style={{ color: "#64748b", margin: 0 }}>
-              End-to-end encryption, role-based access control, and audit logs
-            </Paragraph>
-          </GlassCard>
+              {/* Large faded number prefix */}
+              <div className="absolute top-2 right-4 text-7xl font-display font-bold text-gray-100 dark:text-gray-800/60 select-none leading-none">
+                0{i + 1}
+              </div>
+              <div className="p-5 md:p-6 relative z-10">
+                <div
+                  className={`mb-4 flex h-12 w-12 items-center justify-center rounded-lg text-xl text-white ${feature.color} transition-transform duration-200 group-hover:scale-110`}
+                >
+                  {feature.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {feature.title}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {feature.description}
+                </p>
+              </div>
+            </GlassCard>
+          ))}
         </div>
       </div>
-
-      {/* Add keyframes for floating animation */}
-      <style>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(30px, -30px);
-          }
-        }
-      `}</style>
     </section>
   );
 };

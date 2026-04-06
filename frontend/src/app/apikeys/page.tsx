@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Table,
   Button,
   Space,
   Typography,
@@ -10,7 +9,6 @@ import {
   message,
   Modal,
   Input,
-  Card,
   Popconfirm,
   Alert,
   Row,
@@ -67,7 +65,7 @@ export default function ApiKeyList() {
   const [createdKey, setCreatedKey] = useState<CreateResponse | null>(null);
   const isMobile = useIsMobile();
 
-  const fetchApiKeys = async () => {
+  const fetchApiKeys = useCallback(async () => {
     setLoading(true);
     try {
       const response = await authFetch(`${API_BASE}/api/api-keys`);
@@ -78,16 +76,16 @@ export default function ApiKeyList() {
 
       const data = await response.json();
       setApiKeys(data.apiKeys || []);
-    } catch (error) {
+    } catch {
       message.error("Failed to load API keys");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchApiKeys();
-  }, []);
+  }, [fetchApiKeys]);
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) {
@@ -118,7 +116,7 @@ export default function ApiKeyList() {
       setExpiryDays(null);
       message.success("API key created successfully");
       fetchApiKeys();
-    } catch (error) {
+    } catch {
       message.error("Failed to create API key");
     }
   };
@@ -135,14 +133,9 @@ export default function ApiKeyList() {
 
       message.success("API key deleted");
       fetchApiKeys();
-    } catch (error) {
+    } catch {
       message.error("Failed to delete API key");
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    message.success("Copied to clipboard");
   };
 
   // Calculate statistics

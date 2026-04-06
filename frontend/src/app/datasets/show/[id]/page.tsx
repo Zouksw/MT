@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Row,
@@ -11,9 +11,7 @@ import {
   Tag,
   Button,
   Space,
-  Tabs,
   Descriptions,
-  Progress,
 } from "antd";
 import {
   EditOutlined,
@@ -21,7 +19,6 @@ import {
   DatabaseOutlined,
   LineChartOutlined,
   CloudDownloadOutlined,
-  EyeOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -51,12 +48,7 @@ export default function DatasetDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchDataset();
-    fetchTimeseries();
-  }, [params.id]);
-
-  const fetchDataset = async () => {
+  const fetchDataset = useCallback(async () => {
     if (!params.id) {
       setError("Dataset ID is required");
       setLoading(false);
@@ -76,9 +68,9 @@ export default function DatasetDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
 
-  const fetchTimeseries = async () => {
+  const fetchTimeseries = useCallback(async () => {
     if (!params.id) return;
 
     try {
@@ -88,9 +80,15 @@ export default function DatasetDetailPage() {
         setTimeseries(data.data || data.items || []);
       }
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Failed to fetch timeseries:", err);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchDataset();
+    fetchTimeseries();
+  }, [fetchDataset, fetchTimeseries]);
 
   const handleDelete = async () => {
     // TODO: Implement delete with confirmation
@@ -307,7 +305,7 @@ const timeseriesColumns: ColumnsType<TimeSeries> = [
     title: "Name",
     dataIndex: "name",
     key: "name",
-    render: (name, record) => (
+    render: (name, _record) => (
       <Space>
         <DatabaseOutlined />
         <span className="font-semibold text-gray-900 dark:text-gray-50">{name}</span>

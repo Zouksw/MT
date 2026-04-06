@@ -49,6 +49,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       const message = context ? `${context}: ${safeError.message}` : safeError.message;
       showError(message, safeError.code);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - show toast only once on mount
 
   // Don't show inline if showInline is false or if error shouldn't notify

@@ -22,11 +22,12 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
-// Mock nookies for cookie handling
-jest.mock('nookies', () => ({
-  parseCookies: jest.fn(() => ({})),
-  setCookie: jest.fn(),
-  destroyCookie: jest.fn(),
+// Mock js-cookie for cookie handling
+jest.mock('js-cookie', () => ({
+  get: jest.fn(() => ({})),
+  set: jest.fn(),
+  remove: jest.fn(),
+  getJSON: jest.fn(() => ({})),
 }))
 
 // Mock window.matchMedia

@@ -8,7 +8,7 @@
 "use client";
 
 import React from "react";
-import { Button, Space, Divider } from "antd";
+import { Button, Space } from "antd";
 import { PlusOutlined, MoreOutlined } from "@ant-design/icons";
 
 export interface Action {

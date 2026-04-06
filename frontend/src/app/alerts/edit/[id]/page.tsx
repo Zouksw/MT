@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import { Form, Input, Select, Switch, Button, Row, Col, Typography, Space, Divider, InputNumber } from "antd";
-import { ArrowLeftOutlined, BellOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useGo, useInvalidate, useNotification } from "@refinedev/core";
 import { useOne, useList } from "@refinedev/core";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
-
-const { Text } = Typography;
 
 const ALERT_TYPES = [
   { value: "ANOMALY", label: "Anomaly Detection" },

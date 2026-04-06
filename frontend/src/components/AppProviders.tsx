@@ -1,13 +1,12 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React from "react";
 import { DevtoolsProvider } from "@/providers/devtools";
 import { useNotificationProvider } from "@refinedev/antd";
 import { Refine } from "@refinedev/core";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 import routerProvider from "@refinedev/nextjs-router";
 import { App as AntdApp } from "antd";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
 import ErrorBoundaryWrapper from "@/components/ErrorBoundaryWrapper";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ColorModeContextProvider } from "@/contexts/color-mode";

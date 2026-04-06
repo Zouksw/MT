@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { Card, Typography, Tag, Spin } from "antd";
+import { Card, Typography, Spin } from "antd";
 import dynamic from "next/dynamic";
 
 const { Title } = Typography;
 
-// Dynamic imports for Recharts components to reduce initial bundle size
-const PieChart = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.PieChart })),
+// Dynamic imports for Recharts
+const BarChart = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.BarChart })),
   {
     loading: () => (
       <div className="flex items-center justify-center h-full">
@@ -19,18 +19,18 @@ const PieChart = dynamic(
   }
 ) as React.ComponentType<any>;
 
-const Pie = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Pie })),
+const Bar = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.Bar })),
   { ssr: false }
 ) as React.ComponentType<any>;
 
-const Cell = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Cell })),
+const XAxis = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.XAxis })),
   { ssr: false }
 ) as React.ComponentType<any>;
 
-const ResponsiveContainer = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
+const YAxis = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.YAxis })),
   { ssr: false }
 ) as React.ComponentType<any>;
 
@@ -39,8 +39,13 @@ const Tooltip = dynamic(
   { ssr: false }
 ) as React.ComponentType<any>;
 
-const Legend = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Legend })),
+const ResponsiveContainer = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
+  { ssr: false }
+) as React.ComponentType<any>;
+
+const Cell = dynamic(
+  () => import("recharts").then((mod) => ({ default: mod.Cell })),
   { ssr: false }
 ) as React.ComponentType<any>;
 
@@ -54,63 +59,33 @@ interface AlertDistributionChartProps {
   loading?: boolean;
 }
 
-const COLORS = {
-  critical: "#ef4444",
-  high: "#faad14",
-  medium: "#1890ff",
-  low: "#52c41a",
-};
-
-const RADIAN = Math.PI / 180;
-
-const renderCustomizedLabel = ({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  percent,
-}: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="white"
-      textAnchor={x > cx ? "start" : "end"}
-      dominantBaseline="central"
-      fontSize={12}
-      fontWeight={600}
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
+const SEVERITY_CONFIG = [
+  { name: "Critical", key: "critical", color: "#EF4444", mutedColor: "#FCA5A5" },
+  { name: "High", key: "high", color: "#F59E0B", mutedColor: "#FCD34D" },
+  { name: "Medium", key: "medium", color: "#3B82F6", mutedColor: "#93C5FD" },
+  { name: "Low", key: "low", color: "#10B981", mutedColor: "#6EE7B7" },
+];
 
 export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
   data,
   loading = false,
 }) => {
-  // Convert data to chart format
   const chartData = React.useMemo(() => {
     if (!data) {
-      return [
-        { name: "Critical", value: 2, color: COLORS.critical },
-        { name: "High", value: 5, color: COLORS.high },
-        { name: "Medium", value: 8, color: COLORS.medium },
-        { name: "Low", value: 12, color: COLORS.low },
-      ];
+      return SEVERITY_CONFIG.map((s) => ({
+        name: s.name,
+        value: s.key === "critical" ? 2 : s.key === "high" ? 5 : s.key === "medium" ? 8 : 12,
+        color: s.color,
+        mutedColor: s.mutedColor,
+      }));
     }
 
-    return [
-      { name: "Critical", value: data.critical || 0, color: COLORS.critical },
-      { name: "High", value: data.high || 0, color: COLORS.high },
-      { name: "Medium", value: data.medium || 0, color: COLORS.medium },
-      { name: "Low", value: data.low || 0, color: COLORS.low },
-    ].filter((item) => item.value > 0);
+    return SEVERITY_CONFIG.map((s) => ({
+      name: s.name,
+      value: (data as any)[s.key] || 0,
+      color: s.color,
+      mutedColor: s.mutedColor,
+    })).filter((item) => item.value > 0);
   }, [data]);
 
   const total = React.useMemo(
@@ -122,56 +97,79 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
     <Card
       loading={loading}
       variant="borderless"
-      style={{ height: "100%" }}
+      className="!h-full"
       styles={{ body: { padding: "16px" } }}
     >
-      <Title level={5} style={{ fontSize: "16px", marginBottom: 16 }}>
-        Alert Distribution
-      </Title>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1L15 14H1L8 1Z" stroke="#EF4444" strokeWidth="1.5" strokeLinejoin="round" fill="none"/>
+              <line x1="8" y1="6" x2="8" y2="9.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="8" cy="11.5" r="0.75" fill="#EF4444"/>
+            </svg>
+          </div>
+          <Title level={5} className="!text-base !mb-0">
+            Alert Distribution
+          </Title>
+        </div>
+        {total > 0 && (
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold font-mono data-text text-gray-900 dark:text-white">
+              {total}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">total</span>
+          </div>
+        )}
+      </div>
       {total > 0 ? (
         <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={renderCustomizedLabel}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
+          >
+            <XAxis type="number" hide />
+            <YAxis
+              dataKey="name"
+              type="category"
+              width={60}
+              tick={{ fontSize: 12, fill: "#6B7280" }}
+              axisLine={false}
+              tickLine={false}
+            />
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                border: "1px solid #e8e8e8",
+                backgroundColor: "rgba(255, 255, 255, 0.98)",
+                border: "1px solid #E5E7EB",
                 borderRadius: "8px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                padding: "10px 14px",
+                fontSize: 13,
               }}
+              formatter={(value: number, name: string) => [`${value} alerts`, name]}
+              cursor={{ fill: "rgba(0, 0, 0, 0.03)" }}
             />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              iconType="circle"
-              wrapperStyle={{ fontSize: 12 }}
-            />
-          </PieChart>
+            <Bar
+              dataKey="value"
+              radius={[0, 4, 4, 0]}
+              barSize={20}
+              isAnimationActive={true}
+              animationDuration={600}
+              animationEasing="ease-out"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.85} />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       ) : (
-        <div
-          style={{
-            height: 250,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#8c8c8c",
-          }}
-        >
-          No alerts
+        <div className="flex items-center justify-center text-gray-400 dark:text-gray-500" style={{ height: 250 }}>
+          <div className="text-center">
+            <div className="text-4xl mb-2">&#10003;</div>
+            <p className="text-sm">No alerts</p>
+          </div>
         </div>
       )}
     </Card>

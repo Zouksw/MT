@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Form, Input, Select, InputNumber, Button, Row, Col, Typography, Alert, Space, Divider } from "antd";
+import { Form, Input, Select, InputNumber, Button, Row, Col, Alert, Space, Divider } from "antd";
 import { ArrowLeftOutlined, AlertOutlined } from "@ant-design/icons";
 import { useGo, useInvalidate, useNotification } from "@refinedev/core";
 import { useOne, useList } from "@refinedev/core";
@@ -9,8 +9,6 @@ import { useOne, useList } from "@refinedev/core";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
-
-const { Text } = Typography;
 
 const SEVERITY_LEVELS = [
   { value: "LOW", label: "Low", color: "green" },

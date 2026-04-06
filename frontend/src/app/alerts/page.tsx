@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Space,
   Tag,
@@ -30,10 +30,9 @@ import "dayjs/locale/zh-cn";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { DataTable } from "@/components/tables/DataTable";
 import { ContentCard } from "@/components/layout/ContentCard";
-import { ResponsiveStats } from "@/components/ui/MobileStatsCard";
+import { DataPageStats } from "@/components/data/DataPageStats";
 import { authFetch } from "@/utils/auth";
 import { useIsMobile } from "@/lib/responsive-utils";
 
@@ -78,12 +77,7 @@ export default function AlertList() {
   });
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchAlerts();
-    fetchStats();
-  }, [filters]);
-
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -98,14 +92,14 @@ export default function AlertList() {
 
       const data = await response.json();
       setAlerts(data.alerts || []);
-    } catch (error) {
+    } catch {
       message.error("Failed to load alerts");
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await authFetch(`${API_BASE}/api/alerts/stats`);
 
@@ -113,10 +107,15 @@ export default function AlertList() {
 
       const result = await response.json();
       setStats(result.data || result);
-    } catch (error) {
+    } catch {
       // Stats are optional, don't show error to user
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAlerts();
+    fetchStats();
+  }, [fetchAlerts, fetchStats]);
 
   const handleMarkAsRead = async (alertId: string) => {
     try {
@@ -127,7 +126,7 @@ export default function AlertList() {
       fetchAlerts();
       fetchStats();
       message.success("Marked as read");
-    } catch (error) {
+    } catch {
       message.error("Failed to mark as read");
     }
   };
@@ -141,23 +140,21 @@ export default function AlertList() {
       fetchAlerts();
       fetchStats();
       message.success("All alerts marked as read");
-    } catch (error) {
+    } catch {
       message.error("Failed to mark all as read");
     }
   };
 
   const handleDeleteAlert = async (alertId: string) => {
     try {
-      const token = null;
       await fetch(`${API_BASE}/api/alerts/${alertId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       fetchAlerts();
       fetchStats();
       message.success("Alert deleted");
-    } catch (error) {
+    } catch {
       message.error("Failed to delete alert");
     }
   };
@@ -165,7 +162,7 @@ export default function AlertList() {
   const getAlertIcon = (type: string, severity: string) => {
     if (severity === "ERROR") return <CloseCircleOutlined style={{ color: "#EF4444" }} />;
     if (severity === "WARNING") return <WarningOutlined style={{ color: "#F59E0B" }} />;
-    return <InfoCircleOutlined style={{ color: "#3B82F6" }} />;
+    return <InfoCircleOutlined style={{ color: "#0066CC" }} />;
   };
 
   const getAlertTypeColor = (type: string) => {
@@ -382,29 +379,29 @@ export default function AlertList() {
         }
       />
 
-      {/* Statistics - Mobile-First Responsive Layout */}
+      {/* Statistics */}
       {stats && (
-        <ResponsiveStats
-          isMobile={isMobile}
+        <DataPageStats
           items={[
             {
               label: "Total Alerts",
               value: stats.total,
+              variant: "primary",
             },
             {
               label: "Unread",
               value: stats.unread,
-              color: stats.unread > 0 ? "#EF4444" : undefined,
+              variant: stats.unread > 0 ? "error" : "default",
             },
             {
               label: "Errors",
               value: stats.bySeverity.ERROR || 0,
-              color: "#EF4444",
+              variant: "error",
             },
             {
               label: "Warnings",
               value: stats.bySeverity.WARNING || 0,
-              color: "#F59E0B",
+              variant: "warning",
             },
           ]}
           featuredIndex={0}

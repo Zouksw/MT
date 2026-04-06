@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import useSWR, { SWRResponse, Key, KeyedMutator } from "swr";
+import { useState, useCallback } from "react";
+import useSWR, { Key, KeyedMutator } from "swr";
 import { errorHandler } from "@/lib/errorHandler";
 
 export interface RetryableFetchOptions {
@@ -98,6 +98,7 @@ export function useRetryableFetch<T = any>(
         // Calculate delay with exponential backoff
         const delay = getDelay(retryCount);
 
+        // eslint-disable-next-line no-console
         console.log(
           `[useRetryableFetch] Retry ${retryCount + 1}/${maxRetries} after ${delay}ms for ${key}:`,
           safeError.message
@@ -117,6 +118,7 @@ export function useRetryableFetch<T = any>(
       } else {
         // Max retries exceeded or error not recoverable
         if (retryCount >= maxRetries) {
+          // eslint-disable-next-line no-console
           console.error(
             `[useRetryableFetch] Max retries (${maxRetries}) exceeded for ${key}`
           );
@@ -127,6 +129,7 @@ export function useRetryableFetch<T = any>(
     onSuccess: () => {
       // Reset retry state on success
       if (retryCount > 0) {
+        // eslint-disable-next-line no-console
         console.log(
           `[useRetryableFetch] Success after ${retryCount} retries for ${key}`
         );

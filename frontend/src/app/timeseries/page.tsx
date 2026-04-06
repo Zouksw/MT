@@ -9,20 +9,17 @@ import {
   useTable,
   CreateButton,
 } from "@refinedev/antd";
-import { Space, Table, Tag } from "antd";
+import { Space, Tag } from "antd";
 import type { Breakpoint } from "antd";
 import { useList } from "@refinedev/core";
 import {
-  DatabaseOutlined,
-  AlertOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { DataTable } from "@/components/tables/DataTable";
-import { ResponsiveStats } from "@/components/ui/MobileStatsCard";
+import { DataPageStats } from "@/components/data/DataPageStats";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 export default function TimeseriesList() {
@@ -168,7 +165,7 @@ export default function TimeseriesList() {
 
   return (
     <PageContainer>
-      <List>
+      <List breadcrumb={false}>
         <PageHeader
           title="Time Series"
           description="Manage your time series data with real-time analytics"
@@ -189,36 +186,33 @@ export default function TimeseriesList() {
           }
         />
 
-        {/* Statistics - Mobile-First Responsive Layout */}
-        <div style={{ marginBottom: isMobile ? 16 : 32 }}>
-          <ResponsiveStats
-            isMobile={isMobile}
-            items={[
-              {
-                label: "Total Time Series",
-                value: totalTimeseries,
-                trend: timeseriesTrend,
-              },
-              {
-                label: "Data Points",
-                value: totalDataPoints,
-              },
-              {
-                label: "Anomalies",
-                value: totalAnomalies,
-                trend: anomaliesTrend,
-                color: totalAnomalies > 0 ? "#EF4444" : undefined,
-              },
-              // TODO: Replace with real storage usage data from API
-              {
-                label: "Storage",
-                value: "-",
-                suffix: "",
-              },
-            ]}
-            featuredIndex={0}
-          />
-        </div>
+        {/* Statistics */}
+        <DataPageStats
+          items={[
+            {
+              label: "Total Time Series",
+              value: totalTimeseries,
+              trend: timeseriesTrend,
+              variant: "primary",
+            },
+            {
+              label: "Data Points",
+              value: totalDataPoints,
+              variant: "success",
+            },
+            {
+              label: "Anomalies",
+              value: totalAnomalies,
+              trend: anomaliesTrend,
+              variant: totalAnomalies > 0 ? "error" : "default",
+            },
+            {
+              label: "Storage",
+              value: "-",
+            },
+          ]}
+          featuredIndex={0}
+        />
 
         {/* Data Table */}
         <DataTable

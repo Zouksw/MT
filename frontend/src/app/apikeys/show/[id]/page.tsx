@@ -10,11 +10,9 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  Row,
-  Col,
   Statistic,
   Card,
   Table,
@@ -23,9 +21,7 @@ import {
   Space,
   Descriptions,
   Alert,
-  Input,
   message,
-  Popconfirm,
   Progress,
 } from "antd";
 import {
@@ -35,7 +31,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  ClockCircleOutlined,
   SecurityScanOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -82,12 +77,7 @@ export default function ApiKeyDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchApiKey();
-    fetchUsageLogs();
-  }, [params.id]);
-
-  const fetchApiKey = async () => {
+  const fetchApiKey = useCallback(async () => {
     if (!params.id) {
       setError("API Key ID is required");
       setLoading(false);
@@ -106,14 +96,14 @@ export default function ApiKeyDetailPage() {
         // Create key preview (first 8 and last 4 characters)
         keyPreview: `${(data.data || data).key?.substring(0, 8)}${(data.data || data).key?.slice(-4)}`
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch {
+      setError("Unknown error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
 
-  const fetchUsageLogs = async () => {
+  const fetchUsageLogs = useCallback(async () => {
     if (!params.id) return;
 
     try {
@@ -122,10 +112,16 @@ export default function ApiKeyDetailPage() {
         const data = await response.json();
         setUsageLogs(data.data || data.items || []);
       }
-    } catch (err) {
-      console.error("Failed to fetch usage logs:", err);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.error("Failed to fetch usage logs:");
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchApiKey();
+    fetchUsageLogs();
+  }, [fetchApiKey, fetchUsageLogs]);
 
   const handleCopyKey = () => {
     if (apiKey?.key) {
@@ -137,25 +133,6 @@ export default function ApiKeyDetailPage() {
   const handleRegenerate = async () => {
     // TODO: Implement regenerate functionality
     message.info("Key regeneration will be implemented");
-  };
-
-  const handleRevoke = async () => {
-    if (!params.id) {
-      message.error("API Key ID is required");
-      return;
-    }
-
-    try {
-      const response = await authFetch(`/api/apikeys/${params.id}`, {
-        method: "DELETE"
-      });
-      if (response.ok) {
-        message.success("API key revoked successfully");
-        router.push("/apikeys");
-      }
-    } catch (err) {
-      message.error("Failed to revoke API key");
-    }
   };
 
   if (loading) {
