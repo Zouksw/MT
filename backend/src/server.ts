@@ -13,6 +13,8 @@ import { iotdbRouter } from '@/routes/iotdb';
 import apiKeysRouter from '@/routes/apiKeys';
 import alertsRouter from '@/routes/alerts';
 import healthRouter from '@/routes/health';
+import docsRouter from '@/routes/docs';
+import { metricsRouter } from '@/routes/metrics';
 import { errorHandler } from '@/middleware/errorHandler';
 import { logger } from '@/utils/logger';
 import { securityHeaders } from '@/middleware/security';
@@ -121,6 +123,12 @@ app.use('/api/anomalies', anomaliesRouter);
 app.use('/api/iotdb', iotdbRouter);
 app.use('/api/api-keys', apiKeysRouter);
 app.use('/api/alerts', alertsRouter);
+
+// API documentation
+app.use('/api/docs', docsRouter);
+
+// Performance metrics
+app.use('/api/metrics', metricsRouter);
 
 // Error handling
 app.use(errorHandler);

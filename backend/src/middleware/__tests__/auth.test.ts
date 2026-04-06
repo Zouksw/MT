@@ -60,7 +60,7 @@ describe('authenticate middleware', () => {
     await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'No token provided' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'No token provided', code: 'UNAUTHORIZED' } });
     expect(mockNext).not.toHaveBeenCalled();
   });
 
@@ -70,7 +70,7 @@ describe('authenticate middleware', () => {
     await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'No token provided' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'No token provided', code: 'UNAUTHORIZED' } });
   });
 
   it('should return 401 when token is blacklisted', async () => {
@@ -81,7 +81,7 @@ describe('authenticate middleware', () => {
 
     expect(mockIsTokenBlacklisted).toHaveBeenCalledWith('blacklisted-token');
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Token has been revoked' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'Token has been revoked', code: 'UNAUTHORIZED' } });
   });
 
   it('should return 401 when token is invalid', async () => {
@@ -95,7 +95,7 @@ describe('authenticate middleware', () => {
 
     expect(mockVerifyToken).toHaveBeenCalledWith('invalid-token');
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'Invalid or expired token', code: 'UNAUTHORIZED' } });
   });
 
   it('should return 401 when user not found', async () => {
@@ -111,7 +111,7 @@ describe('authenticate middleware', () => {
       select: { id: true, email: true, name: true, role: true },
     });
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'User not found', code: 'UNAUTHORIZED' } });
   });
 
   it('should authenticate and set user when token is valid', async () => {
@@ -141,7 +141,7 @@ describe('authenticate middleware', () => {
     await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(500);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Authentication failed' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'Authentication failed', code: 'INTERNAL_ERROR' } });
   });
 });
 
@@ -272,7 +272,7 @@ describe('authorize middleware', () => {
     await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Authentication required' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'Authentication required', code: 'UNAUTHORIZED' } });
   });
 
   it('should return 401 when no user object', async () => {
@@ -282,7 +282,7 @@ describe('authorize middleware', () => {
     await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'User information not found' });
+    expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: { message: 'User information not found', code: 'UNAUTHORIZED' } });
   });
 
   it('should return 403 when user role not in allowed roles', async () => {
@@ -293,9 +293,8 @@ describe('authorize middleware', () => {
 
     expect(mockRes.status).toHaveBeenCalledWith(403);
     expect(mockRes.json).toHaveBeenCalledWith({
-      error: 'Insufficient permissions',
-      required: ['admin'],
-      userRole: 'user',
+      success: false,
+      error: { message: 'Insufficient permissions', code: 'FORBIDDEN', required: ['admin'], userRole: 'user' },
     });
   });
 

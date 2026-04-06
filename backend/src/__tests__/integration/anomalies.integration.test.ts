@@ -28,56 +28,56 @@ describe('Anomalies Integration Tests', () => {
   });
 
   describe('GET /anomalies', () => {
-    test('should return anomalies list', async () => {
+    test('should require authentication', async () => {
       const response = await request(app)
         .get('/anomalies')
         .expect('Content-Type', /json/);
 
-      // Should return 200 with empty list or actual data
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('data');
+      // Should return 401 when not authenticated
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should accept pagination parameters', async () => {
+    test('should require authentication for pagination', async () => {
       const response = await request(app)
         .get('/anomalies?page=1&limit=10')
         .expect('Content-Type', /json/);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('success', true);
+      // Should require authentication
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should accept timeseriesId filter', async () => {
+    test('should require authentication for timeseriesId filter', async () => {
       const response = await request(app)
         .get('/anomalies?timeseriesId=test-timeseries-id');
 
-      // May return 200 with empty list, or error due to DB issues
-      expect([200, 404, 500]).toContain(response.status);
+      // Should require authentication
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should accept severity filter', async () => {
+    test('should require authentication for severity filter', async () => {
       const response = await request(app)
         .get('/anomalies?severity=HIGH')
         .expect('Content-Type', /json/);
 
-      expect(response.status).toBe(200);
+      // Should require authentication
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should accept isResolved filter', async () => {
+    test('should require authentication for isResolved filter', async () => {
       const response = await request(app)
         .get('/anomalies?isResolved=false')
         .expect('Content-Type', /json/);
 
-      expect(response.status).toBe(200);
+      // Should require authentication
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should validate limit parameter', async () => {
+    test('should require authentication even with invalid limit', async () => {
       const response = await request(app)
         .get('/anomalies?limit=invalid');
 
-      // Should return validation error or database error
-      expect([400, 200, 500]).toContain(response.status);
+      // Should require authentication or return validation error
+      expect([400, 401]).toContain(response.status);
     });
   });
 

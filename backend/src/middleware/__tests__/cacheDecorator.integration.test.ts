@@ -21,8 +21,11 @@ const mockRedis: any = {
   del: jest.fn(),
 };
 
-jest.mock('@/lib/redisPool', () => ({
-  getRedisClient: jest.fn().mockImplementation(() => Promise.resolve(mockRedis)) as any,
+jest.mock('@/lib/redis', () => ({
+  redis: jest.fn(() => Promise.resolve(mockRedis)),
+  getRedisClient: jest.fn(() => Promise.resolve(mockRedis)),
+  initRedis: jest.fn(() => Promise.resolve()),
+  initCache: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('@/lib/logger');
 
@@ -56,7 +59,8 @@ describe('cacheDecorator Integration Tests', () => {
       return Array.from(mockRedisData.keys()).filter(key => regex.test(key));
     });
 
-    mockRedis.del.mockImplementation(async (keys: string[]) => {
+    mockRedis.del.mockImplementation(async (...args: string[]) => {
+      const keys = Array.isArray(args[0]) ? args[0] : args;
       keys.forEach(key => mockRedisData.delete(key));
       return keys.length;
     });
@@ -108,7 +112,9 @@ describe('cacheDecorator Integration Tests', () => {
       expect(mockRedis.setEx).toHaveBeenCalled();
       const setExCall = mockRedis.setEx.mock.calls[0];
       expect(setExCall[0]).toContain('datasets:list');
-      expect(setExCall[1]).toBe(60);
+      // TTL has jitter applied (±10%), so it should be in range [54, 66]
+      expect(setExCall[1]).toBeGreaterThanOrEqual(54);
+      expect(setExCall[1]).toBeLessThanOrEqual(66);
 
       // Second request - cache hit
       mockRedis.get.mockResolvedValueOnce(JSON.stringify({

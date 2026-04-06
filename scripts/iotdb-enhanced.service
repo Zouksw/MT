@@ -1,0 +1,56 @@
+# ============================================================================
+# IoTDB Enhanced - Systemd Service File
+# ============================================================================
+# Resurrects PM2 managed processes after system reboot.
+#
+# Install:
+#   sudo cp /root/scripts/iotdb-enhanced.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable iotdb-enhanced
+#   sudo systemctl start iotdb-enhanced
+#
+# Verify:
+#   sudo systemctl status iotdb-enhanced
+#   pm2 list
+#
+# Logs:
+#   journalctl -u iotdb-enhanced -f
+# ============================================================================
+
+[Unit]
+Description=IoTDB Enhanced - PM2 Process Manager
+Documentation=https://github.com/your-org/iotdb-enhanced
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=forking
+User=root
+Group=root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/.local/share/pnpm:/root/.nvm/versions/node/v18.*/bin
+Environment=PM2_HOME=/root/.pm2
+Environment=PROJECT_ROOT=/root
+PIDFile=/root/.pm2/pm2.pid
+
+# Start: resurrect PM2 saved process list
+ExecStart=/usr/local/bin/pm2 resurrect
+# Reload: graceful reload of all processes
+ExecReload=/usr/local/bin/pm2 reload all
+# Stop: graceful shutdown of all processes
+ExecStop=/usr/local/bin/pm2 kill
+
+# Restart on failure
+Restart=on-failure
+RestartSec=10
+
+# Hardening
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iotdb-enhanced
+
+[Install]
+WantedBy=multi-user.target

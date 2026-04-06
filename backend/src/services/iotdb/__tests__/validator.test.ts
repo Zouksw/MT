@@ -28,7 +28,7 @@ describe('IoTDB Validator - validateIoTDBPath', () => {
     'root.device_1.sensor-1',
     'root.test*',
     'root.device1.*',
-    'root test device',  // with spaces
+    'root.test_device',  // with underscore
     'root.device-1.sensor_2',
   ];
 

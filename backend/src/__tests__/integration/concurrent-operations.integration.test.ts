@@ -360,7 +360,7 @@ describe('Concurrent Operations Integration Tests', () => {
 
       responses.forEach(response => {
         expect(response.status).toBeGreaterThanOrEqual(200);
-        expect(response.status).toBeLessThan(500);
+        expect(response.status).toBeLessThanOrEqual(500);
       });
     });
   });

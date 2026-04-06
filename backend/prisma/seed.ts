@@ -1,0 +1,1004 @@
+import { PrismaClient, type AlertSeverity, type AlertType, type AnomalySeverity, type DetectionMethod, type ModelAlgorithm, type StorageFormat, type UserRole } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const SALT_ROUNDS = 12;
+const NOW = new Date();
+const THIRTY_DAYS_AGO = new Date(NOW.getTime() - 30 * 24 * 60 * 60 * 1000);
+const SEVEN_DAYS_AGO = new Date(NOW.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/** Generate a random number between min and max */
+function rand(min: number, max: number): number {
+  return Math.random() * (max - min) + min;
+}
+
+/** Generate a random integer between min and max (inclusive) */
+function randInt(min: number, max: number): number {
+  return Math.floor(rand(min, max + 1));
+}
+
+/** Pick a random element from an array */
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** Generate a sine wave with noise - simulates realistic sensor data */
+function sineWave(
+  index: number,
+  baseValue: number,
+  amplitude: number,
+  period: number,
+  noiseAmplitude: number,
+): number {
+  const signal = Math.sin((2 * Math.PI * index) / period) * amplitude;
+  const noise = (Math.random() - 0.5) * 2 * noiseAmplitude;
+  return parseFloat((baseValue + signal + noise).toFixed(4));
+}
+
+/** Add an occasional anomaly spike */
+function withSpike(value: number, index: number, spikeChance: number = 0.02): number {
+  if (Math.random() < spikeChance) {
+    return parseFloat((value * (1 + (Math.random() > 0.5 ? 1 : -1) * rand(0.3, 0.8))).toFixed(4));
+  }
+  return value;
+}
+
+/** Generate a slug from a name */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** Sleep for ms milliseconds */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ============================================================================
+// Seed Data Definitions
+// ============================================================================
+
+interface UserInfo {
+  email: string;
+  password: string;
+  name: string;
+  role: UserRole;
+  avatarUrl?: string;
+}
+
+const USERS: UserInfo[] = [
+  {
+    email: 'admin@iotdb-enhanced.com',
+    password: 'Admin123!',
+    name: 'System Administrator',
+    role: 'ADMIN',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=SA&backgroundColor=3b82f6',
+  },
+  {
+    email: 'user@iotdb-enhanced.com',
+    password: 'User123!',
+    name: 'Jane DataScientist',
+    role: 'EDITOR',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=JD&backgroundColor=10b981',
+  },
+  {
+    email: 'demo@iotdb-enhanced.com',
+    password: 'Demo123!',
+    name: 'Demo User',
+    role: 'VIEWER',
+    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=DU&backgroundColor=f59e0b',
+  },
+];
+
+interface DatasetDef {
+  name: string;
+  description: string;
+  storageFormat: StorageFormat;
+  isPublic: boolean;
+  timeseries: TimeseriesDef[];
+}
+
+interface TimeseriesDef {
+  name: string;
+  description: string;
+  unit: string;
+  colorHex: string;
+  baseValue: number;
+  amplitude: number;
+  period: number;
+  noiseAmplitude: number;
+}
+
+const DATASETS: DatasetDef[] = [
+  {
+    name: 'Temperature Sensors - Building A',
+    description: 'Multi-zone temperature monitoring across Building A floors and rooms. Data collected from IoT sensors deployed in HVAC systems.',
+    storageFormat: 'IOTDB_CACHE',
+    isPublic: true,
+    timeseries: [
+      {
+        name: 'Zone 1 - Lobby Temperature',
+        description: 'Ground floor lobby ambient temperature readings',
+        unit: '\u00B0C',
+        colorHex: '#ef4444',
+        baseValue: 22,
+        amplitude: 4,
+        period: 288, // daily cycle in 5-min intervals
+        noiseAmplitude: 0.8,
+      },
+      {
+        name: 'Zone 2 - Server Room Temperature',
+        description: 'Server room rack inlet temperature',
+        unit: '\u00B0C',
+        colorHex: '#dc2626',
+        baseValue: 19,
+        amplitude: 2,
+        period: 288,
+        noiseAmplitude: 0.5,
+      },
+      {
+        name: 'Zone 3 - Rooftop Ambient',
+        description: 'Outdoor rooftop weather station temperature',
+        unit: '\u00B0C',
+        colorHex: '#f87171',
+        baseValue: 15,
+        amplitude: 8,
+        period: 288,
+        noiseAmplitude: 1.5,
+      },
+    ],
+  },
+  {
+    name: 'Server Room Monitoring',
+    description: 'Comprehensive server room environmental and power monitoring system with real-time alerts.',
+    storageFormat: 'IOTDB_CACHE',
+    isPublic: false,
+    timeseries: [
+      {
+        name: 'Rack Power Consumption',
+        description: 'Total power draw from primary server rack in kilowatts',
+        unit: 'kW',
+        colorHex: '#3b82f6',
+        baseValue: 4.5,
+        amplitude: 1.2,
+        period: 288,
+        noiseAmplitude: 0.3,
+      },
+      {
+        name: 'UPS Battery Level',
+        description: 'Uninterruptible power supply battery charge percentage',
+        unit: '%',
+        colorHex: '#22c55e',
+        baseValue: 98,
+        amplitude: 2,
+        period: 1440, // weekly discharge/charge cycle
+        noiseAmplitude: 0.5,
+      },
+      {
+        name: 'Network Latency',
+        description: 'Round-trip time to core switch in milliseconds',
+        unit: 'ms',
+        colorHex: '#a855f7',
+        baseValue: 2,
+        amplitude: 1,
+        period: 288,
+        noiseAmplitude: 0.5,
+      },
+    ],
+  },
+  {
+    name: 'Solar Panel Array - East Wing',
+    description: 'Performance metrics from the 50kW solar panel installation on the East Wing rooftop.',
+    storageFormat: 'IOTDB_CACHE',
+    isPublic: true,
+    timeseries: [
+      {
+        name: 'Power Output',
+        description: 'Total DC power output from the solar array',
+        unit: 'kW',
+        colorHex: '#f59e0b',
+        baseValue: 25,
+        amplitude: 20,
+        period: 288,
+        noiseAmplitude: 2,
+      },
+      {
+        name: 'Panel Temperature',
+        description: 'Average panel surface temperature',
+        unit: '\u00B0C',
+        colorHex: '#f97316',
+        baseValue: 35,
+        amplitude: 15,
+        period: 288,
+        noiseAmplitude: 2,
+      },
+    ],
+  },
+  {
+    name: 'Weather Station - Rooftop',
+    description: 'Comprehensive weather data collection from the rooftop meteorological station.',
+    storageFormat: 'CSV',
+    isPublic: true,
+    timeseries: [
+      {
+        name: 'Atmospheric Pressure',
+        description: 'Barometric pressure readings from the weather station',
+        unit: 'hPa',
+        colorHex: '#6366f1',
+        baseValue: 1013,
+        amplitude: 10,
+        period: 1440,
+        noiseAmplitude: 2,
+      },
+      {
+        name: 'Relative Humidity',
+        description: 'Ambient relative humidity percentage',
+        unit: '%',
+        colorHex: '#06b6d4',
+        baseValue: 60,
+        amplitude: 20,
+        period: 288,
+        noiseAmplitude: 5,
+      },
+      {
+        name: 'Wind Speed',
+        description: 'Anemometer wind speed measurements',
+        unit: 'm/s',
+        colorHex: '#14b8a6',
+        baseValue: 4,
+        amplitude: 3,
+        period: 144,
+        noiseAmplitude: 1.5,
+      },
+    ],
+  },
+  {
+    name: 'Manufacturing Line - Motor Vibration',
+    description: 'Vibration analysis data from industrial motors on Assembly Line 3. Used for predictive maintenance.',
+    storageFormat: 'IOTDB_CACHE',
+    isPublic: false,
+    timeseries: [
+      {
+        name: 'Motor A - Axial Vibration',
+        description: 'Axial vibration frequency from Motor A on assembly line',
+        unit: 'Hz',
+        colorHex: '#ec4899',
+        baseValue: 50,
+        amplitude: 8,
+        period: 288,
+        noiseAmplitude: 3,
+      },
+      {
+        name: 'Motor A - Radial Vibration',
+        description: 'Radial vibration frequency from Motor A on assembly line',
+        unit: 'Hz',
+        colorHex: '#d946ef',
+        baseValue: 45,
+        amplitude: 6,
+        period: 288,
+        noiseAmplitude: 2,
+      },
+    ],
+  },
+  {
+    name: 'Water Treatment Plant',
+    description: 'Water quality parameters from the municipal water treatment facility monitoring system.',
+    storageFormat: 'IOTDB_CACHE',
+    isPublic: true,
+    timeseries: [
+      {
+        name: 'pH Level',
+        description: 'Water pH level from treatment output',
+        unit: 'pH',
+        colorHex: '#84cc16',
+        baseValue: 7.2,
+        amplitude: 0.4,
+        period: 1440,
+        noiseAmplitude: 0.1,
+      },
+      {
+        name: 'Dissolved Oxygen',
+        description: 'Dissolved oxygen concentration in mg/L',
+        unit: 'mg/L',
+        colorHex: '#22d3ee',
+        baseValue: 8,
+        amplitude: 1.5,
+        period: 288,
+        noiseAmplitude: 0.3,
+      },
+      {
+        name: 'Turbidity',
+        description: 'Water turbidity measured in NTU',
+        unit: 'NTU',
+        colorHex: '#fbbf24',
+        baseValue: 0.5,
+        amplitude: 0.3,
+        period: 288,
+        noiseAmplitude: 0.1,
+      },
+    ],
+  },
+  {
+    name: 'HVAC Energy Consumption',
+    description: 'Heating, ventilation and air conditioning energy usage across campus buildings.',
+    storageFormat: 'CSV',
+    isPublic: false,
+    timeseries: [
+      {
+        name: 'Chiller Power Draw',
+        description: 'Main chiller unit power consumption',
+        unit: 'kW',
+        colorHex: '#64748b',
+        baseValue: 120,
+        amplitude: 40,
+        period: 288,
+        noiseAmplitude: 8,
+      },
+      {
+        name: 'Air Handler Flow Rate',
+        description: 'Total air flow rate through AHU-1',
+        unit: 'm\u00B3/h',
+        colorHex: '#78716c',
+        baseValue: 5000,
+        amplitude: 1500,
+        period: 288,
+        noiseAmplitude: 200,
+      },
+    ],
+  },
+  {
+    name: 'Electric Vehicle Charging Stations',
+    description: 'Usage and performance data from the 12-station EV charging hub in parking garage B2.',
+    storageFormat: 'IOTDB_CACHE',
+    isPublic: true,
+    timeseries: [
+      {
+        name: 'Grid Load',
+        description: 'Total grid power demand from all charging stations',
+        unit: 'kW',
+        colorHex: '#16a34a',
+        baseValue: 80,
+        amplitude: 60,
+        period: 288,
+        noiseAmplitude: 10,
+      },
+      {
+        name: 'Average Charging Rate',
+        description: 'Average charging rate across active stations',
+        unit: 'kW',
+        colorHex: '#059669',
+        baseValue: 22,
+        amplitude: 15,
+        period: 288,
+        noiseAmplitude: 3,
+      },
+    ],
+  },
+];
+
+const MODEL_DEFS: { algorithm: ModelAlgorithm; description: string }[] = [
+  { algorithm: 'ARIMA', description: 'Auto-Regressive Integrated Moving Average model' },
+  { algorithm: 'PROPHET', description: 'Facebook Prophet decomposition model' },
+  { algorithm: 'LSTM', description: 'Long Short-Term Memory neural network' },
+  { algorithm: 'TRANSFORMER', description: 'Attention-based Transformer model' },
+  { algorithm: 'ENSEMBLE', description: 'Weighted ensemble of multiple models' },
+];
+
+const SEVERITIES: AnomalySeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+const DETECTION_METHODS: DetectionMethod[] = ['STATISTICAL', 'ML_AUTOENCODER', 'RULE_BASED'];
+
+// ============================================================================
+// Main Seed Function
+// ============================================================================
+
+async function main() {
+  console.log('');
+  console.log('==========================================');
+  console.log('  IoTDB Enhanced - Database Seeding');
+  console.log('==========================================');
+  console.log('');
+
+  // ------------------------------------------------------------------
+  // 1. Clean existing data (respecting FK order)
+  // ------------------------------------------------------------------
+  console.log('[1/9] Cleaning existing data...');
+
+  // Delete in correct order respecting foreign key constraints
+  await prisma.forecast.deleteMany();
+  await prisma.forecastingModel.deleteMany();
+  await prisma.anomaly.deleteMany();
+  await prisma.alert.deleteMany();
+  await prisma.alertRule.deleteMany();
+  await prisma.datapoint.deleteMany();
+  await prisma.timeseries.deleteMany();
+  await prisma.saved_queries.deleteMany();
+  await prisma.dataset.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.securityAuditLog.deleteMany();
+  await prisma.apiKey.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.organization_members.deleteMany();
+  await prisma.organizations.deleteMany();
+  await prisma.user.deleteMany();
+  console.log('       All tables cleared.');
+
+  // ------------------------------------------------------------------
+  // 2. Create users
+  // ------------------------------------------------------------------
+  console.log('[2/9] Creating users...');
+
+  const users = [];
+  for (const u of USERS) {
+    const passwordHash = await bcrypt.hash(u.password, SALT_ROUNDS);
+    const user = await prisma.user.create({
+      data: {
+        email: u.email,
+        passwordHash,
+        name: u.name,
+        role: u.role,
+        avatarUrl: u.avatarUrl ?? null,
+        preferences: { theme: 'system', notifications: true, language: 'en' },
+        lastLoginAt: new Date(NOW.getTime() - randInt(1, 48) * 60 * 60 * 1000),
+      },
+    });
+    users.push(user);
+    console.log(`       Created: ${u.name} (${u.role}) <${u.email}>`);
+  }
+
+  const adminUser = users[0];
+  const editorUser = users[1];
+  const viewerUser = users[2];
+
+  // ------------------------------------------------------------------
+  // 3. Create organizations and memberships
+  // ------------------------------------------------------------------
+  console.log('[3/9] Creating organizations...');
+
+  const org = await prisma.organizations.create({
+    data: {
+      id: 'org-iotdb-enhanced',
+      owner_id: adminUser.id,
+      name: 'IoTDB Enhanced Corp',
+      slug: 'iotdb-enhanced-corp',
+      description: 'Primary organization for IoTDB Enhanced platform development and operations.',
+      logo_url: 'https://api.dicebear.com/7.x/identicon/svg?seed=iotdb&backgroundColor=3b82f6',
+      settings: { defaultTimezone: 'UTC', dataRetentionDays: 365 },
+    },
+  });
+
+  // Add members to organization
+  await prisma.organization_members.createMany({
+    data: [
+      { id: 'mem-admin', organization_id: org.id, user_id: adminUser.id, role: 'ADMIN' },
+      { id: 'mem-editor', organization_id: org.id, user_id: editorUser.id, role: 'EDITOR' },
+      { id: 'mem-viewer', organization_id: org.id, user_id: viewerUser.id, role: 'VIEWER' },
+    ],
+  });
+  console.log(`       Created: ${org.name}`);
+
+  // ------------------------------------------------------------------
+  // 4. Create datasets and timeseries
+  // ------------------------------------------------------------------
+  console.log('[4/9] Creating datasets and timeseries...');
+
+  const allTimeseries: { id: string; datasetId: string; name: string; unit: string; def: TimeseriesDef }[] = [];
+  let totalDatapoints = 0;
+
+  for (let di = 0; di < DATASETS.length; di++) {
+    const ds = DATASETS[di];
+    const owner = pick(users);
+    const dataset = await prisma.dataset.create({
+      data: {
+        organization_id: org.id,
+        ownerId: owner.id,
+        name: ds.name,
+        slug: slugify(ds.name),
+        description: ds.description,
+        storageFormat: ds.storageFormat,
+        isPublic: ds.isPublic,
+        isImported: ds.storageFormat === 'CSV',
+        sizeBytes: BigInt(0),
+        rowsCount: 0,
+        metadata: { source: 'seed-script', version: 1 },
+        lastAccessedAt: new Date(NOW.getTime() - randInt(0, 7) * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const tsIds: string[] = [];
+    for (const ts of ds.timeseries) {
+      const timeseries = await prisma.timeseries.create({
+        data: {
+          datasetId: dataset.id,
+          name: ts.name,
+          slug: slugify(ts.name),
+          description: ts.description,
+          colorHex: ts.colorHex,
+          unit: ts.unit,
+          timezone: 'UTC',
+          isAnomalyDetectionEnabled: true,
+        },
+      });
+      tsIds.push(timeseries.id);
+      allTimeseries.push({ id: timeseries.id, datasetId: dataset.id, name: ts.name, unit: ts.unit, def: ts });
+    }
+
+    // Generate datapoints for each timeseries in this dataset
+    // 30 days at 5-minute intervals = 8640 points per series
+    const POINTS_PER_SERIES = 8640;
+    const INTERVAL_MS = 5 * 60 * 1000;
+    const BATCH_SIZE = 500;
+
+    for (let ti = 0; ti < ds.timeseries.length; ti++) {
+      const tsDef = ds.timeseries[ti];
+      const tsId = tsIds[ti];
+
+      const batch: {
+        timeseriesId: string;
+        timestamp: Date;
+        valueJson: number;
+        qualityScore: number;
+        isOutlier: boolean;
+        isAnomaly: boolean;
+      }[] = [];
+
+      for (let i = 0; i < POINTS_PER_SERIES; i++) {
+        const timestamp = new Date(THIRTY_DAYS_AGO.getTime() + i * INTERVAL_MS);
+        let value = sineWave(i, tsDef.baseValue, tsDef.amplitude, tsDef.period, tsDef.noiseAmplitude);
+        const isOutlier = Math.random() < 0.015;
+        const isAnomaly = Math.random() < 0.005;
+
+        if (isOutlier) {
+          value = withSpike(value, i, 1.0);
+        }
+        if (isAnomaly) {
+          value = parseFloat((value * (1 + (Math.random() > 0.5 ? 1 : -1) * rand(0.5, 1.5))).toFixed(4));
+        }
+
+        batch.push({
+          timeseriesId: tsId,
+          timestamp,
+          valueJson: value,
+          qualityScore: parseFloat((0.9 + Math.random() * 0.1).toFixed(2)),
+          isOutlier,
+          isAnomaly,
+        });
+
+        if (batch.length >= BATCH_SIZE) {
+          await prisma.datapoint.createMany({ data: batch, skipDuplicates: true });
+          totalDatapoints += batch.length;
+          batch.length = 0;
+        }
+      }
+
+      // Flush remaining
+      if (batch.length > 0) {
+        await prisma.datapoint.createMany({ data: batch, skipDuplicates: true });
+        totalDatapoints += batch.length;
+      }
+    }
+
+    // Update dataset stats
+    await prisma.dataset.update({
+      where: { id: dataset.id },
+      data: {
+        sizeBytes: BigInt(POINTS_PER_SERIES * ds.timeseries.length * 128),
+        rowsCount: POINTS_PER_SERIES * ds.timeseries.length,
+      },
+    });
+
+    console.log(`       Dataset: ${ds.name} (${ds.timeseries.length} series, ${POINTS_PER_SERIES * ds.timeseries.length} points)`);
+  }
+
+  console.log(`       Total datapoints: ${totalDatapoints.toLocaleString()}`);
+
+  // ------------------------------------------------------------------
+  // 5. Create forecasting models
+  // ------------------------------------------------------------------
+  console.log('[5/9] Creating forecasting models...');
+
+  const models: { id: string; timeseriesId: string }[] = [];
+
+  // Create models for the first 5 timeseries
+  for (let i = 0; i < Math.min(5, allTimeseries.length); i++) {
+    const ts = allTimeseries[i];
+    const modelDef = MODEL_DEFS[i % MODEL_DEFS.length];
+    const trainedAt = new Date(NOW.getTime() - randInt(1, 14) * 24 * 60 * 60 * 1000);
+
+    const model = await prisma.forecastingModel.create({
+      data: {
+        timeseriesId: ts.id,
+        trainedById: pick(users).id,
+        algorithm: modelDef.algorithm,
+        hyperparameters: {
+          description: modelDef.description,
+          lookbackWindow: randInt(24, 168),
+          forecastHorizon: randInt(12, 72),
+          learningRate: parseFloat(rand(0.001, 0.01).toFixed(4)),
+          epochs: randInt(50, 200),
+          batchSize: pick([16, 32, 64, 128]),
+        },
+        trainingMetrics: {
+          mae: parseFloat(rand(0.1, 5).toFixed(4)),
+          rmse: parseFloat(rand(0.2, 7).toFixed(4)),
+          mape: parseFloat(rand(1, 15).toFixed(2)),
+          r2: parseFloat(rand(0.7, 0.99).toFixed(4)),
+          trainingTimeSeconds: randInt(30, 600),
+        },
+        version: randInt(1, 5),
+        isActive: Math.random() > 0.2,
+        trainedAt,
+        deployedAt: Math.random() > 0.3 ? new Date(trainedAt.getTime() + randInt(1, 60) * 60 * 1000) : null,
+      },
+    });
+    models.push({ id: model.id, timeseriesId: ts.id });
+    console.log(`       Model: ${modelDef.algorithm} -> ${ts.name}`);
+  }
+
+  // ------------------------------------------------------------------
+  // 6. Create forecasts
+  // ------------------------------------------------------------------
+  console.log('[6/9] Creating forecasts...');
+
+  let totalForecasts = 0;
+
+  for (const model of models) {
+    // Generate 48 forecast points (4 hours ahead at 5-min intervals)
+    const forecastBatch: {
+      modelId: string;
+      timeseriesId: string;
+      timestamp: Date;
+      predictedValue: number;
+      lowerBound: number;
+      upperBound: number;
+      confidence: number;
+      anomalyProbability: number | null;
+      isAnomaly: boolean;
+    }[] = [];
+
+    const baseTs = allTimeseries.find((t) => t.id === model.timeseriesId);
+    const baseValue = baseTs?.def.baseValue ?? 50;
+
+    for (let i = 0; i < 48; i++) {
+      const timestamp = new Date(NOW.getTime() + i * 5 * 60 * 1000);
+      const predicted = baseValue + Math.sin(i / 6) * (baseTs?.def.amplitude ?? 5) + (Math.random() - 0.5) * 2;
+      const uncertainty = (i / 48) * 5 + 1; // uncertainty grows with horizon
+      const confidence = Math.max(0.5, 0.98 - i * 0.008);
+
+      forecastBatch.push({
+        modelId: model.id,
+        timeseriesId: model.timeseriesId,
+        timestamp,
+        predictedValue: parseFloat(predicted.toFixed(6)),
+        lowerBound: parseFloat((predicted - uncertainty).toFixed(6)),
+        upperBound: parseFloat((predicted + uncertainty).toFixed(6)),
+        confidence: parseFloat(confidence.toFixed(2)),
+        anomalyProbability: i > 30 ? parseFloat(rand(0.05, 0.4).toFixed(2)) : null,
+        isAnomaly: false,
+      });
+    }
+
+    await prisma.forecast.createMany({ data: forecastBatch });
+    totalForecasts += forecastBatch.length;
+  }
+
+  console.log(`       Created ${totalForecasts} forecast points across ${models.length} models`);
+
+  // ------------------------------------------------------------------
+  // 7. Create anomalies
+  // ------------------------------------------------------------------
+  console.log('[7/9] Creating anomalies...');
+
+  const anomalies: string[] = [];
+  const anomalyDescriptions: Record<AnomalySeverity, string[]> = {
+    LOW: ['Slightly elevated reading within tolerance', 'Brief minor fluctuation detected', 'Marginally outside normal range'],
+    MEDIUM: ['Sustained deviation from baseline', 'Repeated pattern break detected', 'Two-sigma deviation sustained over 1 hour'],
+    HIGH: ['Significant spike beyond threshold', 'Rapid change rate exceeding safety limits', 'Critical parameter drift detected'],
+    CRITICAL: ['Emergency threshold exceeded', 'Sensor reading in dangerous range', 'System health critically degraded'],
+  };
+
+  for (let i = 0; i < 20; i++) {
+    const ts = pick(allTimeseries);
+    const severity = i < 3 ? 'CRITICAL' : i < 8 ? 'HIGH' : i < 14 ? 'MEDIUM' : 'LOW';
+    const method = pick(DETECTION_METHODS);
+    const createdAt = new Date(THIRTY_DAYS_AGO.getTime() + randInt(0, 29) * 24 * 60 * 60 * 1000);
+    const isResolved = severity === 'LOW' || (severity === 'MEDIUM' && Math.random() > 0.4);
+    const isInvestigated = isResolved || Math.random() > 0.3;
+
+    const anomaly = await prisma.anomaly.create({
+      data: {
+        timeseriesId: ts.id,
+        severity,
+        detectionMethod: method,
+        score: parseFloat(rand(50, 99).toFixed(2)),
+        context: {
+          description: pick(anomalyDescriptions[severity]),
+          expectedRange: [ts.def.baseValue - ts.def.amplitude, ts.def.baseValue + ts.def.amplitude],
+          actualValue: parseFloat(rand(ts.def.baseValue - ts.def.amplitude * 2, ts.def.baseValue + ts.def.amplitude * 2).toFixed(2)),
+          sensorId: `SENSOR-${randInt(100, 999)}`,
+          zone: `Zone ${randInt(1, 5)}`,
+        },
+        isInvestigated,
+        isResolved,
+        resolutionNotes: isResolved
+          ? pick([
+              'Confirmed as sensor calibration drift. Recalibrated sensor.',
+              'Transient spike caused by power cycle. No action needed.',
+              'Replaced faulty sensor. Values back to normal.',
+              'Software update resolved false positive readings.',
+              'Maintenance performed. Anomaly no longer present.',
+            ])
+          : null,
+        resolvedAt: isResolved ? new Date(createdAt.getTime() + randInt(1, 48) * 60 * 60 * 1000) : null,
+        createdAt,
+      },
+    });
+    anomalies.push(anomaly.id);
+  }
+
+  console.log(`       Created ${anomalies.length} anomalies (mixed severity)`);
+
+  // ------------------------------------------------------------------
+  // 8. Create alert rules and alerts
+  // ------------------------------------------------------------------
+  console.log('[8/9] Creating alert rules and alerts...');
+
+  const alertRuleDefs = [
+    { name: 'High Temperature Warning', type: 'ANOMALY', severity: 'WARNING', conditions: { metric: 'value', operator: '>', threshold: 30, duration: '5m' } },
+    { name: 'Critical Temperature Alert', type: 'ANOMALY', severity: 'ERROR', conditions: { metric: 'value', operator: '>', threshold: 40, duration: '1m' } },
+    { name: 'Power Consumption Spike', type: 'ANOMALY', severity: 'WARNING', conditions: { metric: 'value', operator: '>', threshold: 6, duration: '10m' } },
+    { name: 'Forecast Model Ready', type: 'FORECAST_READY', severity: 'INFO', conditions: { metric: 'accuracy', operator: '>', threshold: 0.9 } },
+    { name: 'Low Battery Alert', type: 'ANOMALY', severity: 'ERROR', conditions: { metric: 'value', operator: '<', threshold: 20, duration: '5m' } },
+  ];
+
+  const alertRules: { id: string; timeseriesId: string }[] = [];
+  for (let i = 0; i < alertRuleDefs.length; i++) {
+    const ruleDef = alertRuleDefs[i];
+    const ts = allTimeseries[i % allTimeseries.length];
+    const rule = await prisma.alertRule.create({
+      data: {
+        userId: pick([adminUser.id, editorUser.id]),
+        timeseriesId: ts.id,
+        name: ruleDef.name,
+        description: `Automated alert for ${ts.name}`,
+        type: ruleDef.type,
+        enabled: Math.random() > 0.1,
+        conditions: ruleDef.conditions,
+        severity: ruleDef.severity,
+        channels: { email: true, webhook: Math.random() > 0.5 ? 'https://hooks.example.com/alert' : null },
+        cooldownMinutes: pick([5, 10, 15, 30]),
+        lastTriggeredAt: Math.random() > 0.3 ? new Date(NOW.getTime() - randInt(1, 48) * 60 * 60 * 1000) : null,
+      },
+    });
+    alertRules.push({ id: rule.id, timeseriesId: ts.id });
+  }
+
+  // Create alerts
+  const alertMessages: Record<string, string[]> = {
+    ANOMALY: [
+      'Anomaly detected: value exceeded threshold for the past 5 minutes',
+      'Anomaly detected: statistical outlier in recent readings',
+      'Anomaly detected: pattern deviation from historical baseline',
+      'Anomaly detected: rapid change rate exceeds configured threshold',
+    ],
+    FORECAST_READY: [
+      'Forecast model training completed successfully',
+      'Forecast model updated with latest data and deployed',
+    ],
+    SYSTEM: [
+      'System health check: data ingestion pipeline delayed',
+      'System notification: maintenance window scheduled',
+      'System notification: sensor firmware update available',
+    ],
+  };
+
+  const alertSeverities: AlertSeverity[] = ['INFO', 'WARNING', 'ERROR'];
+
+  let totalAlerts = 0;
+  for (let i = 0; i < 15; i++) {
+    const alertType: AlertType = i < 8 ? 'ANOMALY' : i < 11 ? 'FORECAST_READY' : 'SYSTEM';
+    const ts = allTimeseries[i % allTimeseries.length];
+    const rule = alertRules.find((r) => r.timeseriesId === ts.id);
+    const severity = alertType === 'ANOMALY' ? pick(['WARNING', 'ERROR'] as AlertSeverity[]) : alertType === 'FORECAST_READY' ? 'INFO' : pick(alertSeverities);
+    const isRead = i < 5; // first 5 are read
+
+    await prisma.alert.create({
+      data: {
+        userId: pick([adminUser.id, editorUser.id]),
+        timeseriesId: ts.id,
+        alertRuleId: rule?.id ?? null,
+        type: alertType,
+        severity,
+        message: pick(alertMessages[alertType]),
+        metadata: {
+          triggeredBy: alertType === 'ANOMALY' ? 'rule-engine' : 'system',
+          datasetName: DATASETS.find((d) => d.timeseries.some((t) => t.name === ts.name))?.name ?? 'Unknown',
+          timeseriesName: ts.name,
+          threshold: alertType === 'ANOMALY' ? parseFloat(rand(20, 50).toFixed(1)) : null,
+          actualValue: alertType === 'ANOMALY' ? parseFloat(rand(25, 55).toFixed(1)) : null,
+        },
+        isRead,
+        sentAt: isRead ? new Date(NOW.getTime() - randInt(1, 24) * 60 * 60 * 1000) : null,
+        createdAt: new Date(NOW.getTime() - randInt(0, 48) * 60 * 60 * 1000),
+      },
+    });
+    totalAlerts++;
+  }
+
+  console.log(`       Created ${alertRules.length} alert rules and ${totalAlerts} alerts`);
+
+  // ------------------------------------------------------------------
+  // 9. Create API keys and misc
+  // ------------------------------------------------------------------
+  console.log('[9/9] Creating API keys and additional data...');
+
+  const apiKeyHashes = [
+    { name: 'Production API Key', hash: await bcrypt.hash('iotdb_prod_sk_a1b2c3d4e5f6g7h8', 4), lastChars: 'g7h8' },
+    { name: 'Development API Key', hash: await bcrypt.hash('iotdb_dev_sk_x9y8z7w6v5u4t3s2', 4), lastChars: 's3s2' },
+    { name: 'Monitoring Integration', hash: await bcrypt.hash('iotdb_mon_sk_p0o9i8u7y6t5r4e3', 4), lastChars: 'r4e3' },
+  ];
+
+  for (const keyData of apiKeyHashes) {
+    await prisma.apiKey.create({
+      data: {
+        userId: adminUser.id,
+        name: keyData.name,
+        keyHash: keyData.hash,
+        lastCharacters: parseInt(keyData.lastChars.slice(0, 4), 36) % 10000,
+        isActive: true,
+        usageCount: randInt(10, 5000),
+        expiresAt: new Date(NOW.getTime() + randInt(30, 365) * 24 * 60 * 60 * 1000),
+        lastUsedAt: new Date(NOW.getTime() - randInt(0, 48) * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  // Create saved queries
+  const savedQueries = [
+    { name: 'Daily Temperature Average', params: { aggregation: 'avg', interval: '1d', metric: 'temperature' } },
+    { name: 'Weekly Power Summary', params: { aggregation: 'sum', interval: '1w', metric: 'power' } },
+    { name: 'Anomaly Count by Severity', params: { groupBy: 'severity', type: 'anomalies', period: '30d' } },
+  ];
+
+  for (const q of savedQueries) {
+    await prisma.saved_queries.create({
+      data: {
+        id: `sq-${slugify(q.name)}`,
+        user_id: adminUser.id,
+        organization_id: org.id,
+        name: q.name,
+        description: `Saved query: ${q.name}`,
+        query_params: q.params,
+        is_public: true,
+        usage_count: randInt(5, 200),
+        last_used_at: new Date(NOW.getTime() - randInt(0, 72) * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  // Create audit logs
+  const auditActions = ['CREATE', 'READ', 'UPDATE', 'DELETE', 'EXPORT', 'LOGIN'] as const;
+  const auditResources = [
+    { type: 'dataset', actions: ['CREATE', 'READ', 'UPDATE', 'DELETE', 'EXPORT'] },
+    { type: 'timeseries', actions: ['CREATE', 'READ', 'UPDATE'] },
+    { type: 'user', actions: ['CREATE', 'UPDATE', 'LOGIN'] },
+    { type: 'forecast', actions: ['CREATE', 'READ'] },
+    { type: 'anomaly', actions: ['READ', 'UPDATE'] },
+  ];
+
+  for (let i = 0; i < 30; i++) {
+    const resource = pick(auditResources);
+    const action = pick(resource.actions) as (typeof auditActions)[number];
+    const user = pick(users);
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        resourceType: resource.type,
+        resourceId: i < 10 ? pick(allTimeseries).datasetId : null,
+        action,
+        ipAddress: `192.168.${randInt(1, 10)}.${randInt(1, 254)}`,
+        userAgent: pick([
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+          'IoTDB-Enhanced-CLI/1.0',
+        ]),
+        success: Math.random() > 0.05,
+        errorCode: Math.random() < 0.05 ? 'PERMISSION_DENIED' : null,
+        createdAt: new Date(THIRTY_DAYS_AGO.getTime() + randInt(0, 29) * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  // Create security audit logs
+  const securityEvents = [
+    { event: 'login_success', severity: 'INFO' },
+    { event: 'login_failed', severity: 'WARNING' },
+    { event: 'token_refresh', severity: 'INFO' },
+    { event: 'password_change', severity: 'INFO' },
+    { event: 'api_key_created', severity: 'INFO' },
+    { event: 'permission_denied', severity: 'WARNING' },
+    { event: 'rate_limit_exceeded', severity: 'WARNING' },
+    { event: 'suspicious_activity', severity: 'HIGH' },
+  ];
+
+  for (let i = 0; i < 25; i++) {
+    const evt = pick(securityEvents);
+    await prisma.securityAuditLog.create({
+      data: {
+        event: evt.event,
+        userId: pick(users).id,
+        sessionId: `sess-${randInt(10000, 99999)}`,
+        details: {
+          ip: `192.168.${randInt(1, 10)}.${randInt(1, 254)}`,
+          browser: pick(['Chrome', 'Firefox', 'Safari']),
+          path: pick(['/api/datasets', '/api/timeseries', '/api/auth/login', '/api/alerts']),
+        },
+        severity: evt.severity,
+        userAgent: pick([
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+          'IoTDB-Enhanced-CLI/1.0',
+        ]),
+        url: pick(['/api/datasets', '/api/timeseries', '/api/auth/login', '/api/alerts', '/api/forecasts']),
+        receivedAt: new Date(THIRTY_DAYS_AGO.getTime() + randInt(0, 29) * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  console.log(`       Created ${apiKeyHashes.length} API keys`);
+  console.log(`       Created ${savedQueries.length} saved queries`);
+  console.log(`       Created 30 audit logs`);
+  console.log(`       Created 25 security audit logs`);
+
+  // ------------------------------------------------------------------
+  // Summary
+  // ------------------------------------------------------------------
+  console.log('');
+  console.log('==========================================');
+  console.log('  Seeding Complete!');
+  console.log('==========================================');
+  console.log('');
+  console.log('  Users:');
+  console.log('    admin@iotdb-enhanced.com / Admin123!  (ADMIN)');
+  console.log('    user@iotdb-enhanced.com  / User123!   (EDITOR)');
+  console.log('    demo@iotdb-enhanced.com  / Demo123!   (VIEWER)');
+  console.log('');
+  console.log(`  Datasets:      ${DATASETS.length}`);
+  console.log(`  Timeseries:    ${allTimeseries.length}`);
+  console.log(`  Datapoints:    ${totalDatapoints.toLocaleString()}`);
+  console.log(`  Models:        ${models.length}`);
+  console.log(`  Forecasts:     ${totalForecasts}`);
+  console.log(`  Anomalies:     ${anomalies.length}`);
+  console.log(`  Alert Rules:   ${alertRules.length}`);
+  console.log(`  Alerts:        ${totalAlerts}`);
+  console.log(`  API Keys:      ${apiKeyHashes.length}`);
+  console.log('');
+}
+
+// ============================================================================
+// Entry Point
+// ============================================================================
+
+main()
+  .catch((error) => {
+    console.error('');
+    console.error('==========================================');
+    console.error('  Seeding Failed!');
+    console.error('==========================================');
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

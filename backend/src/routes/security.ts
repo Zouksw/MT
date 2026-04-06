@@ -41,6 +41,63 @@ interface SecurityAuditLogWhere {
 }
 
 /**
+ * @openapi
+ * /api/security/audit:
+ *   post:
+ *     tags: [Security]
+ *     summary: Submit audit logs
+ *     description: Receives and stores security audit logs from the frontend. Validates event types and severity levels.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [logs]
+ *             properties:
+ *               logs:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [event, sessionId, severity]
+ *                   properties:
+ *                     event:
+ *                       type: string
+ *                       enum: [LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, TOKEN_EXPIRED, TOKEN_REFRESHED, CSRF_VIOLATION, XSS_ATTEMPT, RATE_LIMIT_EXCEEDED, PERMISSION_DENIED, SUSPICIOUS_ACTIVITY, INVALID_INPUT, API_ERROR, NETWORK_ERROR]
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                     sessionId:
+ *                       type: string
+ *                     details:
+ *                       type: object
+ *                     severity:
+ *                       type: string
+ *                       enum: [low, medium, high, critical]
+ *                     userAgent:
+ *                       type: string
+ *                     url:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Audit logs recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count: { type: integer }
+ *       400:
+ *         description: Invalid logs format or validation error
+ */
+/**
  * POST /api/security/audit
  * Receives audit logs from the frontend
  */
@@ -118,6 +175,68 @@ router.post('/audit', asyncHandler(async (req: AuthRequest, res: Response) => {
 }));
 
 /**
+ * @openapi
+ * /api/security/audit:
+ *   get:
+ *     tags: [Security]
+ *     summary: Get audit logs (admin only)
+ *     description: Retrieves security audit logs with filtering and pagination. Requires admin role.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema: { type: string }
+ *         description: Filter by user ID
+ *       - in: query
+ *         name: event
+ *         schema: { type: string }
+ *         description: Filter by event type
+ *       - in: query
+ *         name: severity
+ *         schema: { type: string }
+ *         description: Filter by severity
+ *       - in: query
+ *         name: startDate
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: endDate
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Audit logs with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     logs:
+ *                       type: array
+ *                       items: { type: object }
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page: { type: integer }
+ *                         limit: { type: integer }
+ *                         total: { type: integer }
+ *                         pages: { type: integer }
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Admin access required
+ */
+/**
  * GET /api/security/audit
  * Retrieves audit logs (admin only)
  */
@@ -186,6 +305,51 @@ router.get('/audit', asyncHandler(async (req: AuthRequest, res: Response) => {
   });
 }));
 
+/**
+ * @openapi
+ * /api/security/audit/stats:
+ *   get:
+ *     tags: [Security]
+ *     summary: Get audit log statistics (admin only)
+ *     description: Returns aggregated security audit statistics grouped by event type and severity. Requires admin role.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: endDate
+ *         schema: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: Audit statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     byEvent:
+ *                       type: object
+ *                       additionalProperties: { type: integer }
+ *                     bySeverity:
+ *                       type: object
+ *                       additionalProperties: { type: integer }
+ *                     recentCritical:
+ *                       type: array
+ *                       items: { type: object }
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Admin access required
+ */
 /**
  * GET /api/security/audit/stats
  * Get audit log statistics

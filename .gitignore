@@ -68,3 +68,25 @@ debug-*.js
 # Temporary and cache directories
 .gstack-screenshots/
 .gstack/
+
+# System caches (never commit)
+.npm/
+.local/
+.bun/
+.bashrc
+
+# VSCode Server (remote dev)
+.vscode-server/
+
+# Claude internal state
+.claude/backups/
+.claude/ide/
+.claude/sessions/
+.claude/shell-snapshots/
+.claude/telemetry/
+.copilot/
+
+# Backup files
+*.sql
+*.sql.gz
+backups/

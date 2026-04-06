@@ -29,6 +29,36 @@ interface TimeseriesWithIoTDB extends Timeseries {
   };
 }
 
+/**
+ * @openapi
+ * /api/timeseries:
+ *   get:
+ *     tags: [Time Series]
+ *     summary: List all time series
+ *     description: Retrieves a paginated list of time series with optional filtering by dataset and search text.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: datasetId
+ *         schema: { type: string }
+ *         description: Filter by dataset ID
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Search by name or description
+ *     responses:
+ *       200:
+ *         description: Paginated list of time series
+ *       401:
+ *         description: Not authenticated
+ */
 // GET /api/timeseries - Get all timeseries with filters
 router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { datasetId, search } = req.query;
@@ -68,6 +98,29 @@ router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res: Respons
   });
 }));
 
+/**
+ * @openapi
+ * /api/timeseries/{id}:
+ *   get:
+ *     tags: [Time Series]
+ *     summary: Get a single time series
+ *     description: Retrieves a time series by ID with datapoint count and latest IoTDB data if available.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Time series ID
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 100 }
+ *         description: Limit for IoTDB data points
+ *     responses:
+ *       200:
+ *         description: Time series details with IoTDB data
+ *       404:
+ *         description: Time series not found
+ */
 // GET /api/timeseries/:id - Get single timeseries
 router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -129,6 +182,59 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   return success(res, result);
 }));
 
+/**
+ * @openapi
+ * /api/timeseries/{id}/data:
+ *   get:
+ *     tags: [Time Series]
+ *     summary: Get time series data points
+ *     description: Retrieves data points for a time series from both PostgreSQL and IoTDB. Includes IoTDB availability status.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Time series ID
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 100 }
+ *       - in: query
+ *         name: startTime
+ *         schema: { type: string, format: date-time }
+ *         description: Start time filter for IoTDB data
+ *       - in: query
+ *         name: endTime
+ *         schema: { type: string, format: date-time }
+ *         description: End time filter for IoTDB data
+ *     responses:
+ *       200:
+ *         description: Time series data with IoTDB data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items: { type: object }
+ *                     iotdbData:
+ *                       type: array
+ *                       items: { type: object }
+ *                     iotdbError:
+ *                       type: string
+ *                       nullable: true
+ *                     iotdbAvailable:
+ *                       type: boolean
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *       404:
+ *         description: Time series not found
+ */
 // GET /api/timeseries/:id/data - Get timeseries data
 router.get('/:id/data', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -198,6 +304,43 @@ router.get('/:id/data', asyncHandler(async (req: Request, res: Response) => {
   });
 }));
 
+/**
+ * @openapi
+ * /api/timeseries/{id}/data:
+ *   post:
+ *     tags: [Time Series]
+ *     summary: Insert a data point
+ *     description: Inserts a new data point into a time series. Also writes to IoTDB if available.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Time series ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               timestamp:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Timestamp (defaults to current time)
+ *               value:
+ *                 description: The data point value
+ *                 example: 25.5
+ *     responses:
+ *       201:
+ *         description: Data point inserted successfully
+ *       401:
+ *         description: Not authenticated
+ *       404:
+ *         description: Time series not found
+ */
 // POST /api/timeseries/:id/data - Insert data point (requires authentication)
 router.post('/:id/data', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
@@ -239,6 +382,29 @@ router.post('/:id/data', authenticate, asyncHandler(async (req: AuthRequest, res
   return success(res, datapoint, 201);
 }));
 
+/**
+ * @openapi
+ * /api/timeseries/{id}:
+ *   delete:
+ *     tags: [Time Series]
+ *     summary: Delete a time series
+ *     description: Deletes a time series and all its data points from both PostgreSQL and IoTDB.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Time series ID
+ *     responses:
+ *       200:
+ *         description: Time series deleted successfully
+ *       401:
+ *         description: Not authenticated
+ *       404:
+ *         description: Time series not found
+ */
 // DELETE /api/timeseries/:id - Delete timeseries (requires authentication)
 router.delete('/:id', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;

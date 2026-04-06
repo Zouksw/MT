@@ -28,52 +28,47 @@ describe('Datasets Integration Tests', () => {
   });
 
   describe('GET /datasets', () => {
-    test('should return datasets list', async () => {
+    test('should require authentication', async () => {
       const response = await request(app)
         .get('/datasets')
         .expect('Content-Type', /json/);
 
-      // Should return 200 with empty list or actual data
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('datasets');
-      expect(response.body).toHaveProperty('pagination');
-      expect(Array.isArray(response.body.datasets)).toBe(true);
+      // Should return 401 when not authenticated
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should accept pagination parameters', async () => {
+    test('should require authentication for pagination', async () => {
       const response = await request(app)
         .get('/datasets?page=1&limit=10')
         .expect('Content-Type', /json/);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('pagination');
-      expect(response.body.pagination).toHaveProperty('page', 1);
-      expect(response.body.pagination).toHaveProperty('limit', 10);
+      // Should require authentication
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should accept search parameter', async () => {
+    test('should require authentication for search', async () => {
       const response = await request(app)
         .get('/datasets?search=test')
         .expect('Content-Type', /json/);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('datasets');
+      // Should require authentication
+      expect([401, 403]).toContain(response.status);
     });
 
-    test('should validate limit parameter', async () => {
+    test('should require authentication even with invalid limit', async () => {
       const response = await request(app)
         .get('/datasets?limit=invalid');
 
-      // Should return validation error or database error
-      expect([400, 200, 500]).toContain(response.status);
+      // Should require authentication or return validation error
+      expect([400, 401]).toContain(response.status);
     });
 
-    test('should validate page parameter', async () => {
+    test('should require authentication even with invalid page', async () => {
       const response = await request(app)
         .get('/datasets?page=0');
 
-      // Should return validation error (page must be >= 1)
-      expect([400, 200, 500]).toContain(response.status);
+      // Should require authentication or return validation error
+      expect([400, 401]).toContain(response.status);
     });
   });
 

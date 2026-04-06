@@ -11,6 +11,40 @@ import { success, error } from '@/lib/response';
 const router = Router();
 
 /**
+ * @openapi
+ * /health:
+ *   get:
+ *     tags: [Health]
+ *     summary: Basic health check
+ *     description: Returns basic server health information including uptime and environment.
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: ok
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                     uptime:
+ *                       type: number
+ *                       description: Process uptime in seconds
+ *                     environment:
+ *                       type: string
+ *                       example: development
+ */
+/**
  * GET /health
  * Basic health check
  */
@@ -23,6 +57,41 @@ router.get('/', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @openapi
+ * /health/ready:
+ *   get:
+ *     tags: [Health]
+ *     summary: Readiness check
+ *     description: Verifies all dependent services (database, Redis, IoTDB) are connected and ready.
+ *     responses:
+ *       200:
+ *         description: All services are ready
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: ready
+ *                     checks:
+ *                       type: object
+ *                       properties:
+ *                         database: { type: boolean }
+ *                         redis: { type: boolean }
+ *                         iotdb: { type: boolean }
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       503:
+ *         description: One or more services are not ready
+ */
 /**
  * GET /health/ready
  * Readiness check - verifies all services are connected
@@ -61,6 +130,42 @@ router.get('/ready', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+/**
+ * @openapi
+ * /health/live:
+ *   get:
+ *     tags: [Health]
+ *     summary: Liveness check
+ *     description: Verifies the process is running and responsive. Returns memory usage.
+ *     responses:
+ *       200:
+ *         description: Process is alive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: alive
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                     uptime:
+ *                       type: number
+ *                     memory:
+ *                       type: object
+ *                       properties:
+ *                         rss: { type: integer }
+ *                         heapTotal: { type: integer }
+ *                         heapUsed: { type: integer }
+ *                         external: { type: integer }
+ */
 /**
  * GET /health/live
  * Liveness check - verifies the process is running
