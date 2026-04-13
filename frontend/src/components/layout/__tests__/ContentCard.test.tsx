@@ -153,7 +153,7 @@ describe('ContentCard', () => {
       </ContentCard>
     );
 
-    // The colored dot has border-radius: 50% and background: #0066CC
+    // The colored dot has border-radius: 50% and background: #0a72ef
     const dot = container.querySelector('[style*="border-radius: 50%"]');
     expect(dot).toBeInTheDocument();
   });

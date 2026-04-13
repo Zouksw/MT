@@ -51,10 +51,8 @@ export default function LandingPage() {
           left: 0,
           right: 0,
           zIndex: 1000,
-          background: "rgba(255, 255, 255, 0.8)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
+          background: "#ffffff",
+          boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px",
           padding: "16px 24px",
         }}
       >
@@ -68,8 +66,7 @@ export default function LandingPage() {
               top: 100%;
               left: 0;
               right: 0;
-              background: rgba(255, 255, 255, 0.98);
-              backdrop-filter: blur(10px);
+              background: #ffffff;
               flex-direction: column;
               padding: 16px 24px;
               gap: 12px;
@@ -100,12 +97,12 @@ export default function LandingPage() {
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "linear-gradient(135deg, #0066cc 0%, #0077e6 50%, #0088ff 100%)",
+                background: "#171717",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginRight: "12px",
-                fontWeight: 700,
+                fontWeight: 600,
                 color: "#fff",
                 fontSize: "18px",
               }}
@@ -138,9 +135,9 @@ export default function LandingPage() {
             <Button
               type="primary"
               style={{
-                background: "#0066CC",
+                background: "#171717",
                 border: "none",
-                borderRadius: "3px",
+                borderRadius: "6px",
                 height: "40px",
                 padding: "0 20px",
               }}
@@ -189,7 +186,7 @@ export default function LandingPage() {
         className="relative overflow-hidden"
         style={{
           padding: "clamp(60px, 8vw, 100px) 24px",
-          background: "linear-gradient(135deg, #0066CC 0%, #0077E6 50%, #3B82F6 100%)",
+          background: "#171717",
           textAlign: "center",
         }}
       >
@@ -203,7 +200,7 @@ export default function LandingPage() {
             level={2}
             style={{
               fontSize: "clamp(32px, 4vw, 48px)",
-              fontWeight: 700,
+              fontWeight: 600,
               color: "#fff",
               marginBottom: "20px",
             }}
@@ -229,9 +226,9 @@ export default function LandingPage() {
               fontWeight: 600,
               borderRadius: "8px",
               background: "#fff",
-              color: "#0066cc",
+              color: "#0a72ef",
               border: "none",
-              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.15)",
+              boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px",
             }}
             href="/register"
           >
@@ -247,7 +244,7 @@ export default function LandingPage() {
       <footer
         style={{
           padding: "clamp(32px, 5vw, 60px) 24px",
-          background: "#0f172a",
+          background: "#171717",
           color: "#fff",
         }}
       >
@@ -259,13 +256,13 @@ export default function LandingPage() {
                   style={{
                     width: "36px",
                     height: "36px",
-                    borderRadius: "4px",
-                    background: "#0066CC",
+                    borderRadius: "6px",
+                    background: "#171717",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     marginRight: "12px",
-                    fontWeight: 700,
+                    fontWeight: 600,
                     fontSize: "18px",
                   }}
                 >

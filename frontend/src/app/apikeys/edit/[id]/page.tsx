@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Form, Input, Button, Row, Col, Typography, Space, Alert, Switch } from "antd";
 import { ArrowLeftOutlined, KeyOutlined } from "@ant-design/icons";
 import { useGo, useInvalidate, useNotification } from "@refinedev/core";
@@ -13,10 +13,11 @@ import { ContentCard } from "@/components/layout/ContentCard";
 const { Text } = Typography;
 
 interface ApiKeyEditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
+  const { id } = React.use(params);
   const go = useGo();
   const invalidate = useInvalidate();
   const { open } = useNotification();
@@ -26,7 +27,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
   // Get API key data
   const apiKeyResult = useOne({
     resource: "apikeys",
-    id: params.id,
+    id,
   });
 
   const apiKey = apiKeyResult?.result?.data;
@@ -43,7 +44,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/api-keys/${params.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/api-keys/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

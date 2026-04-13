@@ -17,6 +17,9 @@ import {
   Tag,
   Divider,
 } from "antd";
+
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import {
   ThunderboltOutlined,
   RocketOutlined,
@@ -73,6 +76,7 @@ export default function AIPredictPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VisualizationResult | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<Error | null>(null);
   const isMobile = useIsMobile();
 
   // AI Node built-in algorithms
@@ -90,6 +94,7 @@ export default function AIPredictPage() {
     setLoading(true);
     setResult(null);
     setPermissionError(null);
+    setApiError(null);
 
     try {
       const response = await fetch("/api/iotdb/ai/predict/visualize", {
@@ -114,8 +119,10 @@ export default function AIPredictPage() {
 
       const data = await response.json();
       setResult(data);
+      setApiError(null);
       message.success(`Prediction completed! Generated ${data.prediction?.values?.length || 0} data points.`);
     } catch (error: any) {
+      setApiError(error instanceof Error ? error : new Error(error.message || "Prediction failed"));
       if (!permissionError) {
         message.error(`Prediction failed: ${error.message}`);
       }
@@ -282,7 +289,7 @@ export default function AIPredictPage() {
                   block
                   icon={<RocketOutlined />}
                   style={{
-                    background: "#0066CC",
+                    background: "#171717",
                     border: "none",
                     borderRadius: 3,
                     fontWeight: 600,
@@ -301,7 +308,7 @@ export default function AIPredictPage() {
             style={{ marginTop: isMobile ? 16 : 24, padding: isMobile ? "16px" : "20px" }}
           >
             <div style={{ marginBottom: 16 }}>
-              <ThunderboltOutlined style={{ marginRight: 8, color: "#0066cc" }} />
+              <ThunderboltOutlined style={{ marginRight: 8, color: "#0a72ef" }} />
               <span style={{ fontWeight: 600, fontSize: 14 }}>About AI Prediction</span>
             </div>
             <div style={{ fontSize: 13, color: "#64748b", lineHeight: "1.6" }}>
@@ -332,106 +339,115 @@ export default function AIPredictPage() {
 
         {/* Right Column - Results */}
         <Col xs={24} lg={14}>
-          {loading && (
-            <ContentCard style={{ textAlign: "center", padding: "60px 20px" }}>
-              <Spin size="large" tip="Generating predictions..." />
-              <div style={{ marginTop: 16, color: "#999", fontSize: 13 }}>
-                This may take a few moments depending on the data size and model complexity.
-              </div>
-            </ContentCard>
-          )}
-
-          {result && (
-            <>
-              {/* Success Alert */}
-              <Alert
-                message="Prediction Completed Successfully"
-                description={`Generated ${result.prediction.values.length} predictions using ${result.algorithm} model`}
-                type="success"
-                showIcon
-                icon={<CheckCircleOutlined />}
-                style={{ marginBottom: isMobile ? 16 : 24 }}
+          <LoadingState
+            loading={loading}
+            skeletonType="card"
+            timeout={30000}
+            onTimeout={() => {
+              setLoading(false);
+              setApiError(new Error("Prediction request timed out. The model may be processing heavy data."));
+            }}
+          >
+            {apiError && (
+              <ErrorDisplay
+                error={apiError}
+                retry={() => form.submit()}
+                context="AI Prediction"
               />
+            )}
 
-              {/* Prediction Chart */}
-              <PredictionChart
-                timeseries={result.timeseries}
-                historicalData={result.historical}
-                predictionData={result.prediction}
-                algorithm={result.algorithm}
-                onExport={(_format) => {
-                  // Export handled by PredictionChart component
-                }}
-              />
+            {result && (
+              <>
+                {/* Success Alert */}
+                <Alert
+                  message="Prediction Completed Successfully"
+                  description={`Generated ${result.prediction.values.length} predictions using ${result.algorithm} model`}
+                  type="success"
+                  showIcon
+                  icon={<CheckCircleOutlined />}
+                  style={{ marginBottom: isMobile ? 16 : 24 }}
+                />
 
-              {/* Model Information */}
-              <ContentCard
-                title="Model Information"
-                style={{ marginTop: 24 }}
-              >
-                <Descriptions bordered column={2} size="small">
-                  <Descriptions.Item label="Algorithm" span={2}>
-                    <Tag color="purple" icon={<ExperimentOutlined />}>
-                      {result.algorithm.toUpperCase()}
-                    </Tag>
-                    <Tag color="blue" style={{ marginLeft: 8 }}>
-                      AI Node
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Time Series" span={2}>
-                    {result.timeseries}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Historical Points" span={1}>
-                    {result.historical.length}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Prediction Points" span={1}>
-                    {result.prediction.values.length}
-                  </Descriptions.Item>
-                </Descriptions>
-              </ContentCard>
+                {/* Prediction Chart */}
+                <PredictionChart
+                  timeseries={result.timeseries}
+                  historicalData={result.historical}
+                  predictionData={result.prediction}
+                  algorithm={result.algorithm}
+                  onExport={(_format) => {
+                    // Export handled by PredictionChart component
+                  }}
+                />
 
-              {/* Action Buttons */}
-              <Card style={{ marginTop: 24, borderRadius: 4 }}>
-                <Button
-                  type="primary"
-                  size="large"
-                  block
-                  icon={<LineChartOutlined />}
-                  onClick={() => {
-                    // Navigate to create forecast with these predictions
-                    window.location.href = "/forecasts/create";
+                {/* Model Information */}
+                <ContentCard
+                  title="Model Information"
+                  style={{ marginTop: 24 }}
+                >
+                  <Descriptions bordered column={2} size="small">
+                    <Descriptions.Item label="Algorithm" span={2}>
+                      <Tag color="purple" icon={<ExperimentOutlined />}>
+                        {result.algorithm.toUpperCase()}
+                      </Tag>
+                      <Tag color="blue" style={{ marginLeft: 8 }}>
+                        AI Node
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Time Series" span={2}>
+                      {result.timeseries}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Historical Points" span={1}>
+                      {result.historical.length}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Prediction Points" span={1}>
+                      {result.prediction.values.length}
+                    </Descriptions.Item>
+                  </Descriptions>
+                </ContentCard>
+
+                {/* Action Buttons */}
+                <Card style={{ marginTop: 24, borderRadius: 4 }}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    icon={<LineChartOutlined />}
+                    onClick={() => {
+                      // Navigate to create forecast with these predictions
+                      window.location.href = "/forecasts/create";
+                    }}
+                  >
+                    Save as Forecast
+                  </Button>
+                </Card>
+              </>
+            )}
+
+            {!loading && !result && !apiError && (
+              <ContentCard style={{ textAlign: "center", padding: "60px 20px" }}>
+                <div
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: "50%",
+                    background: "#F3F4F6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 20px",
                   }}
                 >
-                  Save as Forecast
-                </Button>
-              </Card>
-            </>
-          )}
-
-          {!loading && !result && (
-            <ContentCard style={{ textAlign: "center", padding: "60px 20px" }}>
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: "50%",
-                  background: "#F3F4F6",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                }}
-              >
-                <RocketOutlined style={{ fontSize: 32, color: "#9ca3af" }} />
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Ready to Predict
-              </div>
-              <div style={{ color: "#6b7280", fontSize: 13 }}>
-                Configure your prediction parameters and click &quot;Generate Prediction&quot; to start.
-              </div>
-            </ContentCard>
-          )}
+                  <RocketOutlined style={{ fontSize: 32, color: "#9ca3af" }} />
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                  Ready to Predict
+                </div>
+                <div style={{ color: "#6b7280", fontSize: 13 }}>
+                  Configure your prediction parameters and click &quot;Generate Prediction&quot; to start.
+                </div>
+              </ContentCard>
+            )}
+          </LoadingState>
         </Col>
       </Row>
     </PageContainer>

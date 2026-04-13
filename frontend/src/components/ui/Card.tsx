@@ -17,10 +17,10 @@ export const Card: React.FC<CardProps> = ({
   // Use consistent transition from animation library
   const transitionStyle = TRANSITIONS.card;
 
-  const baseStyles = "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700";
+  const baseStyles = "bg-white dark:bg-gray-800 rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px]";
 
   const hoverStyles = hover
-    ? "hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-card-hover-dark cursor-pointer"
+    ? "hover:shadow-card-hover dark:hover:shadow-card-hover-dark cursor-pointer"
     : "shadow-card";
 
   const combinedClassName = `${baseStyles} ${hoverStyles} ${className}`.trim();
@@ -48,7 +48,7 @@ export const CardTitle: React.FC<{
   className?: string;
 }> = ({ children, className = "" }) => {
   return (
-    <h3 className={`text-h4 font-display font-bold text-gray-900 dark:text-gray-50 ${className}`.trim()}>
+    <h3 className={`text-h4 font-display font-semibold text-gray-900 dark:text-gray-50 ${className}`.trim()}>
       {children}
     </h3>
   );

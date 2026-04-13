@@ -8,14 +8,14 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Navigation */}
-      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-500 rounded-md flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-lg">I</span>
+                <span className="text-white font-semibold text-lg">I</span>
               </div>
-              <span className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50">
+              <span className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50">
                 IoTDB Enhanced
               </span>
             </Link>
@@ -42,7 +42,7 @@ export default function AboutPage() {
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-medium text-primary mb-6">
             About Us
           </div>
-          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-gray-50 mb-6 tracking-tight">
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold text-gray-900 dark:text-gray-50 mb-6 tracking-tight">
             Building the Future of
             <br />
             <span className="text-primary">Time Series Analytics</span>
@@ -66,13 +66,13 @@ export default function AboutPage() {
             ].map((stat, idx) => (
               <div
                 key={idx}
-                className="stagger-slide-up bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center relative overflow-hidden group hover:-translate-y-1 transition-all duration-200"
-                style={{ animationDelay: `${idx * 80}ms` }}
+                className="stagger-slide-up bg-white dark:bg-gray-800 rounded-xl p-6 text-center relative overflow-hidden group transition-all duration-200"
+                style={{ animationDelay: `${idx * 80}ms`, boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px, #fafafa 0px 0px 0px 1px" }}
               >
                 {/* Subtle gradient top border */}
                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-blue-400" />
                 <div className="text-2xl mb-3">{stat.icon}</div>
-                <div className="text-3xl md:text-4xl font-display font-bold text-primary mb-2">
+                <div className="text-3xl md:text-4xl font-display font-semibold text-primary mb-2">
                   {stat.number}
                 </div>
                 <div className="text-body-sm text-gray-500 dark:text-gray-400 font-medium">
@@ -103,7 +103,8 @@ export default function AboutPage() {
                 helping enterprises identify and solve problems before they occur.
               </p>
             </div>
-            <div className="bg-mesh-gradient rounded-xl p-8 border border-gray-200 dark:border-gray-700">
+            <div className="bg-mesh-gradient rounded-xl p-8"
+                 style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px, #fafafa 0px 0px 0px 1px" }}>
               <div className="grid grid-cols-2 gap-8">
                 {[
                   { value: "99.99%", label: "Platform Uptime" },
@@ -112,7 +113,7 @@ export default function AboutPage() {
                   { value: "24/7", label: "Expert Support" },
                 ].map((stat, idx) => (
                   <div key={idx} className="text-center">
-                    <div className="text-2xl font-display font-bold text-primary mb-1">
+                    <div className="text-2xl font-display font-semibold text-primary mb-1">
                       {stat.value}
                     </div>
                     <div className="text-body-sm text-gray-500 dark:text-gray-400">
@@ -164,11 +165,11 @@ export default function AboutPage() {
             ].map((value, idx) => (
               <div
                 key={idx}
-                className="stagger-slide-up relative bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 group hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
-                style={{ animationDelay: `${idx * 80}ms` }}
+                className="stagger-slide-up relative bg-white dark:bg-gray-800 rounded-xl p-8 group hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px] transition-all duration-300"
+                style={{ animationDelay: `${idx * 80}ms`, boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px, #fafafa 0px 0px 0px 1px" }}
               >
                 {/* Faded number background */}
-                <div className="absolute top-4 right-4 text-7xl font-display font-bold text-gray-100 dark:text-gray-700/50 select-none leading-none">
+                <div className="absolute top-4 right-4 text-7xl font-display font-semibold text-gray-100 dark:text-gray-700/50 select-none leading-none">
                   {value.number}
                 </div>
 
@@ -178,7 +179,7 @@ export default function AboutPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={value.iconPath} />
                     </svg>
                   </div>
-                  <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-3">
+                  <h3 className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50 mb-3">
                     {value.title}
                   </h3>
                   <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -229,8 +230,8 @@ export default function AboutPage() {
             ].map((member, idx) => (
               <div
                 key={idx}
-                className="stagger-slide-up bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-center overflow-hidden group hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
-                style={{ animationDelay: `${idx * 80}ms` }}
+                className="stagger-slide-up bg-white dark:bg-gray-800 rounded-xl text-center overflow-hidden group hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px] transition-all duration-300"
+                style={{ animationDelay: `${idx * 80}ms`, boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px, #fafafa 0px 0px 0px 1px" }}
               >
                 {/* Gradient top strip */}
                 <div className={`h-20 bg-gradient-to-r ${member.gradient} opacity-80`} />
@@ -238,14 +239,14 @@ export default function AboutPage() {
                 {/* Avatar overlapping gradient */}
                 <div className="relative -mt-10 mb-4">
                   <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-br ${member.gradient} flex items-center justify-center ring-4 ring-white dark:ring-gray-800 shadow-lg transition-transform duration-200 group-hover:scale-105`}>
-                    <span className="text-2xl font-display font-bold text-white">
+                    <span className="text-2xl font-display font-semibold text-white">
                       {member.name[0]}
                     </span>
                   </div>
                 </div>
 
                 <div className="px-6 pb-6">
-                  <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-0.5">
+                  <h3 className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50 mb-0.5">
                     {member.name}
                   </h3>
                   <p className="text-body-sm text-gray-500 dark:text-gray-400 mb-0.5">

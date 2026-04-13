@@ -6,7 +6,7 @@
 // Chart color palette - professional and accessible
 export const chartColors = {
   // Primary colors - matching design system
-  primary: "#0066CC",
+  primary: "#0a72ef",
   primaryLight: "#66B3FF",
   primaryDark: "#0055A3",
 
@@ -124,7 +124,6 @@ export const chartTooltipStyles = {
   borderRadius: 4,
   padding: "12px",
   boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-  backdropFilter: "blur(8px)",
   fontSize: 12,
   color: chartColors.gray600,
 

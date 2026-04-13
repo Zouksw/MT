@@ -20,13 +20,16 @@ export function useScrollAnimation<T extends HTMLElement = HTMLDivElement>(
 ) {
   const { threshold = 0.1, rootMargin = "0px 0px -50px 0px", triggerOnce = true } = options;
   const ref = useRef<T>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
-    // Respect reduced motion preference
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
-      setIsVisible(true);
+    // If reduced motion is preferred, already visible via lazy initializer
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
 

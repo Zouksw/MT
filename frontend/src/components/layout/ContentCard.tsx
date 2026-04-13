@@ -40,7 +40,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
   const cardStyle: React.CSSProperties = {
     borderRadius: 8,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
+    boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px",
     marginBottom: token.marginLG,
     transition: "box-shadow 0.2s ease",
   };
@@ -73,7 +73,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                background: "#0066CC",
+                background: "#171717",
                 flexShrink: 0,
                 display: "inline-block",
               }}

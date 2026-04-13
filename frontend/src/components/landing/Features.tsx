@@ -84,7 +84,7 @@ export const Features: React.FC = () => {
               Features
             </span>
           </div>
-          <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white md:text-4xl lg:text-5xl">
+          <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl lg:text-5xl">
             Everything You Need
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-lg text-gray-500 dark:text-gray-400">
@@ -97,12 +97,12 @@ export const Features: React.FC = () => {
           {metrics.map((metric, index) => (
             <div
               key={index}
-              className="group rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 p-5 md:p-7 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/20"
+              className="group rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-white dark:bg-gray-800/50 p-5 md:p-7 text-center transition-all duration-300 hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]"
             >
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary md:h-12 md:w-12">
                 <span className="text-lg md:text-xl">{metric.icon}</span>
               </div>
-              <div className="font-mono text-2xl font-bold text-primary md:text-3xl">
+              <div className="font-mono text-2xl font-semibold text-primary md:text-3xl">
                 {metric.value}
               </div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -117,7 +117,7 @@ export const Features: React.FC = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 p-5 md:p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
+              className="group rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-white dark:bg-gray-800/50 p-5 md:p-6 transition-all duration-300 hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]"
             >
               <div
                 className={`mb-4 flex h-12 w-12 items-center justify-center rounded-lg text-xl text-white ${feature.color} transition-transform duration-200 group-hover:scale-110`}

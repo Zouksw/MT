@@ -10,8 +10,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { use, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Statistic,
   Card,
@@ -22,6 +22,7 @@ import {
   Descriptions,
   Alert,
   message,
+  Modal,
   Progress,
 } from "antd";
 import {
@@ -32,6 +33,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
   SecurityScanOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Breakpoint } from "antd";
@@ -41,7 +43,7 @@ import { DetailPageLayout, DetailSection } from "@/components/layout/DetailPageL
 import { useIsMobile } from "@/lib/responsive-utils";
 
 interface ApiKeyDetailParams {
-  id?: string;
+  id: string;
 }
 
 interface ApiKeyWithDetails extends Omit<ApiKey, 'permissions' | 'lastUsed' | 'expiresAt'> {
@@ -68,8 +70,8 @@ interface ApiUsageLog {
   ip: string;
 }
 
-export default function ApiKeyDetailPage() {
-  const params = useParams() as ApiKeyDetailParams;
+export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDetailParams> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [apiKey, setApiKey] = useState<ApiKeyWithDetails | null>(null);
   const [usageLogs, setUsageLogs] = useState<ApiUsageLog[]>([]);
@@ -78,7 +80,7 @@ export default function ApiKeyDetailPage() {
   const isMobile = useIsMobile();
 
   const fetchApiKey = useCallback(async () => {
-    if (!params.id) {
+    if (!id) {
       setError("API Key ID is required");
       setLoading(false);
       return;
@@ -86,7 +88,7 @@ export default function ApiKeyDetailPage() {
 
     try {
       setLoading(true);
-      const response = await authFetch(`/api/apikeys/${params.id}`);
+      const response = await authFetch(`/api/apikeys/${id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch API key");
       }
@@ -101,13 +103,13 @@ export default function ApiKeyDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [id]);
 
   const fetchUsageLogs = useCallback(async () => {
-    if (!params.id) return;
+    if (!id) return;
 
     try {
-      const response = await authFetch(`/api/apikeys/${params.id}/usage`);
+      const response = await authFetch(`/api/apikeys/${id}/usage`);
       if (response.ok) {
         const data = await response.json();
         setUsageLogs(data.data || data.items || []);
@@ -116,7 +118,7 @@ export default function ApiKeyDetailPage() {
       // eslint-disable-next-line no-console
       console.error("Failed to fetch usage logs:");
     }
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     fetchApiKey();
@@ -131,8 +133,34 @@ export default function ApiKeyDetailPage() {
   };
 
   const handleRegenerate = async () => {
-    // TODO: Implement regenerate functionality
-    message.info("Key regeneration will be implemented");
+    Modal.confirm({
+      title: "Regenerate API Key",
+      icon: <ExclamationCircleOutlined />,
+      content: "Regenerating this API key will invalidate the current key immediately. Any existing integrations using this key will stop working until they are updated with the new key.",
+      okText: "Regenerate",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          const response = await authFetch(`/api/apikeys/${id}/regenerate`, { method: "POST" });
+          if (!response.ok) {
+            throw new Error("Failed to regenerate API key");
+          }
+          const data = await response.json();
+          const newKey = data.data || data;
+          setApiKey({
+            ...apiKey!,
+            ...(typeof newKey === "object" ? newKey : {}),
+            keyPreview: newKey.key
+              ? `${newKey.key.substring(0, 8)}${newKey.key.slice(-4)}`
+              : apiKey!.keyPreview,
+          });
+          message.success("API key regenerated successfully. Make sure to copy the new key.");
+        } catch {
+          message.error("Failed to regenerate API key");
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -179,7 +207,26 @@ export default function ApiKeyDetailPage() {
       label: "Revoke",
       danger: true,
       onClick: () => {
-        // Show confirmation for revoke action
+        Modal.confirm({
+          title: "Revoke API Key",
+          icon: <ExclamationCircleOutlined />,
+          content: "Revoking this API key will permanently disable it. Any applications using this key will lose access immediately.",
+          okText: "Revoke",
+          okType: "danger",
+          cancelText: "Cancel",
+          onOk: async () => {
+            try {
+              const response = await authFetch(`/api/apikeys/${id}`, { method: "DELETE" });
+              if (!response.ok) {
+                throw new Error("Failed to revoke API key");
+              }
+              message.success("API key revoked");
+              router.push("/apikeys");
+            } catch {
+              message.error("Failed to revoke API key");
+            }
+          },
+        });
       }
     }
   ];

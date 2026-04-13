@@ -504,9 +504,9 @@ export default function ForecastCreate() {
                 loading={loading}
                 block
                 style={{
-                  background: "#0066CC",
+                  background: "#171717",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: "6px",
                   fontWeight: 600,
                 }}
               >

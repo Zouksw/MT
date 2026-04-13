@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Row, Col, Space, Avatar, Tag, Button as AntButton } from "antd";
+import { Card, Row, Col, Avatar, Tag, Button as AntButton } from "antd";
 import {
   SafetyOutlined,
   UserOutlined,
@@ -10,10 +10,8 @@ import {
   RightOutlined,
   ClockCircleOutlined,
   CheckCircleFilled,
-  LockOutlined,
   ApiOutlined,
   SettingOutlined,
-  LogoutOutlined,
 } from "@ant-design/icons";
 import { useGo } from "@refinedev/core";
 
@@ -34,7 +32,7 @@ interface UserProfile {
 export default function SettingsPage() {
   const go = useGo();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async () => {
     setLoading(true);
@@ -112,11 +110,11 @@ export default function SettingsPage() {
       <Row gutter={[24, 24]}>
         {/* User Profile Card */}
         <Col xs={24} lg={8}>
-          <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+          <div className="rounded-xl overflow-hidden bg-white dark:bg-gray-800">
             {/* Gradient header strip */}
             <div
               className="h-24 relative"
-              style={{ background: "linear-gradient(135deg, #0066CC, #3B82F6)" }}
+              style={{ background: "#171717" }}
             >
               {/* Decorative circles */}
               <div className="absolute top-2 right-8 w-16 h-16 rounded-full bg-white/10" />
@@ -130,9 +128,9 @@ export default function SettingsPage() {
                 src={user?.avatar}
                 icon={<UserOutlined />}
                 className="ring-4 ring-white dark:ring-gray-800 shadow-lg"
-                style={{ border: "3px solid #0066CC" }}
+                style={{ border: "3px solid #171717" }}
               />
-              <h4 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mt-3 mb-0.5">
+              <h4 className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50 mt-3 mb-0.5">
                 {user?.name || "User"}
               </h4>
               <p className="text-body text-gray-500 dark:text-gray-400 mb-2">
@@ -214,7 +212,7 @@ export default function SettingsPage() {
                 <circle cx="64" cy="64" r="54" fill="none" stroke="#E5E7EB" strokeWidth="8" className="dark:stroke-gray-700" />
                 <circle
                   cx="64" cy="64" r="54" fill="none"
-                  stroke="#10B981"
+                  stroke="#0a72ef"
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={`${securityScore * 3.39} 339`}
@@ -222,7 +220,7 @@ export default function SettingsPage() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-display font-bold text-gray-900 dark:text-gray-50">
+                <span className="text-3xl font-display font-semibold text-gray-900 dark:text-gray-50">
                   {Math.round(securityScore)}
                 </span>
                 <span className="text-xs text-gray-500">out of 100</span>
@@ -309,7 +307,7 @@ export default function SettingsPage() {
                 <Col xs={12} md={6} key={idx}>
                   <button
                     onClick={() => go({ to: action.path, type: "push" })}
-                    className="w-full p-4 rounded-xl border border-gray-100 dark:border-gray-700 text-left group hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-800"
+                    className="w-full p-4 rounded-xl text-left group transition-shadow duration-200 bg-white dark:bg-gray-800"
                   >
                     <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white text-sm mb-3 transition-transform duration-200 group-hover:scale-110`}>
                       {action.icon}

@@ -83,7 +83,7 @@ export const MobileFilterPanel: React.FC<MobileFilterPanelProps> = ({
       {activeCount > 0 && (
         <span
           style={{
-            background: "#0066CC",
+            background: "#171717",
             color: "#fff",
             borderRadius: "10px",
             padding: "2px 8px",
@@ -121,7 +121,7 @@ export const MobileFilterPanel: React.FC<MobileFilterPanelProps> = ({
             strong
             style={{
               fontSize: "12px",
-              color: "#0066CC",
+              color: "#0a72ef",
               background: "rgba(0, 102, 204, 0.08)",
               padding: "2px 8px",
               borderRadius: "10px",
@@ -193,7 +193,7 @@ export const MobileFilterPanel: React.FC<MobileFilterPanelProps> = ({
               block
               onClick={handleApply}
               style={{
-                background: "#0066CC",
+                background: "#171717",
                 borderRadius: 4,
               }}
             >
@@ -272,7 +272,7 @@ export const InlineFilterBar: React.FC<InlineFilterBarProps> = ({
           <div
             style={{
               padding: "6px 12px",
-              background: filter.value ? "#0066CC" : "#FFFFFF",
+              background: filter.value ? "#171717" : "#FFFFFF",
               border: "1px solid #E5E7EB",
               borderRadius: "16px",
               fontSize: "13px",
@@ -355,8 +355,8 @@ export const MobileQuickFilters: React.FC<MobileQuickFiltersProps> = ({
               style={{
                 flex: "0 0 auto",
                 padding: "6px 12px",
-                background: isActive ? "#0066CC" : "#FFFFFF",
-                border: "1px solid " + (isActive ? "#0066CC" : "#E5E7EB"),
+                background: isActive ? "#171717" : "#FFFFFF",
+                border: "1px solid " + (isActive ? "#171717" : "#E5E7EB"),
                 borderRadius: "16px",
                 cursor: "pointer",
                 transition: "all 0.2s",

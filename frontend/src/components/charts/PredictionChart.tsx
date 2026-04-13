@@ -220,7 +220,6 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
             borderRadius: chartTooltipStyles.borderRadius,
             padding: chartTooltipStyles.padding,
             boxShadow: chartTooltipStyles.boxShadow,
-            backdropFilter: chartTooltipStyles.backdropFilter,
             minWidth: 180,
           }}
         >
@@ -357,7 +356,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
                 }}
               >
                 <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Historical Mean</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: chartColors.gray900 }}>
+                <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
                   {formatValue(historicalStats.mean)}
                 </div>
               </div>
@@ -389,7 +388,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
                 }}
               >
                 <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Prediction Mean</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: chartColors.gray900 }}>
+                <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
                   {formatValue(predictionStats.mean)}
                 </div>
               </div>

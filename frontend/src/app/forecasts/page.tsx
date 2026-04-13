@@ -319,10 +319,10 @@ export default function ForecastList() {
               <CreateButton
                 icon={<PlusOutlined />}
                 style={{
-                  background: "#0066CC",
+                  background: "#171717",
                   border: "none",
                   height: "40px",
-                  borderRadius: "4px",
+                  borderRadius: "6px",
                   fontWeight: 600,
                 }}
               >

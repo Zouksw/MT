@@ -107,7 +107,7 @@ export const MobileStatsCard: React.FC<MobileStatsCardProps> = ({
                 <div
                   style={{
                     fontSize: isFeatured ? "32px" : "24px",
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: item.color || "#111827",
                     lineHeight: 1,
                     marginBottom: isFeatured ? "12px" : "8px",
@@ -218,7 +218,7 @@ export const DesktopGridStats: React.FC<DesktopGridStatsProps> = ({
                 <div
                   style={{
                     fontSize: isFeatured ? "36px" : "28px",
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: item.color || "#111827",
                     lineHeight: 1,
                     marginBottom: isFeatured ? "12px" : "8px",

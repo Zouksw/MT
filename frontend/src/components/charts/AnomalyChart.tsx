@@ -274,7 +274,6 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
                         borderRadius: chartTooltipStyles.borderRadius,
                         padding: chartTooltipStyles.padding,
                         boxShadow: chartTooltipStyles.boxShadow,
-                        backdropFilter: chartTooltipStyles.backdropFilter,
                         minWidth: 200,
                     }}
                 >
@@ -412,7 +411,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
                             }}
                         >
                             <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Mean</div>
-                            <div style={{ fontSize: 18, fontWeight: 700, color: chartColors.gray900 }}>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
                                 {formatValue(stats.mean)}
                             </div>
                         </div>
@@ -426,7 +425,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
                             }}
                         >
                             <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Std Dev</div>
-                            <div style={{ fontSize: 18, fontWeight: 700, color: chartColors.gray900 }}>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
                                 {formatValue(stats.std)}
                             </div>
                         </div>
@@ -454,7 +453,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
                             }}
                         >
                             <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Anomalies</div>
-                            <div style={{ fontSize: 18, fontWeight: 700, color: chartColors.gray900 }}>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
                                 {anomalyStats.total}
                             </div>
                         </div>

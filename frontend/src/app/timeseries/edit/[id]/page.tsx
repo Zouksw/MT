@@ -61,7 +61,7 @@ export default function TimeseriesEdit() {
         <Form.Item
           label="Color"
           name="colorHex"
-          initialValue="#1890ff"
+          initialValue="#0a72ef"
         >
           <Input type="color" style={{ width: 100, height: 40 }} />
         </Form.Item>

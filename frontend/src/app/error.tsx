@@ -27,40 +27,10 @@ export default function Error({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `
-          linear-gradient(135deg, #fa709a 0%, #fee140 100%)
-        `,
+        background: "#fafafa",
         padding: "24px",
       }}
     >
-      {/* Animated background elements */}
-      <div
-        style={{
-          position: "absolute",
-          width: "600px",
-          height: "600px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%)",
-          top: "-200px",
-          left: "-200px",
-          filter: "blur(60px)",
-          animation: "float 20s ease-in-out infinite",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          width: "500px",
-          height: "500px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)",
-          bottom: "-150px",
-          right: "-150px",
-          filter: "blur(60px)",
-          animation: "float 25s ease-in-out infinite reverse",
-        }}
-      />
-
       <div
         style={{
           position: "relative",
@@ -75,25 +45,24 @@ export default function Error({
             width: "120px",
             height: "120px",
             borderRadius: "30px",
-            background: "rgba(255, 255, 255, 0.25)",
-            backdropFilter: "blur(10px)",
+            background: "#f0f0f0",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 32px",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08)",
           }}
         >
-          <ExclamationCircleOutlined style={{ fontSize: "60px", color: "#fff" }} />
+          <ExclamationCircleOutlined style={{ fontSize: "60px", color: "#0a72ef" }} />
         </div>
 
         {/* Title */}
         <Title
           level={1}
           style={{
-            color: "#fff",
+            color: "#171717",
             fontSize: "clamp(32px, 5vw, 48px)",
-            fontWeight: 700,
+            fontWeight: 600,
             marginBottom: "16px",
             lineHeight: 1.2,
           }}
@@ -105,7 +74,7 @@ export default function Error({
         <Paragraph
           style={{
             fontSize: "18px",
-            color: "rgba(255, 255, 255, 0.9)",
+            color: "#525252",
             marginBottom: "40px",
             lineHeight: 1.6,
           }}
@@ -118,18 +87,18 @@ export default function Error({
         {process.env.NODE_ENV === "development" && error.message && (
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.2)",
-              backdropFilter: "blur(10px)",
+              background: "#f5f5f5",
               borderRadius: "8px",
               padding: "16px",
               marginBottom: "32px",
               textAlign: "left",
+              border: "1px solid #e5e5e5",
             }}
           >
             <Paragraph
               style={{
                 fontSize: "13px",
-                color: "rgba(255, 255, 255, 0.8)",
+                color: "#525252",
                 margin: 0,
                 fontFamily: "monospace",
                 whiteSpace: "pre-wrap",
@@ -142,7 +111,7 @@ export default function Error({
               <Paragraph
                 style={{
                   fontSize: "12px",
-                  color: "rgba(255, 255, 255, 0.6)",
+                  color: "#737373",
                   margin: "8px 0 0 0",
                   fontFamily: "monospace",
                 }}
@@ -165,8 +134,8 @@ export default function Error({
               fontSize: "16px",
               fontWeight: 600,
               borderRadius: "8px",
-              background: "#fff",
-              color: "#fa709a",
+              background: "#0a72ef",
+              color: "#fff",
               border: "none",
             }}
             onClick={() => reset()}
@@ -182,10 +151,9 @@ export default function Error({
               fontSize: "16px",
               fontWeight: 600,
               borderRadius: "8px",
-              background: "rgba(255, 255, 255, 0.25)",
-              backdropFilter: "blur(10px)",
-              color: "#fff",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
+              background: "#fff",
+              color: "#171717",
+              border: "1px solid #e5e5e5",
             }}
             onClick={() => router.push("/")}
           >
@@ -198,7 +166,7 @@ export default function Error({
           <Paragraph
             style={{
               fontSize: "14px",
-              color: "rgba(255, 255, 255, 0.8)",
+              color: "#737373",
               marginBottom: "16px",
             }}
           >
@@ -209,13 +177,12 @@ export default function Error({
               href="/dashboard"
               style={{
                 fontSize: "14px",
-                color: "#fff",
+                color: "#0a72ef",
                 textDecoration: "none",
-                opacity: 0.9,
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Dashboard
             </a>
@@ -223,48 +190,18 @@ export default function Error({
               href="/login"
               style={{
                 fontSize: "14px",
-                color: "#fff",
+                color: "#0a72ef",
                 textDecoration: "none",
-                opacity: 0.9,
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Login
-            </a>
-            <a
-              href="https://github.com/your-repo/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: "14px",
-                color: "#fff",
-                textDecoration: "none",
-                opacity: 0.9,
-                transition: "opacity 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
-            >
-              Report Issue
             </a>
           </div>
         </div>
       </div>
-
-      {/* Add animation keyframes */}
-      <style>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(30px, -30px);
-          }
-        }
-      `}</style>
     </div>
   );
 }

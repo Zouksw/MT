@@ -9,7 +9,7 @@
 
 export const lightColors = {
   // Primary - Refined Blue
-  primary: "#0066CC",
+  primary: "#0a72ef",
   primaryBg: "#E6F0FA",
   primaryBgHover: "#D6E6F8",
   primaryBorder: "#66B3FF",
@@ -186,7 +186,7 @@ export const typography = {
   fontWeightNormal: 400,
   fontWeightMedium: 500,
   fontWeightSemibold: 600,
-  fontWeightBold: 700,
+  fontWeightBold: 600,
 
   // Line Heights
   lineHeightTight: 1.25,

@@ -10,8 +10,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { use, useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import {
   Row,
   Col,
@@ -22,6 +22,8 @@ import {
   Button,
   Space,
   Alert,
+  Modal,
+  message,
 } from "antd";
 import {
   EditOutlined,
@@ -29,6 +31,7 @@ import {
   LineChartOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Forecast } from "@/types/api";
@@ -84,8 +87,26 @@ export default function ForecastDetailPage() {
   }, [fetchForecast]);
 
   const handleDelete = async () => {
-    // TODO: Implement delete with confirmation
-    router.push("/forecasts");
+    Modal.confirm({
+      title: "Delete Forecast",
+      icon: <ExclamationCircleOutlined />,
+      content: "Are you sure you want to delete this forecast? This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          const response = await authFetch(`/api/forecasts/${params.id}`, { method: "DELETE" });
+          if (!response.ok) {
+            throw new Error("Failed to delete forecast");
+          }
+          message.success("Forecast deleted");
+          router.push("/forecasts");
+        } catch {
+          message.error("Failed to delete forecast");
+        }
+      },
+    });
   };
 
   if (loading) {

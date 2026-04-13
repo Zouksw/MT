@@ -35,7 +35,6 @@ export default function ApiKeyCreate() {
               <Select.Option value="write:datasets">Write Datasets</Select.Option>
               <Select.Option value="read:timeseries">Read Time Series</Select.Option>
               <Select.Option value="write:timeseries">Write Time Series</Select.Option>
-              <Select.Option value="train:models">Train Models</Select.Option>
               <Select.Option value="admin">Admin</Select.Option>
             </Select>
           </Form.Item>

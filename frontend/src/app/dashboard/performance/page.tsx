@@ -680,8 +680,8 @@ export default function PerformancePage() {
                   >
                     <defs>
                       <linearGradient id="avgGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#0066CC" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#0066CC" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#0a72ef" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#0a72ef" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -710,13 +710,13 @@ export default function PerformancePage() {
                       type="monotone"
                       dataKey="avg"
                       name="Average"
-                      stroke="#0066CC"
+                      stroke="#0a72ef"
                       strokeWidth={2.5}
                       dot={false}
                       activeDot={{
                         r: 4,
                         strokeWidth: 2,
-                        stroke: "#0066CC",
+                        stroke: "#0a72ef",
                         fill: "#FFFFFF",
                       }}
                       isAnimationActive={true}
@@ -768,8 +768,8 @@ export default function PerformancePage() {
                   >
                     <defs>
                       <linearGradient id="heapGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#0066CC" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#0066CC" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#0a72ef" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#0a72ef" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -807,13 +807,13 @@ export default function PerformancePage() {
                       type="monotone"
                       dataKey="heapUsedMB"
                       name="Heap Used"
-                      stroke="#0066CC"
+                      stroke="#0a72ef"
                       strokeWidth={2.5}
                       dot={false}
                       activeDot={{
                         r: 4,
                         strokeWidth: 2,
-                        stroke: "#0066CC",
+                        stroke: "#0a72ef",
                         fill: "#FFFFFF",
                       }}
                       isAnimationActive={true}
@@ -1006,7 +1006,7 @@ function WebVitalCard({
 }) {
   if (loading || !data) {
     return (
-      <div className="p-4 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+      <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50" style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px" }}>
         <Spin size="small" />
       </div>
     );
@@ -1016,13 +1016,13 @@ function WebVitalCard({
   const tag = data.avg > 0 ? ratingTag(data.avg, thresholds) : null;
 
   return (
-    <div className="p-4 rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/30">
+    <div className="p-4 rounded-lg bg-white dark:bg-gray-900/30" style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px" }}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{name}</span>
         {tag}
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{label}</p>
-      <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 data-text">
+      <div className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 data-text">
         {displayValue}
       </div>
       <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5">

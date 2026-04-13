@@ -110,7 +110,7 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 14L6 8L9 11L14 2" stroke="#0066CC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 14L6 8L9 11L14 2" stroke="#0a72ef" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <Title level={5} className="!text-base !mb-0">
@@ -138,8 +138,8 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
         <LineChart data={displayData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#0066CC" stopOpacity={0.15} />
-              <stop offset="95%" stopColor="#0066CC" stopOpacity={0} />
+              <stop offset="5%" stopColor="#0a72ef" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#0a72ef" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -178,13 +178,13 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
             type="monotone"
             dataKey="count"
             name="Forecasts"
-            stroke="#0066CC"
+            stroke="#0a72ef"
             strokeWidth={2.5}
             dot={false}
             activeDot={{
               r: 5,
               strokeWidth: 2,
-              stroke: "#0066CC",
+              stroke: "#0a72ef",
               fill: "#FFFFFF",
             }}
             fill="url(#forecastGradient)"

@@ -1,7 +1,8 @@
 "use client";
 
-import { Row, Col, Tag, Button, Space, Alert, Descriptions, Badge } from "antd";
-import { ArrowLeftOutlined, BellOutlined, InfoCircleOutlined, WarningOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import React from "react";
+import { Row, Col, Tag, Button, Space, Alert, Descriptions, Badge, Modal, message } from "antd";
+import { ArrowLeftOutlined, BellOutlined, InfoCircleOutlined, WarningOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useGo } from "@refinedev/core";
 import { useOne } from "@refinedev/core";
 import { DateField } from "@refinedev/antd";
@@ -9,9 +10,10 @@ import { DateField } from "@refinedev/antd";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
+import { authFetch } from "@/utils/auth";
 
 interface AlertShowPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const SEVERITY_CONFIG = {
@@ -40,11 +42,12 @@ const ALERT_TYPE_CONFIG = {
 };
 
 export default function AlertShowPage({ params }: AlertShowPageProps) {
+  const { id } = React.use(params);
   const go = useGo();
 
   const alertResult = useOne({
     resource: "alerts",
-    id: params.id,
+    id,
   });
 
   const alert = alertResult?.result?.data;
@@ -176,16 +179,49 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
                   type="primary"
                   block
                   style={{
-                    background: "#0066CC",
+                    background: "#171717",
                     border: "none",
-                    borderRadius: "4px",
+                    borderRadius: "6px",
                     fontWeight: 600,
+                  }}
+                  onClick={async () => {
+                    try {
+                      const response = await authFetch(`/api/alerts/${id}/read`, { method: "PATCH" });
+                      if (!response.ok) {
+                        throw new Error("Failed to mark alert as read");
+                      }
+                      message.success("Alert marked as read");
+                      alertResult.query?.refetch();
+                    } catch {
+                      message.error("Failed to mark alert as read");
+                    }
                   }}
                 >
                   Mark as Read
                 </Button>
               )}
-              <Button danger block>
+              <Button danger block onClick={() => {
+                Modal.confirm({
+                  title: "Delete Alert",
+                  icon: <ExclamationCircleOutlined />,
+                  content: "Are you sure you want to delete this alert? This action cannot be undone.",
+                  okText: "Delete",
+                  okType: "danger",
+                  cancelText: "Cancel",
+                  onOk: async () => {
+                    try {
+                      const response = await authFetch(`/api/alerts/${id}`, { method: "DELETE" });
+                      if (!response.ok) {
+                        throw new Error("Failed to delete alert");
+                      }
+                      message.success("Alert deleted");
+                      go({ to: "/alerts", type: "push" });
+                    } catch {
+                      message.error("Failed to delete alert");
+                    }
+                  },
+                });
+              }}>
                 Delete Alert
               </Button>
             </Space>

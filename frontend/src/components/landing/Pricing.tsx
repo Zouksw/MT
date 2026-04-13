@@ -79,7 +79,7 @@ const plans: PricingPlan[] = [
 ];
 
 const planColors = {
-  purple: "#0066CC",
+  purple: "#0a72ef",
   blue: "#3B82F6",
   sunset: "#0EA5E9",
 };
@@ -104,7 +104,7 @@ export const Pricing: React.FC = () => {
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.1em",
-              color: "#0066cc",
+              color: "#0a72ef",
             }}
           >
             Pricing
@@ -113,7 +113,7 @@ export const Pricing: React.FC = () => {
             level={2}
             style={{
               fontSize: "clamp(32px, 4vw, 48px)",
-              fontWeight: 700,
+              fontWeight: 600,
               marginTop: "16px",
               marginBottom: "16px",
             }}
@@ -142,7 +142,7 @@ export const Pricing: React.FC = () => {
                   padding: plan.popular ? "clamp(24px, 4vw, 40px) clamp(16px, 3vw, 32px)" : "clamp(20px, 3vw, 32px)",
                   position: "relative",
                   background: "#fff",
-                  border: plan.popular ? "2px solid #0066cc" : "1px solid #f1f5f9",
+                  border: plan.popular ? "2px solid #0a72ef" : "1px solid #f1f5f9",
                   borderRadius: "8px",
                   transition: "all 0.3s ease",
                 }}
@@ -165,7 +165,7 @@ export const Pricing: React.FC = () => {
                       background: planColors.purple,
                       color: "#fff",
                       padding: "4px 16px",
-                      borderRadius: "3px",
+                      borderRadius: "6px",
                       fontSize: "12px",
                       fontWeight: 600,
                       display: "flex",
@@ -189,7 +189,7 @@ export const Pricing: React.FC = () => {
                   <Text
                     style={{
                       fontSize: "48px",
-                      fontWeight: 700,
+                      fontWeight: 600,
                       color: planColors[plan.gradient],
                     }}
                   >
@@ -207,7 +207,7 @@ export const Pricing: React.FC = () => {
                     <div key={idx} style={{ display: "flex", alignItems: "flex-start" }}>
                       <CheckOutlined
                         style={{
-                          color: "#0066cc",
+                          color: "#0a72ef",
                           marginRight: "12px",
                           marginTop: "4px",
                         }}
@@ -226,7 +226,7 @@ export const Pricing: React.FC = () => {
                     height: "48px",
                     fontSize: "16px",
                     fontWeight: 600,
-                    borderRadius: "4px",
+                    borderRadius: "6px",
                     ...(plan.popular
                       ? {
                           background: planColors.purple,

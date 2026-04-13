@@ -10,8 +10,8 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { use, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Statistic,
   Tag,
@@ -21,6 +21,7 @@ import {
   Alert,
   Timeline,
   Card,
+  message,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -36,7 +37,7 @@ import { DetailPageLayout, DetailSection } from "@/components/layout/DetailPageL
 import { useIsMobile } from "@/lib/responsive-utils";
 
 interface AnomalyDetailParams {
-  id?: string;
+  id: string;
 }
 
 interface AnomalyWithDetails extends Omit<Anomaly, 'timeseries'> {
@@ -58,8 +59,8 @@ interface AnomalyWithDetails extends Omit<Anomaly, 'timeseries'> {
   };
 }
 
-export default function AnomalyDetailPage() {
-  const params = useParams() as AnomalyDetailParams;
+export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyDetailParams> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [anomaly, setAnomaly] = useState<AnomalyWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +68,7 @@ export default function AnomalyDetailPage() {
   const isMobile = useIsMobile();
 
   const fetchAnomaly = useCallback(async () => {
-    if (!params.id) {
+    if (!id) {
       setError("Anomaly ID is required");
       setLoading(false);
       return;
@@ -75,7 +76,7 @@ export default function AnomalyDetailPage() {
 
     try {
       setLoading(true);
-      const response = await authFetch(`/api/anomalies/${params.id}`);
+      const response = await authFetch(`/api/anomalies/${id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch anomaly");
       }
@@ -86,24 +87,44 @@ export default function AnomalyDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     fetchAnomaly();
   }, [fetchAnomaly]);
 
   const handleResolve = async () => {
-    // TODO: Implement resolve functionality
-    setAnomaly({
-      ...anomaly!,
-      isResolved: true,
-      resolvedAt: new Date().toISOString()
-    } as AnomalyWithDetails);
+    try {
+      const response = await authFetch(`/api/anomalies/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "RESOLVED" }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to resolve anomaly");
+      }
+      message.success("Anomaly resolved successfully");
+      fetchAnomaly();
+    } catch {
+      message.error("Failed to resolve anomaly");
+    }
   };
 
   const handleDismiss = async () => {
-    // TODO: Implement dismiss functionality
-    router.push("/anomalies");
+    try {
+      const response = await authFetch(`/api/anomalies/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DISMISSED" }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to dismiss anomaly");
+      }
+      message.success("Anomaly dismissed");
+      fetchAnomaly();
+    } catch {
+      message.error("Failed to dismiss anomaly");
+    }
   };
 
   if (loading) {

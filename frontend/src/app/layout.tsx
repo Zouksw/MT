@@ -13,7 +13,7 @@ const outfit = Outfit({
   weight: '700',
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-outfit',
+  variable: '--font-geist-sans',
 });
 
 const dmSans = DM_Sans({
@@ -73,12 +73,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const theme = cookieStore.get("theme");
 
   return (
@@ -89,7 +89,7 @@ export default function RootLayout({
             position: absolute;
             top: -40px;
             left: 0;
-            background: #0066cc;
+            background: #171717;
             color: white;
             padding: 8px 16px;
             z-index: 100;

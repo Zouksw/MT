@@ -11,11 +11,11 @@ import tokens from "./tokens";
 // ============================================================================
 
 export const gradients = {
-  primary: "linear-gradient(135deg, #0066cc 0%, #0077e6 50%, #0088ff 100%)",
+  primary: "#171717",
   secondary: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
   success: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
   dark: "linear-gradient(135deg, #434343 0%, #000000 100%)",
-  purple: "linear-gradient(135deg, #0066cc 0%, #0077e6 50%, #0088ff 100%)",
+  purple: "#171717",
   blue: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
   sunset: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
   midnight: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
@@ -48,7 +48,7 @@ export const lightTheme = {
     ...RefineThemes.Blue.token,
 
     // Primary Colors - More vibrant for commercial look
-    colorPrimary: "#0066cc", // Indigo 500
+    colorPrimary: "#0a72ef", // Indigo 500
     colorPrimaryBg: "#eef2ff",
     colorPrimaryBgHover: "#e0e7ff",
     colorPrimaryBorder: "#c7d2fe",

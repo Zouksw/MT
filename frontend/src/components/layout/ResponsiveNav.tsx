@@ -21,6 +21,8 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   BellOutlined,
+  ThunderboltOutlined,
+  ApiOutlined,
 } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/responsive-utils";
 import { Dropdown, Badge } from "antd";
@@ -58,7 +60,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Alerts",
     icon: <AlertOutlined />,
     path: "/alerts",
-    badge: 3,
   },
   {
     key: "anomalies",
@@ -73,7 +74,7 @@ const USER_MENU_ITEMS = [
     key: "profile",
     label: "Profile",
     icon: <UserOutlined />,
-    path: "/profile",
+    path: "/settings/profile",
   },
   {
     key: "settings",
@@ -85,7 +86,7 @@ const USER_MENU_ITEMS = [
     key: "logout",
     label: "Logout",
     icon: <LogoutOutlined />,
-    path: "/logout",
+    path: "/login",
     danger: true,
   },
 ];
@@ -138,14 +139,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           style={{
             width: 32,
             height: 32,
-            background: "#0066CC",
+            background: "#171717",
             borderRadius: 6,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             color: "#FFFFFF",
             fontSize: 18,
-            fontWeight: 700,
+            fontWeight: 600,
             flexShrink: 0,
           }}
         >
@@ -155,7 +156,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           <span
             style={{
               fontSize: 16,
-              fontWeight: 700,
+              fontWeight: 600,
               color: "#111827",
             }}
           >
@@ -275,13 +276,26 @@ export const MobileTabBar: React.FC = () => {
       })}
 
       {/* More menu for additional items */}
-      <div
-        className="mobile-tab-item"
-        onClick={() => router.push("/more")}
+      <Dropdown
+        menu={{
+          items: [
+            { key: "anomalies", label: "Anomalies", icon: <ExperimentOutlined />, onClick: () => router.push("/anomalies") },
+            { key: "forecasts", label: "Forecasts", icon: <FundOutlined />, onClick: () => router.push("/forecasts") },
+            { key: "ai", label: "AI Models", icon: <ThunderboltOutlined />, onClick: () => router.push("/ai/models") },
+            { key: "trading", label: "Trading", icon: <DashboardOutlined />, onClick: () => router.push("/trading") },
+            { type: "divider" as const },
+            { key: "apikeys", label: "API Keys", icon: <ApiOutlined />, onClick: () => router.push("/apikeys") },
+            { key: "settings", label: "Settings", icon: <SettingOutlined />, onClick: () => router.push("/settings") },
+          ],
+        }}
+        trigger={["click"]}
+        placement="topRight"
       >
-        <MenuFoldOutlined className="mobile-tab-item-icon" />
-        <span>More</span>
-      </div>
+        <div className="mobile-tab-item">
+          <MenuFoldOutlined className="mobile-tab-item-icon" />
+          <span>More</span>
+        </div>
+      </Dropdown>
     </nav>
   );
 };
@@ -329,11 +343,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       {action || (
         <div
           className="mobile-header-action"
-          onClick={() => router.push("/notifications")}
+          onClick={() => router.push("/settings/notifications")}
         >
-          <Badge count={3} size="small">
-            <BellOutlined style={{ fontSize: 18 }} />
-          </Badge>
+          <BellOutlined style={{ fontSize: 18 }} />
         </div>
       )}
     </header>

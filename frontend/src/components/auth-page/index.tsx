@@ -107,11 +107,11 @@ export function AuthPage(props: AuthPageProps) {
         {/* Content */}
         <div className="relative z-10">
           {/* Logo */}
-          <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+          <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15">
             <ThunderboltOutlined className="text-3xl text-white" />
           </div>
 
-          <h1 className="font-display text-4xl font-bold leading-tight">
+          <h1 className="font-display text-4xl font-semibold leading-tight">
             IoTDB Enhanced
           </h1>
           <p className="mt-4 max-w-sm text-lg leading-relaxed text-white/80">
@@ -127,7 +127,7 @@ export function AuthPage(props: AuthPageProps) {
             { icon: <SafetyOutlined />, title: "Enterprise Security", desc: "End-to-end encryption and access control" },
           ].map((f, i) => (
             <div key={i} className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10">
                 <span className="text-xl">{f.icon}</span>
               </div>
               <div>
@@ -151,7 +151,7 @@ export function AuthPage(props: AuthPageProps) {
           {/* Blue accent bar */}
           <div className="mb-8 h-1 w-12 rounded-full bg-primary" />
 
-          <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white">
+          <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white">
             {renderTitle()}
           </h2>
           <p className="mt-3 text-base text-gray-500 dark:text-gray-400">

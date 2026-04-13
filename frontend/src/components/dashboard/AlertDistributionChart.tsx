@@ -115,7 +115,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
         </div>
         {total > 0 && (
           <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono data-text text-gray-900 dark:text-white">
+            <span className="text-2xl font-semibold font-mono data-text text-gray-900 dark:text-white">
               {total}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">total</span>

@@ -21,7 +21,7 @@
 
 :root {
   /* Primary Colors */
-  --color-primary: #0066CC;
+  --color-primary: #0a72ef;
   --color-primary-hover: #0055A3;
   --color-primary-active: #004080;
   --color-primary-light: #EEF2FF;
@@ -145,8 +145,8 @@ body {
 
 /* Display/Hero - Outfit Bold */
 h1, h2, .text-display {
-  font-family: var(--font-outfit), sans-serif;
-  font-weight: 700;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -343,11 +343,12 @@ nav.ant-breadcrumb ol li::before,
    ========================================================================== */
 
 .ant-card {
-  border: 1px solid #e5e7eb;
+  border: none;
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px, #fafafa 0px 0px 0px 1px;
 }
 
 .dark .ant-card {
-  border-color: #374151;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px 2px 2px;
 }
 
 /* Stat card styles are now defined in the Enhanced Stat Card section below */
@@ -409,7 +410,7 @@ nav.ant-breadcrumb ol li::before,
 }
 
 .ant-pagination-item:hover {
-  border-color: #0066CC;
+  border-color: #0a72ef;
 }
 
 .dark .ant-pagination-item:hover {
@@ -434,26 +435,25 @@ nav.ant-breadcrumb ol li::before,
 /* Content card */
 .content-card {
   background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
+  border: none;
+  border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px, #fafafa 0px 0px 0px 1px;
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .content-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 4px, rgba(0, 0, 0, 0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px;
 }
 
 .dark .content-card {
   background-color: #1f2937;
-  border-color: #374151;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px 2px 2px;
 }
 
 .dark .content-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px 4px 4px, rgba(0, 0, 0, 0.2) 0px 8px 8px -8px;
 }
 
 /* Page header */
@@ -463,9 +463,9 @@ nav.ant-breadcrumb ol li::before,
 
 .page-header__title {
   font-size: 30px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
-  color: #111827;
+  color: #171717;
   margin: 0 0 8px 0;
 }
 
@@ -871,23 +871,22 @@ nav.ant-breadcrumb ol li::before,
    GLASSMORPHISM & COMMERCIAL STYLES
    ========================================================================== */
 
-/* Glass Card Base Styles */
+/* Glass Card Base Styles — converted to shadow-as-border */
 .glass-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 4px, rgba(0, 0, 0, 0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px;
 }
 
 .dark .glass-card:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px 4px 4px, rgba(0, 0, 0, 0.2) 0px 8px 8px -8px;
 }
 
 /* Gradient Text - Professional Blue (kept for limited use) */
 .gradient-text {
-  color: #0066CC;
+  color: #0a72ef;
   font-weight: 600;
 }
 
@@ -946,7 +945,7 @@ textarea {
 
 /* Custom Button Styles - Professional Solid Colors */
 .ant-btn-primary {
-  background: #0066CC !important;
+  background: #0a72ef !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(0, 102, 204, 0.2);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -954,13 +953,11 @@ textarea {
 
 .ant-btn-primary:hover {
   background: #0055A3 !important;
-  box-shadow: 0 2px 6px rgba(0, 102, 204, 0.25);
-  transform: translateY(-1px);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 4px 4px;
 }
 
 .ant-btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 102, 204, 0.15);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
 }
 
 .dark .ant-btn-primary {
@@ -1007,7 +1004,7 @@ textarea {
 .ant-input-focused,
 .ant-select-focused .ant-select-selector {
   box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1) !important;
-  border-color: #0066cc !important;
+  border-color: #0a72ef !important;
 }
 
 .dark .ant-input:focus,
@@ -1037,8 +1034,8 @@ textarea {
 
 /* Pagination Styles - Professional Solid Colors */
 .ant-pagination-item-active {
-  background: #0066CC !important;
-  border-color: #0066CC !important;
+  background: #0a72ef !important;
+  border-color: #0a72ef !important;
 }
 
 .ant-pagination-item-active a {
@@ -1076,7 +1073,7 @@ textarea {
 
 /* Progress Bar Enhancements - Professional Solid Color */
 .ant-progress-bg {
-  background: #0066CC !important;
+  background: #0a72ef !important;
 }
 
 .dark .ant-progress-bg {
@@ -1097,29 +1094,7 @@ textarea {
   background: #64748b;
 }
 
-/* Badge Pulse Effect */
-.badge-pulse {
-  position: relative;
-}
-
-.badge-pulse::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
+/* Badge Pulse Effect — removed (anti-Vercel) */
 
 /* Text Wrap Balance for Better Headings */
 h1, h2, h3, h4, h5, h6 {
@@ -1696,7 +1671,7 @@ html {
 
 /* Add visible focus ring to all interactive elements */
 *:focus-visible {
-  outline: 3px solid #0066CC !important;
+  outline: 3px solid #0a72ef !important;
   outline-offset: 2px !important;
   border-radius: 2px;
   box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.3);
@@ -1719,7 +1694,7 @@ html {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #0066CC;
+  background: #0a72ef;
   color: white;
   padding: 8px 16px;
   text-decoration: none;
@@ -1799,7 +1774,7 @@ html {
 }
 
 .pulse-glow {
-  animation: pulseGlow 2s ease-in-out infinite;
+  /* Removed — anti-Vercel excessive animation */
 }
 
 /* Shimmer slide - for progress bars and loading overlays */
@@ -1863,16 +1838,15 @@ html {
 }
 
 .stat-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
-  transform: translateY(-2px);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 4px, rgba(0, 0, 0, 0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px !important;
 }
 
 .dark .stat-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px 4px 4px, rgba(0, 0, 0, 0.2) 0px 8px 8px -8px !important;
 }
 
 .stat-card--primary::before {
-  background: linear-gradient(90deg, #0066CC, #3B82F6);
+  background: #0a72ef;
 }
 
 .stat-card--success::before {
@@ -1909,7 +1883,7 @@ html {
 
 /* Row hover with left accent border */
 .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
-  box-shadow: inset 3px 0 0 0 #0066CC;
+  box-shadow: inset 3px 0 0 0 #0a72ef;
 }
 
 .dark .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
@@ -1944,7 +1918,7 @@ html {
   content: "";
   display: block;
   height: 1px;
-  background: linear-gradient(to right, #0066CC, rgba(0, 102, 204, 0.2), transparent);
+  background: #0a72ef;
   margin-top: 16px;
 }
 
@@ -1954,7 +1928,7 @@ html {
 
 .page-header h3,
 .page-header .ant-typography {
-  font-family: var(--font-outfit), sans-serif;
+  font-family: var(--font-geist-sans), sans-serif;
 }
 
 /* ============================================================================
@@ -1977,7 +1951,7 @@ html {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #0066CC, #3B82F6);
+  background: #0a72ef;
   border-radius: 8px 8px 0 0;
 }
 

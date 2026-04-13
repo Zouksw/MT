@@ -106,7 +106,7 @@ export function meetsWCAG_AAA(
  */
 export const DESIGN_COLORS = {
   // Primary colors
-  primary: "#0066CC",
+  primary: "#0a72ef",
   "primary-hover": "#0055A3",
   "primary-light": "#EEF2FF",
 

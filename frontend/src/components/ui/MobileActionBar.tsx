@@ -95,8 +95,8 @@ export const MobileActionBar: React.FC<MobileActionBarProps> = ({
                 height: "44px",
                 fontSize: "16px",
                 fontWeight: 600,
-                background: primary.type === "primary" ? "#0066CC" : undefined,
-                borderColor: primary.type === "primary" ? "#0066CC" : undefined,
+                background: primary.type === "primary" ? "#171717" : undefined,
+                borderColor: primary.type === "primary" ? "#171717" : undefined,
                 flex: 1,
               }}
             >
@@ -156,8 +156,8 @@ export const MobileActionBar: React.FC<MobileActionBarProps> = ({
               height: "48px",
               fontSize: "16px",
               fontWeight: 600,
-              background: primary.type === "primary" ? "#0066CC" : undefined,
-              borderColor: primary.type === "primary" ? "#0066CC" : undefined,
+              background: primary.type === "primary" ? "#171717" : undefined,
+              borderColor: primary.type === "primary" ? "#171717" : undefined,
             }}
           >
             {primary.label}
@@ -254,8 +254,8 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
         borderRadius: "50%",
         boxShadow: "0 4px 12px rgba(0, 102, 204, 0.4)",
         fontSize: "24px",
-        background: "#0066CC",
-        borderColor: "#0066CC",
+        background: "#171717",
+        borderColor: "#171717",
         zIndex: 1000,
         display: "flex",
         alignItems: "center",
@@ -270,7 +270,7 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
             background: "rgba(0, 0, 0, 0.8)",
             color: "#fff",
             padding: "6px 12px",
-            borderRadius: "4px",
+            borderRadius: "6px",
             fontSize: "12px",
             whiteSpace: "nowrap",
           }}

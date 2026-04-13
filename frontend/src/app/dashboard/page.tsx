@@ -85,15 +85,12 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-h1 font-display font-bold text-gray-900 dark:text-gray-50">
+              <h1 className="text-h1 font-display font-semibold text-gray-900 dark:text-gray-50">
                 Welcome back, {user?.name || "User"}!
               </h1>
               {/* System Health Indicator */}
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30">
-                <div className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                </div>
+                <span className="inline-flex rounded-full h-2 w-2 bg-green-500" />
                 <span className="text-xs font-medium text-green-700 dark:text-green-400">Healthy</span>
               </div>
             </div>
@@ -156,7 +153,7 @@ export default function DashboardPage() {
             <Col xs={24}>
               <div
                 className="rounded-lg p-5 sm:p-6 text-white relative overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #0066CC 0%, #0077E6 50%, #3B82F6 100%)" }}
+                style={{ background: "#171717" }}
               >
                 {/* Floating decorative dots */}
                 <div className="absolute top-4 right-12 w-16 h-16 rounded-full bg-white/5" style={{ animation: "float 6s ease-in-out infinite" }} />
@@ -169,7 +166,7 @@ export default function DashboardPage() {
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" fill="white" fillOpacity="0.8" />
                       </svg>
-                      <h3 className="text-h4 font-display font-bold text-white mb-0">
+                      <h3 className="text-h4 font-display font-semibold text-white mb-0">
                         AI Models Status
                       </h3>
                     </div>
@@ -190,7 +187,7 @@ export default function DashboardPage() {
                       ))}
                     </div>
                     <div>
-                      <div className="text-4xl font-display font-bold leading-none data-text">
+                      <div className="text-4xl font-display font-semibold leading-none data-text">
                         {stats.aiModels.active}
                       </div>
                       <p className="text-body-sm text-white/85 mt-1">

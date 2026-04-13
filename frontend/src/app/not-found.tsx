@@ -21,40 +21,10 @@ export default function NotFound() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `
-          linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-        `,
+        background: "#fafafa",
         padding: "24px",
       }}
     >
-      {/* Animated background elements */}
-      <div
-        style={{
-          position: "absolute",
-          width: "600px",
-          height: "600px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)",
-          top: "-200px",
-          left: "-200px",
-          filter: "blur(60px)",
-          animation: "float 20s ease-in-out infinite",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          width: "500px",
-          height: "500px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%)",
-          bottom: "-150px",
-          right: "-150px",
-          filter: "blur(60px)",
-          animation: "float 25s ease-in-out infinite reverse",
-        }}
-      />
-
       <div
         style={{
           position: "relative",
@@ -68,7 +38,7 @@ export default function NotFound() {
           style={{
             fontSize: "clamp(120px, 20vw, 200px)",
             fontWeight: 900,
-            color: "rgba(255, 255, 255, 0.2)",
+            color: "rgba(10, 114, 239, 0.1)",
             lineHeight: 1,
             marginBottom: "-20px",
             userSelect: "none",
@@ -83,25 +53,24 @@ export default function NotFound() {
             width: "100px",
             height: "100px",
             borderRadius: "24px",
-            background: "rgba(255, 255, 255, 0.2)",
-            backdropFilter: "blur(10px)",
+            background: "#f0f0f0",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 32px",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08)",
           }}
         >
-          <FileSearchOutlined style={{ fontSize: "50px", color: "#fff" }} />
+          <FileSearchOutlined style={{ fontSize: "50px", color: "#0a72ef" }} />
         </div>
 
         {/* Title */}
         <Title
           level={1}
           style={{
-            color: "#fff",
+            color: "#171717",
             fontSize: "clamp(32px, 5vw, 48px)",
-            fontWeight: 700,
+            fontWeight: 600,
             marginBottom: "16px",
             lineHeight: 1.2,
           }}
@@ -113,7 +82,7 @@ export default function NotFound() {
         <Paragraph
           style={{
             fontSize: "18px",
-            color: "rgba(255, 255, 255, 0.9)",
+            color: "#525252",
             marginBottom: "40px",
             lineHeight: 1.6,
           }}
@@ -134,8 +103,8 @@ export default function NotFound() {
               fontSize: "16px",
               fontWeight: 600,
               borderRadius: "8px",
-              background: "#fff",
-              color: "#667eea",
+              background: "#0a72ef",
+              color: "#fff",
               border: "none",
             }}
             onClick={() => router.push("/")}
@@ -151,10 +120,9 @@ export default function NotFound() {
               fontSize: "16px",
               fontWeight: 600,
               borderRadius: "8px",
-              background: "rgba(255, 255, 255, 0.2)",
-              backdropFilter: "blur(10px)",
-              color: "#fff",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
+              background: "#fff",
+              color: "#171717",
+              border: "1px solid #e5e5e5",
             }}
             onClick={() => router.back()}
           >
@@ -164,7 +132,7 @@ export default function NotFound() {
 
         {/* Helpful Links */}
         <div style={{ marginTop: "48px" }}>
-          <Text style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.7)" }}>
+          <Text style={{ fontSize: "14px", color: "#737373" }}>
             Or try these:
           </Text>
           <div style={{ marginTop: "16px", display: "flex", gap: "24px", justifyContent: "center", flexWrap: "wrap" }}>
@@ -172,13 +140,12 @@ export default function NotFound() {
               href="/dashboard"
               style={{
                 fontSize: "14px",
-                color: "#fff",
+                color: "#0a72ef",
                 textDecoration: "none",
-                opacity: 0.9,
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Dashboard
             </a>
@@ -186,13 +153,12 @@ export default function NotFound() {
               href="/timeseries"
               style={{
                 fontSize: "14px",
-                color: "#fff",
+                color: "#0a72ef",
                 textDecoration: "none",
-                opacity: 0.9,
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Time Series
             </a>
@@ -200,13 +166,12 @@ export default function NotFound() {
               href="/alerts"
               style={{
                 fontSize: "14px",
-                color: "#fff",
+                color: "#0a72ef",
                 textDecoration: "none",
-                opacity: 0.9,
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Alerts
             </a>
@@ -214,32 +179,18 @@ export default function NotFound() {
               href="/forecasts"
               style={{
                 fontSize: "14px",
-                color: "#fff",
+                color: "#0a72ef",
                 textDecoration: "none",
-                opacity: 0.9,
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Forecasts
             </a>
           </div>
         </div>
       </div>
-
-      {/* Add animation keyframes */}
-      <style>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(30px, -30px);
-          }
-        }
-      `}</style>
     </div>
   );
 }

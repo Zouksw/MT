@@ -174,7 +174,7 @@ export default function AnomalyList() {
             {
               label: "Critical",
               value: criticalCount,
-              color: "#0066CC",
+              color: "#0a72ef",
             },
             {
               label: "High",

@@ -173,7 +173,7 @@ export default function ProfileSettingsPage() {
                 size={100}
                 src={user?.avatarUrl}
                 icon={<UserOutlined />}
-                style={{ border: "3px solid #1890ff" }}
+                style={{ border: "3px solid #0a72ef" }}
               />
               <div style={{ textAlign: "center" }}>
                 <Title level={4} style={{ fontSize: "18px", marginBottom: 4 }}>
@@ -197,7 +197,7 @@ export default function ProfileSettingsPage() {
                   title="Datasets"
                   value={user?._count.datasets || 0}
                   prefix={<DatabaseOutlined />}
-                  valueStyle={{ fontSize: 20, color: "#1890ff" }}
+                  valueStyle={{ fontSize: 20, color: "#0a72ef" }}
                 />
               </Col>
               <Col span={8}>
@@ -205,7 +205,7 @@ export default function ProfileSettingsPage() {
                   title="Models"
                   value={user?._count.models || 0}
                   prefix={<SecurityScanOutlined />}
-                  valueStyle={{ fontSize: 20, color: "#52c41a" }}
+                  valueStyle={{ fontSize: 20, color: "#10B981" }}
                 />
               </Col>
               <Col span={8}>
@@ -213,7 +213,7 @@ export default function ProfileSettingsPage() {
                   title="Orgs"
                   value={user?._count.ownedOrganizations || 0}
                   prefix={<BranchesOutlined />}
-                  valueStyle={{ fontSize: 20, color: "#722ed1" }}
+                  valueStyle={{ fontSize: 20, color: "#8B5CF6" }}
                 />
               </Col>
             </AntRow>
@@ -261,7 +261,7 @@ export default function ProfileSettingsPage() {
                 >
                   <Input
                     prefix={<CameraOutlined />}
-                    placeholder="https://example.com/avatar.png"
+                    placeholder="https://your-avatar-url.com/image.png"
                     size="large"
                   />
                 </Form.Item>

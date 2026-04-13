@@ -9,12 +9,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary - Blue
+        // Vercel Primary - Develop Blue
         primary: {
-          DEFAULT: "#0066CC",
+          DEFAULT: "#0a72ef",
           hover: "#0055A3",
           active: "#004080",
-          light: "#EEF2FF",
+          light: "#ebf5ff",
         },
 
         // Secondary - Slate Blue
@@ -62,18 +62,18 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
-        display: ["Outfit", "sans-serif"],
-        mono: ["Roboto Mono", "monospace"],
-        code: ["JetBrains Mono", "monospace"],
+        sans: ["var(--font-geist-sans)", "Geist", "Arial", "sans-serif"],
+        display: ["var(--font-geist-sans)", "Geist", "Arial", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "Geist Mono", "monospace"],
+        code: ["var(--font-geist-mono)", "Geist Mono", "monospace"],
       },
       fontSize: {
-        "display": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
-        "h1": ["36px", { lineHeight: "1.2", letterSpacing: "-0.02em" }],
-        "h2": ["28px", { lineHeight: "1.3" }],
-        "h3": ["22px", { lineHeight: "1.4" }],
-        "h4": ["18px", { lineHeight: "1.5" }],
-        "body-lg": ["16px", { lineHeight: "1.5" }],
+        "display": ["48px", { lineHeight: "1.1", letterSpacing: "-2.4px" }],
+        "h1": ["36px", { lineHeight: "1.2", letterSpacing: "-1.44px" }],
+        "h2": ["28px", { lineHeight: "1.25", letterSpacing: "-0.96px" }],
+        "h3": ["22px", { lineHeight: "1.3", letterSpacing: "-0.48px" }],
+        "h4": ["18px", { lineHeight: "1.4" }],
+        "body-lg": ["16px", { lineHeight: "1.5", letterSpacing: "-0.32px" }],
         "body": ["14px", { lineHeight: "1.5" }],
         "body-sm": ["12px", { lineHeight: "1.5" }],
         "data-lg": ["18px", { lineHeight: "1.4" }],
@@ -87,16 +87,20 @@ const config: Config = {
       },
       borderRadius: {
         "sm": "4px",
-        "md": "8px",
-        "lg": "12px",
-        "xl": "16px",
-        "2xl": "24px",
+        "md": "6px",
+        "lg": "8px",
+        "xl": "12px",
+        "2xl": "16px",
+        "pill": "9999px",
       },
       boxShadow: {
-        "card": "0 1px 3px rgba(0, 0, 0, 0.06)",
-        "card-hover": "0 2px 6px rgba(0, 0, 0, 0.08)",
-        "card-hover-dark": "0 2px 6px rgba(0, 0, 0, 0.4)",
-        "button-hover": "0 4px 12px rgba(0, 102, 204, 0.3)",
+        "shadow-border": "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px",
+        "ring-border": "rgb(235, 235, 235) 0px 0px 0px 1px",
+        "card": "rgba(0,0,0,0.08) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 2px, rgba(0,0,0,0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px",
+        "card-hover": "rgba(0,0,0,0.08) 0px 0px 0px 1px, rgba(0,0,0,0.06) 0px 4px 4px, rgba(0,0,0,0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px",
+        "card-hover-dark": "rgba(0,0,0,0.3) 0px 0px 0px 1px, rgba(0,0,0,0.2) 0px 4px 4px, rgba(0,0,0,0.2) 0px 8px 8px -8px",
+        "button-hover": "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 4px 4px",
+        "focus": "hsla(212, 100%, 48%, 1) 0px 0px 0px 2px",
       },
       animation: {
         "skeleton-pulse": "skeleton-pulse 1.5s ease-in-out infinite",

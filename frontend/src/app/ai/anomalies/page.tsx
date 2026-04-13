@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { ContentCard } from "@/components/layout/ContentCard";
 import { DataTable } from "@/components/tables/DataTable";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import dynamic from "next/dynamic";
 
 // Dynamic import for heavy chart component
@@ -46,6 +48,7 @@ export default function AIAnomaliesPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VisualizationResult | null>(null);
+  const [apiError, setApiError] = useState<Error | null>(null);
 
   const severityColors: Record<string, string> = {
     LOW: "green",
@@ -236,9 +239,9 @@ export default function AIAnomaliesPage() {
               size="large"
               icon={<WarningOutlined />}
               style={{
-                background: "#0066CC",
+                background: "#171717",
                 border: "none",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 fontWeight: 600,
               }}
             >

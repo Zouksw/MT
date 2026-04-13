@@ -42,7 +42,7 @@ export const DataPageStats: React.FC<DataPageStatsProps> = ({
       <div style={{ marginBottom: 16 }}>
         <ResponsiveStats
           isMobile={true}
-          items={items.map((item, i) => ({
+          items={items.map((item, _i) => ({
             label: item.label,
             value: item.value,
             color: item.color,

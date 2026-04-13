@@ -148,7 +148,7 @@ export const Hero: React.FC = () => {
         </div>
 
         {/* Headline */}
-        <h1 className="font-display text-4xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white md:text-5xl lg:text-7xl">
+        <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-gray-900 dark:text-white md:text-5xl lg:text-7xl">
           Real-Time Analytics
           <br />
           <span className="text-primary">at Any Scale</span>
@@ -174,17 +174,17 @@ export const Hero: React.FC = () => {
         {/* Floating Metrics Bar */}
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-400 dark:text-gray-500 font-mono">
           <div className="flex items-center gap-2">
-            <span className="text-primary font-bold text-base">10M+</span>
+            <span className="text-primary font-semibold text-base">10M+</span>
             <span>Data Points/sec</span>
           </div>
           <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
           <div className="flex items-center gap-2">
-            <span className="text-primary font-bold text-base">&lt;1ms</span>
+            <span className="text-primary font-semibold text-base">&lt;1ms</span>
             <span>Latency</span>
           </div>
           <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
           <div className="flex items-center gap-2">
-            <span className="text-primary font-bold text-base">99.99%</span>
+            <span className="text-primary font-semibold text-base">99.99%</span>
             <span>Uptime</span>
           </div>
         </div>
@@ -196,7 +196,7 @@ export const Hero: React.FC = () => {
               Live Data Stream
             </span>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-green-500" />
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">Streaming</span>
             </div>
           </div>
@@ -209,10 +209,10 @@ export const Hero: React.FC = () => {
             <GlassCard
               key={i}
               intensity="light"
-              className="group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover relative"
+              className="group transition-all duration-200 hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px] relative"
             >
               {/* Large faded number prefix */}
-              <div className="absolute top-2 right-4 text-7xl font-display font-bold text-gray-100 dark:text-gray-800/60 select-none leading-none">
+              <div className="absolute top-2 right-4 text-7xl font-display font-semibold text-gray-100 dark:text-gray-800/60 select-none leading-none">
                 0{i + 1}
               </div>
               <div className="p-5 md:p-6 relative z-10">

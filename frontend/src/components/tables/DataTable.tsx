@@ -146,7 +146,8 @@ export const DataTable = <T extends Record<string, any>>({
         {dataSource.map((record, rowIndex) => (
           <div
             key={rowIndex}
-            className="rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/80 p-4 transition-all duration-200 active:scale-[0.98]"
+            className="rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800/80 p-4 transition-all duration-200 active:scale-[0.98]"
+            style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px" }}
           >
             {visibleColumns.map((col) => {
               const value = record[(col as any).dataIndex as string];

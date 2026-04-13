@@ -48,11 +48,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   const titleStyle: React.CSSProperties = {
     fontSize: token.fontSizeHeading3,
-    fontWeight: 700,
+    fontWeight: 600,
     lineHeight: 1.25,
     color: token.colorText,
     margin: "0 0 8px 0",
-    fontFamily: "var(--font-outfit), sans-serif",
+    fontFamily: "var(--font-geist-sans), sans-serif",
     letterSpacing: "-0.02em",
   };
 

@@ -26,7 +26,7 @@ const faqs: FAQItem[] = [
   {
     question: "How does AI-powered forecasting work?",
     answer:
-      "Our platform uses multiple machine learning algorithms including ARIMA, Prophet, LSTM, and Transformer models. You can train models on your historical time series data and generate accurate predictions with confidence intervals.",
+      "Our platform provides pre-trained AI models including ARIMA, Prophet, LSTM, and Transformer architectures. Generate accurate predictions with confidence intervals directly on your time series data — no model training required.",
     icon: <ThunderboltOutlined />,
   },
   {
@@ -70,7 +70,7 @@ export default function FAQ() {
           <div className="mb-4 inline-block rounded border border-primary/20 bg-primary/8 px-4 py-1.5">
             <span className="text-sm font-semibold text-primary uppercase tracking-wide">FAQ</span>
           </div>
-          <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
+          <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl">
             Frequently Asked Questions
           </h2>
           <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
@@ -85,10 +85,10 @@ export default function FAQ() {
             return (
               <div
                 key={index}
-                className={`rounded-lg border transition-all duration-300 ${
+                className={`rounded-lg transition-all duration-300 ${
                   isExpanded
-                    ? "border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/5"
-                    : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700"
+                    ? "border border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/5"
+                    : "shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-white dark:bg-gray-800/50 hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]"
                 }`}
               >
                 <button
@@ -142,7 +142,7 @@ export default function FAQ() {
         </div>
 
         {/* Contact CTA */}
-        <div className="mt-12 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-8 text-center md:mt-16">
+        <div className="mt-12 rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-gray-50 dark:bg-gray-800/50 p-8 text-center md:mt-16">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Still have questions?
           </h3>

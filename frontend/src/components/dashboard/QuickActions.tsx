@@ -71,11 +71,11 @@ export const QuickActions: React.FC = () => {
               onClick={() => router.push(action.path)}
               className={`
                 group relative w-full flex items-center gap-3 p-4 rounded-lg
-                text-left transition-all duration-200
+                text-left transition-shadow duration-200
                 stagger-slide-up
                 ${action.primary
-                  ? "bg-primary text-white hover:bg-primary-hover shadow-[0_1px_3px_rgba(0,102,204,0.2)] hover:shadow-[0_4px_12px_rgba(0,102,204,0.3)] hover:-translate-y-0.5 pulse-glow"
-                  : "bg-white dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 hover:border-primary/30 dark:hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5"
+                  ? "bg-primary text-white hover:bg-primary-hover shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,rgba(0,0,0,0.04)_0px_8px_8px_-8px]"
+                  : "bg-white dark:bg-gray-800/80 shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]"
                 }
               `}
               style={{ animationDelay: `${i * 50}ms` }}

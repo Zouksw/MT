@@ -31,10 +31,10 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = "inline-flex items-center justify-center font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variantStyles = {
-    primary: "bg-primary text-white hover:bg-primary-hover hover:-translate-y-0.5 hover:shadow-button-hover active:scale-95 focus:ring-primary",
-    secondary: "bg-secondary text-white hover:bg-secondary-hover hover:-translate-y-0.5 active:scale-95 focus:ring-secondary",
-    ghost: "bg-transparent border border-primary text-primary hover:bg-primary-light active:scale-95 focus:ring-primary",
-    danger: "bg-error text-white hover:bg-error-dark hover:-translate-y-0.5 active:scale-95 focus:ring-error",
+    primary: "bg-primary text-white hover:bg-primary-hover hover:shadow-button-hover active:scale-95 focus:ring-primary",
+    secondary: "bg-secondary text-white hover:bg-secondary-hover active:scale-95 focus:ring-secondary",
+    ghost: "bg-transparent text-primary shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px] hover:bg-primary-light active:scale-95 focus:ring-primary",
+    danger: "bg-error text-white hover:bg-error-dark active:scale-95 focus:ring-error",
   };
 
   const sizeStyles = {

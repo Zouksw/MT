@@ -40,15 +40,13 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
   const { data: user } = useGetIdentity<IUser>();
   const go = useGo();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [currentLocale, setCurrentLocale] = useState<string>("en");
-
-  // Read stored locale preference on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("locale");
-    if (stored === "zh-CN" || stored === "en") {
-      setCurrentLocale(stored);
+  const [currentLocale, setCurrentLocale] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("locale");
+      if (stored === "zh-CN" || stored === "en") return stored;
     }
-  }, []);
+    return "en";
+  });
 
   const toggleLocale = useCallback(() => {
     const next = currentLocale === "en" ? "zh-CN" : "en";
@@ -57,29 +55,32 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
   }, [currentLocale]);
 
   // Fetch unread alert count
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const response = await authFetch("/api/alerts/stats");
-      if (response.ok) {
-        const result = await response.json();
-        const data = result.data || result;
-        setUnreadCount(data?.unread || 0);
-      }
-    } catch {
-      // Silently ignore - non-critical
-    }
-  }, []);
-
   useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30s
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        const response = await authFetch("/api/alerts/stats");
+        if (response.ok && mounted) {
+          const result = await response.json();
+          const data = result.data || result;
+          setUnreadCount(data?.unread || 0);
+        }
+      } catch {
+        // Silently ignore - non-critical
+      }
+    };
+
+    load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const headerStyles: React.CSSProperties = {
     background: "rgba(255, 255, 255, 0.85)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
     borderBottom: "1px solid rgba(0, 102, 204, 0.06)",
     display: "flex",
     justifyContent: "space-between",
@@ -142,7 +143,7 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
             style={{
               width: 32,
               height: 32,
-              background: "linear-gradient(135deg, #0066CC, #3B82F6)",
+              background: "#171717",
               borderRadius: 6,
               display: "flex",
               alignItems: "center",
@@ -153,9 +154,9 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
             <span
               style={{
                 color: "#fff",
-                fontWeight: 700,
+                fontWeight: 600,
                 fontSize: 16,
-                fontFamily: "var(--font-outfit), sans-serif",
+                fontFamily: "var(--font-geist-sans), sans-serif",
                 lineHeight: 1,
               }}
             >
@@ -167,7 +168,7 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
               fontWeight: 600,
               fontSize: 14,
               color: token.colorText,
-              fontFamily: "var(--font-outfit), sans-serif",
+              fontFamily: "var(--font-geist-sans), sans-serif",
             }}
             className="hidden sm:inline"
           >
@@ -265,7 +266,7 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
               icon={<UserOutlined />}
               style={{
                 border: "2px solid",
-                borderImage: "linear-gradient(135deg, #0066CC, #3B82F6) 1",
+                borderImage: "#171717 1",
                 borderRadius: "50%",
               }}
             />

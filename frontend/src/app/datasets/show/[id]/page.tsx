@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { use, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Row,
   Col,
@@ -12,6 +12,8 @@ import {
   Button,
   Space,
   Descriptions,
+  Modal,
+  message,
 } from "antd";
 import {
   EditOutlined,
@@ -20,6 +22,7 @@ import {
   LineChartOutlined,
   CloudDownloadOutlined,
   PlusOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Breakpoint } from "antd";
@@ -29,7 +32,7 @@ import { DetailPageLayout, DetailSection } from "@/components/layout/DetailPageL
 import { useIsMobile } from "@/lib/responsive-utils";
 
 interface DatasetDetailParams {
-  id?: string;
+  id: string;
 }
 
 interface DatasetWithStats extends Dataset {
@@ -39,8 +42,8 @@ interface DatasetWithStats extends Dataset {
   storageLocation?: string;
 }
 
-export default function DatasetDetailPage() {
-  const params = useParams() as DatasetDetailParams;
+export default function DatasetDetailPage({ params }: { params: Promise<DatasetDetailParams> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [dataset, setDataset] = useState<DatasetWithStats | null>(null);
   const [timeseries, setTimeseries] = useState<TimeSeries[]>([]);
@@ -49,7 +52,7 @@ export default function DatasetDetailPage() {
   const isMobile = useIsMobile();
 
   const fetchDataset = useCallback(async () => {
-    if (!params.id) {
+    if (!id) {
       setError("Dataset ID is required");
       setLoading(false);
       return;
@@ -57,7 +60,7 @@ export default function DatasetDetailPage() {
 
     try {
       setLoading(true);
-      const response = await authFetch(`/api/datasets/${params.id}`);
+      const response = await authFetch(`/api/datasets/${id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch dataset");
       }
@@ -68,13 +71,13 @@ export default function DatasetDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [id]);
 
   const fetchTimeseries = useCallback(async () => {
-    if (!params.id) return;
+    if (!id) return;
 
     try {
-      const response = await authFetch(`/api/datasets/${params.id}/timeseries`);
+      const response = await authFetch(`/api/datasets/${id}/timeseries`);
       if (response.ok) {
         const data = await response.json();
         setTimeseries(data.data || data.items || []);
@@ -83,7 +86,7 @@ export default function DatasetDetailPage() {
       // eslint-disable-next-line no-console
       console.error("Failed to fetch timeseries:", err);
     }
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     fetchDataset();
@@ -91,8 +94,26 @@ export default function DatasetDetailPage() {
   }, [fetchDataset, fetchTimeseries]);
 
   const handleDelete = async () => {
-    // TODO: Implement delete with confirmation
-    router.push("/datasets");
+    Modal.confirm({
+      title: "Delete Dataset",
+      icon: <ExclamationCircleOutlined />,
+      content: "Are you sure you want to delete this dataset? This action cannot be undone and will remove all associated time series and data points.",
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          const response = await authFetch(`/api/datasets/${id}`, { method: "DELETE" });
+          if (!response.ok) {
+            throw new Error("Failed to delete dataset");
+          }
+          message.success("Dataset deleted");
+          router.push("/datasets");
+        } catch {
+          message.error("Failed to delete dataset");
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -222,9 +243,9 @@ export default function DatasetDetailPage() {
             icon={<PlusOutlined />}
             href={`/timeseries/create?dataset=${dataset.id}`}
             style={{
-              background: "#0066CC",
+              background: "#171717",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "6px",
               fontWeight: 600,
             }}
           >

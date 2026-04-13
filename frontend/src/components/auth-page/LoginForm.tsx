@@ -98,7 +98,7 @@ export function LoginForm() {
     borderRadius: "8px",
     fontSize: "16px",
     fontWeight: 600,
-    background: "#0066CC",
+    background: "#171717",
     border: "none",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
   };
@@ -149,7 +149,7 @@ export function LoginForm() {
           </Form.Item>
           <a
             href="/forgot-password"
-            style={{ fontSize: "14px", color: "#0066CC", textDecoration: "none" }}
+            style={{ fontSize: "14px", color: "#0a72ef", textDecoration: "none" }}
           >
             Forgot password?
           </a>

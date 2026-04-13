@@ -87,6 +87,13 @@ export default function NotificationsSettingsPage() {
       />
 
       <Alert
+        type="info"
+        message="Notification preferences are saved to your browser."
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+
+      <Alert
         message="Email Notifications"
         description="Configure which events you want to be notified about via email."
         type="info"

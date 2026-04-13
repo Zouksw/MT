@@ -163,11 +163,11 @@ export const textStyles = {
   normal: { fontWeight: 400 as const },
   medium: { fontWeight: 500 as const },
   semibold: { fontWeight: 600 as const },
-  bold: { fontWeight: 700 as const },
+  bold: { fontWeight: 600 as const },
 
   // Combined typography
-  h1: { fontSize: 28, fontWeight: 700 as const, lineHeight: 1.2 },
-  h2: { fontSize: 24, fontWeight: 700 as const, lineHeight: 1.2 },
+  h1: { fontSize: 28, fontWeight: 600 as const, lineHeight: 1.2 },
+  h2: { fontSize: 24, fontWeight: 600 as const, lineHeight: 1.2 },
   h3: { fontSize: 20, fontWeight: 600 as const, lineHeight: 1.2 },
   h4: { fontSize: 18, fontWeight: 600 as const, lineHeight: 1.2 },
   h5: { fontSize: 16, fontWeight: 600 as const, lineHeight: 1.2 },

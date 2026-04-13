@@ -73,7 +73,7 @@ export default function GettingStarted() {
               Quick Start
             </span>
           </div>
-          <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white md:text-4xl lg:text-5xl">
+          <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl lg:text-5xl">
             Get Started in Minutes
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-lg text-gray-500 dark:text-gray-400">
@@ -90,10 +90,10 @@ export default function GettingStarted() {
                 <div className="absolute right-0 top-1/2 hidden h-px w-8 -translate-y-1/2 border-t-2 border-dashed border-gray-200 dark:border-gray-700 lg:block" />
               )}
 
-              <div className="group rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 p-6 pt-10 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+              <div className="group rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-white dark:bg-gray-800/50 p-6 pt-10 transition-all duration-300 hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]">
                 {/* Step number badge */}
                 <div
-                  className={`absolute -top-4 left-6 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white shadow-md ${step.color}`}
+                  className={`absolute -top-4 left-6 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white shadow-md ${step.color}`}
                 >
                   {step.number}
                 </div>
@@ -117,7 +117,7 @@ export default function GettingStarted() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="flex items-center gap-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-5 py-4"
+              className="flex items-center gap-3 rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-gray-50 dark:bg-gray-800/50 px-5 py-4"
             >
               <CheckCircleOutlined className="text-lg text-green-500" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

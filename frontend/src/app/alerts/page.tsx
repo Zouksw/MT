@@ -162,7 +162,7 @@ export default function AlertList() {
   const getAlertIcon = (type: string, severity: string) => {
     if (severity === "ERROR") return <CloseCircleOutlined style={{ color: "#EF4444" }} />;
     if (severity === "WARNING") return <WarningOutlined style={{ color: "#F59E0B" }} />;
-    return <InfoCircleOutlined style={{ color: "#0066CC" }} />;
+    return <InfoCircleOutlined style={{ color: "#0a72ef" }} />;
   };
 
   const getAlertTypeColor = (type: string) => {
@@ -366,9 +366,9 @@ export default function AlertList() {
                 onClick={handleMarkAllAsRead}
                 type="primary"
                 style={{
-                  background: "#0066CC",
+                  background: "#171717",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: "6px",
                   fontWeight: 600,
                 }}
               >

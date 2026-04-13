@@ -102,7 +102,7 @@ export function UpdatePasswordForm({ token }: { token: string }) {
     borderRadius: "8px",
     fontSize: "16px",
     fontWeight: 600,
-    background: "#0066CC",
+    background: "#171717",
     border: "none",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
   };

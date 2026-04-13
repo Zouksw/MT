@@ -216,6 +216,13 @@ export default function SessionsSettingsPage() {
         description="View and manage your login sessions"
       />
 
+      <Alert
+        type="info"
+        message="Session history is stored locally. Connect to the backend API for full session management."
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12}>
           <Card>
@@ -223,7 +230,7 @@ export default function SessionsSettingsPage() {
               title="Active Sessions"
               value={activeSessions.length}
               prefix={<SafetyOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              valueStyle={{ color: "#0a72ef" }}
             />
           </Card>
         </Col>
@@ -275,14 +282,14 @@ export default function SessionsSettingsPage() {
         />
       </ContentCard>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style>{`
         .current-session-row {
-          background-color: rgba(82, 196, 26, 0.05) !important;
+          background-color: rgba(16, 185, 129, 0.05) !important;
         }
         .current-session-row:hover td {
-          background-color: rgba(82, 196, 26, 0.1) !important;
+          background-color: rgba(16, 185, 129, 0.1) !important;
         }
-      `}} />
+      `}</style>
     </PageContainer>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Form, Input, Select, Switch, Button, Row, Col, Typography, Space, Divider, InputNumber } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useGo, useInvalidate, useNotification } from "@refinedev/core";
@@ -24,10 +24,11 @@ const SEVERITY_LEVELS = [
 ];
 
 interface AlertEditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function AlertEditPage({ params }: AlertEditPageProps) {
+  const { id } = React.use(params);
   const go = useGo();
   const invalidate = useInvalidate();
   const { open } = useNotification();
@@ -37,7 +38,7 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
   // Get alert data
   const alertResult = useOne({
     resource: "alerts",
-    id: params.id,
+    id,
   });
 
   const alert = alertResult?.result?.data;
@@ -69,7 +70,7 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts/${params.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -133,7 +134,7 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <PageHeader
           title="Edit Alert"
-          description={`Editing alert: ${alert.name || params.id.slice(0, 8)}...`}
+          description={`Editing alert: ${alert.name || id.slice(0, 8)}...`}
           actions={
             <Button
               icon={<ArrowLeftOutlined />}

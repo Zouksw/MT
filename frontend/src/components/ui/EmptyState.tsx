@@ -28,13 +28,13 @@ function DataIllustration() {
   return (
     <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Rising bar chart */}
-      <rect x="10" y="50" width="16" height="24" rx="2" fill="#0066CC" opacity="0.2" />
-      <rect x="32" y="38" width="16" height="36" rx="2" fill="#0066CC" opacity="0.4" />
-      <rect x="54" y="26" width="16" height="48" rx="2" fill="#0066CC" opacity="0.6" />
-      <rect x="76" y="14" width="16" height="60" rx="2" fill="#0066CC" opacity="0.8" />
+      <rect x="10" y="50" width="16" height="24" rx="2" fill="#0a72ef" opacity="0.2" />
+      <rect x="32" y="38" width="16" height="36" rx="2" fill="#0a72ef" opacity="0.4" />
+      <rect x="54" y="26" width="16" height="48" rx="2" fill="#0a72ef" opacity="0.6" />
+      <rect x="76" y="14" width="16" height="60" rx="2" fill="#0a72ef" opacity="0.8" />
       {/* Trend line */}
-      <path d="M18 46 L40 34 L62 22 L84 10" stroke="#0066CC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="84" cy="10" r="3" fill="#0066CC">
+      <path d="M18 46 L40 34 L62 22 L84 10" stroke="#0a72ef" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="84" cy="10" r="3" fill="#0a72ef">
         <animate attributeName="r" values="3;4;3" dur="2s" repeatCount="indefinite" />
       </circle>
       {/* Baseline */}
@@ -47,13 +47,13 @@ function DatasetsIllustration() {
   return (
     <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Stacked database icons */}
-      <ellipse cx="40" cy="24" rx="24" ry="8" stroke="#0066CC" strokeWidth="1.5" fill="#0066CC" fillOpacity="0.08" />
-      <path d="M16 24 V40 C16 44.4 27 48 40 48 C53 48 64 44.4 64 40 V24" stroke="#0066CC" strokeWidth="1.5" fill="none" />
-      <path d="M16 32 C16 36.4 27 40 40 40 C53 40 64 36.4 64 32" stroke="#0066CC" strokeWidth="1.5" fill="none" opacity="0.5" />
+      <ellipse cx="40" cy="24" rx="24" ry="8" stroke="#0a72ef" strokeWidth="1.5" fill="#0a72ef" fillOpacity="0.08" />
+      <path d="M16 24 V40 C16 44.4 27 48 40 48 C53 48 64 44.4 64 40 V24" stroke="#0a72ef" strokeWidth="1.5" fill="none" />
+      <path d="M16 32 C16 36.4 27 40 40 40 C53 40 64 36.4 64 32" stroke="#0a72ef" strokeWidth="1.5" fill="none" opacity="0.5" />
       {/* Plus icon */}
-      <circle cx="82" cy="40" r="16" fill="#0066CC" fillOpacity="0.1" stroke="#0066CC" strokeWidth="1.5" />
-      <line x1="82" y1="32" x2="82" y2="48" stroke="#0066CC" strokeWidth="2" strokeLinecap="round" />
-      <line x1="74" y1="40" x2="90" y2="40" stroke="#0066CC" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="82" cy="40" r="16" fill="#0a72ef" fillOpacity="0.1" stroke="#0a72ef" strokeWidth="1.5" />
+      <line x1="82" y1="32" x2="82" y2="48" stroke="#0a72ef" strokeWidth="2" strokeLinecap="round" />
+      <line x1="74" y1="40" x2="90" y2="40" stroke="#0a72ef" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -63,11 +63,11 @@ function TimeseriesIllustration() {
     <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* ECG/heartbeat line */}
       <path d="M8 40 L24 40 L30 40 L36 20 L42 60 L48 30 L54 50 L60 40 L72 40 L78 40 L84 25 L90 55 L96 35 L102 45 L108 40 L112 40"
-        stroke="#0066CC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        stroke="#0a72ef" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
         <animate attributeName="stroke-dashoffset" from="300" to="0" dur="2s" repeatCount="indefinite" />
       </path>
       {/* Glow dot at end */}
-      <circle cx="112" cy="40" r="3" fill="#0066CC">
+      <circle cx="112" cy="40" r="3" fill="#0a72ef">
         <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
       </circle>
     </svg>
@@ -149,21 +149,21 @@ const illustrationMap: Record<EmptyStateType, { title: string; description: stri
     title: "No Data Yet",
     description: "Start by adding your first time series or importing existing data.",
     svg: <DataIllustration />,
-    color: "#0066CC",
+    color: "#0a72ef",
     bgColor: "bg-blue-50/50 dark:bg-blue-900/10",
   },
   datasets: {
     title: "No Datasets",
     description: "Create your first dataset to organize and manage your time series data.",
     svg: <DatasetsIllustration />,
-    color: "#0066CC",
+    color: "#0a72ef",
     bgColor: "bg-blue-50/50 dark:bg-blue-900/10",
   },
   timeseries: {
     title: "No Time Series",
     description: "Create a time series to start collecting and analyzing your data.",
     svg: <TimeseriesIllustration />,
-    color: "#0066CC",
+    color: "#0a72ef",
     bgColor: "bg-blue-50/50 dark:bg-blue-900/10",
   },
   alerts: {
@@ -234,7 +234,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {actionText && onAction && (
         <button
           onClick={onAction}
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-hover hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,102,204,0.3)] active:translate-y-0"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px] transition-all duration-200 hover:bg-primary-hover active:translate-y-0"
         >
           {actionText}
         </button>

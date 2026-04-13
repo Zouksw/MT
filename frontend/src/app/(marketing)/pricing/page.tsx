@@ -67,9 +67,9 @@ export default function PricingPage() {
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <span className="text-white font-bold text-lg">I</span>
+                <span className="text-white font-semibold text-lg">I</span>
               </div>
-              <span className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50">
+              <span className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50">
                 IoTDB Enhanced
               </span>
             </Link>
@@ -151,14 +151,14 @@ export default function PricingPage() {
                 )}
 
                 <div className="text-center mb-6">
-                  <h3 className="text-h3 font-display font-bold text-gray-900 dark:text-gray-50 mb-2">
+                  <h3 className="text-h3 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
                     {plan.name}
                   </h3>
                   <p className="text-body text-gray-600 dark:text-gray-400 mb-4">
                     {plan.description}
                   </p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-display font-bold text-gray-900 dark:text-gray-50 data-text">
+                    <span className="text-5xl font-display font-semibold text-gray-900 dark:text-gray-50 data-text">
                       ${plan.price[billingCycle]}
                     </span>
                     <span className="text-body text-gray-600 dark:text-gray-400">
@@ -247,7 +247,7 @@ export default function PricingPage() {
                 key={idx}
                 className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-800"
               >
-                <h3 className="text-h4 font-display font-bold text-gray-900 dark:text-gray-50 mb-2">
+                <h3 className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
                   {faq.q}
                 </h3>
                 <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">

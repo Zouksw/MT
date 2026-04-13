@@ -280,9 +280,9 @@ export const DataExport: React.FC<DataExportProps> = ({
           icon={<CloudDownloadOutlined />}
           size="large"
           style={{
-            background: "#0066CC",
+            background: "#171717",
             border: "none",
-            borderRadius: "3px",
+            borderRadius: "6px",
             fontWeight: 600,
           }}
         >

@@ -41,16 +41,16 @@
 
   .desktop-nav-item:hover {
     background: rgba(0, 102, 204, 0.08);
-    color: #0066CC;
+    color: #0a72ef;
   }
 
   .desktop-nav-item.active {
-    background: #0066CC;
+    background: #0a72ef;
     color: #FFFFFF;
   }
 
   .desktop-nav-item:focus-visible {
-    outline: 2px solid #0066CC;
+    outline: 2px solid #0a72ef;
     outline-offset: 2px;
   }
 
@@ -121,7 +121,7 @@
   }
 
   a:hover {
-    color: #0066CC;
+    color: #0a72ef;
   }
 
   /* Icon button hover */
@@ -139,7 +139,7 @@
 
   .icon-button:hover {
     background: #F3F4F6;
-    color: #0066CC;
+    color: #0a72ef;
   }
 
   /* Tooltip enhancement */
@@ -157,7 +157,7 @@
 @media (min-width: 1024px) {
   /* Focus visible styles for keyboard navigation */
   *:focus-visible {
-    outline: 2px solid #0066CC;
+    outline: 2px solid #0a72ef;
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -167,7 +167,7 @@
     position: absolute;
     top: -40px;
     left: 0;
-    background: #0066CC;
+    background: #0a72ef;
     color: #FFFFFF;
     padding: 8px 16px;
     z-index: 10000;
@@ -230,7 +230,7 @@
   }
 
   .ant-breadcrumb-link:hover {
-    color: #0066CC;
+    color: #0a72ef;
   }
 }
 
@@ -286,7 +286,7 @@
   .ant-select-focused .ant-select-selector,
   .ant-picker-focused {
     box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-    border-color: #0066CC;
+    border-color: #0a72ef;
   }
 
   /* Form label styling */

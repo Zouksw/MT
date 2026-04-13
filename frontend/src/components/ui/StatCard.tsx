@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Card, Space } from "antd";
 import {
   ArrowUpOutlined,
@@ -34,19 +34,18 @@ export interface StatCardProps {
 
 // --- Animated counter hook ---
 function useAnimatedCounter(target: number, duration = 800) {
-  const [display, setDisplay] = useState(0);
+  const [display, setDisplay] = useState(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return target;
+    }
+    return 0;
+  });
   const prevTarget = useRef(target);
 
   useEffect(() => {
-    if (typeof target !== "number") {
-      setDisplay(target);
-      return;
-    }
-
     // Skip animation if reduced motion is preferred
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
-      setDisplay(target);
       prevTarget.current = target;
       return;
     }
@@ -149,7 +148,7 @@ const variantColors: Record<
   { text: string; bgLight: string }
 > = {
   default: { text: "#475569", bgLight: "#F1F5F9" },
-  primary: { text: "#0066CC", bgLight: "#EEF2FF" },
+  primary: { text: "#0a72ef", bgLight: "#EEF2FF" },
   success: { text: "#10B981", bgLight: "#D1FAE5" },
   warning: { text: "#D97706", bgLight: "#FEF3C7" },
   error: { text: "#EF4444", bgLight: "#FEE2E2" },
@@ -226,7 +225,7 @@ export const StatCard = React.memo<StatCardProps>(
                   className="data-text"
                   style={{
                     fontSize: 28,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: colors.text,
                     lineHeight: 1.2,
                     display: "block",

@@ -15,7 +15,7 @@ export const LanguageSwitcher: React.FC = () => {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const t = useTranslations('nav');
+  const _t = useTranslations('nav');
 
   const currentLocale = localeLabels[locale] || localeLabels['en'];
 

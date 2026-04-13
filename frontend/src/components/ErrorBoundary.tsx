@@ -118,7 +118,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   style={{
                     background: "#f5f5f5",
                     padding: "16px",
-                    borderRadius: "4px",
+                    borderRadius: "6px",
                     maxHeight: "300px",
                     overflow: "auto",
                     fontSize: "12px",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Form, Input, Select, InputNumber, Button, Row, Col, Alert, Space, Divider } from "antd";
 import { ArrowLeftOutlined, AlertOutlined } from "@ant-design/icons";
 import { useGo, useInvalidate, useNotification } from "@refinedev/core";
@@ -26,10 +26,11 @@ const DETECTION_METHODS = [
 ];
 
 interface AnomalyShowPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function AnomalyEditPage({ params }: AnomalyShowPageProps) {
+  const { id } = React.use(params);
   const go = useGo();
   const invalidate = useInvalidate();
   const { open } = useNotification();
@@ -39,7 +40,7 @@ export default function AnomalyEditPage({ params }: AnomalyShowPageProps) {
   // Get anomaly data
   const anomalyResult = useOne({
     resource: "anomalies",
-    id: params.id,
+    id,
   });
 
   const anomaly = anomalyResult?.result?.data;
@@ -72,7 +73,7 @@ export default function AnomalyEditPage({ params }: AnomalyShowPageProps) {
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/anomalies/${params.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/anomalies/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -136,7 +137,7 @@ export default function AnomalyEditPage({ params }: AnomalyShowPageProps) {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <PageHeader
           title="Edit Anomaly Record"
-          description={`Editing anomaly ${params.id.slice(0, 8)}...`}
+          description={`Editing anomaly ${id.slice(0, 8)}...`}
           actions={
             <Button
               icon={<ArrowLeftOutlined />}
