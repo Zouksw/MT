@@ -1,0 +1,39 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "iotdb-enhanced.fullname" . }}-backup
+spec:
+  schedule: "{{ .Values.backup.schedule }}"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: pg-backup
+              image: postgres:15-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  BACKUP_FILE="/backup/pg-$(date +%Y%m%d-%H%M%S).sql.gz"
+                  pg_dump "$DATABASE_URL" | gzip > "$BACKUP_FILE"
+                  echo "PostgreSQL backup: $BACKUP_FILE"
+                  {{- if .Values.backup.postgresWal.s3Bucket }}
+                  # S3 upload would go here
+                  {{- end }}
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "iotdb-enhanced.fullname" . }}-secrets
+                      key: DATABASE_URL
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup
+              emptyDir: {}
+{{- end }}

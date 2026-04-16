@@ -103,3 +103,4 @@ debug-*.js
 *.sql
 *.sql.gz
 backups/
+docs/references/awesome-design-md/
