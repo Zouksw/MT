@@ -7,6 +7,7 @@ dist/
 build/
 .next/
 out/
+tsconfig.tsbuildinfo
 
 # Environment variables
 .env
@@ -79,12 +80,24 @@ debug-*.js
 .vscode-server/
 
 # Claude internal state
+.claude.json
 .claude/backups/
+.claude/file-history/
 .claude/ide/
+.claude/plans/
+.claude/projects/
 .claude/sessions/
+.claude/settings.json
 .claude/shell-snapshots/
 .claude/telemetry/
 .copilot/
+
+# System files (never commit)
+.dotnet/
+.ssh/
+.wget-hsts
+.bash_history
+.config/
 
 # Backup files
 *.sql
