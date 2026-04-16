@@ -16,65 +16,6 @@ process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 process.env.AI_NODE_HOST = process.env.AI_NODE_HOST || 'localhost';
 process.env.AI_NODE_PORT = process.env.AI_NODE_PORT || '10810';
 
-// Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  log: jest.fn(),
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-};
-
-// Mock AI Node Python scripts
-// Note: rpc-client is mocked individually in test files
-
-// Mock Winston logger
-jest.mock('winston', () => ({
-  createLogger: jest.fn(() => ({
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-  })),
-  format: {
-    json: jest.fn(),
-    colorize: jest.fn(),
-    simple: jest.fn(),
-    combine: jest.fn(),
-    timestamp: jest.fn(),
-    errors: jest.fn(),
-    splat: jest.fn(),
-    printf: jest.fn(),
-  },
-  transports: {
-    Console: jest.fn(),
-    File: jest.fn(),
-  },
-}));
-
-// Mock bcryptjs
-jest.mock('bcryptjs', () => ({
-  hash: jest.fn().mockResolvedValue('$2b$12$hashedpassword'),
-  compare: jest.fn().mockResolvedValue(true),
-  genSalt: jest.fn().mockResolvedValue('$2b$12$salt'),
-}));
-
-// Mock crypto for tests - simplified but preserves all crypto functions
-let cryptoCounter = 0;
-jest.mock('crypto', () => {
-  const actual = jest.requireActual('crypto');
-  return {
-    ...actual,
-    randomBytes: jest.fn((size) => {
-      cryptoCounter++;
-      const buffer = Buffer.alloc(size);
-      buffer.writeUInt32BE(cryptoCounter, 0);
-      return buffer;
-    }),
-  };
-});
-
 // Setup global test teardown
 afterAll(async () => {
   // Cleanup can be added here if needed

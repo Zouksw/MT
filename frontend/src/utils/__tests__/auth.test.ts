@@ -12,6 +12,8 @@ import {
   authFetch,
   isAuthenticated,
   getCachedUser,
+  setCachedUser,
+  clearCachedUser,
   verifyAuthentication,
 } from '../auth';
 

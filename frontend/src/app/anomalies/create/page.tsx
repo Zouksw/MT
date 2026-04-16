@@ -57,11 +57,13 @@ export default function AnomalyCreate() {
       const timeseriesPath = timeseries.slug || timeseries.name;
 
       // Call API to create anomaly
+      const { tokenManager } = await import('@/lib/tokenManager');
+      const token = tokenManager.getToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/anomalies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           timeseriesId,

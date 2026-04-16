@@ -1,41 +1,51 @@
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import request from 'supertest';
 import express, { Express } from 'express';
-import securityRouter from '@/routes/security';
 
-// Mock Prisma Client
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
-    securityAuditLog: {
-      createMany: jest.fn(),
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-  };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
-});
+// Mock auth middleware
+jest.mock('@/middleware/auth', () => ({
+  authenticate: (req: any, res: any, next: any) => {
+    const userId = req.get('X-User-Id');
+    const userRole = req.get('X-User-Role');
+    if (userId) {
+      req.userId = userId;
+      req.user = { id: userId, email: 'test@test.com', name: 'Test', role: userRole || 'VIEWER' };
+    }
+    next();
+  },
+  AuthRequest: Object,
+}));
 
-// Mock logger
-jest.mock('../../lib/logger', () => ({
+// Mock @/lib before importing security route (which now imports from @/lib)
+const mockPrisma = {
+  securityAuditLog: {
+    createMany: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+  },
+};
+
+jest.mock('@/lib', () => ({
+  prisma: mockPrisma,
   logger: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
-import { PrismaClient } from '@prisma/client';
-import { logger } from '@/lib/logger';
+import securityRouter from '@/routes/security';
+import { logger } from '@/lib';
+
+// prisma reference for tests (same object as the mock)
+const prisma = mockPrisma;
 
 describe('Security Routes', () => {
   let app: Express;
-  let prisma: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Get mocked Prisma instance
-    prisma = new PrismaClient();
 
     // Setup Express app
     app = express();
@@ -384,12 +394,13 @@ describe('Security Routes', () => {
     });
 
     test('should return 403 for non-admin users', async () => {
-      // Note: This test assumes middleware sets req.user. In real scenario,
-      // auth middleware would handle this. We're testing the route logic.
+      const response = await request(app)
+        .get('/api/security/audit')
+        .set('X-User-Id', 'viewer-123')
+        .set('X-User-Role', 'VIEWER');
 
-      // Since we can't easily mock req.user in supertest without auth middleware,
-      // we'll just verify the logic path exists
-      expect(true).toBe(true);
+      expect(response.status).toBe(403);
+      expect(response.body).toHaveProperty('error');
     });
   });
 

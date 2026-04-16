@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { iotdbClient, iotdbRPCClient, iotdbAIService } from '@/services/iotdb';
 import { aiRateLimiter } from '@/middleware/rateLimiter';
+import { authenticate, AuthRequest } from '@/middleware/auth';
 import { asyncHandler, BadRequestError } from '@/middleware/errorHandler';
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib';
 import {
   sqlQuerySchema,
   createTimeseriesSchema,
@@ -95,7 +96,7 @@ router.get('/status', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/iotdb/sql
  * Execute SQL query - Primary interface for all IoTDB operations
  */
-router.post('/sql', asyncHandler(async (req: Request, res: Response) => {
+router.post('/sql', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { sql } = sqlQuerySchema.parse(req.body);
   const result = await iotdbClient.query(sql);
   res.json(result);
@@ -124,7 +125,7 @@ router.post('/sql', asyncHandler(async (req: Request, res: Response) => {
  * GET /api/iotdb/sql
  * Execute SQL query via GET (for simple queries)
  */
-router.get('/sql', asyncHandler(async (req: Request, res: Response) => {
+router.get('/sql', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { sql } = req.query;
   if (!sql || typeof sql !== 'string') {
     throw new BadRequestError('SQL query required');
@@ -169,7 +170,7 @@ router.get('/sql', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/iotdb/timeseries
  * Create a new time series using SQL
  */
-router.post('/timeseries', asyncHandler(async (req: Request, res: Response) => {
+router.post('/timeseries', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createTimeseriesSchema.parse(req.body);
 
   // Use RPC client for CREATE operations
@@ -197,7 +198,7 @@ router.post('/timeseries', asyncHandler(async (req: Request, res: Response) => {
  * GET /api/iotdb/timeseries
  * List time series
  */
-router.get('/timeseries', asyncHandler(async (req: Request, res: Response) => {
+router.get('/timeseries', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { path } = req.query;
   const result = await iotdbClient.listTimeseries(path as string | undefined);
   res.json(result);
@@ -224,7 +225,7 @@ router.get('/timeseries', asyncHandler(async (req: Request, res: Response) => {
  * DELETE /api/iotdb/timeseries/:path
  * Delete a time series
  */
-router.delete('/timeseries/:path(*)', asyncHandler(async (req: Request, res: Response) => {
+router.delete('/timeseries/:path(*)', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { path } = req.params;
   // Use RPC client for DROP operations
   const result = await iotdbRPCClient.deleteTimeseries(path);
@@ -271,7 +272,7 @@ router.delete('/timeseries/:path(*)', asyncHandler(async (req: Request, res: Res
  * POST /api/iotdb/insert
  * Insert records into time series
  */
-router.post('/insert', asyncHandler(async (req: Request, res: Response) => {
+router.post('/insert', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { records } = insertRecordsSchema.parse(req.body);
 
   // Transform records to match RPC client format
@@ -324,7 +325,7 @@ router.post('/insert', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/iotdb/insert/one
  * Insert a single record
  */
-router.post('/insert/one', asyncHandler(async (req: Request, res: Response) => {
+router.post('/insert/one', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = insertOneRecordSchema.parse(req.body);
 
   // Convert measurements array to Record format for RPC client
@@ -375,7 +376,7 @@ router.post('/insert/one', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/iotdb/query/data
  * Query time series data
  */
-router.post('/query/data', asyncHandler(async (req: Request, res: Response) => {
+router.post('/query/data', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = queryDataSchema.parse(req.body);
   const result = await iotdbClient.queryData(validatedData);
   res.json(result);
@@ -415,7 +416,7 @@ router.post('/query/data', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/iotdb/aggregate
  * Execute aggregate query
  */
-router.post('/aggregate', asyncHandler(async (req: Request, res: Response) => {
+router.post('/aggregate', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = aggregateSchema.parse(req.body);
   const result = await iotdbClient.aggregate({
     ...validatedData,
@@ -480,7 +481,7 @@ router.post('/aggregate', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/iotdb/ai/predict
  * Predict future values using AI
  */
-router.post('/ai/predict', aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
+router.post('/ai/predict', authenticate, aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
   const startTime = Date.now();
   const { timeseries, horizon, algorithm, confidenceLevel } = predictSchema.parse(req.body);
 
@@ -574,7 +575,7 @@ router.post('/ai/predict', aiRateLimiter, asyncHandler(async (req: Request, res:
  * POST /api/iotdb/ai/predict/batch
  * Batch predict for multiple time series
  */
-router.post('/ai/predict/batch', aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
+router.post('/ai/predict/batch', authenticate, aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
   const { requests } = batchPredictSchema.parse(req.body);
 
   // Normalize algorithms and build cache keys
@@ -687,7 +688,7 @@ router.post('/ai/predict/batch', aiRateLimiter, asyncHandler(async (req: Request
  * POST /api/iotdb/ai/predict/visualize
  * Get historical data + predictions for chart visualization
  */
-router.post('/ai/predict/visualize', aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
+router.post('/ai/predict/visualize', authenticate, aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
   const { timeseries, horizon, algorithm, confidenceLevel, historyPoints } = visualizePredictSchema.parse(req.body);
 
   // Normalize algorithm
@@ -755,7 +756,7 @@ router.post('/ai/predict/visualize', aiRateLimiter, asyncHandler(async (req: Req
  * POST /api/iotdb/ai/anomalies
  * Detect anomalies using AI
  */
-router.post('/ai/anomalies', asyncHandler(async (req: Request, res: Response) => {
+router.post('/ai/anomalies', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const startTime = Date.now();
   const validatedData = detectAnomaliesSchema.parse(req.body);
 
@@ -838,7 +839,7 @@ router.post('/ai/anomalies', asyncHandler(async (req: Request, res: Response) =>
  * POST /api/iotdb/ai/anomalies/visualize
  * Get historical data + anomalies for chart visualization
  */
-router.post('/ai/anomalies/visualize', aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
+router.post('/ai/anomalies/visualize', authenticate, aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
   const { timeseries, method, threshold, startTime, endTime, historyPoints } = req.body;
 
   // Get historical data for context
@@ -891,7 +892,7 @@ router.post('/ai/anomalies/visualize', aiRateLimiter, asyncHandler(async (req: R
  * GET /api/iotdb/ai/models
  * List available AI models
  */
-router.get('/ai/models', asyncHandler(async (req: Request, res: Response) => {
+router.get('/ai/models', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const models = await iotdbAIService.listModels();
   res.json({ models });
 }));
@@ -917,7 +918,7 @@ router.get('/ai/models', asyncHandler(async (req: Request, res: Response) => {
  * GET /api/iotdb/ai/models/:id
  * Get model information
  */
-router.get('/ai/models/:id', asyncHandler(async (req: Request, res: Response) => {
+router.get('/ai/models/:id', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const model = await iotdbAIService.getModelInfo(id);
   res.json(model);
@@ -957,7 +958,7 @@ router.get('/ai/models/:id', asyncHandler(async (req: Request, res: Response) =>
  * POST /api/iotdb/ai/models/train
  * Train a new AI model
  */
-router.post('/ai/models/train', asyncHandler(async (req: Request, res: Response) => {
+router.post('/ai/models/train', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const { timeseries, algorithm, parameters } = req.body;
 
   if (!timeseries || !algorithm) {

@@ -70,11 +70,13 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      const { tokenManager } = await import('@/lib/tokenManager');
+      const token = tokenManager.getToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(values),
       });

@@ -32,10 +32,7 @@ export default function AnalysisPage() {
     async function loadMatrix() {
       setLoading(true);
       try {
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("token")
-            : null;
+        const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };

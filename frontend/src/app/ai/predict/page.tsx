@@ -97,9 +97,13 @@ export default function AIPredictPage() {
     setApiError(null);
 
     try {
+      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
       const response = await fetch("/api/iotdb/ai/predict/visualize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           timeseries: values.timeseries,
           algorithm: values.model,

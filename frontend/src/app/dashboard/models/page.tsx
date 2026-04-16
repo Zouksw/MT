@@ -177,10 +177,7 @@ export default function ModelsComparisonPage() {
     async function loadAccuracy() {
       setLoading(true);
       try {
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("token")
-            : null;
+        const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };

@@ -5,14 +5,13 @@
  */
 
 import { Router, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
-import { logger } from '@/lib/logger';
-import { AuthRequest } from '@/middleware/auth';
+import { Prisma } from '@prisma/client';
+import { prisma, logger } from '@/lib';
+import { authenticate, AuthRequest } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { error, success, successWithMessage, unauthorized, forbidden } from '@/lib/response';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * Incoming audit log from frontend
@@ -101,7 +100,7 @@ interface SecurityAuditLogWhere {
  * POST /api/security/audit
  * Receives audit logs from the frontend
  */
-router.post('/audit', asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/audit', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { logs } = req.body;
 
   // Validate request
@@ -240,7 +239,7 @@ router.post('/audit', asyncHandler(async (req: AuthRequest, res: Response) => {
  * GET /api/security/audit
  * Retrieves audit logs (admin only)
  */
-router.get('/audit', asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/audit', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   const {
     userId,
     event,
@@ -354,7 +353,7 @@ router.get('/audit', asyncHandler(async (req: AuthRequest, res: Response) => {
  * GET /api/security/audit/stats
  * Get audit log statistics
  */
-router.get('/audit/stats', asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/audit/stats', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
   // Check if user is admin
   if (req.user?.role !== 'ADMIN') {
     return forbidden(res, 'Admin access required');

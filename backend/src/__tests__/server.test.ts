@@ -263,8 +263,13 @@ describe('Server Configuration Validation', () => {
       }
     });
 
-    // If we get here without throwing, all modules loaded
-    expect(true).toBe(true);
+    // If we get here without throwing, all modules loaded successfully
+    const loadedCount = criticalModules.length;
+    expect(loadedCount).toBe(7);
+    criticalModules.forEach(({ path }) => {
+      // require() succeeded in the loop above, so each module is cached and resolvable
+      expect(require.resolve(path)).toBeDefined();
+    });
   });
 
   test('should export expected functions from modules', () => {

@@ -2,10 +2,16 @@
  * Alert Notification Service
  *
  * Handles sending alerts through various channels (email, webhook, Slack).
+ *
+ * NOTE: This service and @/services/notificationChannels.ts both implement
+ * email/Slack/webhook sending independently. They serve different callers:
+ *   - This file: called by @/services/tradingSignals.ts (signal pipeline)
+ *   - notificationChannels.ts: called by @/services/alert-rules.ts (alert rules pipeline)
+ * Post-launch TODO: Merge into a single unified notification pipeline.
  */
 
 import nodemailer from 'nodemailer';
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib';
 import type {
   NotificationChannel,
   AlertWithMetadata,

@@ -69,9 +69,13 @@ export default function AIAnomaliesPage() {
     setResult(null);
 
     try {
+      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
       const response = await fetch("/api/iotdb/ai/anomalies/visualize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           timeseries: values.timeseries,
           threshold: values.threshold,

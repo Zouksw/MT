@@ -34,6 +34,13 @@ jest.mock('../../lib', () => ({
   },
 }));
 
+// Mock bcryptjs for API key validation tests
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn().mockResolvedValue('$2b$12$hashedpassword'),
+  compare: jest.fn().mockResolvedValue(true),
+  genSalt: jest.fn().mockResolvedValue('$2b$12$salt'),
+}));
+
 const mockPrisma = prisma as any;
 
 // Helper to create mock User
@@ -85,11 +92,11 @@ describe('API Keys Service', () => {
 
     it('should generate a key with correct format', () => {
       const key = generateApiKey();
-      const parts = key.split('_');
-      expect(parts).toHaveLength(3);
-      expect(parts[0]).toBe('iotd');
-      expect(parts[1]).toHaveLength(16); // 8 bytes = 16 hex chars
-      expect(parts[2].length).toBeGreaterThan(0);
+      // Format: iotd_<16 hex chars>_<base64url random string>
+      // base64url can contain _ so we check the first two segments
+      expect(key).toMatch(/^iotd_[0-9a-f]{16}_/);
+      // Total key should be reasonably long (prefix + 16 hex + separator + base64url)
+      expect(key.length).toBeGreaterThan(30);
     });
 
     it('should generate unique keys', () => {

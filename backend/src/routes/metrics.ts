@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { success, error, validationError } from '@/lib/response';
 import { redis } from '@/lib/redis';
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib';
 
 const router = Router();
 

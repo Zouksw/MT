@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '@/lib';
-import { logger } from '@/utils/logger';
+import { prisma, logger } from '@/lib';
 import { authenticate, AuthRequest } from '@/middleware/auth';
 import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '@/middleware/errorHandler';
 import { getPagination, paginationSchema } from '@/schemas/common';

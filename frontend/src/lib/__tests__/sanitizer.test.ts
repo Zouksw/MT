@@ -4,26 +4,19 @@
  * Tests for input sanitization and XSS prevention functionality
  */
 
-// Mock DOMPurify for testing - must be before import
-jest.mock('dompurify', () => {
-  const mockSanitize = jest.fn((html) => {
-    return html
-      .replace(/<script[^>]*>.*?<\/script>/gi, '')
-      .replace(/on\w+="[^"]*"/gi, '')
-      .replace(/javascript:/gi, '');
-  });
-  return {
-    __esModule: true,
-    default: {
-      sanitize: mockSanitize,
-    },
-  };
+// Mock window.DOMPurify for testing (sanitizer uses window.DOMPurify, not an import)
+const mockSanitize = jest.fn((html: string) => {
+  return html
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/javascript:/gi, '');
 });
 
-import { sanitizer } from '../sanitizer';
-import DOMPurify from 'dompurify';
+if (typeof window !== 'undefined') {
+  (window as any).DOMPurify = { sanitize: mockSanitize };
+}
 
-const mockSanitize = DOMPurify.sanitize as jest.Mock;
+import { sanitizer } from '../sanitizer';
 
 // Mock console methods
 global.console = {

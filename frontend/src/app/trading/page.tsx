@@ -154,7 +154,7 @@ export default function TradingPage() {
     setIsDemoData(false);
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 

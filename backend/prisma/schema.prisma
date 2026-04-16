@@ -46,6 +46,7 @@ model Dataset {
   name            String
   slug            String
   description     String?
+  commodityType   String?       @map("commodity_type")
   storageFormat   StorageFormat @map("storage_format")
   filePath        String?       @map("file_path")
   sizeBytes       BigInt?       @map("size_bytes")
@@ -349,6 +350,28 @@ model saved_queries {
   @@index([organization_id])
   @@index([user_id, created_at(sort: Desc)])
   @@index([user_id])
+}
+
+model PredictionLog {
+  id              String    @id @default(uuid())
+  modelId         String    @map("model_id")
+  commodityId     String    @map("commodity_id")
+  timeseriesPath  String    @map("timeseries_path")
+  horizon         Int
+  predictedValues Json      @map("predicted_values")
+  actualValues    Json?     @map("actual_values")
+  lowerBounds     Json?     @map("lower_bounds")
+  upperBounds     Json?     @map("upper_bounds")
+  confidence      Decimal?  @db.Decimal(3, 2)
+  mape            Decimal?  @db.Decimal(5, 2)
+  status          String    @default("pending")
+  predictedAt     DateTime  @default(now()) @map("predicted_at")
+  verifiedAt      DateTime? @map("verified_at")
+
+  @@index([modelId])
+  @@index([commodityId])
+  @@index([predictedAt])
+  @@map("prediction_logs")
 }
 
 enum UserRole {

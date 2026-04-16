@@ -132,7 +132,12 @@ export const DataExport: React.FC<DataExportProps> = ({
       }, 200);
 
       // Fetch data
-      const response = await fetch(`/api/iotdb/query?${params.toString()}`);
+      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
+      const response = await fetch(`/api/iotdb/query?${params.toString()}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
 
       clearInterval(progressInterval);
       setProgress(95);

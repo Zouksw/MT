@@ -12,11 +12,13 @@ import { anomaliesRouter } from '@/routes/anomalies';
 import { iotdbRouter } from '@/routes/iotdb';
 import apiKeysRouter from '@/routes/apiKeys';
 import alertsRouter from '@/routes/alerts';
+import { signalsRouter } from '@/routes/signals';
+import securityRouter from '@/routes/security';
 import healthRouter from '@/routes/health';
 import docsRouter from '@/routes/docs';
 import { metricsRouter } from '@/routes/metrics';
 import { errorHandler } from '@/middleware/errorHandler';
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib';
 import { securityHeaders } from '@/middleware/security';
 import { config } from './lib';
 import { loggingMiddleware, errorLoggingMiddleware } from '@/middleware/logging';
@@ -123,6 +125,8 @@ app.use('/api/anomalies', anomaliesRouter);
 app.use('/api/iotdb', iotdbRouter);
 app.use('/api/api-keys', apiKeysRouter);
 app.use('/api/alerts', alertsRouter);
+app.use('/api/signals', signalsRouter);
+app.use('/api/security', securityRouter);
 
 // API documentation
 app.use('/api/docs', docsRouter);

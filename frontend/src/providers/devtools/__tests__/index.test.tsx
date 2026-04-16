@@ -36,14 +36,17 @@ describe('DevtoolsProvider', () => {
     expect(getByTestId('devtools-provider-base')).toBeInTheDocument();
   });
 
-  it('should include DevtoolsPanel', () => {
-    const { getByTestId } = render(
+  it('should include DevtoolsPanel only in development', () => {
+    // DevtoolsPanel only renders when NODE_ENV === 'development'
+    // In test environment, it should not render
+    const { queryByTestId } = render(
       <DevtoolsProvider>
         <div>Child</div>
       </DevtoolsProvider>
     );
 
-    expect(getByTestId('devtools-panel')).toBeInTheDocument();
+    // In test mode, DevtoolsPanel should NOT be present
+    expect(queryByTestId('devtools-panel')).not.toBeInTheDocument();
   });
 
   it('should render multiple children', () => {

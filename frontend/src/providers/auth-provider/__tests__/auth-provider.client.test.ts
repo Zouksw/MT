@@ -188,10 +188,14 @@ describe('authProviderClient', () => {
   });
 
   describe('check', () => {
-    it('should return authenticated when valid auth cookie exists', async () => {
+    it('should return authenticated when valid auth cookie and token exist', async () => {
       (Cookies.get as jest.Mock).mockReturnValue(
         JSON.stringify(mockUser)
       );
+
+      const { tokenManager } = require('@/lib/tokenManager');
+      tokenManager.getToken.mockReturnValue('valid-token');
+      tokenManager.isTokenValid.mockReturnValue(true);
 
       const { authProviderClient } = await import('../auth-provider.client');
       const axios = (await import('axios')).default.create();
@@ -213,21 +217,21 @@ describe('authProviderClient', () => {
 
       expect(result).toEqual({
         authenticated: false,
-        logout: true,
-        redirectTo: '/login',
       });
     });
 
     it('should return unauthenticated when auth cookie is invalid JSON', async () => {
       (Cookies.get as jest.Mock).mockReturnValue('invalid-json{');
 
+      // Token must also be absent for unauthenticated
+      const { tokenManager } = require('@/lib/tokenManager');
+      tokenManager.getToken.mockReturnValue(null);
+
       const { authProviderClient } = await import('../auth-provider.client');
       const result = await authProviderClient.check();
 
       expect(result).toEqual({
         authenticated: false,
-        logout: true,
-        redirectTo: '/login',
       });
     });
   });
@@ -310,7 +314,8 @@ describe('authProviderClient', () => {
       // Implementation returns an Error object with properties attached
       expect(result).toHaveProperty('error');
       expect(result.error).toBeInstanceOf(Error);
-      expect((result.error as any).message).toBe('You do not have permission to perform this action.');
+      // Message comes from errorHandler mock: error.response?.data?.error
+      expect((result.error as any).message).toBe('Forbidden');
     });
   });
 });

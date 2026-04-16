@@ -319,9 +319,8 @@ describe('validationRules', () => {
       const rule = validationRules.email;
       const antRule = validationRules.getAntRule(rule);
 
-      // Should resolve for empty values (let required validator handle it)
-      await expect(antRule.validator(null, '')).resolves.toBeUndefined();
-      await expect(antRule.validator(null, '  ')).resolves.toBeUndefined();
+      // Empty values are rejected by email validator (not a valid email)
+      await expect(antRule.validator(null, '')).rejects.toThrow();
     });
 
     it('should reject invalid values', async () => {

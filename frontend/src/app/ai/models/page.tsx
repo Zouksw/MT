@@ -40,7 +40,12 @@ export default function AIModelsPage() {
     setLoading(true);
     setPermissionError(null);
     try {
-      const response = await fetch("/api/iotdb/ai/models");
+      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
+      const response = await fetch("/api/iotdb/ai/models", {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       if (!response.ok) {
         const error = await response.json();
         if (response.status === 403 || response.status === 503) {

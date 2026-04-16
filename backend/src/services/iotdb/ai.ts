@@ -181,7 +181,16 @@ export class IoTDBAIService {
    * - naive_forecaster: 朴素预测
    * - stl_forecaster: STL 分解预测
    */
+  private validateTimeseriesPath(timeseries: string): void {
+    if (!/^root\.[a-zA-Z0-9_.]+$/.test(timeseries)) {
+      throw new Error(`Invalid timeseries path: ${timeseries}. Must match pattern: root.xxx.xxx`);
+    }
+  }
+
   async predict(request: PredictionRequest): Promise<PredictionResult> {
+    // Validate timeseries path to prevent SQL injection
+    this.validateTimeseriesPath(request.timeseries);
+
     // 直接使用用户指定的模型名称（小写），不做任何映射
     const modelType = request.algorithm || 'arima';
 
@@ -335,6 +344,9 @@ except Exception as e:
    * - ml: 机器学习方法
    */
   async detectAnomalies(request: AnomalyDetectionRequest): Promise<AnomalyDetectionResult> {
+    // Validate timeseries path to prevent SQL injection
+    this.validateTimeseriesPath(request.timeseries);
+
     const threshold = request.threshold || 2.5;
     const method = request.method || 'ml';
 
