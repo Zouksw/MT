@@ -56,7 +56,7 @@ function PortfolioCard({ portfolio }: { portfolio: {
           <Row gutter={16}>
             <Col span={8}>
               <Statistic
-                title="Total P&L"
+                title="Total Price Change"
                 value={performance.totalPnl}
                 precision={2}
                 valueStyle={{ color: performance.totalPnl >= 0 ? '#22c55e' : '#ef4444' }}
@@ -65,7 +65,7 @@ function PortfolioCard({ portfolio }: { portfolio: {
             </Col>
             <Col span={8}>
               <Statistic
-                title="Unrealized"
+                title="Unrealized Change"
                 value={performance.totalUnrealizedPnl}
                 precision={2}
                 valueStyle={{ color: performance.totalUnrealizedPnl >= 0 ? '#22c55e' : '#ef4444' }}
@@ -73,11 +73,11 @@ function PortfolioCard({ portfolio }: { portfolio: {
             </Col>
             <Col span={8}>
               <Statistic
-                title="Positions"
+                title="Tracked"
                 value={performance.positionCount}
                 suffix={
                   <span className="text-xs text-gray-400">
-                    ({performance.longCount}L / {performance.shortCount}S)
+                    ({performance.longCount} bullish / {performance.shortCount} bearish)
                   </span>
                 }
               />
@@ -91,7 +91,7 @@ function PortfolioCard({ portfolio }: { portfolio: {
                   <div>
                     <span className="text-sm font-medium">{pos.commodity.name}</span>
                     <Tag color={pos.side === 'LONG' ? 'green' : 'red'} className="ml-2 text-xs">
-                      {pos.side}
+                      {pos.side === 'LONG' ? 'Bullish' : 'Bearish'}
                     </Tag>
                   </div>
                   <div className="text-right">
@@ -103,7 +103,7 @@ function PortfolioCard({ portfolio }: { portfolio: {
                         className="text-xs font-mono"
                         style={{ color: pos.unrealizedPnl >= 0 ? '#22c55e' : '#ef4444' }}
                       >
-                        P&L: {pos.unrealizedPnl >= 0 ? '+' : ''}{pos.unrealizedPnl.toFixed(2)}
+                        Change: {pos.unrealizedPnl >= 0 ? '+' : ''}{pos.unrealizedPnl.toFixed(2)}
                       </div>
                     )}
                   </div>
@@ -113,7 +113,7 @@ function PortfolioCard({ portfolio }: { portfolio: {
           )}
         </>
       ) : (
-        <Empty description="No positions" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <Empty description="No tracked commodities" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}
     </Card>
   );

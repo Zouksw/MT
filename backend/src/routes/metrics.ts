@@ -7,8 +7,18 @@ import { Router, Request, Response } from 'express';
 import { success, error, validationError } from '@/lib/response';
 import { redis } from '@/lib/redis';
 import { logger } from '@/lib';
+import { authenticate } from '@/middleware/auth';
 
 const router = Router();
+
+// Protect all metrics endpoints except web-vitals ingestion
+router.use((req, _res, next) => {
+  // POST /web-vitals is public (frontend sends data)
+  if (req.method === 'POST' && req.path === '/web-vitals') {
+    return next();
+  }
+  authenticate(req as any, _res as any, next);
+});
 
 // --- In-memory metrics store ---
 

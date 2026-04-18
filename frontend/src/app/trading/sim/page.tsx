@@ -43,7 +43,7 @@ export default function SimulationPage() {
     const res = await fetch(`${base}/api/sim/accounts`, {
       method: "POST",
       headers,
-      body: JSON.stringify(values),
+      body: JSON.stringify({ ...values, initialBalance: 0 }),
     });
 
     if (res.ok) {
@@ -75,7 +75,7 @@ export default function SimulationPage() {
               icon={<PlusOutlined />}
               onClick={() => setCreateOpen(true)}
             >
-              New Account
+              New Backtest
             </Button>
           }
         />
@@ -86,7 +86,7 @@ export default function SimulationPage() {
           <Card>
             <Empty description="No backtest accounts yet. Create one to start verifying predictions!">
               <Button type="primary" onClick={() => setCreateOpen(true)}>
-                Create Account
+                Create Backtest
               </Button>
             </Empty>
           </Card>
@@ -107,15 +107,14 @@ export default function SimulationPage() {
                     <Row gutter={8}>
                       <Col span={12}>
                         <Statistic
-                          title="Balance"
-                          value={a.currentBalance}
-                          precision={2}
+                          title="Predictions"
+                          value={a.tradeCount}
                           valueStyle={{ fontSize: 14 }}
                         />
                       </Col>
                       <Col span={12}>
                         <Statistic
-                          title="P&L"
+                          title="Score"
                           value={a.pnl}
                           precision={2}
                           valueStyle={{
@@ -148,18 +147,16 @@ export default function SimulationPage() {
         )}
 
         <Modal
-          title="Create Simulation Account"
+          title="Create Backtest Account"
           open={createOpen}
           onCancel={() => setCreateOpen(false)}
           footer={null}
         >
           <Form onFinish={handleCreate} layout="vertical">
             <Form.Item name="name" label="Account Name" rules={[{ required: true }]}>
-              <input className="w-full border rounded px-3 py-2" placeholder="My Backtest Account" />
+              <input className="w-full border rounded px-3 py-2" placeholder="My Backtest" />
             </Form.Item>
-            <Form.Item name="initialBalance" label="Initial Balance (USD)" initialValue={100000}>
-              <InputNumber min={1000} max={10000000} className="w-full" />
-            </Form.Item>
+            <Form.Item name="initialBalance" initialValue={0} hidden><input /></Form.Item>
             <Button type="primary" htmlType="submit" block>
               Create
             </Button>
@@ -203,16 +200,16 @@ function AccountDetail({ accountId }: { accountId: string }) {
       render: (v: number) => v.toFixed(2),
     },
     {
-      title: "P&L",
+      title: "Result",
       dataIndex: "realizedPnl",
       key: "pnl",
       render: (v: number | null) =>
         v != null ? (
-          <span style={{ color: v >= 0 ? "#22c55e" : "#ef4444" }}>
-            {v >= 0 ? "+" : ""}{v.toFixed(2)}
-          </span>
+          <Tag color={v >= 0 ? "green" : "red"}>
+            {v >= 0 ? "Correct" : "Incorrect"}
+          </Tag>
         ) : (
-          <Tag color="blue">Open</Tag>
+          <Tag color="blue">Pending</Tag>
         ),
     },
   ];
@@ -222,11 +219,11 @@ function AccountDetail({ accountId }: { accountId: string }) {
       <Card size="small">
         <Row gutter={16}>
           <Col span={6}>
-            <Statistic title="Balance" value={account.currentBalance} precision={2} />
+            <Statistic title="Predictions" value={account.openTradeCount + account.pendingOrderCount} />
           </Col>
           <Col span={6}>
             <Statistic
-              title="Total P&L"
+              title="Score"
               value={account.totalPnl}
               precision={2}
               valueStyle={{ color: account.totalPnl >= 0 ? "#22c55e" : "#ef4444" }}
@@ -316,24 +313,12 @@ function OrderModal({
         <Form.Item name="commodityId" label="Commodity" rules={[{ required: true }]}>
           <Select placeholder="Select commodity" />
         </Form.Item>
-        <Row gutter={8}>
-          <Col span={12}>
-            <Form.Item name="side" label="Side" rules={[{ required: true }]}>
-              <Select>
-                <Select.Option value="BUY">Predict Up</Select.Option>
-                <Select.Option value="SELL">Predict Down</Select.Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-              <Select>
-                <Select.Option value="MARKET">Market</Select.Option>
-                <Select.Option value="LIMIT">Limit</Select.Option>
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+        <Form.Item name="side" label="Direction" rules={[{ required: true }]}>
+          <Select>
+            <Select.Option value="BUY">Predict Up</Select.Option>
+            <Select.Option value="SELL">Predict Down</Select.Option>
+          </Select>
+        </Form.Item>
         <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>
           <InputNumber min={0.01} className="w-full" />
         </Form.Item>

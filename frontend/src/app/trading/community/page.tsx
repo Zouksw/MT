@@ -47,7 +47,7 @@ export default function CommunityPage() {
       },
     },
     {
-      title: "Trader",
+      title: "Analyst",
       dataIndex: ["user", "name"],
       key: "name",
     },
@@ -57,25 +57,14 @@ export default function CommunityPage() {
       key: "account",
     },
     {
-      title: "Balance",
-      dataIndex: "balance",
-      key: "balance",
-      render: (v: number) => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      title: "Predictions",
+      dataIndex: "tradeCount",
+      key: "predictions",
     },
     {
-      title: "P&L",
-      dataIndex: "pnl",
-      key: "pnl",
-      render: (v: number) => (
-        <span style={{ color: v >= 0 ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
-          {v >= 0 ? "+" : ""}${v.toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      title: "Return",
+      title: "Signal Score",
       dataIndex: "pnlPercent",
-      key: "pnlPct",
+      key: "score",
       render: (v: number) => (
         <Tag color={v >= 0 ? "green" : "red"}>
           {v >= 0 ? "+" : ""}{v.toFixed(1)}%
@@ -83,9 +72,14 @@ export default function CommunityPage() {
       ),
     },
     {
-      title: "Trades",
-      dataIndex: "tradeCount",
-      key: "trades",
+      title: "Accuracy",
+      dataIndex: "pnl",
+      key: "accuracy",
+      render: (v: number) => (
+        <span style={{ color: v >= 0 ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
+          {v >= 0 ? "+" : ""}{v.toFixed(2)}
+        </span>
+      ),
     },
   ];
 
@@ -102,7 +96,7 @@ export default function CommunityPage() {
       <PageContainer>
         <PageHeader
           title="Community"
-          description="Top traders and shared signals"
+          description="Top analysts ranked by prediction accuracy and signal quality"
           actions={
             <Tag icon={<TrophyOutlined />} color="gold">
               Leaderboard
@@ -114,7 +108,7 @@ export default function CommunityPage() {
           {isLoading ? (
             <Spin />
           ) : leaderboard.length === 0 ? (
-            <Empty description="No traders on the leaderboard yet. Start trading to appear here!" />
+            <Empty description="No analysts on the leaderboard yet. Start making predictions to appear here!" />
           ) : (
             <Table
               dataSource={leaderboard}

@@ -40,6 +40,14 @@ jest.mock('@/lib', () => ({
   prisma: {},
 }));
 
+jest.mock('@/middleware/auth', () => ({
+  authenticate: (req: any, _res: any, next: any) => {
+    req.userId = 'test-user-id';
+    req.userRole = 'ADMIN';
+    next();
+  },
+}));
+
 import { metricsRouter } from '../metrics';
 
 const app = express();
