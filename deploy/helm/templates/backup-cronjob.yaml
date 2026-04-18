@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-backup
+  name: {{ include "trademind.fullname" . }}-backup
 spec:
   schedule: "{{ .Values.backup.schedule }}"
   concurrencyPolicy: Forbid
@@ -27,7 +27,7 @@ spec:
                 - name: DATABASE_URL
                   valueFrom:
                     secretKeyRef:
-                      name: {{ include "iotdb-enhanced.fullname" . }}-secrets
+                      name: {{ include "trademind.fullname" . }}-secrets
                       key: DATABASE_URL
               volumeMounts:
                 - name: backup

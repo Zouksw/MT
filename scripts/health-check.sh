@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# IoTDB Enhanced - Health Check Script
+# TradeMind AI - Health Check Script
 #
 # Verifies health of all services after deployment.
 # Can be run standalone or as part of deployment.
@@ -305,7 +305,7 @@ check_cpu() {
 
 main() {
   echo "=========================================="
-  echo "  IoTDB Enhanced Health Check"
+  echo "  TradeMind AI Health Check"
   echo "=========================================="
   echo "Started at: $(date)"
   echo "Timeout: ${TIMEOUT}s"

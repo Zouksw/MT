@@ -70,7 +70,7 @@ export default function PricingPage() {
                 <span className="text-white font-semibold text-lg">I</span>
               </div>
               <span className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50">
-                IoTDB Enhanced
+                TradeMind AI
               </span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
@@ -283,7 +283,7 @@ export default function PricingPage() {
       <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-body-sm text-gray-500 dark:text-gray-400">
-            © 2026 IoTDB Enhanced. All rights reserved.
+            © 2026 TradeMind AI. All rights reserved.
           </p>
         </div>
       </footer>

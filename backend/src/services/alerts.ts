@@ -11,17 +11,12 @@ import { z } from 'zod';
 // Re-export types
 export * from './alert-types';
 
-// Re-export rule management
+// Re-export rule management (includes sendNotification adapter)
 export {
   createAlertRule,
   evaluateAlertRule,
   triggerAlert,
 } from './alert-rules';
-
-// Re-export notification functions
-export {
-  sendNotification,
-} from './alert-notifications';
 
 /**
  * List alerts for a user

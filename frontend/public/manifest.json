@@ -1,7 +1,7 @@
 {
-  "name": "IoTDB Enhanced",
-  "short_name": "IoTDB",
-  "description": "Professional IoT time series database management platform with AI-powered forecasting and anomaly detection",
+  "name": "TradeMind AI",
+  "short_name": "TradeMind",
+  "description": "AI-powered commodity price forecasting and trading signals for beef, grain, and forex markets",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F9FAFB",
@@ -22,20 +22,20 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "utilities", "developer"],
+  "categories": ["productivity", "finance", "utilities"],
   "shortcuts": [
+    {
+      "name": "Trading",
+      "short_name": "Trading",
+      "description": "View commodity charts and trading signals",
+      "url": "/trading",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View dashboard and statistics",
       "url": "/dashboard",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Time Series",
-      "short_name": "Time Series",
-      "description": "Manage time series data",
-      "url": "/timeseries",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {

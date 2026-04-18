@@ -79,18 +79,8 @@ debug-*.js
 # VSCode Server (remote dev)
 .vscode-server/
 
-# Claude internal state
-.claude.json
-.claude/backups/
-.claude/file-history/
-.claude/ide/
-.claude/plans/
-.claude/projects/
-.claude/sessions/
-.claude/settings.json
-.claude/shell-snapshots/
-.claude/telemetry/
-.copilot/
+# Claude Code internal state (never commit)
+.claude/
 
 # System files (never commit)
 .dotnet/

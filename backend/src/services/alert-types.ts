@@ -13,7 +13,10 @@ export interface AlertCondition {
   value?: number;
   threshold?: number;
   pattern?: string;
-  [key: string]: any;
+  metric?: string;
+  window?: number;
+  sensitivity?: number;
+  duration?: number;
 }
 
 /**
@@ -25,7 +28,10 @@ export interface AlertEvaluationData {
   timeseriesId: string;
   isAnomaly?: boolean;
   isFlatline?: boolean;
-  [key: string]: any;
+  metric?: string;
+  window?: number;
+  previousValue?: number;
+  changePercent?: number;
 }
 
 /**

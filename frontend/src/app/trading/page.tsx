@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Typography,
   Row,
@@ -10,6 +10,7 @@ import {
   Tag,
   ConfigProvider,
   Space,
+  Spin,
 } from "antd";
 import {
   ThunderboltOutlined,
@@ -18,214 +19,136 @@ import {
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import CommoditySelector from "@/components/trading/CommoditySelector";
-import TradingForecastChart from "@/components/trading/TradingForecastChart";
+import ProfessionalChart from "@/components/trading/ProfessionalChart";
+import TimeframeSelector from "@/components/trading/TimeframeSelector";
+import ChartToolbar, { type ChartType } from "@/components/trading/ChartToolbar";
 import TradingSignalPanel from "@/components/trading/TradingSignalPanel";
 import ModelConsensusTable from "@/components/trading/ModelConsensusTable";
 import AnomalyAlertBanner, { type AnomalyAlert } from "@/components/trading/AnomalyAlertBanner";
+import { useCommodities, usePriceHistory } from "@/lib/market-data";
 
 const { Text, Paragraph } = Typography;
 
-// Commodity presets with demo data
-const COMMODITIES = [
-  {
-    id: "wti-crude",
-    name: "WTI Crude Oil",
-    symbol: "CL",
-    unit: "USD/bbl",
-    timeseriesPath: "root.trading.wti_crude.price",
-    demoPrice: 78.45,
-    demoChange: 1.23,
-    demoChangePercent: 1.59,
-  },
-  {
-    id: "brent-crude",
-    name: "Brent Crude",
-    symbol: "BZ",
-    unit: "USD/bbl",
-    timeseriesPath: "root.trading.brent_crude.price",
-    demoPrice: 82.17,
-    demoChange: -0.45,
-    demoChangePercent: -0.54,
-  },
-  {
-    id: "natural-gas",
-    name: "Natural Gas",
-    symbol: "NG",
-    unit: "USD/MMBtu",
-    timeseriesPath: "root.trading.natural_gas.price",
-    demoPrice: 2.34,
-    demoChange: 0.08,
-    demoChangePercent: 3.54,
-  },
-  {
-    id: "gold",
-    name: "Gold",
-    symbol: "XAU",
-    unit: "USD/oz",
-    timeseriesPath: "root.trading.gold.price",
-    demoPrice: 2345.6,
-    demoChange: 12.3,
-    demoChangePercent: 0.53,
-  },
-];
-
-// Generate demo prediction data
-function generateDemoPredictions(currentPrice: number) {
-  const models = ["arima", "holtwinters", "exponential_smoothing", "stl_forecaster", "naive_forecaster"];
-  const predictions: Record<string, any> = {};
-
-  for (const model of models) {
-    const trend = (Math.random() - 0.4) * 0.02;
-    const volatility = 0.005 + Math.random() * 0.01;
-    const timestamps: number[] = [];
-    const values: number[] = [];
-    const lowerBound: number[] = [];
-    const upperBound: number[] = [];
-
-    let price = currentPrice;
-    const now = Date.now();
-
-    for (let i = 0; i < 10; i++) {
-      price = price * (1 + trend + (Math.random() - 0.5) * volatility);
-      timestamps.push(now + (i + 1) * 86400000);
-      values.push(Math.round(price * 100) / 100);
-      lowerBound.push(Math.round(price * (1 - 0.02 - Math.random() * 0.02) * 100) / 100);
-      upperBound.push(Math.round(price * (1 + 0.02 + Math.random() * 0.02) * 100) / 100);
-    }
-
-    predictions[model] = { timestamps, values, lowerBound, upperBound, algorithm: model };
-  }
-
-  return predictions;
-}
-
-function generateDemoSignal(predictions: Record<string, any>, currentPrice: number) {
-  const individualSignals = Object.entries(predictions).map(([modelId, pred]) => {
-    const lastPred = pred.values[pred.values.length - 1];
-    const change = ((lastPred - currentPrice) / currentPrice) * 100;
-    return {
-      modelId,
-      type: change > 1 ? "BUY" as const : change < -1 ? "SELL" as const : "HOLD" as const,
-      predictedChange: Math.round(change * 100) / 100,
-      currentValue: currentPrice,
-      predictedValue: lastPred,
-      confidence: 0.5 + Math.random() * 0.4,
-      status: "available" as const,
-    };
-  });
-
-  const buyCount = individualSignals.filter((s) => s.type === "BUY").length;
-  const sellCount = individualSignals.filter((s) => s.type === "SELL").length;
-  const holdCount = individualSignals.length - buyCount - sellCount;
-  const consensusType = buyCount > sellCount ? "BUY" : sellCount > buyCount ? "SELL" : "HOLD";
-  const modelsAgree = Math.max(buyCount, sellCount, holdCount);
-
-  return {
-    type: consensusType,
-    confidence: Math.round((modelsAgree / individualSignals.length) * 100) / 100,
-    modelsAgree,
-    totalModels: individualSignals.length,
-    availableModels: individualSignals.length,
-    predictedDirection: Math.round(
-      (individualSignals.reduce((s, sig) => s + sig.predictedChange, 0) / individualSignals.length) * 100
-    ) / 100,
-    supportLevel: Math.round(currentPrice * 0.97 * 100) / 100,
-    resistanceLevel: Math.round(currentPrice * 1.04 * 100) / 100,
-    individualSignals,
-    distribution: { buy: buyCount, sell: sellCount, hold: holdCount },
-    timestamp: new Date().toISOString(),
-  };
-}
+type Timeframe = "daily" | "weekly" | "monthly";
 
 export default function TradingPage() {
-  const [selectedCommodity, setSelectedCommodity] = useState(COMMODITIES[0].id);
-  const [predictions, setPredictions] = useState<Record<string, any>>({});
+  const [selectedSlug, setSelectedSlug] = useState<string>("");
+  const [timeframe, setTimeframe] = useState<Timeframe>("daily");
+  const [chartType, setChartType] = useState<ChartType>("candlestick");
+  const [indicators, setIndicators] = useState({ sma20: true, sma50: true, bollinger: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [signal, setSignal] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [signalLoading, setSignalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([]);
-  const [isDemoData, setIsDemoData] = useState(false);
 
-  const selected = COMMODITIES.find((c) => c.id === selectedCommodity)!;
+  // Fetch commodity list
+  const { commodities, loading: commoditiesLoading } = useCommodities();
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setIsDemoData(false);
+  // Auto-select first commodity
+  useEffect(() => {
+    if (!selectedSlug && commodities.length > 0) {
+      setSelectedSlug(commodities[0].slug);
+    }
+  }, [selectedSlug, commodities]);
 
+  const selected = useMemo(
+    () => commodities.find((c) => c.slug === selectedSlug),
+    [commodities, selectedSlug],
+  );
+
+  // Fetch price history
+  const { prices, loading: pricesLoading } = usePriceHistory(
+    selectedSlug,
+    timeframe,
+  );
+
+  const loading = commoditiesLoading || pricesLoading;
+
+  // Fetch AI signal when commodity changes
+  const loadSignal = useCallback(async () => {
+    if (!selected || prices.length === 0) return;
+
+    const currentPrice = prices[prices.length - 1]?.close;
+    if (!currentPrice) return;
+
+    setSignalLoading(true);
     try {
-      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
+      const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(
-        `/api/signals/${selected.id}?timeseriesPath=${encodeURIComponent(selected.timeseriesPath)}&currentPrice=${selected.demoPrice}&horizon=10`,
-        { headers }
+        `${apiBase}/api/signals/${selected.slug}?timeseriesPath=root.trading.${selected.slug}.price&currentPrice=${currentPrice}&horizon=10`,
+        { headers },
       );
 
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {
           setSignal(data.data);
-
-          // Try to get cached predictions
-          try {
-            const predRes = await fetch(
-              `/api/signals/${selected.id}/predictions?horizon=10`,
-              { headers }
-            );
-            if (predRes.ok) {
-              const predData = await predRes.json();
-              if (predData.success && predData.data?.predictions) {
-                setPredictions(predData.data.predictions);
-                return; // Success — don't fall through to demo
-              }
-            }
-          } catch {
-            // Predictions fetch failed — use demo
-          }
-          // API signal succeeded but predictions unavailable — generate demo predictions
-          const demoPreds = generateDemoPredictions(selected.demoPrice);
-          setPredictions(demoPreds);
-          setIsDemoData(true);
-        } else {
-          throw new Error("API returned unsuccessful");
         }
-      } else {
-        // API unavailable — full demo fallback
-        const demoPreds = generateDemoPredictions(selected.demoPrice);
-        setPredictions(demoPreds);
-        setSignal(generateDemoSignal(demoPreds, selected.demoPrice));
-        setIsDemoData(true);
       }
     } catch {
-      const demoPreds = generateDemoPredictions(selected.demoPrice);
-      setPredictions(demoPreds);
-      setSignal(generateDemoSignal(demoPreds, selected.demoPrice));
-      setIsDemoData(true);
+      // Signal fetch failed — keep existing signal or null
     } finally {
-      setLoading(false);
+      setSignalLoading(false);
     }
-  }, [selected.id, selected.demoPrice, selected.timeseriesPath]);
+  }, [selected, prices]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadSignal();
+  }, [loadSignal]);
 
-  // Generate demo historical data for chart
-  const historicalData = React.useMemo(() => {
-    const data = [];
-    const now = Date.now();
-    let price = selected.demoPrice * 0.95;
-    for (let i = 30; i >= 0; i--) {
-      price += (Math.random() - 0.48) * (selected.demoPrice * 0.01);
-      data.push({
-        timestamp: now - i * 86400000,
-        value: Math.round(price * 100) / 100,
-      });
+  // Fetch anomalies when commodity changes
+  useEffect(() => {
+    if (!selected) {
+      setAnomalies([]);
+      return;
     }
-    return data;
-  }, [selected.demoPrice]);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(
+          `${apiBase}/api/anomalies?commodityId=${selected.id}`,
+          { headers },
+        );
+
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setAnomalies(data.data?.anomalies ?? data.data ?? []);
+        }
+      } catch {
+        // Anomaly fetch failed — keep empty
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selected]);
+
+  // Convert prices to chart data format
+  const chartData = useMemo(
+    () =>
+      prices.map((p) => ({
+        time: p.date,
+        open: p.open ?? p.close,
+        high: p.high ?? p.close,
+        low: p.low ?? p.close,
+        close: p.close,
+        volume: p.volume ?? 0,
+      })),
+    [prices],
+  );
+
+  // Current price for signal panel
+  const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0;
 
   return (
     <ConfigProvider
@@ -239,40 +162,41 @@ export default function TradingPage() {
     >
       <PageContainer>
         <PageHeader
-          title="Trading Intelligence"
-          description="AI-powered commodity price forecasting and trading signals"
+          title="Market Intelligence"
+          description="AI-powered commodity price forecasting and market analysis"
           actions={
-            <Tag color="blue" style={{ fontSize: 11 }}>Beta</Tag>
+            selected ? (
+              <Tag color="blue" style={{ fontSize: 11 }}>
+                {selected.nameCn || selected.name}
+              </Tag>
+            ) : undefined
           }
         />
 
-        {/* Commodity Selector — tabs on desktop, dropdown on mobile */}
-        <CommoditySelector
-          commodities={COMMODITIES.map((c) => ({ id: c.id, name: c.name, symbol: c.symbol }))}
-          selected={selectedCommodity}
-          onSelect={setSelectedCommodity}
-          loading={loading}
-          renderLabel={(c) => (
-            <span>
-              {c.name}{" "}
-              <Text type="secondary" style={{ fontSize: 11 }}>
-                ({c.symbol})
-              </Text>
-            </span>
-          )}
-        />
-
-        {/* Anomaly alerts — hidden when empty */}
-        <AnomalyAlertBanner anomalies={anomalies} />
-
-        {isDemoData && (
-          <Alert
-            type="info"
-            message="Showing demo data. Connect to a live data source for real-time trading signals."
-            showIcon
-            style={{ marginBottom: 16 }}
+        {/* Commodity Selector */}
+        {commodities.length > 0 && (
+          <CommoditySelector
+            commodities={commodities.map((c) => ({
+              id: c.slug,
+              name: c.nameCn || c.name,
+              symbol: c.category === "forex" ? c.slug.replace("_", "/").toUpperCase() : c.originCountry || c.category.slice(0, 3).toUpperCase(),
+            }))}
+            selected={selectedSlug}
+            onSelect={setSelectedSlug}
+            loading={commoditiesLoading}
+            renderLabel={(c) => (
+              <span>
+                {c.name}{" "}
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  ({c.symbol})
+                </Text>
+              </span>
+            )}
           />
         )}
+
+        {/* Anomaly alerts */}
+        <AnomalyAlertBanner anomalies={anomalies} />
 
         {error && (
           <Alert
@@ -285,42 +209,54 @@ export default function TradingPage() {
           />
         )}
 
-        {/* 2-column layout: Chart (2fr) + Signal Panel (1fr) on desktop, single column on mobile */}
+        {/* Toolbar: Timeframe + Chart Type + Indicators */}
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+          <ChartToolbar
+            chartType={chartType}
+            onChartTypeChange={setChartType}
+            indicators={indicators}
+            onIndicatorsChange={setIndicators}
+          />
+        </div>
+
+        {/* 2-column layout: Chart + Signal Panel */}
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={16}>
             <Card
               title={
                 <Space>
                   <LineChartOutlined />
-                  <span>{selected.name} — Price Forecast</span>
+                  <span>{selected?.name || "Loading..."} — Price Chart</span>
                 </Space>
               }
               loading={loading}
             >
-              <TradingForecastChart
-                historicalData={historicalData}
-                predictions={predictions}
-                currentPrice={selected.demoPrice}
+              <ProfessionalChart
+                data={chartData}
                 supportLevel={signal?.supportLevel}
                 resistanceLevel={signal?.resistanceLevel}
-                loading={loading}
+                chartType={chartType}
+                height={480}
               />
             </Card>
           </Col>
 
           <Col xs={24} lg={8}>
-            <TradingSignalPanel
-              consensusType={signal?.type || "HOLD"}
-              confidence={signal?.confidence || 0}
-              modelsAgree={signal?.modelsAgree || 0}
-              totalModels={signal?.totalModels || 0}
-              individualSignals={signal?.individualSignals || []}
-              predictedDirection={signal?.predictedDirection || 0}
-              supportLevel={signal?.supportLevel || selected.demoPrice * 0.97}
-              resistanceLevel={signal?.resistanceLevel || selected.demoPrice * 1.04}
-              distribution={signal?.distribution || { buy: 0, sell: 0, hold: 0 }}
-              loading={loading}
-            />
+            <Spin spinning={signalLoading} tip="Loading AI signals...">
+              <TradingSignalPanel
+                consensusType={signal?.type || "HOLD"}
+                confidence={signal?.confidence || 0}
+                modelsAgree={signal?.modelsAgree || 0}
+                totalModels={signal?.totalModels || 0}
+                individualSignals={signal?.individualSignals ?? []}
+                predictedDirection={signal?.predictedDirection || 0}
+                supportLevel={signal?.supportLevel || currentPrice * 0.97}
+                resistanceLevel={signal?.resistanceLevel || currentPrice * 1.04}
+                distribution={signal?.distribution || { buy: 0, sell: 0, hold: 0 }}
+                loading={signalLoading}
+              />
+            </Spin>
           </Col>
         </Row>
 
@@ -334,11 +270,11 @@ export default function TradingPage() {
                   <span>Model Consensus</span>
                 </Space>
               }
-              loading={loading}
+              loading={signalLoading}
             >
               <ModelConsensusTable
                 signals={signal?.individualSignals || []}
-                loading={loading}
+                loading={signalLoading}
               />
             </Card>
           </Col>

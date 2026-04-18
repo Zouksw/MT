@@ -8,7 +8,7 @@ export const logger = winston.createLogger({
     winston.format.splat(),
     winston.format.json()
   ),
-  defaultMeta: { service: 'iotdb-enhanced' },
+  defaultMeta: { service: 'trademind' },
   transports: [
     new winston.transports.Console({
       format: winston.format.combine(

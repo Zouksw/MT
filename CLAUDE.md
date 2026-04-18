@@ -1,6 +1,22 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## Product: TradeMind AI
+
+大宗商品市场信息与分析平台. **不是交易平台.**
+
+核心功能: 商品价格展示 + 多因素分析(天气/汇率/关税/运费) + AI自动预测(7模型信号引擎).
+不涉及: 下单交易, 账户余额, 订单执行, 实际支付.
+
+已有但需重新定位的功能:
+- Simulation(模拟交易) → 预测回测工具(验证AI预测准确率)
+- Portfolio(投资组合) → 分析分组(跟踪相关品种)
+- Billing(Stripe计费) → AI功能分层(更多信号/模型/历史数据)
+
+---
+
+## Coding Guidelines
+
+Behavioral guidelines to reduce common LLM coding mistakes.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 

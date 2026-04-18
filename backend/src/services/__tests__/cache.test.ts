@@ -9,13 +9,14 @@
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
-// Mock redis module
-jest.mock('redis', () => ({
-  createClient: jest.fn(),
+// Mock @/lib/redis to provide a mock Redis client
+const mockGetRedisClient = jest.fn();
+
+jest.mock('@/lib/redis', () => ({
+  getRedisClient: () => mockGetRedisClient(),
 }));
 
-// Mock logger
-jest.mock('../../utils/logger', () => ({
+jest.mock('@/lib', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
@@ -23,7 +24,6 @@ jest.mock('../../utils/logger', () => ({
   },
 }));
 
-import { createClient } from 'redis';
 import * as cacheService from '@/services/cache';
 
 // ============================================================================
@@ -61,17 +61,14 @@ function createMockRedisClient(overrides: any = {}) {
 
 let mockRedisClient: ReturnType<typeof createMockRedisClient>;
 
-beforeEach(async () => {
+beforeEach(() => {
   jest.clearAllMocks();
-  await cacheService.closeCache();
   mockRedisClient = createMockRedisClient();
-  (createClient as jest.Mock).mockReturnValue(mockRedisClient);
-  process.env.REDIS_URL = 'redis://localhost:6379';
+  mockGetRedisClient.mockResolvedValue(mockRedisClient);
 });
 
-afterEach(async () => {
-  delete process.env.REDIS_URL;
-  await cacheService.closeCache();
+afterEach(() => {
+  mockGetRedisClient.mockReset();
 });
 
 // ============================================================================
@@ -311,9 +308,8 @@ describe('Cache - Advanced Operations', () => {
   });
 
   describe('closeCache', () => {
-    it('should close Redis connection', async () => {
-      await cacheService.closeCache();
-      expect(mockRedisClient.quit).toHaveBeenCalled();
+    it('should not throw (connection managed by lib/redis)', async () => {
+      await expect(cacheService.closeCache()).resolves.not.toThrow();
     });
   });
 });
@@ -375,16 +371,14 @@ describe('Cache - Error Handling', () => {
 
   describe('Connection failures', () => {
     it('should handle operations when Redis is not connected', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValue(new Error('Connection failed'));
+      mockGetRedisClient.mockRejectedValue(new Error('Connection failed'));
 
       const result = await cacheService.get('test-key');
       expect(result).toBeNull();
     });
 
     it('should handle stats when Redis is not connected', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValue(new Error('Connection failed'));
+      mockGetRedisClient.mockRejectedValue(new Error('Connection failed'));
 
       const stats = await cacheService.getCacheStats();
       expect(stats.connected).toBe(false);
@@ -411,16 +405,13 @@ describe('Cache - Error Handling', () => {
 // ============================================================================
 
 describe('Cache - Connection Management', () => {
-  it('should return same client on multiple initCache calls', async () => {
-    const client1 = await cacheService.initCache();
-    const client2 = await cacheService.initCache();
-
-    expect(client1).toBe(client2);
-    expect(mockRedisClient.connect).toHaveBeenCalledTimes(1);
+  it('should return client from getRedisClient', async () => {
+    const client = await cacheService.initCache();
+    expect(client).toBe(mockRedisClient);
   });
 
   it('should handle connection failure gracefully', async () => {
-    mockRedisClient.connect.mockRejectedValue(new Error('Connection failed'));
+    mockGetRedisClient.mockRejectedValue(new Error('Connection failed'));
     const client = await cacheService.initCache();
     expect(client).toBeNull();
   });
@@ -458,18 +449,15 @@ describe('Cache - Additional Coverage', () => {
       await expect(cacheService.flushCache()).resolves.not.toThrow();
     });
 
-    it('should handle flushCache after close', async () => {
-      await cacheService.closeCache();
+    it('should handle flushCache when client available', async () => {
       await cacheService.flushCache();
-      // Should re-initialize and call flushDb
       expect(mockRedisClient.flushDb).toHaveBeenCalled();
     });
   });
 
   describe('getCacheStats edge cases', () => {
     it('should return default stats when init fails', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+      mockGetRedisClient.mockRejectedValueOnce(new Error('Connection failed'));
       const stats = await cacheService.getCacheStats();
       expect(stats).toEqual({
         connected: false,
@@ -511,28 +499,24 @@ describe('Cache - Additional Coverage', () => {
   });
 
   describe('Operations when not initialized', () => {
-    it('should handle get when not initialized and init fails', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+    it('should handle get when init fails', async () => {
+      mockGetRedisClient.mockRejectedValueOnce(new Error('Connection failed'));
       const result = await cacheService.get('test-key');
       expect(result).toBeNull();
     });
 
-    it('should handle set when not initialized and init fails', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+    it('should handle set when init fails', async () => {
+      mockGetRedisClient.mockRejectedValueOnce(new Error('Connection failed'));
       await expect(cacheService.set('key', 'val')).resolves.not.toThrow();
     });
 
-    it('should handle del when not initialized and init fails', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+    it('should handle del when init fails', async () => {
+      mockGetRedisClient.mockRejectedValueOnce(new Error('Connection failed'));
       await expect(cacheService.del('key')).resolves.not.toThrow();
     });
 
-    it('should handle exists when not initialized and init fails', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+    it('should handle exists when init fails', async () => {
+      mockGetRedisClient.mockRejectedValueOnce(new Error('Connection failed'));
       const result = await cacheService.exists('key');
       expect(result).toBe(false);
     });
@@ -543,9 +527,8 @@ describe('Cache - Additional Coverage', () => {
       expect(result).toBe(0);
     });
 
-    it('should handle expire when not initialized and init fails', async () => {
-      await cacheService.closeCache();
-      mockRedisClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+    it('should handle expire when init fails', async () => {
+      mockGetRedisClient.mockRejectedValueOnce(new Error('Connection failed'));
       await expect(cacheService.expire('key', 60)).resolves.not.toThrow();
     });
   });

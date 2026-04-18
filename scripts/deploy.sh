@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# IoTDB Enhanced - Production Deployment Script
+# TradeMind AI - Production Deployment Script
 #
 # Usage:
 #   ./scripts/deploy.sh              # Normal deploy
@@ -301,7 +301,7 @@ explicit_rollback() {
 main() {
     echo -e "${CYAN}"
     echo "============================================"
-    echo "  IoTDB Enhanced - Production Deployment"
+    echo "  TradeMind AI - Production Deployment"
     echo "============================================"
     echo -e "${NC}"
 

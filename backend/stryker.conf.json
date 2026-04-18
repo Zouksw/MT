@@ -33,7 +33,7 @@
     "maxTestsToLog": 5
   },
   "dashboard": {
-    "project": "iotdb-enhanced",
+    "project": "trademind",
     "version": "main",
     "reportType": "full"
   },

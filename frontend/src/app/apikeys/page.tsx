@@ -281,7 +281,7 @@ export default function ApiKeyList() {
 
           <Alert
             message="API Keys"
-            description="API keys allow you to authenticate with the IoTDB Enhanced API programmatically. Keep them secure and never share them publicly."
+            description="API keys allow you to authenticate with the TradeMind AI API programmatically. Keep them secure and never share them publicly."
             type="info"
             showIcon
           />

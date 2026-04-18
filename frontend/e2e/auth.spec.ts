@@ -96,7 +96,7 @@ test.describe('Registration Flow', () => {
     if (await confirmPasswordInput.count() > 0) {
       await page.fill('input[type="email"]', 'new@example.com');
       await page.fill('input[type="password"]', 'password123');
-      await page.fill(confirmPasswordInput, 'different123');
+      await confirmPasswordInput.fill('different123');
 
       await page.click('button[type="submit"]');
 

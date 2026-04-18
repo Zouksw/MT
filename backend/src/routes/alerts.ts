@@ -66,8 +66,8 @@ router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res: Respons
 
   const result = await listAlerts(req.userId, {
     unreadOnly: unreadOnly === 'true',
-    type: type as any,
-    severity: severity as any,
+    type: type as 'ANOMALY' | 'FORECAST_READY' | 'SYSTEM' | undefined,
+    severity: severity as 'INFO' | 'WARNING' | 'ERROR' | undefined,
     limit: params.limit,
     offset: 0,
   });

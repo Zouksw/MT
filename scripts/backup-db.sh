@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# IoTDB Enhanced - Database Backup Script
+# TradeMind AI - Database Backup Script
 #
 # Creates a timestamped PostgreSQL backup using pg_dump.
 # Supports optional gzip compression and automatic rotation.

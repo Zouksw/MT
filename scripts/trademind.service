@@ -1,25 +1,25 @@
 # ============================================================================
-# IoTDB Enhanced - Systemd Service File
+# TradeMind AI - Systemd Service File
 # ============================================================================
 # Resurrects PM2 managed processes after system reboot.
 #
 # Install:
-#   sudo cp /root/scripts/iotdb-enhanced.service /etc/systemd/system/
+#   sudo cp /root/scripts/trademind.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable iotdb-enhanced
-#   sudo systemctl start iotdb-enhanced
+#   sudo systemctl enable trademind
+#   sudo systemctl start trademind
 #
 # Verify:
-#   sudo systemctl status iotdb-enhanced
+#   sudo systemctl status trademind
 #   pm2 list
 #
 # Logs:
-#   journalctl -u iotdb-enhanced -f
+#   journalctl -u trademind -f
 # ============================================================================
 
 [Unit]
-Description=IoTDB Enhanced - PM2 Process Manager
-Documentation=https://github.com/your-org/iotdb-enhanced
+Description=TradeMind AI - PM2 Process Manager
+Documentation=https://github.com/your-org/trademind
 After=network.target postgresql.service redis.service
 Wants=postgresql.service redis.service
 
@@ -50,7 +50,7 @@ LimitNPROC=4096
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=iotdb-enhanced
+SyslogIdentifier=trademind
 
 [Install]
 WantedBy=multi-user.target

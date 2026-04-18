@@ -125,7 +125,7 @@ describe('authProviderClient', () => {
         data: { user: mockUser, token: mockToken },
       });
 
-      const result = await authProviderClient.register({
+      const result = await authProviderClient.register!({
         email: 'new@example.com',
         password: 'password123',
         name: 'New User',
@@ -145,7 +145,7 @@ describe('authProviderClient', () => {
         response: { data: { error: 'Email already exists' } },
       });
 
-      const result = await authProviderClient.register({
+      const result = await authProviderClient.register!({
         email: 'existing@example.com',
         password: 'password123',
       });
@@ -161,7 +161,7 @@ describe('authProviderClient', () => {
       const axios = (await import('axios')).default.create();
       (axios.post as jest.Mock).mockResolvedValue({});
 
-      const result = await authProviderClient.logout();
+      const result = await authProviderClient.logout({});
 
       expect(result).toEqual({
         success: true,
@@ -177,7 +177,7 @@ describe('authProviderClient', () => {
         response: { status: 500 },
       });
 
-      const result = await authProviderClient.logout();
+      const result = await authProviderClient.logout({});
 
       expect(result).toEqual({
         success: true,
@@ -243,7 +243,7 @@ describe('authProviderClient', () => {
       );
 
       const { authProviderClient } = await import('../auth-provider.client');
-      const result = await authProviderClient.getPermissions();
+      const result = await authProviderClient.getPermissions!();
 
       expect(result).toEqual(['admin', 'user']);
     });
@@ -252,7 +252,7 @@ describe('authProviderClient', () => {
       (Cookies.get as jest.Mock).mockReturnValue(null);
 
       const { authProviderClient } = await import('../auth-provider.client');
-      const result = await authProviderClient.getPermissions();
+      const result = await authProviderClient.getPermissions!();
 
       expect(result).toEqual([]);
     });
@@ -268,7 +268,7 @@ describe('authProviderClient', () => {
       );
 
       const { authProviderClient } = await import('../auth-provider.client');
-      const result = await authProviderClient.getIdentity();
+      const result = await authProviderClient.getIdentity!();
 
       expect(result).toEqual({
         id: 'user-123',
@@ -283,7 +283,7 @@ describe('authProviderClient', () => {
       (Cookies.get as jest.Mock).mockReturnValue(null);
 
       const { authProviderClient } = await import('../auth-provider.client');
-      const result = await authProviderClient.getIdentity();
+      const result = await authProviderClient.getIdentity!();
 
       expect(result).toBeNull();
     });

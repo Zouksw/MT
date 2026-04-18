@@ -79,21 +79,21 @@ interface UserInfo {
 
 const USERS: UserInfo[] = [
   {
-    email: 'admin@iotdb-enhanced.com',
+    email: 'admin@trademind.com',
     password: 'Admin123!',
     name: 'System Administrator',
     role: 'ADMIN',
     avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=SA&backgroundColor=3b82f6',
   },
   {
-    email: 'user@iotdb-enhanced.com',
+    email: 'user@trademind.com',
     password: 'User123!',
     name: 'Jane DataScientist',
     role: 'EDITOR',
     avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=JD&backgroundColor=10b981',
   },
   {
-    email: 'demo@iotdb-enhanced.com',
+    email: 'demo@trademind.com',
     password: 'Demo123!',
     name: 'Demo User',
     role: 'VIEWER',
@@ -405,7 +405,7 @@ const DETECTION_METHODS: DetectionMethod[] = ['STATISTICAL', 'ML_AUTOENCODER', '
 async function main() {
   console.log('');
   console.log('==========================================');
-  console.log('  IoTDB Enhanced - Database Seeding');
+  console.log('  TradeMind AI - Database Seeding');
   console.log('==========================================');
   console.log('');
 
@@ -467,12 +467,12 @@ async function main() {
 
   const org = await prisma.organizations.create({
     data: {
-      id: 'org-iotdb-enhanced',
+      id: 'org-trademind',
       owner_id: adminUser.id,
-      name: 'IoTDB Enhanced Corp',
-      slug: 'iotdb-enhanced-corp',
-      description: 'Primary organization for IoTDB Enhanced platform development and operations.',
-      logo_url: 'https://api.dicebear.com/7.x/identicon/svg?seed=iotdb&backgroundColor=3b82f6',
+      name: 'TradeMind AI Corp',
+      slug: 'trademind-corp',
+      description: 'Primary organization for TradeMind AI platform development and operations.',
+      logo_url: 'https://api.dicebear.com/7.x/identicon/svg?seed=trademind&backgroundColor=3b82f6',
       settings: { defaultTimezone: 'UTC', dataRetentionDays: 365 },
     },
   });
@@ -911,7 +911,7 @@ async function main() {
         userAgent: pick([
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-          'IoTDB-Enhanced-CLI/1.0',
+          'TradeMind-CLI/1.0',
         ]),
         success: Math.random() > 0.05,
         errorCode: Math.random() < 0.05 ? 'PERMISSION_DENIED' : null,
@@ -948,7 +948,7 @@ async function main() {
         userAgent: pick([
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-          'IoTDB-Enhanced-CLI/1.0',
+          'TradeMind-CLI/1.0',
         ]),
         url: pick(['/api/datasets', '/api/timeseries', '/api/auth/login', '/api/alerts', '/api/forecasts']),
         receivedAt: new Date(THIRTY_DAYS_AGO.getTime() + randInt(0, 29) * 24 * 60 * 60 * 1000),
@@ -962,6 +962,267 @@ async function main() {
   console.log(`       Created 25 security audit logs`);
 
   // ------------------------------------------------------------------
+  // 10. Create TradeMind AI commodity data
+  // ------------------------------------------------------------------
+  console.log('[10/10] Creating TradeMind AI commodity data...');
+
+  await prisma.commodityPrice.deleteMany();
+  await prisma.marketFactor.deleteMany();
+  await prisma.commodity.deleteMany();
+
+  const COMMODITIES = [
+    // Domestic beef cuts
+    { slug: 'brisket_cn', name: 'Brisket (Domestic)', nameCn: '牛腩（国产）', category: 'beef_cuts', subcategory: 'brisket', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'shin_cn', name: 'Shin/Shank (Domestic)', nameCn: '牛腱（国产）', category: 'beef_cuts', subcategory: 'shin', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'sirloin_cn', name: 'Sirloin (Domestic)', nameCn: '西冷（国产）', category: 'beef_cuts', subcategory: 'sirloin', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'fatty_brisket_cn', name: 'Fatty Brisket (Domestic)', nameCn: '肥牛（国产）', category: 'beef_cuts', subcategory: 'fatty_brisket', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'thick_flank_cn', name: 'Thick Flank (Domestic)', nameCn: '牛展（国产）', category: 'beef_cuts', subcategory: 'thick_flank', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'oyster_blade_cn', name: 'Oyster Blade (Domestic)', nameCn: '板腱（国产）', category: 'beef_cuts', subcategory: 'oyster_blade', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Imported beef - Australia
+    { slug: 'aus_brisket_m7', name: 'Australian Brisket M7', nameCn: '澳洲牛腩 M7', category: 'beef_cuts', subcategory: 'brisket', grade: 'M7', originCountry: 'AUS', factoryCode: '847', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'aus_sirloin_m9', name: 'Australian Sirloin M9', nameCn: '澳洲西冷 M9', category: 'beef_cuts', subcategory: 'sirloin', grade: 'M9', originCountry: 'AUS', factoryCode: '239', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'aus_shin_m5', name: 'Australian Shin M5', nameCn: '澳洲牛腱 M5', category: 'beef_cuts', subcategory: 'shin', grade: 'M5', originCountry: 'AUS', factoryCode: '1260', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'aus_oyster_blade_m7', name: 'Australian Oyster Blade M7', nameCn: '澳洲板腱 M7', category: 'beef_cuts', subcategory: 'oyster_blade', grade: 'M7', originCountry: 'AUS', factoryCode: '514', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'aus_thick_flank_m7', name: 'Australian Thick Flank M7', nameCn: '澳洲牛展 M7', category: 'beef_cuts', subcategory: 'thick_flank', grade: 'M7', originCountry: 'AUS', factoryCode: '847', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Imported beef - Brazil
+    { slug: 'bra_brisket', name: 'Brazilian Brisket', nameCn: '巴西牛腩', category: 'beef_cuts', subcategory: 'brisket', originCountry: 'BRA', factoryCode: 'SIF2057', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'bra_shin', name: 'Brazilian Shin', nameCn: '巴西牛腱', category: 'beef_cuts', subcategory: 'shin', originCountry: 'BRA', factoryCode: 'SIF431', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'bra_frozen_boneless', name: 'Brazilian Frozen Boneless Beef', nameCn: '巴西冷冻去骨牛肉', category: 'beef_cuts', subcategory: 'boneless', originCountry: 'BRA', factoryCode: 'SIF2583', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Imported beef - Argentina
+    { slug: 'arg_shin', name: 'Argentine Shin', nameCn: '阿根廷牛腱', category: 'beef_cuts', subcategory: 'shin', originCountry: 'ARG', factoryCode: '1920', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'arg_brisket', name: 'Argentine Brisket', nameCn: '阿根廷牛腩', category: 'beef_cuts', subcategory: 'brisket', originCountry: 'ARG', factoryCode: '2077', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Imported beef - Uruguay
+    { slug: 'ury_thick_flank', name: 'Uruguayan Thick Flank', nameCn: '乌拉圭牛展', category: 'beef_cuts', subcategory: 'thick_flank', originCountry: 'URY', factoryCode: '379', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'ury_shin', name: 'Uruguayan Shin', nameCn: '乌拉圭牛腱', category: 'beef_cuts', subcategory: 'shin', originCountry: 'URY', factoryCode: '310', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Live cattle
+    { slug: 'live_cattle_cn', name: 'Live Cattle (China)', nameCn: '国内活牛', category: 'live_cattle', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+
+    // International futures
+    { slug: 'cme_live_cattle', name: 'CME Live Cattle Futures', nameCn: 'CME活牛期货', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'cme_feeder_cattle', name: 'CME Feeder Cattle Futures', nameCn: 'CME育肥牛期货', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+
+    // Grain & Feed
+    { slug: 'corn_cn', name: 'Corn (China)', nameCn: '玉米', category: 'grain', originCountry: 'CN', unit: 'CNY/ton', currency: 'CNY' },
+    { slug: 'soybean_meal_cn', name: 'Soybean Meal (China)', nameCn: '豆粕', category: 'feed', originCountry: 'CN', unit: 'CNY/ton', currency: 'CNY' },
+
+    // Exchange rates
+    { slug: 'usd_cny', name: 'USD/CNY', nameCn: '美元/人民币', category: 'forex', unit: 'rate', currency: 'CNY' },
+    { slug: 'aud_usd', name: 'AUD/USD', nameCn: '澳元/美元', category: 'forex', unit: 'rate', currency: 'USD' },
+    { slug: 'brl_usd', name: 'BRL/USD', nameCn: '雷亚尔/美元', category: 'forex', unit: 'rate', currency: 'USD' },
+
+    // Additional domestic beef cuts
+    { slug: 'ribeye_cn', name: 'Ribeye (Domestic)', nameCn: '眼肉（国产）', category: 'beef_cuts', subcategory: 'ribeye', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'tenderloin_cn', name: 'Tenderloin (Domestic)', nameCn: '牛柳（国产）', category: 'beef_cuts', subcategory: 'tenderloin', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'beef_tripe_cn', name: 'Beef Tripe (Domestic)', nameCn: '牛肚（国产）', category: 'beef_cuts', subcategory: 'offal', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'beef_tendon_cn', name: 'Beef Tendon (Domestic)', nameCn: '牛筋（国产）', category: 'beef_cuts', subcategory: 'offal', originCountry: 'CN', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Additional imported beef
+    { slug: 'aus_rump_m5', name: 'Australian Rump M5', nameCn: '澳洲黄瓜条 M5', category: 'beef_cuts', subcategory: 'rump', grade: 'M5', originCountry: 'AUS', factoryCode: '239', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'aus_cube_roll_m9', name: 'Australian Cube Roll M9', nameCn: '澳洲眼肉 M9', category: 'beef_cuts', subcategory: 'cube_roll', grade: 'M9', originCountry: 'AUS', factoryCode: '239', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'bra_topside', name: 'Brazilian Topside', nameCn: '巴西小米龙', category: 'beef_cuts', subcategory: 'topside', originCountry: 'BRA', factoryCode: 'SIF2057', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'bra_round', name: 'Brazilian Round', nameCn: '巴西大黄瓜条', category: 'beef_cuts', subcategory: 'round', originCountry: 'BRA', factoryCode: 'SIF431', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'arg_forequarter', name: 'Argentine Forequarter', nameCn: '阿根廷前腱', category: 'beef_cuts', subcategory: 'forequarter', originCountry: 'ARG', factoryCode: '1920', unit: 'CNY/kg', currency: 'CNY' },
+    { slug: 'ury_boneless', name: 'Uruguayan Boneless Beef', nameCn: '乌拉圭去骨牛肉', category: 'beef_cuts', subcategory: 'boneless', originCountry: 'URY', factoryCode: '379', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Other meat
+    { slug: 'nz_lamb_leg', name: 'NZ Lamb Leg', nameCn: '新西兰羊腿', category: 'other_meat', subcategory: 'lamb', originCountry: 'NZ', unit: 'CNY/kg', currency: 'CNY' },
+
+    // Additional grain & feed
+    { slug: 'wheat_cn', name: 'Wheat (China)', nameCn: '小麦', category: 'grain', originCountry: 'CN', unit: 'CNY/ton', currency: 'CNY' },
+    { slug: 'sorghum_cn', name: 'Sorghum (China)', nameCn: '高粱', category: 'grain', originCountry: 'CN', unit: 'CNY/ton', currency: 'CNY' },
+    { slug: 'soybean_oil_cn', name: 'Soybean Oil (China)', nameCn: '豆油', category: 'feed', originCountry: 'CN', unit: 'CNY/ton', currency: 'CNY' },
+    { slug: 'dalian_palm_oil', name: 'Palm Oil (Dalian)', nameCn: '棕榈油（大商所）', category: 'feed', originCountry: 'MY', unit: 'CNY/ton', currency: 'CNY' },
+
+    // Additional forex
+    { slug: 'eur_usd', name: 'EUR/USD', nameCn: '欧元/美元', category: 'forex', unit: 'rate', currency: 'USD' },
+    { slug: 'gbp_usd', name: 'GBP/USD', nameCn: '英镑/美元', category: 'forex', unit: 'rate', currency: 'USD' },
+
+    // Shipping index
+    { slug: 'bdi', name: 'Baltic Dry Index', nameCn: '波罗的海干散货指数', category: 'shipping', unit: 'index', currency: 'USD' },
+  ];
+
+  // Price baselines for generating realistic data
+  const PRICE_BASELINES: Record<string, { base: number; volatility: number }> = {
+    brisket_cn: { base: 52, volatility: 3 },
+    shin_cn: { base: 68, volatility: 4 },
+    sirloin_cn: { base: 85, volatility: 5 },
+    fatty_brisket_cn: { base: 45, volatility: 3 },
+    thick_flank_cn: { base: 60, volatility: 4 },
+    oyster_blade_cn: { base: 72, volatility: 4 },
+    aus_brisket_m7: { base: 42, volatility: 3 },
+    aus_sirloin_m9: { base: 95, volatility: 6 },
+    aus_shin_m5: { base: 38, volatility: 2 },
+    aus_oyster_blade_m7: { base: 58, volatility: 4 },
+    aus_thick_flank_m7: { base: 48, volatility: 3 },
+    bra_brisket: { base: 32, volatility: 2 },
+    bra_shin: { base: 36, volatility: 2 },
+    bra_frozen_boneless: { base: 28, volatility: 2 },
+    arg_shin: { base: 38, volatility: 2 },
+    arg_brisket: { base: 30, volatility: 2 },
+    ury_thick_flank: { base: 40, volatility: 3 },
+    ury_shin: { base: 42, volatility: 3 },
+    live_cattle_cn: { base: 24, volatility: 1.5 },
+    cme_live_cattle: { base: 185, volatility: 8 },
+    cme_feeder_cattle: { base: 245, volatility: 12 },
+    corn_cn: { base: 2600, volatility: 100 },
+    soybean_meal_cn: { base: 3800, volatility: 150 },
+    usd_cny: { base: 7.25, volatility: 0.1 },
+    aud_usd: { base: 0.65, volatility: 0.015 },
+    brl_usd: { base: 0.18, volatility: 0.008 },
+    ribeye_cn: { base: 120, volatility: 5 },
+    tenderloin_cn: { base: 180, volatility: 8 },
+    beef_tripe_cn: { base: 35, volatility: 2 },
+    beef_tendon_cn: { base: 55, volatility: 3 },
+    aus_rump_m5: { base: 48, volatility: 2 },
+    aus_cube_roll_m9: { base: 110, volatility: 6 },
+    bra_topside: { base: 28, volatility: 1.5 },
+    bra_round: { base: 25, volatility: 1.2 },
+    arg_forequarter: { base: 24, volatility: 1 },
+    ury_boneless: { base: 30, volatility: 1.5 },
+    nz_lamb_leg: { base: 65, volatility: 4 },
+    wheat_cn: { base: 2900, volatility: 60 },
+    sorghum_cn: { base: 2400, volatility: 50 },
+    soybean_oil_cn: { base: 8200, volatility: 200 },
+    dalian_palm_oil: { base: 7800, volatility: 180 },
+    eur_usd: { base: 1.08, volatility: 0.008 },
+    gbp_usd: { base: 1.27, volatility: 0.01 },
+    bdi: { base: 1800, volatility: 60 },
+  };
+
+  // Create commodities
+  let commodityCount = 0;
+  for (const c of COMMODITIES) {
+    await prisma.commodity.create({
+      data: {
+        slug: c.slug,
+        name: c.name,
+        nameCn: c.nameCn ?? null,
+        category: c.category,
+        subcategory: c.subcategory ?? null,
+        grade: c.grade ?? null,
+        originCountry: c.originCountry ?? null,
+        factoryCode: c.factoryCode ?? null,
+        unit: c.unit,
+        currency: c.currency,
+        metadata: { source: 'seed', importType: c.category === 'forex' ? 'api' : 'manual' },
+      },
+    });
+    commodityCount++;
+  }
+
+  // Generate 180 days of daily price data for each commodity
+  const DAYS = 180;
+  let priceCount = 0;
+  const priceBatch: {
+    commodityId: string;
+    date: Date;
+    interval: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number | null;
+    source: string;
+    metadata: any;
+  }[] = [];
+
+  const commodities = await prisma.commodity.findMany();
+  const BATCH_SIZE = 500;
+
+  for (const commodity of commodities) {
+    const baseline = PRICE_BASELINES[commodity.slug];
+    if (!baseline) continue;
+
+    let price = baseline.base;
+
+    for (let d = 0; d < DAYS; d++) {
+      const date = new Date(NOW.getTime() - (DAYS - d) * 24 * 60 * 60 * 1000);
+      // Skip weekends for futures
+      if (commodity.category === 'futures' && (date.getDay() === 0 || date.getDay() === 6)) continue;
+
+      const change = (Math.random() - 0.48) * baseline.volatility;
+      price = Math.max(price * 0.8, Math.min(price * 1.2, price + change));
+
+      const open = parseFloat((price + (Math.random() - 0.5) * baseline.volatility * 0.3).toFixed(4));
+      const close = parseFloat(price.toFixed(4));
+      const high = parseFloat(Math.max(open, close, price + Math.random() * baseline.volatility * 0.5).toFixed(4));
+      const low = parseFloat(Math.min(open, close, price - Math.random() * baseline.volatility * 0.5).toFixed(4));
+
+      let metadata: Record<string, unknown> | null = null;
+      if (commodity.category === 'beef_cuts' && commodity.originCountry !== 'CN') {
+        metadata = {
+          spot_cny_kg: close,
+          shipping_cost_usd_ton: 250 + Math.random() * 60,
+          tariff_rate: commodity.originCountry === 'AUS' ? 0 : 0.12,
+        };
+      } else if (commodity.category === 'futures') {
+        metadata = {
+          futures_usd_ton: close * 2.20462, // cwt to ton
+          open_interest: Math.floor(Math.random() * 50000 + 10000),
+        };
+      }
+
+      priceBatch.push({
+        commodityId: commodity.id,
+        date,
+        interval: 'daily',
+        open,
+        high,
+        low,
+        close,
+        volume: commodity.category === 'futures' ? Math.floor(Math.random() * 20000 + 5000) : null,
+        source: 'seed',
+        metadata,
+      });
+
+      if (priceBatch.length >= BATCH_SIZE) {
+        await prisma.commodityPrice.createMany({ data: priceBatch, skipDuplicates: true });
+        priceCount += priceBatch.length;
+        priceBatch.length = 0;
+      }
+    }
+  }
+
+  // Flush remaining
+  if (priceBatch.length > 0) {
+    await prisma.commodityPrice.createMany({ data: priceBatch, skipDuplicates: true });
+    priceCount += priceBatch.length;
+  }
+
+  // Generate exchange rate market factors
+  const fxRates = [
+    { type: 'exchange_rate', region: 'US/CN', value: 7.25, unit: 'CNY/USD' },
+    { type: 'exchange_rate', region: 'AU/US', value: 0.65, unit: 'AUD/USD' },
+    { type: 'exchange_rate', region: 'BR/US', value: 0.18, unit: 'BRL/USD' },
+  ];
+
+  for (const fx of fxRates) {
+    let rate = fx.value;
+    for (let d = 0; d < 30; d++) {
+      rate += (Math.random() - 0.5) * 0.01;
+      await prisma.marketFactor.create({
+        data: {
+          type: fx.type,
+          region: fx.region,
+          date: new Date(NOW.getTime() - (30 - d) * 24 * 60 * 60 * 1000),
+          value: parseFloat(rate.toFixed(6)),
+          unit: fx.unit,
+          source: 'seed',
+        },
+      });
+    }
+  }
+
+  console.log(`       Created ${commodityCount} commodities`);
+  console.log(`       Created ${priceCount} price records (${DAYS} days each)`);
+  console.log(`       Created ${fxRates.length * 30} market factor records`);
+
+  // ------------------------------------------------------------------
   // Summary
   // ------------------------------------------------------------------
   console.log('');
@@ -970,9 +1231,9 @@ async function main() {
   console.log('==========================================');
   console.log('');
   console.log('  Users:');
-  console.log('    admin@iotdb-enhanced.com / Admin123!  (ADMIN)');
-  console.log('    user@iotdb-enhanced.com  / User123!   (EDITOR)');
-  console.log('    demo@iotdb-enhanced.com  / Demo123!   (VIEWER)');
+  console.log('    admin@trademind.com / Admin123!  (ADMIN)');
+  console.log('    user@trademind.com  / User123!   (EDITOR)');
+  console.log('    demo@trademind.com  / Demo123!   (VIEWER)');
   console.log('');
   console.log(`  Datasets:      ${DATASETS.length}`);
   console.log(`  Timeseries:    ${allTimeseries.length}`);

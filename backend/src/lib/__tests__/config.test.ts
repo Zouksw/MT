@@ -254,7 +254,7 @@ describe('Config Module', () => {
 
       const config = await import('../config');
 
-      expect(config.config.email.from).toBe('noreply@iotdb-enhanced.com');
+      expect(config.config.email.from).toBe('noreply@trademind.com');
     });
 
     test('should use default SMTP port when not set', async () => {

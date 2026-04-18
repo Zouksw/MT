@@ -91,10 +91,10 @@ describe('AuthPage', () => {
     expect(screen.getByText('Privacy Policy')).toBeInTheDocument();
   });
 
-  it('should render IoTDB Enhanced branding on left panel', () => {
+  it('should render TradeMind AI branding on left panel', () => {
     render(<AuthPage type="login" />);
 
-    expect(screen.getByText('IoTDB Enhanced')).toBeInTheDocument();
+    expect(screen.getByText('TradeMind AI')).toBeInTheDocument();
   });
 
   it('should render feature highlights on left panel', () => {

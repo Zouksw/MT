@@ -112,7 +112,7 @@ export function AuthPage(props: AuthPageProps) {
           </div>
 
           <h1 className="font-display text-4xl font-semibold leading-tight">
-            IoTDB Enhanced
+            TradeMind AI
           </h1>
           <p className="mt-4 max-w-sm text-lg leading-relaxed text-white/80">
             Enterprise-grade time series database platform with AI-powered forecasting and real-time analytics

@@ -31,12 +31,12 @@ jest.mock('antd', () => {
 
 // Mock axios
 jest.mock('axios', () => {
-  const mockAxios = {
+  const mockAxios: Record<string, unknown> = {
     post: jest.fn(),
     defaults: { headers: { common: {} } },
-    create: jest.fn(() => mockAxios),
     interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
   };
+  mockAxios.create = jest.fn(() => mockAxios);
   return mockAxios;
 });
 

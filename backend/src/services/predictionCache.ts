@@ -101,7 +101,7 @@ export async function runAndCachePrediction(
     const result = await iotdbAIService.predict({
       timeseries: timeseriesPath,
       horizon,
-      algorithm: modelId as any,
+      algorithm: modelId as 'arima' | 'timer_xl' | 'sundial' | 'holtwinters' | 'exponential_smoothing' | 'naive_forecaster' | 'stl_forecaster',
       confidenceLevel,
     });
 

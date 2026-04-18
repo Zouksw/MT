@@ -2,15 +2,14 @@
  * Commodity Correlation Analysis
  *
  * Computes Pearson correlation between commodity price series.
- * Uses 30-day rolling window with UTC timezone alignment.
+ * Uses rolling window with UTC timezone alignment.
  *
  * API:
  *   GET /api/signals/correlation?commodityIds=id1,id2&window=30
  *   GET /api/signals/correlation/matrix — full pairwise correlation matrix
  */
 
-import { prisma } from '@/lib';
-import { logger } from '@/lib';
+import { prisma, logger } from '@/lib';
 
 export interface CorrelationResult {
   commodityA: string;
@@ -29,51 +28,40 @@ export interface CorrelationMatrix {
   asOfDate: string;
 }
 
+const MAX_MATRIX_SIZE = 20;
+
 /**
- * Get price time series from PostgreSQL for a commodity
+ * Get price time series from CommodityPrice for a commodity slug
  */
 async function getPriceSeries(
-  commodityId: string,
+  commoditySlug: string,
   windowDays: number
 ): Promise<Array<{ date: string; value: number }>> {
   const since = new Date(Date.now() - windowDays * 86400000);
 
-  // Get timeseries for this dataset
-  const timeseries = await prisma.timeseries.findFirst({
-    where: {
-      dataset: { slug: commodityId },
-    },
-    orderBy: { createdAt: 'desc' },
+  const commodity = await prisma.commodity.findUnique({
+    where: { slug: commoditySlug },
+    select: { id: true },
   });
 
-  if (!timeseries) return [];
+  if (!commodity) return [];
 
-  // Get price datapoints within window
-  const datapoints = await prisma.datapoint.findMany({
+  const prices = await prisma.commodityPrice.findMany({
     where: {
-      timeseriesId: timeseries.id,
-      timestamp: { gte: since },
+      commodityId: commodity.id,
+      interval: 'daily',
+      date: { gte: since },
     },
-    orderBy: { timestamp: 'asc' },
-    select: {
-      timestamp: true,
-      valueJson: true,
-    },
+    orderBy: { date: 'asc' },
+    select: { date: true, close: true },
   });
 
-  return datapoints
-    .map((dp) => {
-      const vj = dp.valueJson as Record<string, any>;
-      // Try different price field names
-      const value =
-        vj?.buy ?? vj?.futures ?? vj?.futures_usd_ton ?? vj?.spot_cny_kg ?? vj?.value;
-      if (typeof value !== 'number') return null;
-      return {
-        date: dp.timestamp.toISOString().split('T')[0],
-        value,
-      };
-    })
-    .filter((d): d is { date: string; value: number } => d !== null);
+  return prices
+    .filter((p) => p.close !== null)
+    .map((p) => ({
+      date: p.date.toISOString().split('T')[0],
+      value: Number(p.close),
+    }));
 }
 
 /**
@@ -83,7 +71,6 @@ function pearsonCorrelation(
   seriesA: Array<{ date: string; value: number }>,
   seriesB: Array<{ date: string; value: number }>
 ): { correlation: number; sampleSize: number } {
-  // Align by date (inner join)
   const mapB = new Map(seriesB.map((s) => [s.date, s.value]));
 
   const pairs: Array<[number, number]> = [];
@@ -97,7 +84,6 @@ function pearsonCorrelation(
   const n = pairs.length;
   if (n < 3) return { correlation: 0, sampleSize: n };
 
-  // Compute Pearson r
   const sumA = pairs.reduce((s, [a]) => s + a, 0);
   const sumB = pairs.reduce((s, [, b]) => s + b, 0);
   const meanA = sumA / n;
@@ -119,7 +105,6 @@ function pearsonCorrelation(
   if (denom === 0) return { correlation: 0, sampleSize: n };
 
   const r = covAB / denom;
-  // Clamp to [-1, 1] (floating point safety)
   return {
     correlation: Math.max(-1, Math.min(1, Math.round(r * 10000) / 10000)),
     sampleSize: n,
@@ -145,7 +130,7 @@ export async function computeCorrelation(
     commodityA,
     commodityB,
     correlation: result.correlation,
-    pValue: null, // Would need jstat or similar for exact p-value
+    pValue: null,
     sampleSize: result.sampleSize,
     windowDays,
     asOfDate: new Date().toISOString().split('T')[0],
@@ -159,7 +144,11 @@ export async function computeCorrelationMatrix(
   commodityIds: string[],
   windowDays: number = 30
 ): Promise<CorrelationMatrix> {
-  // Load all series in parallel
+  if (commodityIds.length > MAX_MATRIX_SIZE) {
+    logger.warn(`[Correlation] Matrix limited to ${MAX_MATRIX_SIZE} commodities, got ${commodityIds.length}`);
+    commodityIds = commodityIds.slice(0, MAX_MATRIX_SIZE);
+  }
+
   const seriesMap = new Map<string, Array<{ date: string; value: number }>>();
   await Promise.all(
     commodityIds.map(async (id) => {
@@ -171,16 +160,15 @@ export async function computeCorrelationMatrix(
   const n = commodityIds.length;
   const matrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
 
-  // Compute pairwise correlations
   for (let i = 0; i < n; i++) {
-    matrix[i][i] = 1; // Self-correlation = 1
+    matrix[i][i] = 1;
     for (let j = i + 1; j < n; j++) {
       const result = pearsonCorrelation(
         seriesMap.get(commodityIds[i]) || [],
         seriesMap.get(commodityIds[j]) || []
       );
       matrix[i][j] = result.correlation;
-      matrix[j][i] = result.correlation; // Symmetric
+      matrix[j][i] = result.correlation;
     }
   }
 
@@ -193,21 +181,21 @@ export async function computeCorrelationMatrix(
 }
 
 /**
- * Get list of available commodities (datasets with commodityType)
+ * Get list of available commodities for correlation analysis
  */
 export async function getAvailableCommodities(): Promise<
   Array<{ id: string; name: string; slug: string; type: string | null }>
 > {
-  const datasets = await prisma.dataset.findMany({
-    where: { commodityType: { not: null } },
-    select: { id: true, name: true, slug: true, commodityType: true },
+  const commodities = await prisma.commodity.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, slug: true, category: true },
     orderBy: { name: 'asc' },
   });
 
-  return datasets.map((d) => ({
-    id: d.id,
-    name: d.name,
-    slug: d.slug,
-    type: d.commodityType,
+  return commodities.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    type: c.category,
   }));
 }

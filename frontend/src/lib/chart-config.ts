@@ -1,5 +1,5 @@
 /**
- * Unified Chart Configuration for IoTDB Enhanced
+ * Unified Chart Configuration for TradeMind AI
  * Provides consistent styling for all Recharts components
  */
 

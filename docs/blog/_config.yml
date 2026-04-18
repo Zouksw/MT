@@ -1,12 +1,12 @@
-# IoTDB Enhanced Blog
+# TradeMind AI Blog
 
-title: IoTDB Enhanced Blog
-description: Enterprise time series database platform with AI-powered forecasting
-author: IoTDB Enhanced Team
+title: TradeMind AI Blog
+description: AI-powered commodity market intelligence and prediction platform
+author: TradeMind AI Team
 lang: en
 timezone: UTC
-url: "https://your-username.github.io/iotdb-enhanced"
-baseurl: "/iotdb-enhanced"
+url: "https://trademind.ai"
+baseurl: ""
 
 # Build settings
 markdown: kramdown
@@ -38,11 +38,11 @@ defaults:
       type: "posts"
     values:
       layout: "post"
-      author: "IoTDB Enhanced Team"
+      author: "TradeMind AI Team"
 
 # Social
 github_username: Zouksw
-twitter_username: iotdb_enhanced
+twitter_username: trademind_ai
 
 # SEO
 logo: /assets/img/logo.png
@@ -55,6 +55,6 @@ nav:
   - title: Blog
     url: /blog/
   - title: Documentation
-    url: https://your-username.github.io/iotdb-enhanced/docs
+    url: /docs
   - title: GitHub
-    url: https://github.com/Zouksw/iotdb-enhanced
+    url: https://github.com/Zouksw/trademind

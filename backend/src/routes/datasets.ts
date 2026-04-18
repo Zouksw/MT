@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma, logger } from '@/lib';
+import type { Prisma } from '@prisma/client';
 import { authenticate, AuthRequest } from '@/middleware/auth';
 import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '@/middleware/errorHandler';
 import { getPagination, paginationSchema } from '@/schemas/common';
@@ -10,12 +11,19 @@ import Papa from 'papaparse';
 
 const router = Router();
 
+type DatasetRow = {
+  sizeBytes?: bigint | null;
+  rowsCount?: number | null;
+  owner?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
 // Helper to serialize BigInt fields for JSON responses
-const serializeDataset = (dataset: any) => {
-  const serialized: any = { ...dataset };
+const serializeDataset = (dataset: DatasetRow) => {
+  const serialized: DatasetRow = { ...dataset };
 
   // Convert all BigInt fields to string
-  if (serialized.sizeBytes) serialized.sizeBytes = serialized.sizeBytes.toString();
+  if (serialized.sizeBytes) serialized.sizeBytes = serialized.sizeBytes.toString() as unknown as bigint;
   if (serialized.rowsCount) serialized.rowsCount = serialized.rowsCount;
 
   // Handle nested objects
@@ -24,19 +32,8 @@ const serializeDataset = (dataset: any) => {
   return serialized;
 };
 
-const serializeDatasets = (datasets: any[]) =>
-  datasets.map((ds: any) => {
-    const serialized: any = { ...ds };
-
-    // Convert all BigInt fields to string
-    if (serialized.sizeBytes) serialized.sizeBytes = serialized.sizeBytes.toString();
-    if (serialized.rowsCount) serialized.rowsCount = serialized.rowsCount;
-
-    // Handle nested objects
-    if (serialized.owner) serialized.owner = { ...serialized.owner };
-
-    return serialized;
-  });
+const serializeDatasets = (datasets: DatasetRow[]) =>
+  datasets.map((ds: DatasetRow) => serializeDataset(ds));
 
 /**
  * @openapi
@@ -103,7 +100,7 @@ router.get('/', authenticate, cacheRoute('datasets:list', 300), asyncHandler(asy
   const { skip, take } = getPagination(req.query);
   const params = paginationSchema.parse(req.query);
 
-  const where: any = {};
+  const where: Prisma.DatasetWhereInput = {};
 
   if (search) {
     where.OR = [
@@ -127,7 +124,7 @@ router.get('/', authenticate, cacheRoute('datasets:list', 300), asyncHandler(asy
   ]);
 
   // Convert BigInt to string for JSON serialization
-  const serializedDatasets = datasets.map((ds: any) => ({
+  const serializedDatasets = datasets.map((ds: { sizeBytes?: bigint | null; rowsCount?: number | null; [key: string]: unknown }) => ({
     ...ds,
     sizeBytes: ds.sizeBytes?.toString() || null,
     rowsCount: ds.rowsCount || null,
@@ -480,7 +477,7 @@ router.post('/:id/import', authenticate, asyncHandler(async (req: AuthRequest, r
     throw new ForbiddenError();
   }
 
-  let parsedData: any[] = [];
+  let parsedData: Record<string, unknown>[] = [];
   let timestampColumn = 'timestamp';
   let valueColumns: string[] = [];
 
@@ -496,7 +493,7 @@ router.post('/:id/import', authenticate, asyncHandler(async (req: AuthRequest, r
       throw new BadRequestError('CSV parsing failed');
     }
 
-    parsedData = parseResult.data;
+    parsedData = parseResult.data as Record<string, unknown>[];
 
     // Find timestamp column (look for common names)
     const columns = Object.keys(parsedData[0] || {});
@@ -554,7 +551,7 @@ router.post('/:id/import', authenticate, asyncHandler(async (req: AuthRequest, r
     const datapoints: { timeseriesId: string; timestamp: Date; valueJson: string }[] = [];
 
     for (const row of batch) {
-      const timestamp = new Date(row[timestampColumn]);
+      const timestamp = new Date(row[timestampColumn] as string | number | Date);
       if (isNaN(timestamp.getTime())) {
         continue;
       }

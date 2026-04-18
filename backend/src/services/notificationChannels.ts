@@ -93,7 +93,7 @@ async function sendEmail(
   const transport = getEmailTransport();
   if (!transport || to.length === 0) return false;
 
-  const fromAddress = process.env.SMTP_FROM || 'noreply@iotdb-enhanced.local';
+  const fromAddress = process.env.SMTP_FROM || 'noreply@trademind.local';
 
   const severityEmoji = payload.severity === 'critical'
     ? '🔴'
@@ -105,7 +105,7 @@ async function sendEmail(
 
   try {
     await transport.sendMail({
-      from: `"IoTDB Alerts" <${fromAddress}>`,
+      from: `"TradeMind Alerts" <${fromAddress}>`,
       to: to.join(', '),
       subject,
       text: payload.message + '\n\n' + JSON.stringify(payload.data, null, 2),
@@ -155,7 +155,7 @@ async function sendSlack(
           { title: 'Commodity', value: payload.commodityId, short: true },
           { title: 'Time', value: payload.timestamp, short: false },
         ],
-        footer: 'IoTDB Enhanced Trading Platform',
+        footer: 'TradeMind AI Trading Platform',
         ts: Math.floor(new Date(payload.timestamp).getTime() / 1000),
       },
     ],

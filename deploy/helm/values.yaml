@@ -1,14 +1,14 @@
-# Default values for iotdb-enhanced
+# Default values for trademind
 
 replicaCount: 2
 
 image:
   backend:
-    repository: iotdb-enhanced/backend
+    repository: trademind/backend
     tag: latest
     pullPolicy: IfNotPresent
   frontend:
-    repository: iotdb-enhanced/frontend
+    repository: trademind/frontend
     tag: latest
     pullPolicy: IfNotPresent
 
@@ -87,16 +87,16 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: iotdb.example.com
+    - host: trademind.example.com
       paths:
         - path: /api
           service: backend
         - path: /
           service: frontend
   tls:
-    - secretName: iotdb-tls
+    - secretName: trademind-tls
       hosts:
-        - iotdb.example.com
+        - trademind.example.com
 
 # HPA
 autoscaling:

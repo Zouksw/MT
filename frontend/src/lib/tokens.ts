@@ -1,5 +1,5 @@
 /**
- * Design Tokens for IoTDB Enhanced Frontend
+ * Design Tokens for TradeMind AI Frontend
  * Modern Minimalist Design System
  */
 

@@ -18,9 +18,9 @@ interface FAQItem {
 
 const faqs: FAQItem[] = [
   {
-    question: "What is IoTDB Enhanced?",
+    question: "What is TradeMind AI?",
     answer:
-      "IoTDB Enhanced is an enterprise-grade time series database platform built on Apache IoTDB. It provides real-time analytics, AI-powered forecasting, anomaly detection, and a modern web interface for managing your IoT data at scale.",
+      "TradeMind AI is an enterprise-grade time series database platform built on Apache IoTDB. It provides real-time analytics, AI-powered forecasting, anomaly detection, and a modern web interface for managing your IoT data at scale.",
     icon: <CloudServerOutlined />,
   },
   {
@@ -38,7 +38,7 @@ const faqs: FAQItem[] = [
   {
     question: "Can I integrate with my existing systems?",
     answer:
-      "Yes. IoTDB Enhanced provides a RESTful API, WebSocket support for real-time updates, and native IoTDB protocol compatibility. You can also use our SDKs and integrate with popular data pipelines.",
+      "Yes. TradeMind AI provides a RESTful API, WebSocket support for real-time updates, and native IoTDB protocol compatibility. You can also use our SDKs and integrate with popular data pipelines.",
     icon: <ApiOutlined />,
   },
   {
@@ -74,7 +74,7 @@ export default function FAQ() {
             Frequently Asked Questions
           </h2>
           <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
-            Everything you need to know about IoTDB Enhanced
+            Everything you need to know about TradeMind AI
           </p>
         </div>
 

@@ -55,7 +55,7 @@
     "getStarted": "立即开始"
   },
   "landing": {
-    "brandName": "IoTDB Enhanced",
+    "brandName": "TradeMind AI",
     "hero": {
       "badge": "企业级时间序列平台",
       "title1": "实时分析",
@@ -123,15 +123,15 @@
     "faq": {
       "sectionLabel": "常见问题",
       "title": "常见问题解答",
-      "subtitle": "关于 IoTDB Enhanced 您需要了解的一切",
-      "q1": "什么是 IoTDB Enhanced？",
-      "a1": "IoTDB Enhanced 是基于 Apache IoTDB 构建的企业级时间序列数据库平台。它提供实时分析、AI 驱动的预测、异常检测以及现代化的 Web 界面，帮助您大规模管理物联网数据。",
+      "subtitle": "关于 TradeMind AI 您需要了解的一切",
+      "q1": "什么是 TradeMind AI？",
+      "a1": "TradeMind AI 是基于 Apache IoTDB 构建的企业级时间序列数据库平台。它提供实时分析、AI 驱动的预测、异常检测以及现代化的 Web 界面，帮助您大规模管理物联网数据。",
       "q2": "AI 预测是如何工作的？",
       "a2": "我们的平台使用多种机器学习算法，包括 ARIMA、Prophet、LSTM 和 Transformer 模型。您可以在历史时间序列数据上训练模型，并生成带有置信区间的准确预测。",
       "q3": "我的数据安全吗？",
       "a3": "绝对安全。我们实施企业级安全措施，包括静态和传输中的加密、基于角色的访问控制（RBAC）、API 密钥管理和安全的会话管理。",
       "q4": "我可以与我现有的系统集成吗？",
-      "a4": "可以。IoTDB Enhanced 提供 RESTful API、WebSocket 实时更新支持以及原生 IoTDB 协议兼容性。您还可以使用我们的 SDK 并与流行的数据管道集成。",
+      "a4": "可以。TradeMind AI 提供 RESTful API、WebSocket 实时更新支持以及原生 IoTDB 协议兼容性。您还可以使用我们的 SDK 并与流行的数据管道集成。",
       "q5": "有哪些部署选项？",
       "a5": "您可以在任何云平台（AWS、GCP、Azure）上使用 AWS RDS、ElastiCache 或 Cloud SQL 等托管服务进行部署。我们提供 Docker、Kubernetes 和传统虚拟机设置的全面部署指南。",
       "q6": "你们提供企业支持吗？",
@@ -141,14 +141,14 @@
     },
     "cta": {
       "title": "准备开始了吗？",
-      "subtitle": "加入数千个正在使用 IoTDB Enhanced 构建时间序列数据平台的团队。",
+      "subtitle": "加入数千个正在使用 TradeMind AI 构建时间序列数据平台的团队。",
       "startFreeTrial": "免费试用",
       "noCreditCard": "无需信用卡，免费试用 14 天。"
     },
     "footer": {
       "description": "企业级时间序列数据库平台，提供实时分析与 AI 智能洞察。",
       "product": "产品",
-      "copyright": "\u00a9 2025 IoTDB Enhanced. 保留所有权利。"
+      "copyright": "\u00a9 2025 TradeMind AI. 保留所有权利。"
     }
   },
   "dashboard": {
@@ -222,7 +222,7 @@
     "countries": "覆盖国家",
     "dataPointsDay": "日均数据点",
     "mission": "我们的使命",
-    "missionDescription1": "IoTDB Enhanced 致力于让时间序列数据分析变得简单、强大且易于使用。我们相信工业设备产生的每一份数据都蕴含着巨大的价值——我们的使命是帮助您发现和利用这些价值。",
+    "missionDescription1": "TradeMind AI 致力于让时间序列数据分析变得简单、强大且易于使用。我们相信工业设备产生的每一份数据都蕴含着巨大的价值——我们的使命是帮助您发现和利用这些价值。",
     "missionDescription2": "通过整合前沿 AI 技术，我们不仅提供数据存储和查询能力，还提供预测、预警和智能分析功能——帮助企业提前发现和解决问题。",
     "platformUptime": "平台可用性",
     "queryLatency": "查询延迟",

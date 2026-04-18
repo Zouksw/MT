@@ -11,8 +11,10 @@
 
 import { prisma } from '@/lib';
 import { logger } from '@/lib';
+import type { Prisma } from '@prisma/client';
 import type { SignalType } from './tradingSignals';
 import { dispatchNotification, getConfiguredChannels } from './notificationChannels';
+import type { Server } from 'socket.io';
 
 export interface NotificationEvent {
   type: 'anomaly' | 'signal_change' | 'forecast_ready';
@@ -40,7 +42,7 @@ export async function checkSignalChange(
   commodityId: string,
   newSignal: SignalType,
   confidence: number,
-  io?: any
+  io?: Server
 ): Promise<void> {
   const previous = lastSignals.get(commodityId);
 
@@ -71,7 +73,7 @@ export async function notifyAnomaly(
   message: string,
   severity: 'info' | 'warning' | 'critical' = 'warning',
   data: Record<string, unknown> = {},
-  io?: any
+  io?: Server
 ): Promise<void> {
   const event: NotificationEvent = {
     type: 'anomaly',
@@ -91,7 +93,7 @@ export async function notifyAnomaly(
 export async function notifyForecastReady(
   commodityId: string,
   modelCount: number,
-  io?: any
+  io?: Server
 ): Promise<void> {
   const event: NotificationEvent = {
     type: 'forecast_ready',
@@ -108,7 +110,7 @@ export async function notifyForecastReady(
 /**
  * Emit notification via WebSocket + persist to alerts
  */
-async function emitNotification(event: NotificationEvent, io?: any): Promise<void> {
+async function emitNotification(event: NotificationEvent, io?: Server): Promise<void> {
   // 1. WebSocket broadcast
   if (io) {
     try {
@@ -150,7 +152,7 @@ async function emitNotification(event: NotificationEvent, io?: any): Promise<voi
               ? 'WARNING' as const
               : 'INFO' as const,
             message: event.message,
-            metadata: event.data as any,
+            metadata: event.data as unknown as Prisma.InputJsonValue,
           })),
         });
       }

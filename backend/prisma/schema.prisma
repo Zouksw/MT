@@ -33,6 +33,13 @@ model User {
   saved_queries        saved_queries[]
   securityAuditLogs    SecurityAuditLog[]     @relation("SecurityAuditLogs")
   sessions             Session[]
+  watchlists           Watchlist[]
+  portfolios           Portfolio[]
+  simAccounts          SimulationAccount[]
+  sharedSignals        SharedSignal[]
+  signalComments       SignalComment[]
+  signalLikes          SignalLike[]
+  subscription         Subscription?
 
   @@index([email])
   @@index([createdAt(sort: Desc)])
@@ -427,4 +434,289 @@ enum AuditAction {
   DELETE
   EXPORT
   LOGIN
+}
+
+// ─── TradeMind AI: Commodity Trading Models ───
+
+model Commodity {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  nameCn        String?  @map("name_cn")
+  category      String   // beef_cuts, live_cattle, grain, feed, forex, etc.
+  subcategory   String?  // brisket, shin, sirloin, thick_flank, etc.
+  grade         String?  // Prime, Choice, Select, M9, M7, etc.
+  originCountry String?  @map("origin_country") // AUS, BRA, ARG, URY, USA, CN
+  factoryCode   String?  @map("factory_code")
+  unit          String   // USD/kg, CNY/kg, USD/ton, etc.
+  currency      String   @default("USD")
+  isActive      Boolean  @default(true) @map("is_active")
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+  prices        CommodityPrice[]
+  watchlistItems WatchlistItem[]
+  positions     Position[]
+  simOrders     SimulationOrder[]
+  simTrades     SimulationTrade[]
+
+  @@index([category])
+  @@index([originCountry])
+  @@index([isActive])
+  @@map("commodities")
+}
+
+model CommodityPrice {
+  id           String    @id @default(uuid())
+  commodityId  String    @map("commodity_id")
+  date         DateTime
+  interval     String    // daily, weekly, monthly
+  open         Decimal?  @db.Decimal(18, 6)
+  high         Decimal?  @db.Decimal(18, 6)
+  low          Decimal?  @db.Decimal(18, 6)
+  close        Decimal   @db.Decimal(18, 6)
+  volume       Decimal?  @db.Decimal(18, 4)
+  source       String    // usda_ams, fao, cme, china_mara, china_customs, manual
+  metadata     Json?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  commodity    Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
+
+  @@unique([commodityId, interval, date])
+  @@index([commodityId, interval, date(sort: Desc)])
+  @@index([commodityId, date(sort: Desc)])
+  @@map("commodity_prices")
+}
+
+model MarketFactor {
+  id         String   @id @default(uuid())
+  type       String   // weather, exchange_rate, tariff, shipping_cost, quota, policy
+  region     String?
+  date       DateTime
+  value      Decimal  @db.Decimal(18, 6)
+  unit       String
+  source     String
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([type, region, date])
+  @@index([type, date(sort: Desc)])
+  @@map("market_factors")
+}
+
+// ─── Phase 2: Watchlist & Portfolio ───
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WatchlistItem[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("watchlists")
+}
+
+model WatchlistItem {
+  id           String    @id @default(uuid())
+  watchlistId  String    @map("watchlist_id")
+  commodityId  String    @map("commodity_id")
+  addedAt      DateTime  @default(now()) @map("added_at")
+  notes        String?
+  watchlist    Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  commodity    Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
+
+  @@unique([watchlistId, commodityId])
+  @@index([watchlistId])
+  @@map("watchlist_items")
+}
+
+model Portfolio {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions   Position[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model Position {
+  id             String     @id @default(uuid())
+  portfolioId    String     @map("portfolio_id")
+  commodityId    String     @map("commodity_id")
+  side           String     @default("LONG") // LONG or SHORT
+  quantity       Decimal    @db.Decimal(18, 6)
+  avgEntryPrice  Decimal    @map("avg_entry_price") @db.Decimal(18, 6)
+  currentPrice   Decimal?   @map("current_price") @db.Decimal(18, 6)
+  unrealizedPnl  Decimal?   @map("unrealized_pnl") @db.Decimal(18, 6)
+  realizedPnl    Decimal?   @map("realized_pnl") @db.Decimal(18, 6)
+  openedAt       DateTime   @default(now()) @map("opened_at")
+  closedAt       DateTime?  @map("closed_at")
+  notes          String?
+  portfolio      Portfolio  @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  commodity      Commodity  @relation(fields: [commodityId], references: [id])
+
+  @@index([portfolioId])
+  @@index([commodityId])
+  @@map("positions")
+}
+
+// ─── Phase 3: Simulation Trading ───
+
+model SimulationAccount {
+  id              String              @id @default(uuid())
+  userId          String              @map("user_id")
+  name            String
+  initialBalance  Decimal             @map("initial_balance") @db.Decimal(18, 2)
+  currentBalance  Decimal             @map("current_balance") @db.Decimal(18, 2)
+  isActive        Boolean             @default(true) @map("is_active")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime?           @updatedAt @map("updated_at")
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          SimulationOrder[]
+  trades          SimulationTrade[]
+
+  @@index([userId])
+  @@map("simulation_accounts")
+}
+
+model SimulationOrder {
+  id              String   @id @default(uuid())
+  accountId       String   @map("account_id")
+  commodityId     String   @map("commodity_id")
+  side            String   // BUY, SELL
+  type            String   // MARKET, LIMIT, STOP
+  quantity        Decimal  @db.Decimal(18, 6)
+  price           Decimal? @db.Decimal(18, 6)
+  stopPrice       Decimal? @map("stop_price") @db.Decimal(18, 6)
+  status          String   @default("PENDING") // PENDING, FILLED, CANCELLED
+  filledPrice     Decimal? @map("filled_price") @db.Decimal(18, 6)
+  filledQuantity  Decimal? @map("filled_quantity") @db.Decimal(18, 6)
+  commission      Decimal  @default(0) @db.Decimal(18, 4)
+  placedAt        DateTime @default(now()) @map("placed_at")
+  filledAt        DateTime? @map("filled_at")
+  account         SimulationAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  commodity       Commodity @relation(fields: [commodityId], references: [id])
+
+  @@index([accountId])
+  @@index([status])
+  @@map("simulation_orders")
+}
+
+model SimulationTrade {
+  id              String   @id @default(uuid())
+  accountId       String   @map("account_id")
+  commodityId     String   @map("commodity_id")
+  orderId         String?  @map("order_id")
+  side            String   // BUY, SELL
+  quantity        Decimal  @db.Decimal(18, 6)
+  entryPrice      Decimal  @map("entry_price") @db.Decimal(18, 6)
+  exitPrice       Decimal? @map("exit_price") @db.Decimal(18, 6)
+  realizedPnl     Decimal? @map("realized_pnl") @db.Decimal(18, 6)
+  commission      Decimal  @default(0) @db.Decimal(18, 4)
+  openedAt        DateTime @default(now()) @map("opened_at")
+  closedAt        DateTime? @map("closed_at")
+  account         SimulationAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  commodity       Commodity @relation(fields: [commodityId], references: [id])
+
+  @@index([accountId])
+  @@index([openedAt])
+  @@map("simulation_trades")
+}
+
+// ─── Phase 6: Community & Social ───
+
+model SharedSignal {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  commoditySlug   String   @map("commodity_slug")
+  signalType      String   @map("signal_type") // BUY, SELL, HOLD
+  confidence      Decimal  @db.Decimal(3, 2)
+  reasoning       String?
+  currentPrice    Decimal? @map("current_price") @db.Decimal(18, 6)
+  targetPrice     Decimal? @map("target_price") @db.Decimal(18, 6)
+  likes           Int      @default(0)
+  commentsCount   Int      @default(0) @map("comments_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signalComments  SignalComment[]
+  signalLikes     SignalLike[]
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@index([commoditySlug])
+  @@map("shared_signals")
+}
+
+model SignalComment {
+  id         String       @id @default(uuid())
+  signalId   String       @map("signal_id")
+  userId     String       @map("user_id")
+  content    String
+  createdAt  DateTime     @default(now()) @map("created_at")
+  signal     SharedSignal @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([signalId])
+  @@index([userId])
+  @@map("signal_comments")
+}
+
+model SignalLike {
+  id         String       @id @default(uuid())
+  signalId   String       @map("signal_id")
+  userId     String       @map("user_id")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  signal     SharedSignal @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([signalId, userId])
+  @@index([signalId])
+  @@map("signal_likes")
+}
+
+// ─── Phase 7: Monetization ───
+
+model Subscription {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  stripeCustomerId  String?  @map("stripe_customer_id")
+  stripePriceId     String?  @map("stripe_price_id")
+  stripeSubId       String?  @map("stripe_sub_id")
+  plan              String   @default("free") // free, pro, enterprise
+  status            String   @default("active") // active, past_due, canceled
+  currentPeriodEnd  DateTime? @map("current_period_end")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime? @updatedAt @map("updated_at")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageRecords      UsageRecord[]
+
+  @@unique([userId])
+  @@index([stripeCustomerId])
+  @@index([plan])
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id             String       @id @default(uuid())
+  subscriptionId String       @map("subscription_id")
+  feature        String       // signals, watchlists, api_calls, etc.
+  count          Int          @default(0)
+  periodStart    DateTime     @map("period_start")
+  periodEnd      DateTime     @map("period_end")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, feature, periodStart])
+  @@index([subscriptionId])
+  @@map("usage_records")
 }

@@ -1,4 +1,4 @@
-# IoTDB Enhanced - CI/CD Pipeline
+# TradeMind AI - CI/CD Pipeline
 #
 # Features:
 # - Automated testing on every push/PR
@@ -43,9 +43,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: Install dependencies
         run: |
@@ -83,9 +83,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: Install dependencies
         run: |
@@ -136,9 +136,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: Install dependencies
         run: |
@@ -179,9 +179,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: Install dependencies
         run: |
@@ -222,9 +222,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: Install and build backend
         run: |
@@ -263,7 +263,7 @@ jobs:
     timeout-minutes: 30
     environment:
       name: production
-      url: https://iotdb.example.com
+      url: https://trademind.example.com
 
     steps:
       - name: Deploy to server

@@ -6,7 +6,7 @@ async function main() {
 
   // Get first user
   const user = await prisma.user.findFirst({
-    where: { email: 'admin@iotdb-enhanced.com' },
+    where: { email: 'admin@trademind.com' },
   });
 
   if (!user) {

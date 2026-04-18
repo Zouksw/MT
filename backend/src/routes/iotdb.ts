@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { iotdbClient, iotdbRPCClient, iotdbAIService } from '@/services/iotdb';
+import type { PredictionRequest } from '@/services/iotdb/ai';
 import { aiRateLimiter } from '@/middleware/rateLimiter';
 import { authenticate, AuthRequest } from '@/middleware/auth';
 import { asyncHandler, BadRequestError } from '@/middleware/errorHandler';
@@ -284,7 +285,7 @@ router.post('/insert', authenticate, asyncHandler(async (req: Request, res: Resp
   }));
 
   // Use RPC client for INSERT operations
-  const result = await iotdbRPCClient.insertRecords(transformedRecords as any);
+  const result = await iotdbRPCClient.insertRecords(transformedRecords as { device: string; measurements: string[]; values: unknown[][]; timestamp: number }[]);
   res.json({ success: true, result });
 }));
 
@@ -421,7 +422,7 @@ router.post('/aggregate', authenticate, asyncHandler(async (req: Request, res: R
   const result = await iotdbClient.aggregate({
     ...validatedData,
     interval: validatedData.interval?.toString(),
-  } as any);
+  } as Parameters<typeof iotdbClient.aggregate>[0]);
   res.json(result);
 }));
 
@@ -504,7 +505,7 @@ router.post('/ai/predict', authenticate, aiRateLimiter, asyncHandler(async (req:
     const result = await iotdbAIService.predict({
       timeseries,
       horizon,
-      algorithm: normalizedAlgorithm as any,
+      algorithm: normalizedAlgorithm as PredictionRequest['algorithm'],
       confidenceLevel,
     });
 
@@ -579,22 +580,22 @@ router.post('/ai/predict/batch', authenticate, aiRateLimiter, asyncHandler(async
   const { requests } = batchPredictSchema.parse(req.body);
 
   // Normalize algorithms and build cache keys
-  const normalizedRequests = requests.map((r: any) => ({
+  const normalizedRequests = requests.map((r: { timeseries: string; horizon: number; algorithm?: string; confidenceLevel?: number }) => ({
     ...r,
-    algorithm: (r.algorithm === 'prophet' ? 'arima' : r.algorithm || 'arima') as any,
+    algorithm: (r.algorithm === 'prophet' ? 'arima' : r.algorithm || 'arima') as PredictionRequest['algorithm'],
   }));
 
   // Try to get all results from cache
-  const cacheKeysList = normalizedRequests.map((r: any) =>
-    cacheKeys.prediction(r.timeseries, r.algorithm, r.horizon)
+  const cacheKeysList = normalizedRequests.map((r: { timeseries: string; algorithm?: string; horizon: number }) =>
+    cacheKeys.prediction(r.timeseries, r.algorithm || 'arima', r.horizon)
   );
 
-  const cachedResults = await mget<any>(cacheKeysList);
-  const batchResults: any[] = [];
+  const cachedResults = await mget<Record<string, unknown>>(cacheKeysList);
+  const batchResults: Record<string, unknown>[] = [];
   const uncachedIndices: number[] = [];
 
   // Separate cached and uncached requests
-  requests.forEach((req: any, index: number) => {
+  requests.forEach((req: { timeseries: string }, index: number) => {
     if (cachedResults[index]) {
       batchResults[index] = {
         ...cachedResults[index],
@@ -609,7 +610,7 @@ router.post('/ai/predict/batch', authenticate, aiRateLimiter, asyncHandler(async
   // Process uncached requests in parallel
   if (uncachedIndices.length > 0) {
     const uncachedRequests = uncachedIndices.map(i => normalizedRequests[i]);
-    const freshResults = await iotdbAIService.batchPredict(uncachedRequests as any);
+    const freshResults = await iotdbAIService.batchPredict(uncachedRequests as PredictionRequest[]);
 
     // Store in cache and update results
     for (let i = 0; i < freshResults.length; i++) {
@@ -704,7 +705,7 @@ router.post('/ai/predict/visualize', authenticate, aiRateLimiter, asyncHandler(a
   const predictionResult = await iotdbAIService.predict({
     timeseries,
     horizon: horizon || 10,
-    algorithm: normalizedAlgorithm as any,
+    algorithm: normalizedAlgorithm as PredictionRequest['algorithm'],
     confidenceLevel: confidenceLevel || 0.95,
   });
 

@@ -14,6 +14,16 @@ jest.mock('../../lib/database', () => ({
   },
 }));
 
+jest.mock('@/lib/redis', () => ({
+  getRedisClient: jest.fn().mockResolvedValue(null),
+}));
+
+jest.mock('@/services/iotdb', () => ({
+  iotdbClient: {
+    healthCheck: jest.fn().mockResolvedValue(false),
+  },
+}));
+
 import { prisma } from '@/lib/database';
 
 describe('Health Routes', () => {

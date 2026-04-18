@@ -5,14 +5,14 @@ const options: Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'IoTDB Enhanced API',
+      title: 'TradeMind AI API',
       version: '1.0.0',
       description:
-        'IoTDB Enhanced is a time-series data analytics and AI forecasting platform built on Apache IoTDB. ' +
-        'This API provides endpoints for authentication, dataset management, time series operations, ' +
-        'AI-powered forecasting and anomaly detection, alert management, and more.',
+        'TradeMind AI is a commodity market intelligence platform providing price data, ' +
+        'multi-factor analysis, and AI-powered predictions. This API covers commodity data, ' +
+        'AI signal generation, watchlists, analytics, community features, and more.',
       contact: {
-        name: 'IoTDB Enhanced Team',
+        name: 'TradeMind AI Team',
       },
     },
     servers: [
@@ -21,7 +21,7 @@ const options: Options = {
         description: 'Development server',
       },
       {
-        url: 'https://api.iotdb-enhanced.example.com',
+        url: 'https://api.trademind.example.com',
         description: 'Production server',
       },
     ],
@@ -63,6 +63,13 @@ const options: Options = {
       { name: 'Anomalies', description: 'Anomaly detection and management' },
       { name: 'Alerts', description: 'Alert and alert rule management' },
       { name: 'API Keys', description: 'API key creation and management' },
+      { name: 'Market Data', description: 'Commodity prices, market factors, and data import' },
+      { name: 'Signals', description: 'AI prediction signals and multi-model forecasts' },
+      { name: 'Watchlists', description: 'Commodity watchlists and real-time quotes' },
+      { name: 'Analytics', description: 'Seasonality, correlation, and trend analysis' },
+      { name: 'Community', description: 'Signal sharing, leaderboard, and social features' },
+      { name: 'Backtest', description: 'Prediction accuracy verification against historical data' },
+      { name: 'Analysis Groups', description: 'Commodity grouping for comparative analysis' },
       { name: 'IoTDB', description: 'Direct Apache IoTDB operations and AI services' },
       { name: 'Security', description: 'Security audit logs and event tracking' },
       { name: 'Health', description: 'System health, readiness, and liveness checks' },

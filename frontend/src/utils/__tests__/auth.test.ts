@@ -229,7 +229,7 @@ describe('auth utilities', () => {
 
     it('should warn in development when not authenticated', () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      (process.env as any).NODE_ENV = 'development';
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       tokenManager.getToken.mockReturnValue(null);
@@ -240,7 +240,7 @@ describe('auth utilities', () => {
       );
 
       warnSpy.mockRestore();
-      process.env.NODE_ENV = originalEnv;
+      (process.env as any).NODE_ENV = originalEnv;
     });
   });
 
@@ -303,7 +303,7 @@ describe('auth utilities', () => {
       setCachedUser(testUser);
 
       const stored = localStorageMock.getItem('user');
-      const parsedUser = JSON.parse(stored);
+      const parsedUser = JSON.parse(stored!);
       expect(parsedUser).toEqual({
         id: '1',
         name: 'Test User',
@@ -314,12 +314,12 @@ describe('auth utilities', () => {
     });
 
     it('should not store sensitive data like password', () => {
-      const testUser = { id: '1', name: 'Test User', password: 'secret123', apiKey: 'key-123' };
+      const testUser = { id: '1', name: 'Test User', email: 'test@test.com', password: 'secret123', apiKey: 'key-123' };
 
-      setCachedUser(testUser);
+      setCachedUser(testUser as any);
 
       const stored = localStorageMock.getItem('user');
-      const parsedUser = JSON.parse(stored);
+      const parsedUser = JSON.parse(stored!);
       expect(parsedUser.password).toBeUndefined();
       expect(parsedUser.apiKey).toBeUndefined();
     });

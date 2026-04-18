@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}
+  name: {{ include "trademind.fullname" . }}
   labels:
     app.kubernetes.io/component: ingress
   {{- with .Values.ingress.annotations }}
@@ -31,7 +31,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "iotdb-enhanced.fullname" $ }}-{{ .service }}
+                name: {{ include "trademind.fullname" $ }}-{{ .service }}
                 port:
                   number: {{ if eq .service "backend" }}{{ $.Values.backend.port }}{{ else }}{{ $.Values.frontend.port }}{{ end }}
           {{- end }}

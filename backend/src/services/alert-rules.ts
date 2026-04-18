@@ -7,7 +7,7 @@
 
 import { prisma, logger } from '@/lib';
 import type { Prisma } from '@prisma/client';
-import { sendNotification } from './alert-notifications';
+import { dispatchNotification, type NotificationChannel as ChannelType } from './notificationChannels';
 import type {
   AlertRule,
   AlertCondition,
@@ -16,6 +16,51 @@ import type {
   NotificationChannel,
   AlertWithMetadata,
 } from './alert-types';
+
+type AlertType = 'ANOMALY' | 'FORECAST_READY' | 'SYSTEM';
+type AlertSeverity = 'INFO' | 'WARNING' | 'ERROR';
+
+type PrismaAlertRule = Awaited<ReturnType<typeof prisma.alertRule.findUnique>> & {
+  id: string;
+};
+
+function mapRule(rule: PrismaAlertRule): AlertRule {
+  return {
+    id: rule.id,
+    userId: rule.userId,
+    timeseriesId: rule.timeseriesId,
+    name: rule.name,
+    description: rule.description || undefined,
+    type: rule.type as AlertType,
+    condition: rule.conditions as unknown as AlertCondition,
+    severity: rule.severity as AlertSeverity,
+    enabled: rule.enabled,
+    notificationChannels: rule.channels as unknown as NotificationChannel[],
+    cooldownMinutes: rule.cooldownMinutes,
+    lastTriggeredAt: rule.lastTriggeredAt || undefined,
+    createdAt: rule.createdAt,
+    updatedAt: rule.updatedAt || rule.createdAt,
+  };
+}
+
+/**
+ * Adapt AlertWithMetadata + NotificationChannel to notificationChannels.ts interfaces
+ */
+async function sendNotification(channel: NotificationChannel, alert: AlertWithMetadata): Promise<void> {
+  const payload = {
+    type: 'anomaly' as const,
+    severity: alert.severity === 'ERROR' ? 'critical' as const : alert.severity === 'WARNING' ? 'warning' as const : 'info' as const,
+    commodityId: alert.timeseriesId,
+    message: alert.message,
+    data: (alert.metadata as Record<string, unknown>) ?? {},
+    timestamp: alert.createdAt.toISOString(),
+  };
+
+  const channels: ChannelType[] = [channel.type as ChannelType];
+  const emailRecipients = channel.type === 'email' && channel.config?.email ? [channel.config.email] : [];
+
+  await dispatchNotification(payload, channels, emailRecipients);
+}
 
 /**
  * Create a new alert rule
@@ -51,31 +96,16 @@ export async function createAlertRule(params: {
       description,
       type,
       enabled: true,
-      conditions: condition as any,
+      conditions: condition as unknown as Prisma.InputJsonValue,
       severity,
-      channels: notificationChannels as any,
+      channels: notificationChannels as unknown as Prisma.InputJsonValue,
       cooldownMinutes,
     },
   });
 
   logger.info(`[ALERT_RULE] Created alert rule ${rule.id} for user ${userId}`);
 
-  return {
-    id: rule.id,
-    userId: rule.userId,
-    timeseriesId: rule.timeseriesId,
-    name: rule.name,
-    description: rule.description || undefined,
-    type: rule.type as any,
-    condition: rule.conditions as any,
-    severity: rule.severity as any,
-    enabled: rule.enabled,
-    notificationChannels: rule.channels as any,
-    cooldownMinutes: rule.cooldownMinutes,
-    lastTriggeredAt: rule.lastTriggeredAt || undefined,
-    createdAt: rule.createdAt,
-    updatedAt: rule.updatedAt || rule.createdAt,
-  };
+  return mapRule(rule);
 }
 
 /**
@@ -88,22 +118,7 @@ export async function getAlertRule(id: string): Promise<AlertRule | null> {
 
   if (!rule) return null;
 
-  return {
-    id: rule.id,
-    userId: rule.userId,
-    timeseriesId: rule.timeseriesId,
-    name: rule.name,
-    description: rule.description || undefined,
-    type: rule.type as any,
-    condition: rule.conditions as any,
-    severity: rule.severity as any,
-    enabled: rule.enabled,
-    notificationChannels: rule.channels as any,
-    cooldownMinutes: rule.cooldownMinutes,
-    lastTriggeredAt: rule.lastTriggeredAt || undefined,
-    createdAt: rule.createdAt,
-    updatedAt: rule.updatedAt || rule.createdAt,
-  };
+  return mapRule(rule);
 }
 
 /**
@@ -128,22 +143,7 @@ export async function listAlertRules(userId: string, options?: {
     orderBy: { createdAt: 'desc' },
   });
 
-  return rules.map(rule => ({
-    id: rule.id,
-    userId: rule.userId,
-    timeseriesId: rule.timeseriesId,
-    name: rule.name,
-    description: rule.description || undefined,
-    type: rule.type as any,
-    condition: rule.conditions as any,
-    severity: rule.severity as any,
-    enabled: rule.enabled,
-    notificationChannels: rule.channels as any,
-    cooldownMinutes: rule.cooldownMinutes,
-    lastTriggeredAt: rule.lastTriggeredAt || undefined,
-    createdAt: rule.createdAt,
-    updatedAt: rule.updatedAt || rule.createdAt,
-  }));
+  return rules.map(rule => mapRule(rule));
 }
 
 /**
@@ -153,15 +153,15 @@ export async function updateAlertRule(
   id: string,
   updates: Partial<Omit<AlertRule, 'id' | 'userId' | 'timeseriesId' | 'createdAt'>>
 ): Promise<AlertRule> {
-  const data: any = {};
-  
+  const data: Prisma.AlertRuleUpdateInput = {};
+
   if (updates.name !== undefined) data.name = updates.name;
   if (updates.description !== undefined) data.description = updates.description;
   if (updates.type !== undefined) data.type = updates.type;
-  if (updates.condition !== undefined) data.conditions = updates.condition as any;
+  if (updates.condition !== undefined) data.conditions = updates.condition as unknown as Prisma.InputJsonValue;
   if (updates.severity !== undefined) data.severity = updates.severity;
   if (updates.enabled !== undefined) data.enabled = updates.enabled;
-  if (updates.notificationChannels !== undefined) data.channels = updates.notificationChannels as any;
+  if (updates.notificationChannels !== undefined) data.channels = updates.notificationChannels as unknown as Prisma.InputJsonValue;
   if (updates.cooldownMinutes !== undefined) data.cooldownMinutes = updates.cooldownMinutes;
   if (updates.lastTriggeredAt !== undefined) data.lastTriggeredAt = updates.lastTriggeredAt;
   
@@ -172,22 +172,7 @@ export async function updateAlertRule(
     data,
   });
 
-  return {
-    id: rule.id,
-    userId: rule.userId,
-    timeseriesId: rule.timeseriesId,
-    name: rule.name,
-    description: rule.description || undefined,
-    type: rule.type as any,
-    condition: rule.conditions as any,
-    severity: rule.severity as any,
-    enabled: rule.enabled,
-    notificationChannels: rule.channels as any,
-    cooldownMinutes: rule.cooldownMinutes,
-    lastTriggeredAt: rule.lastTriggeredAt || undefined,
-    createdAt: rule.createdAt,
-    updatedAt: rule.updatedAt || rule.createdAt,
-  };
+  return mapRule(rule);
 }
 
 /**
@@ -244,7 +229,7 @@ export async function evaluateAlertRule(
       break;
 
     default:
-      logger.warn(`[ALERT_RULE] Unknown condition type: ${(condition as any).type}`);
+      logger.warn(`[ALERT_RULE] Unknown condition type: ${condition.type}`);
   }
 
   return shouldTrigger;
@@ -302,10 +287,10 @@ export async function triggerAlert(params: TriggerAlertParams): Promise<void> {
       userId: rule.userId,
       timeseriesId: rule.timeseriesId,
       alertRuleId: ruleId,
-      type: rule.type as any,
-      severity: rule.severity as any,
+      type: rule.type as AlertType,
+      severity: rule.severity as AlertSeverity,
       message: `Alert triggered: ${rule.name}`,
-      metadata: alertData as any,
+      metadata: alertData as Prisma.InputJsonValue,
     },
   });
 
@@ -364,20 +349,5 @@ export async function getActiveAlertRules(
     },
   });
 
-  return rules.map(rule => ({
-    id: rule.id,
-    userId: rule.userId,
-    timeseriesId: rule.timeseriesId,
-    name: rule.name,
-    description: rule.description || undefined,
-    type: rule.type as any,
-    condition: rule.conditions as any,
-    severity: rule.severity as any,
-    enabled: rule.enabled,
-    notificationChannels: rule.channels as any,
-    cooldownMinutes: rule.cooldownMinutes,
-    lastTriggeredAt: rule.lastTriggeredAt || undefined,
-    createdAt: rule.createdAt,
-    updatedAt: rule.updatedAt || rule.createdAt,
-  }));
+  return rules.map(rule => mapRule(rule));
 }

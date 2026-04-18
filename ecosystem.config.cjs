@@ -1,5 +1,5 @@
 /**
- * IoTDB Enhanced - PM2 Ecosystem Configuration
+ * TradeMind AI - PM2 Ecosystem Configuration
  *
  * Description: Process management configuration for production deployment
  * Usage:
@@ -14,7 +14,7 @@
  *   - Set PM2_USER environment variable to override default user (default: node)
  *   - Set IOTDB_ENCRYPTION_KEY for encrypted .env files
  *
- * Author: IoTDB Enhanced Team
+ * Author: TradeMind AI Team
  * Version: 1.4.0
  *
  * Security:
@@ -24,7 +24,7 @@
  *
  * AI Node Setup:
  *   AI Node is managed separately via scripts/start-ainode.sh and scripts/stop-ainode.sh
- *   For PM2 management, use: pm2 start scripts/start-ainode.sh --name iotdb-ainode
+ *   For PM2 management, use: pm2 start scripts/start-ainode.sh --name trademind-ainode
  */
 
 const path = require('path');
@@ -37,7 +37,7 @@ const PM2_USER = process.env.PM2_USER || 'node';
 module.exports = {
   apps: [
     {
-      name: 'iotdb-backend',
+      name: 'trademind-backend',
       script: 'npm',
       args: 'run dev',
       cwd: path.join(PROJECT_ROOT, 'backend'),
@@ -127,7 +127,7 @@ module.exports = {
       treekill: true, // Kill process tree
     },
     {
-      name: 'iotdb-frontend',
+      name: 'trademind-frontend',
       script: 'npm',
       args: 'run dev',
       cwd: path.join(PROJECT_ROOT, 'frontend'),
@@ -172,9 +172,9 @@ module.exports = {
     // AI Node (Python service) - Optional PM2 management
     // Note: AI Node is typically started/stopped via scripts/start-ainode.sh
     // To enable PM2 management, uncomment the following and run:
-    // pm2 start ecosystem.config.cjs --only iotdb-ainode
+    // pm2 start ecosystem.config.cjs --only trademind-ainode
     {
-      name: 'iotdb-ainode',
+      name: 'trademind-ainode',
       script: './scripts/start-ainode.sh',
       cwd: PROJECT_ROOT,
       instances: 1,
@@ -217,7 +217,7 @@ module.exports = {
       user: PM2_USER,
       host: process.env.DEPLOY_HOST || 'your-server.com',
       ref: 'origin/main',
-      repo: process.env.GIT_REPO || 'git@github.com:your-org/iotdb-enhanced.git',
+      repo: process.env.GIT_REPO || 'git@github.com:your-org/trademind.git',
       path: PROJECT_ROOT,
       'pre-deploy-local': '',
       'post-deploy': 'pnpm install && cd backend && pnpm install && pnpm run build && cd ../frontend && pnpm install && pnpm run build && pm2 reload ecosystem.config.cjs --env production',
@@ -227,7 +227,7 @@ module.exports = {
       user: PM2_USER,
       host: process.env.DEPLOY_STAGING_HOST || 'staging.your-server.com',
       ref: 'origin/develop',
-      repo: process.env.GIT_REPO || 'git@github.com:your-org/iotdb-enhanced.git',
+      repo: process.env.GIT_REPO || 'git@github.com:your-org/trademind.git',
       path: PROJECT_ROOT,
       'post-deploy': 'pnpm install && cd backend && pnpm install && pnpm run build && cd ../frontend && pnpm install && pnpm run build && pm2 reload ecosystem.config.cjs --env staging',
     },

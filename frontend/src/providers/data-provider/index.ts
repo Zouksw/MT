@@ -72,7 +72,7 @@ axiosInstance.interceptors.response.use(
 );
 
 /**
- * Custom data provider for IoTDB Enhanced backend
+ * Custom data provider for TradeMind AI backend
  * Adapts backend API response format to Refine's expected format
  */
 export const dataProvider: DataProvider = {

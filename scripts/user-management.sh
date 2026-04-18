@@ -1,5 +1,5 @@
 #!/bin/bash
-# IoTDB Enhanced - User Management Script
+# TradeMind AI - User Management Script
 # ========================================
 # 统一用户管理脚本：创建管理员、修改密码
 

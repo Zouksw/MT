@@ -8,7 +8,7 @@
  * - Offline fallback page
  */
 
-const CACHE_NAME = "iotdb-enhanced-v1";
+const CACHE_NAME = "trademind-v1";
 const urlsToCache = [
   "/",
   "/dashboard",

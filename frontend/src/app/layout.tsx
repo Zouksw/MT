@@ -39,12 +39,12 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "IoTDB Enhanced - Professional Time Series Database",
-    template: "%s | IoTDB Enhanced"
+    default: "TradeMind AI — AI-Powered Commodity Trading Intelligence",
+    template: "%s | TradeMind AI"
   },
-  description: "Professional IoT time series database management platform with AI-powered forecasting and anomaly detection",
-  keywords: ["iot", "time series database", "forecasting", "anomaly detection", "iotdb", "data analytics"],
-  authors: [{ name: "IoTDB Enhanced Team" }],
+  description: "AI-powered commodity price forecasting and trading signals for beef, grain, and forex markets",
+  keywords: ["commodity trading", "AI forecasting", "trading signals", "beef prices", "grain prices", "forex"],
+  authors: [{ name: "TradeMind AI Team" }],
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",
@@ -61,15 +61,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://iotdb-enhanced.com",
-    title: "IoTDB Enhanced Platform",
-    description: "Professional IoT time series database management platform with AI-powered forecasting and anomaly detection",
-    siteName: "IoTDB Enhanced",
+    url: "https://trademind.ai",
+    title: "TradeMind AI — AI-Powered Commodity Trading Intelligence",
+    description: "AI-powered commodity price forecasting and trading signals for beef, grain, and forex markets",
+    siteName: "TradeMind AI",
   },
   twitter: {
     card: "summary_large_image",
-    title: "IoTDB Enhanced Platform",
-    description: "Professional IoT time series database management platform",
+    title: "TradeMind AI — AI-Powered Commodity Trading Intelligence",
+    description: "AI-powered commodity price forecasting and trading signals",
   },
 };
 

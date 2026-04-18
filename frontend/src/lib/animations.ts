@@ -2,7 +2,7 @@
  * Animation Utility Library
  *
  * Centralized animation constants and utilities for consistent motion design
- * across the IoTDB Enhanced application.
+ * across the TradeMind AI application.
  *
  * Design Principles:
  * - Micro: 50-100ms - Tooltips, tiny state changes

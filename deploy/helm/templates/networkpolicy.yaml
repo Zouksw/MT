@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-backend-policy
+  name: {{ include "trademind.fullname" . }}-backend-policy
   labels:
     app.kubernetes.io/component: backend
 spec:
@@ -82,7 +82,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-frontend-policy
+  name: {{ include "trademind.fullname" . }}-frontend-policy
   labels:
     app.kubernetes.io/component: frontend
 spec:

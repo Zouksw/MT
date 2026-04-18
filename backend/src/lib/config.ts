@@ -108,7 +108,13 @@ export const config = {
     smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
     smtpUser: process.env.SMTP_USER,
     smtpPass: process.env.SMTP_PASS,
-    from: process.env.EMAIL_FROM || 'noreply@iotdb-enhanced.com',
+    from: process.env.EMAIL_FROM || 'noreply@trademind.com',
+  },
+
+  dataIngestion: {
+    exchangeRateApiUrl: process.env.EXCHANGE_RATE_API_URL || 'https://open.er-api.com/v6/latest/USD',
+    scrapeIntervalMinutes: parseInt(process.env.SCRAPE_INTERVAL_MINUTES || '60', 10),
+    importMaxFileSize: parseInt(process.env.IMPORT_MAX_FILE_SIZE || '10485760', 10),
   },
 } as const;
 
@@ -120,6 +126,7 @@ logger.info('Configuration loaded', {
   iotdb: { host: config.iotdb.host, port: config.iotdb.port, aiEnabled: config.iotdb.aiEnabled },
   redis: { enabled: config.redis.enabled },
   email: { configured: !!config.email.smtpHost },
+  dataIngestion: { scrapeInterval: config.dataIngestion.scrapeIntervalMinutes },
 });
 
 export default config;

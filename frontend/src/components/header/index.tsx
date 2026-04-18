@@ -172,7 +172,7 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
             }}
             className="hidden sm:inline"
           >
-            IoTDB Enhanced
+            TradeMind AI
           </span>
         </a>
       </div>

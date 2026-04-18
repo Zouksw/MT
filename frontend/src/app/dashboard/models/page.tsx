@@ -184,7 +184,7 @@ export default function ModelsComparisonPage() {
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
         const res = await fetch(
-          `/api/signals/models/accuracy?days=${days}`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/signals/models/accuracy?days=${days}`,
           { headers }
         );
 
@@ -195,44 +195,10 @@ export default function ModelsComparisonPage() {
             return;
           }
         }
-        // Demo data fallback
-        const models = [
-          "arima",
-          "holtwinters",
-          "exponential_smoothing",
-          "stl_forecaster",
-          "naive_forecaster",
-          "timer_xl",
-          "sundial",
-        ];
-        setAccuracy(
-          models.map((m) => ({
-            modelId: m,
-            avgMape: Math.random() * 10 + 1,
-            predictionCount: Math.floor(Math.random() * 50 + 10),
-            verifiedCount: Math.floor(Math.random() * 30 + 5),
-          }))
-        );
+        setAccuracy([]);
         setIsDemoData(true);
       } catch {
-        // Demo fallback
-        const models = [
-          "arima",
-          "holtwinters",
-          "exponential_smoothing",
-          "stl_forecaster",
-          "naive_forecaster",
-          "timer_xl",
-          "sundial",
-        ];
-        setAccuracy(
-          models.map((m) => ({
-            modelId: m,
-            avgMape: Math.random() * 10 + 1,
-            predictionCount: Math.floor(Math.random() * 50 + 10),
-            verifiedCount: Math.floor(Math.random() * 30 + 5),
-          }))
-        );
+        setAccuracy([]);
         setIsDemoData(true);
       } finally {
         setLoading(false);
@@ -261,7 +227,7 @@ export default function ModelsComparisonPage() {
         {isDemoData && (
           <Alert
             type="info"
-            message="Showing demo accuracy data. Connect to live data for real model metrics."
+            message="No prediction data yet."
             showIcon
             style={{ marginBottom: 16 }}
           />

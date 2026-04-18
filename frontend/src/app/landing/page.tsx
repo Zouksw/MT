@@ -32,7 +32,7 @@ const { Title, Text, Paragraph } = Typography;
 /**
  * Landing Page - Commercial SaaS Marketing Homepage
  *
- * A modern, professional landing page showcasing IoTDB Enhanced
+ * A modern, professional landing page showcasing TradeMind AI
  * with hero section, features, pricing, FAQ, and getting started guide.
  */
 export default function LandingPage() {
@@ -110,7 +110,7 @@ export default function LandingPage() {
               I
             </div>
             <Text strong style={{ fontSize: "18px" }}>
-              IoTDB Enhanced
+              TradeMind AI
             </Text>
           </div>
 
@@ -214,7 +214,7 @@ export default function LandingPage() {
               marginBottom: "32px",
             }}
           >
-            Join thousands of teams already using IoTDB Enhanced to power their time
+            Join thousands of teams already using TradeMind AI to power their time
             series data platform.
           </Paragraph>
           <Button
@@ -269,7 +269,7 @@ export default function LandingPage() {
                   I
                 </div>
                 <Text strong style={{ fontSize: "18px", color: "#fff" }}>
-                  IoTDB Enhanced
+                  TradeMind AI
                 </Text>
               </div>
               <Paragraph style={{ color: "#94a3b8", marginBottom: "16px" }}>
@@ -322,7 +322,7 @@ export default function LandingPage() {
             }}
           >
             <Text style={{ color: "#64748b", fontSize: "14px" }}>
-              © 2025 IoTDB Enhanced. All rights reserved.
+              © 2025 TradeMind AI. All rights reserved.
             </Text>
             <Button
               type="text"

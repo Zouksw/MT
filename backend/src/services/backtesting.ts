@@ -40,7 +40,12 @@ export async function runBacktest(
   for (const days of windows) {
     const since = new Date(Date.now() - days * 86400000);
 
-    const where: any = {
+    const where: {
+      modelId: string;
+      status: string;
+      verifiedAt: { gte: Date };
+      commodityId?: string;
+    } = {
       modelId,
       status: 'verified',
       verifiedAt: { gte: since },

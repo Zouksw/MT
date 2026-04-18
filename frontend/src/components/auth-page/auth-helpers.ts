@@ -20,7 +20,7 @@ export function getTitle(type: AuthType): string {
     case "updatePassword":
       return "Update Password";
     default:
-      return "IoTDB Enhanced";
+      return "TradeMind AI";
   }
 }
 
@@ -76,7 +76,7 @@ export function getFormConfig(type: AuthType): AuthFormConfig {
       };
     default:
       return {
-        title: "IoTDB Enhanced",
+        title: "TradeMind AI",
         description: "",
         submitText: "Submit",
       };

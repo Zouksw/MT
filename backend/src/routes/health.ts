@@ -7,6 +7,8 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@/lib';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { success, error } from '@/lib/response';
+import { getRedisClient } from '@/lib/redis';
+import { iotdbClient } from '@/services/iotdb';
 
 const router = Router();
 
@@ -113,11 +115,20 @@ router.get('/ready', asyncHandler(async (req: Request, res: Response) => {
     allHealthy = false;
   }
 
-  // Check Redis connection (if configured)
-  // Note: Redis check would go here when Redis is properly integrated
+  // Check Redis connection
+  try {
+    const redis = await getRedisClient();
+    checks.redis = redis ? await redis.ping().then(() => true).catch(() => false) : false;
+  } catch {
+    checks.redis = false;
+  }
 
-  // Check IoTDB connection (if configured)
-  // Note: IoTDB check would go here
+  // Check IoTDB connection
+  try {
+    checks.iotdb = await iotdbClient.healthCheck();
+  } catch {
+    checks.iotdb = false;
+  }
 
   if (allHealthy) {
     return success(res, {

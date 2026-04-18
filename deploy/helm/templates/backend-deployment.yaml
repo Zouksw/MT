@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-backend
+  name: {{ include "trademind.fullname" . }}-backend
   labels:
     app.kubernetes.io/component: backend
 spec:
@@ -24,7 +24,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "iotdb-enhanced.fullname" . }}-secrets
+                  name: {{ include "trademind.fullname" . }}-secrets
                   key: DATABASE_URL
             - name: REDIS_HOST
               value: "{{ .Release.Name }}-redis-master"
@@ -33,12 +33,12 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "iotdb-enhanced.fullname" . }}-secrets
+                  name: {{ include "trademind.fullname" . }}-secrets
                   key: JWT_SECRET
             - name: SESSION_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "iotdb-enhanced.fullname" . }}-secrets
+                  name: {{ include "trademind.fullname" . }}-secrets
                   key: SESSION_SECRET
             {{- range $key, $val := .Values.backend.env }}
             - name: {{ $key }}
@@ -62,7 +62,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-backend
+  name: {{ include "trademind.fullname" . }}-backend
 spec:
   selector:
     app.kubernetes.io/component: backend
@@ -73,7 +73,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-frontend
+  name: {{ include "trademind.fullname" . }}-frontend
   labels:
     app.kubernetes.io/component: frontend
 spec:
@@ -115,7 +115,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "iotdb-enhanced.fullname" . }}-frontend
+  name: {{ include "trademind.fullname" . }}-frontend
 spec:
   selector:
     app.kubernetes.io/component: frontend

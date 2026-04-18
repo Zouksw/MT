@@ -320,21 +320,21 @@ describe('validationRules', () => {
       const antRule = validationRules.getAntRule(rule);
 
       // Empty values are rejected by email validator (not a valid email)
-      await expect(antRule.validator(null, '')).rejects.toThrow();
+      await expect(antRule.validator(null, '', {})).rejects.toThrow();
     });
 
     it('should reject invalid values', async () => {
       const rule = validationRules.email;
       const antRule = validationRules.getAntRule(rule);
 
-      await expect(antRule.validator(null, 'invalid')).rejects.toThrow();
+      await expect(antRule.validator(null, 'invalid', {})).rejects.toThrow();
     });
 
     it('should accept valid values', async () => {
       const rule = validationRules.email;
       const antRule = validationRules.getAntRule(rule);
 
-      await expect(antRule.validator(null, 'test@example.com')).resolves.toBeUndefined();
+      await expect(antRule.validator(null, 'test@example.com', {})).resolves.toBeUndefined();
     });
   });
 

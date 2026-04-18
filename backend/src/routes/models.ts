@@ -212,7 +212,7 @@ router.post('/train', authenticate, checkAIAccess, asyncHandler(async (req: Auth
 
   const trainResult = await iotdbClient.trainModel(
     iotdbPath,
-    validatedData.algorithm as any,
+    validatedData.algorithm as 'ARIMA' | 'PROPHET' | 'LSTM' | 'TRANSFORMER',
     validatedData.hyperparameters || {}
   );
 

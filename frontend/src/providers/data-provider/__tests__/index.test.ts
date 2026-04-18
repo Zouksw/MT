@@ -163,7 +163,7 @@ describe('dataProvider', () => {
       const mockData = { result: 'custom data' };
       mockAxios.get.mockResolvedValue({ data: mockData });
 
-      const result = await dataProvider.custom({
+      const result = await dataProvider.custom!({
         url: '/custom/endpoint',
         method: 'get',
       });
@@ -176,7 +176,7 @@ describe('dataProvider', () => {
       mockAxios.post.mockResolvedValue({ data: mockData });
 
       const payload = { name: 'Custom', value: 100 };
-      const result = await dataProvider.custom({
+      const result = await dataProvider.custom!({
         url: '/custom/create',
         method: 'post',
         payload,
@@ -189,7 +189,7 @@ describe('dataProvider', () => {
       const mockData = { id: '123', updated: true };
       mockAxios.patch.mockResolvedValue({ data: mockData });
 
-      const result = await dataProvider.custom({
+      const result = await dataProvider.custom!({
         url: '/custom/update',
         method: 'patch',
         payload: { value: 200 },
@@ -202,7 +202,7 @@ describe('dataProvider', () => {
       const mockData = { id: '123', replaced: true };
       mockAxios.put.mockResolvedValue({ data: mockData });
 
-      const result = await dataProvider.custom({
+      const result = await dataProvider.custom!({
         url: '/custom/replace',
         method: 'put',
         payload: { name: 'Replaced' },
@@ -215,7 +215,7 @@ describe('dataProvider', () => {
       const mockData = { deleted: true };
       mockAxios.delete.mockResolvedValue({ data: mockData });
 
-      const result = await dataProvider.custom({
+      const result = await dataProvider.custom!({
         url: '/custom/delete',
         method: 'delete',
       });

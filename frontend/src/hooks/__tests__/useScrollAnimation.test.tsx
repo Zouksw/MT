@@ -90,7 +90,7 @@ describe('useScrollAnimation', () => {
     // Simulate the observer firing with isIntersecting = true
     act(() => {
       capturedCallback!(
-        [{ isIntersecting: true, target: document.createElement('div') }] as IntersectionObserverEntry[],
+        [{ isIntersecting: true, target: document.createElement('div') }] as unknown as IntersectionObserverEntry[],
         capturedObserver!
       );
     });
@@ -123,7 +123,7 @@ describe('useScrollAnimation', () => {
     // First: set visible
     act(() => {
       capturedCallback!(
-        [{ isIntersecting: true, target: document.createElement('div') }] as IntersectionObserverEntry[],
+        [{ isIntersecting: true, target: document.createElement('div') }] as unknown as IntersectionObserverEntry[],
         capturedObserver!
       );
     });
@@ -132,7 +132,7 @@ describe('useScrollAnimation', () => {
     // Then: set not visible
     act(() => {
       capturedCallback!(
-        [{ isIntersecting: false, target: document.createElement('div') }] as IntersectionObserverEntry[],
+        [{ isIntersecting: false, target: document.createElement('div') }] as unknown as IntersectionObserverEntry[],
         capturedObserver!
       );
     });

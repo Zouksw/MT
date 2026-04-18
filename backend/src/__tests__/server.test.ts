@@ -214,7 +214,6 @@ describe('Server Configuration', () => {
         '../services/alerts',
         '../services/alert-rules',
         '../services/alert-types',
-        '../services/alert-notifications',
       ];
 
       alertServices.forEach(servicePath => {

@@ -23,6 +23,7 @@ import {
   BellOutlined,
   ThunderboltOutlined,
   ApiOutlined,
+  StockOutlined,
 } from "@ant-design/icons";
 import { useIsMobile } from "@/lib/responsive-utils";
 import { Dropdown, Badge } from "antd";
@@ -44,6 +45,20 @@ const NAV_ITEMS: NavItem[] = [
     path: "/",
   },
   {
+    key: "trading",
+    label: "Market",
+    icon: <StockOutlined />,
+    path: "/trading",
+    children: [
+      { key: "trading-chart", label: "Charts", icon: <FundOutlined />, path: "/trading" },
+      { key: "trading-watchlist", label: "Watchlists", icon: <ThunderboltOutlined />, path: "/trading/watchlist" },
+      { key: "trading-portfolio", label: "Analysis Groups", icon: <DashboardOutlined />, path: "/trading/portfolio" },
+      { key: "trading-sim", label: "Backtest", icon: <ExperimentOutlined />, path: "/trading/sim" },
+      { key: "trading-analytics", label: "Analytics", icon: <FundOutlined />, path: "/trading/analytics" },
+      { key: "trading-community", label: "Community", icon: <UserOutlined />, path: "/trading/community" },
+    ],
+  },
+  {
     key: "datasets",
     label: "Datasets",
     icon: <DatabaseOutlined />,
@@ -60,12 +75,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Alerts",
     icon: <AlertOutlined />,
     path: "/alerts",
-  },
-  {
-    key: "anomalies",
-    label: "Anomalies",
-    icon: <ExperimentOutlined />,
-    path: "/anomalies",
   },
 ];
 
@@ -150,7 +159,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
             flexShrink: 0,
           }}
         >
-          I
+          T
         </div>
         {!collapsed && (
           <span
@@ -160,7 +169,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               color: "#111827",
             }}
           >
-            IoTDB Enhanced
+            TradeMind AI
           </span>
         )}
       </div>
@@ -169,34 +178,47 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       <nav>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
+          const hasChildren = item.children && item.children.length > 0;
 
           return (
-            <div
-              key={item.key}
-              className={`desktop-nav-item ${isActive ? "active" : ""}`}
-              onClick={() => handleNavClick(item)}
-              style={{
-                padding: collapsed ? "12px" : "10px 12px",
-                justifyContent: collapsed ? "center" : "flex-start",
-                position: "relative",
-              }}
-              title={collapsed ? item.label : undefined}
-            >
-              <span
+            <div key={item.key}>
+              <div
+                className={`desktop-nav-item ${isActive && !hasChildren ? "active" : ""}`}
+                onClick={() => handleNavClick(item)}
                 style={{
-                  fontSize: 18,
-                  flexShrink: 0,
+                  padding: collapsed ? "12px" : "10px 12px",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  position: "relative",
                 }}
+                title={collapsed ? item.label : undefined}
               >
-                {item.icon}
-              </span>
-              {!collapsed && (
-                <>
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge && item.badge > 0 && (
-                    <Badge count={item.badge} size="small" />
-                  )}
-                </>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                {!collapsed && (
+                  <>
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.badge && item.badge > 0 && (
+                      <Badge count={item.badge} size="small" />
+                    )}
+                  </>
+                )}
+              </div>
+              {!collapsed && hasChildren && isActive && (
+                <div style={{ paddingLeft: 20 }}>
+                  {item.children!.map((child) => {
+                    const childActive = pathname === child.path;
+                    return (
+                      <div
+                        key={child.key}
+                        className={`desktop-nav-item ${childActive ? "active" : ""}`}
+                        onClick={() => handleNavClick(child)}
+                        style={{ padding: "6px 12px", fontSize: 13 }}
+                      >
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>{child.icon}</span>
+                        <span style={{ flex: 1 }}>{child.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
@@ -282,7 +304,7 @@ export const MobileTabBar: React.FC = () => {
             { key: "anomalies", label: "Anomalies", icon: <ExperimentOutlined />, onClick: () => router.push("/anomalies") },
             { key: "forecasts", label: "Forecasts", icon: <FundOutlined />, onClick: () => router.push("/forecasts") },
             { key: "ai", label: "AI Models", icon: <ThunderboltOutlined />, onClick: () => router.push("/ai/models") },
-            { key: "trading", label: "Trading", icon: <DashboardOutlined />, onClick: () => router.push("/trading") },
+            { key: "trading", label: "Market", icon: <DashboardOutlined />, onClick: () => router.push("/trading") },
             { type: "divider" as const },
             { key: "apikeys", label: "API Keys", icon: <ApiOutlined />, onClick: () => router.push("/apikeys") },
             { key: "settings", label: "Settings", icon: <SettingOutlined />, onClick: () => router.push("/settings") },
@@ -337,7 +359,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           fontWeight: 600,
         }}
       >
-        {title || "IoTDB Enhanced"}
+        {title || "TradeMind AI"}
       </h1>
 
       {action || (

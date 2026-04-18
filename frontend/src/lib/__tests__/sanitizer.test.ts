@@ -37,8 +37,8 @@ describe('sanitizer', () => {
     });
 
     it('should handle null and undefined', () => {
-      expect(sanitizer.sanitizeHtml(null)).toBe('');
-      expect(sanitizer.sanitizeHtml(undefined)).toBe('');
+      expect(sanitizer.sanitizeHtml(null as any)).toBe('');
+      expect(sanitizer.sanitizeHtml(undefined as any)).toBe('');
     });
 
     it('should handle empty strings', () => {
@@ -68,7 +68,7 @@ describe('sanitizer', () => {
     it('should handle invalid URLs', () => {
       expect(sanitizer.sanitizeUrl('not-a-url')).toBe('#');
       expect(sanitizer.sanitizeUrl('')).toBe('#');
-      expect(sanitizer.sanitizeUrl(null)).toBe('#');
+      expect(sanitizer.sanitizeUrl(null as any)).toBe('#');
     });
   });
 
@@ -95,7 +95,7 @@ describe('sanitizer', () => {
 
     it('should respect max bounds', () => {
       expect(sanitizer.sanitizeNumber('150', 0, 100)).toBe(100);
-      expect(sanitizer.sanitizeNumber('200', null, 100)).toBe(100);
+      expect(sanitizer.sanitizeNumber('200', undefined, 100)).toBe(100);
     });
 
     it('should handle infinity', () => {
