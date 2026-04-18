@@ -1044,6 +1044,22 @@ async function main() {
 
     // Shipping index
     { slug: 'bdi', name: 'Baltic Dry Index', nameCn: '波罗的海干散货指数', category: 'shipping', unit: 'index', currency: 'USD' },
+
+    // USDA AMS sourced (US livestock prices)
+    { slug: 'live_cattle_us', name: 'US Live Cattle (5-Area)', nameCn: '美国活牛（五区加权）', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'feeder_cattle_us', name: 'US Feeder Cattle', nameCn: '美国育肥牛', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'boxed_beef_choice', name: 'US Boxed Beef Choice Cutout', nameCn: '美国Choice级箱切牛肉', category: 'beef_cuts', subcategory: 'cutout', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'beef_cutout_us', name: 'US Beef Cutout Composite', nameCn: '美国牛肉综合切割价值', category: 'beef_cuts', subcategory: 'cutout', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+
+    // FAO Food Price Indices
+    { slug: 'fao_food_index', name: 'FAO Food Price Index', nameCn: 'FAO食品价格指数', category: 'index', unit: 'index', currency: 'USD' },
+    { slug: 'fao_meat_index', name: 'FAO Meat Price Index', nameCn: 'FAO肉类价格指数', category: 'index', unit: 'index', currency: 'USD' },
+    { slug: 'fao_dairy_index', name: 'FAO Dairy Price Index', nameCn: 'FAO乳制品价格指数', category: 'index', unit: 'index', currency: 'USD' },
+    { slug: 'fao_cereals_index', name: 'FAO Cereals Price Index', nameCn: 'FAO谷物价格指数', category: 'index', unit: 'index', currency: 'USD' },
+    { slug: 'fao_oils_index', name: 'FAO Oils Price Index', nameCn: 'FAO油脂价格指数', category: 'index', unit: 'index', currency: 'USD' },
+
+    // US grain futures
+    { slug: 'us_soybean', name: 'US Soybean Futures', nameCn: '美豆期货', category: 'futures', originCountry: 'USA', unit: 'US cents/bushel', currency: 'USD' },
   ];
 
   // Price baselines for generating realistic data
@@ -1092,6 +1108,16 @@ async function main() {
     eur_usd: { base: 1.08, volatility: 0.008 },
     gbp_usd: { base: 1.27, volatility: 0.01 },
     bdi: { base: 1800, volatility: 60 },
+    live_cattle_us: { base: 185, volatility: 8 },
+    feeder_cattle_us: { base: 245, volatility: 12 },
+    boxed_beef_choice: { base: 310, volatility: 10 },
+    beef_cutout_us: { base: 290, volatility: 8 },
+    fao_food_index: { base: 125, volatility: 3 },
+    fao_meat_index: { base: 118, volatility: 4 },
+    fao_dairy_index: { base: 130, volatility: 5 },
+    fao_cereals_index: { base: 135, volatility: 6 },
+    fao_oils_index: { base: 150, volatility: 7 },
+    us_soybean: { base: 1400, volatility: 30 },
   };
 
   // Create commodities

@@ -145,6 +145,15 @@ const PRICE_MODELS: Record<string, PriceModel> = {
   eur_usd: { basePrice: 1.08, volatility: 0.005, seasonalAmp: 0.01, trend: 0 },
   gbp_usd: { basePrice: 1.27, volatility: 0.006, seasonalAmp: 0.012, trend: 0 },
   bdi: { basePrice: 1800, volatility: 50, seasonalAmp: 100, trend: 1 }, // Baltic Dry Index
+  live_cattle_us: { basePrice: 185, volatility: 5, seasonalAmp: 8, trend: 0.05 },
+  feeder_cattle_us: { basePrice: 245, volatility: 8, seasonalAmp: 12, trend: 0.08 },
+  boxed_beef_choice: { basePrice: 310, volatility: 6, seasonalAmp: 10, trend: 0.04 },
+  beef_cutout_us: { basePrice: 290, volatility: 5, seasonalAmp: 8, trend: 0.03 },
+  fao_food_index: { basePrice: 125, volatility: 2, seasonalAmp: 4, trend: 0.02 },
+  fao_meat_index: { basePrice: 118, volatility: 3, seasonalAmp: 5, trend: 0.02 },
+  fao_dairy_index: { basePrice: 130, volatility: 4, seasonalAmp: 6, trend: 0.02 },
+  fao_cereals_index: { basePrice: 135, volatility: 4, seasonalAmp: 7, trend: 0.03 },
+  fao_oils_index: { basePrice: 150, volatility: 5, seasonalAmp: 8, trend: 0.03 },
 };
 
 function getSeasonalFactor(month: number): number {
