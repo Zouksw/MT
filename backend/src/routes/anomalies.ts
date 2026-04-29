@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { AnomalySeverity, DetectionMethod, AlertSeverity, AlertType, Prisma } from '@prisma/client';
+import type { AnomalySeverity, DetectionMethod, AlertSeverity, AlertType, Prisma } from '@prisma/client';
 import { prisma, logger } from '@/lib';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, NotFoundError, BadRequestError } from '@/middleware/errorHandler';
-import { getPagination, paginationSchema } from '@/schemas/common';
+import { getPagination, } from '@/schemas/common';
 import { anomaliesQuerySchema, detectAnomaliesSchema, updateAnomalySchema, bulkResolveSchema } from '@/schemas/anomalies';
 import { success, paginated, successWithMessage } from '@/lib/response';
 
@@ -233,7 +233,7 @@ router.post('/detect', authenticate, asyncHandler(async (req: AuthRequest, res) 
     // Z-score based detection
     const values = dataPoints.map(dp => Number(dp.valueJson) || 0);
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
     const stdDev = Math.sqrt(variance);
     const zThreshold = 3; // 3 standard deviations
 
@@ -286,7 +286,7 @@ router.post('/detect', authenticate, asyncHandler(async (req: AuthRequest, res) 
           context: {
             currentValue,
             windowMean: windowMean.toFixed(2),
-            percentChange: (percentChange * 100).toFixed(2) + '%',
+            percentChange: `${(percentChange * 100).toFixed(2)}%`,
           },
         });
       }
@@ -517,7 +517,7 @@ router.get('/stats/timeseries/:timeseriesId', asyncHandler(async (req, res) => {
       total,
       resolved,
       unresolved,
-      resolutionRate: total > 0 ? (resolved / total * 100).toFixed(1) + '%' : '0%',
+      resolutionRate: total > 0 ? `${(resolved / total * 100).toFixed(1)}%` : '0%',
       severityBreakdown,
     },
   });

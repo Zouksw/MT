@@ -1,4 +1,4 @@
-# IoTDB Enhanced
+# MT
 
 Enterprise-grade time series database platform with AI-powered forecasting and real-time analytics.
 
@@ -8,7 +8,7 @@ Enterprise-grade time series database platform with AI-powered forecasting and r
 
 ## Overview
 
-IoTDB Enhanced extends Apache IoTDB 2.0.5 with AI capabilities, providing a complete solution for time series data management, prediction, and anomaly detection.
+MT extends Apache IoTDB 2.0.5 with AI capabilities, providing a complete solution for time series data management, prediction, and anomaly detection.
 
 **Core Features**:
 - High-performance time series data storage and querying
@@ -301,4 +301,4 @@ Apache License 2.0
 
 ---
 
-**IoTDB Enhanced** - Enterprise Time Series Data Platform © 2025
+**MT** - Enterprise Time Series Data Platform © 2025

@@ -1,0 +1,27 @@
+/**
+ * Form styles — Ant Design form overrides, input focus
+ */
+
+.ant-form-item-label > label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.dark .ant-form-item-label > label {
+  color: #d1d5db;
+}
+
+/* Input Focus Styles - Gold Accent */
+.ant-input:focus,
+.ant-input-focused,
+.ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.1);
+  border-color: #B8860B;
+}
+
+.dark .ant-input:focus,
+.dark .ant-input-focused,
+.dark .ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
+  border-color: #D4A030;
+}

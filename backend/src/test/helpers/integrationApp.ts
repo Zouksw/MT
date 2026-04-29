@@ -13,7 +13,7 @@
  *   await cleanup();
  */
 
-import express, { Express, Router } from 'express';
+import express, { type Express, type Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { errorHandler } from '@/middleware/errorHandler';

@@ -2,7 +2,7 @@
 
 ## ✨ What's Been Created
 
-A beautiful, responsive blog for IoTDB Enhanced with:
+A beautiful, responsive blog for TradeMind AI with:
 
 - **Modern Design**: Gradient backgrounds, glassmorphism effects, smooth animations
 - **3 Sample Articles**: Release notes, tutorials, security posts
@@ -28,8 +28,8 @@ A beautiful, responsive blog for IoTDB Enhanced with:
 Edit `/docs/blog/_config.yml`:
 
 ```yaml
-url: "https://YOUR_USERNAME.github.io/iotdb-enhanced"
-baseurl: "/iotdb-enhanced"
+url: "https://YOUR_USERNAME.github.io/trademind-ai"
+baseurl: "/trademind-ai"
 ```
 
 ### 3. Push to GitHub
@@ -49,7 +49,7 @@ git push origin main
 ### 5. Visit Your Blog
 
 ```
-https://YOUR_USERNAME.github.io/iotdb-enhanced/blog/
+https://YOUR_USERNAME.github.io/trademind-ai/blog/
 ```
 
 ---
@@ -109,7 +109,7 @@ https://YOUR_USERNAME.github.io/iotdb-enhanced/blog/
 
 ## 📊 Sample Articles Created
 
-### 1. Introducing IoTDB Enhanced v1.3
+### 1. Introducing TradeMind AI v1.3
 - **Date**: 2025-03-28
 - **Tags**: Release, AI, Forecasting
 - **Content**: Version highlights, new features, upgrade guide
@@ -249,7 +249,7 @@ All share the same navigation and branding.
 
 ---
 
-**🎉 Congratulations!** Your IoTDB Enhanced blog is ready to go!
+**🎉 Congratulations!** Your TradeMind AI blog is ready to go!
 
 **Next Steps**:
 1. Push to GitHub
@@ -261,5 +261,5 @@ All share the same navigation and branding.
 
 **Need Help?**
 - Check the [blog README](docs/blog/README.md)
-- Open a [GitHub Issue](https://github.com/Zouksw/iotdb-enhanced/issues)
-- Start a [Discussion](https://github.com/Zouksw/iotdb-enhanced/discussions)
+- Open a [GitHub Issue](https://github.com/Zouksw/trademind-ai/issues)
+- Start a [Discussion](https://github.com/Zouksw/trademind-ai/discussions)

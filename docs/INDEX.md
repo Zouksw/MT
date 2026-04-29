@@ -1,4 +1,4 @@
-# IoTDB Enhanced - Documentation
+# MT - Documentation
 
 **Version**: 1.3.0 | **Last Updated**: 2026-03-28
 
@@ -99,6 +99,6 @@ cd backend && npm test
 
 ---
 
-**Maintainer**: IoTDB Enhanced Team
+**Maintainer**: MT Team
 **Last Review**: 2026-03-28
 **Next Review**: 2026-06-28

@@ -1,6 +1,6 @@
-# Contributing to IoTDB Enhanced
+# Contributing to TradeMind AI
 
-Thank you for your interest in contributing to IoTDB Enhanced! We welcome contributions from developers of all skill levels.
+Thank you for your interest in contributing to TradeMind AI! We welcome contributions from developers of all skill levels.
 
 ## Table of Contents
 
@@ -30,8 +30,8 @@ Thank you for your interest in contributing to IoTDB Enhanced! We welcome contri
    ```bash
    # Fork the repository on GitHub
    # Then clone your fork
-   git clone https://github.com/YOUR-USERNAME/iotdb-enhanced.git
-   cd iotdb-enhanced
+   git clone https://github.com/YOUR-USERNAME/trademind-ai.git
+   cd trademind-ai
    ```
 
 2. **Install dependencies**

@@ -144,7 +144,7 @@ export async function cleanupRedisTestData(): Promise<void> {
  * await cleanupTestTimeseries();
  * ```
  */
-export async function cleanupTestTimeseries(timeseries?: string[]): Promise<void> {
+export async function cleanupTestTimeseries(_timeseries?: string[]): Promise<void> {
   try {
     // Note: This is a placeholder. In actual implementation, you would:
     // 1. Get IoTDB client

@@ -5,14 +5,14 @@ const options: Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'TradeMind AI API',
+      title: 'MT API',
       version: '1.0.0',
       description:
-        'TradeMind AI is a commodity market intelligence platform providing price data, ' +
+        'MT is a commodity market intelligence platform providing price data, ' +
         'multi-factor analysis, and AI-powered predictions. This API covers commodity data, ' +
         'AI signal generation, watchlists, analytics, community features, and more.',
       contact: {
-        name: 'TradeMind AI Team',
+        name: 'MT Team',
       },
     },
     servers: [
@@ -21,7 +21,7 @@ const options: Options = {
         description: 'Development server',
       },
       {
-        url: 'https://api.trademind.example.com',
+        url: 'https://api.mt.example.com',
         description: 'Production server',
       },
     ],

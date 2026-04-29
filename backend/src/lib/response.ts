@@ -3,8 +3,7 @@
  * Standardizes success and error response formats
  */
 
-import { Response } from 'express';
-import { ApiError } from '@/middleware/errorHandler';
+import type { Response } from 'express';
 import type { ErrorDetail } from '@/types/api';
 
 /**

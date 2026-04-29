@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -106,7 +106,7 @@ const CHART_COLORS = {
   upWick: "#16a34a",
   downWick: "#dc2626",
   sma20: "#f59e0b",
-  sma50: "#0a72ef",
+  sma50: "#B8860B",
   support: "#10b981",
   resistance: "#ef4444",
   prediction: "#f59e0b",
@@ -203,8 +203,8 @@ export default function ProfessionalChart({
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { labelBackgroundColor: isDark ? "#334155" : "#0a72ef" },
-        horzLine: { labelBackgroundColor: isDark ? "#334155" : "#0a72ef" },
+        vertLine: { labelBackgroundColor: isDark ? "#334155" : "#B8860B" },
+        horzLine: { labelBackgroundColor: isDark ? "#334155" : "#B8860B" },
       },
       rightPriceScale: {
         borderColor: isDark ? "#1e293b" : "#e2e8f0",
@@ -523,10 +523,10 @@ export default function ProfessionalChart({
             O <span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>{legend.open.toFixed(2)}</span>
           </span>
           <span>
-            H <span className="text-gray-700 dark:text-gray-300">{legend.high.toFixed(2)}</span>
+            H <span className="text-foreground">{legend.high.toFixed(2)}</span>
           </span>
           <span>
-            L <span className="text-gray-700 dark:text-gray-300">{legend.low.toFixed(2)}</span>
+            L <span className="text-foreground">{legend.low.toFixed(2)}</span>
           </span>
           <span>
             C <span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>{legend.close.toFixed(2)}</span>

@@ -1,8 +1,8 @@
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { iotdbClient, iotdbRPCClient, iotdbAIService } from '@/services/iotdb';
 import type { PredictionRequest } from '@/services/iotdb/ai';
 import { aiRateLimiter } from '@/middleware/rateLimiter';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, } from '@/middleware/auth';
 import { asyncHandler, BadRequestError } from '@/middleware/errorHandler';
 import { logger } from '@/lib';
 import {
@@ -55,7 +55,7 @@ const router = Router();
  * GET /api/iotdb/status
  * Check IoTDB service health
  */
-router.get('/status', asyncHandler(async (req: Request, res: Response) => {
+router.get('/status', asyncHandler(async (_req: Request, res: Response) => {
   const isHealthy = await iotdbClient.healthCheck();
   res.json({
     status: isHealthy ? 'healthy' : 'unhealthy',
@@ -131,7 +131,8 @@ router.get('/sql', authenticate, asyncHandler(async (req: Request, res: Response
   if (!sql || typeof sql !== 'string') {
     throw new BadRequestError('SQL query required');
   }
-  const result = await iotdbClient.query(sql);
+  const { sql: validatedSql } = sqlQuerySchema.parse({ sql });
+  const result = await iotdbClient.query(validatedSql);
   res.json(result);
 }));
 
@@ -483,7 +484,6 @@ router.post('/aggregate', authenticate, asyncHandler(async (req: Request, res: R
  * Predict future values using AI
  */
 router.post('/ai/predict', authenticate, aiRateLimiter, asyncHandler(async (req: Request, res: Response) => {
-  const startTime = Date.now();
   const { timeseries, horizon, algorithm, confidenceLevel } = predictSchema.parse(req.body);
 
   // Normalize algorithm (prophet -> timer_xl for IoTDB compatibility)
@@ -509,19 +509,11 @@ router.post('/ai/predict', authenticate, aiRateLimiter, asyncHandler(async (req:
       confidenceLevel,
     });
 
-    const duration = (Date.now() - startTime) / 1000;
-
-    // Record prediction metrics (10% sampling for performance)
-    if (Math.random() < 0.1) {
-    }
-
     // Cache the result for 15 minutes
     await cacheSet(cacheKey, result, 900);
 
     res.json({ ...result, cached: false });
   } catch (error) {
-    // Record error metrics (always record errors)
-    const duration = (Date.now() - startTime) / 1000;
     logger.error(`AI prediction failed for ${timeseries}: ${error}`);
     throw error;
   }
@@ -758,7 +750,6 @@ router.post('/ai/predict/visualize', authenticate, aiRateLimiter, asyncHandler(a
  * Detect anomalies using AI
  */
 router.post('/ai/anomalies', authenticate, asyncHandler(async (req: Request, res: Response) => {
-  const startTime = Date.now();
   const validatedData = detectAnomaliesSchema.parse(req.body);
 
   try {
@@ -771,16 +762,8 @@ router.post('/ai/anomalies', authenticate, asyncHandler(async (req: Request, res
       endTime: validatedData.endTime,
     });
 
-    const duration = (Date.now() - startTime) / 1000;
-
-    // Record anomaly detection metrics (10% sampling for performance)
-    if (Math.random() < 0.1) {
-    }
-
     res.json(result);
   } catch (error) {
-    // Record error metrics (always record errors)
-    const duration = (Date.now() - startTime) / 1000;
     logger.error(`AI anomaly detection failed for ${validatedData.timeseries}: ${error}`);
     throw error;
   }
@@ -893,7 +876,7 @@ router.post('/ai/anomalies/visualize', authenticate, aiRateLimiter, asyncHandler
  * GET /api/iotdb/ai/models
  * List available AI models
  */
-router.get('/ai/models', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.get('/ai/models', authenticate, asyncHandler(async (_req: Request, res: Response) => {
   const models = await iotdbAIService.listModels();
   res.json({ models });
 }));

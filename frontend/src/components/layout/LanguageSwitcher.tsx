@@ -1,14 +1,14 @@
 'use client';
 
-import React from 'react';
-import { Dropdown } from 'antd';
-import { GlobalOutlined } from '@ant-design/icons';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/navigation';
+import { Globe } from 'lucide-react';
 
 const localeLabels: Record<string, { label: string; flag: string }> = {
-  en: { label: 'English', flag: '🇺🇸' },
-  'zh-CN': { label: '中文', flag: '🇨🇳' },
+  en: { label: 'English', flag: '\u{1F1FA}\u{1F1F8}' },
+  'zh-CN': { label: '\u{4E2D}\u{6587}', flag: '\u{1F1E8}\u{1F1F3}' },
 };
 
 export const LanguageSwitcher: React.FC = () => {
@@ -16,39 +16,60 @@ export const LanguageSwitcher: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const _t = useTranslations('nav');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const currentLocale = localeLabels[locale] || localeLabels['en'];
+  const currentLocale = localeLabels[locale] || localeLabels.en;
 
-  const menuItems = Object.entries(localeLabels).map(([key, { label, flag }]) => ({
-    key,
-    label: (
-      <span className="flex items-center gap-2">
-        <span>{flag}</span>
-        <span>{label}</span>
-      </span>
-    ),
-  }));
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
 
-  const handleLocaleChange = ({ key }: { key: string }) => {
+  const handleSelect = (key: string) => {
+    setOpen(false);
     if (key !== locale) {
       router.replace(pathname, { locale: key });
     }
   };
 
   return (
-    <Dropdown
-      menu={{ items: menuItems, onClick: handleLocaleChange, selectedKeys: [locale] }}
-      trigger={['click']}
-      placement="bottomRight"
-    >
+    <div className="relative" ref={ref}>
       <button
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm text-gray-600 dark:text-gray-300 hover:bg-accent transition-colors"
         aria-label={currentLocale.label}
+        onClick={() => setOpen(!open)}
+        type="button"
       >
-        <GlobalOutlined className="text-base" />
+        <Globe className="size-4" />
         <span className="hidden sm:inline">{currentLocale.flag}</span>
       </button>
-    </Dropdown>
+
+      {open && (
+        <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-card border border z-50">
+          <div className="py-1">
+            {Object.entries(localeLabels).map(([key, { label, flag }]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelect(key)}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-accent transition-colors ${
+                  key === locale ? 'text-amber-600 font-medium' : 'text-foreground'
+                }`}
+              >
+                <span>{flag}</span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -45,6 +45,10 @@ export function WebVitals() {
  * Persists data to Redis via the backend metrics API for dashboard consumption
  */
 async function sendToAnalytics(metric: { name: string; value: number; id: string; delta: number }) {
+  // Only send standard web vitals that the backend accepts
+  const ALLOWED = ["LCP", "FID", "CLS", "TTFB", "INP"];
+  if (!ALLOWED.includes(metric.name)) return;
+
   try {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 

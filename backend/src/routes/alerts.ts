@@ -3,8 +3,8 @@
  * Endpoints for managing alerts and notifications
  */
 
-import { Router, Request, Response } from 'express';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { Router, type Response } from 'express';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, UnauthorizedError } from '@/middleware/errorHandler';
 import { limitSchema } from '@/schemas/common';
 import {

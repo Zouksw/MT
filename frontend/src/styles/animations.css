@@ -1,0 +1,263 @@
+/**
+ * Animations & keyframes — page transitions, stagger, modal, micro-interactions
+ * Consolidated reduced-motion rules at the end.
+ */
+
+/* Base keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.fade-in { animation: fadeIn 0.2s ease-in-out; }
+.slide-up { animation: slideUp 0.3s ease-out; }
+
+/* Skeleton shimmer */
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Pulse - for loading states only */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Page Transition Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-container,
+main,
+[data-page-container] {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Page transition variants */
+@keyframes pageTransitionFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.page-transition-fade-in { animation: pageTransitionFadeIn 200ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+.page-transition-fade-out { opacity: 0; }
+
+@keyframes pageTransitionSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition-slide-up-in { animation: pageTransitionSlideUp 300ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+.page-transition-slide-up-out { opacity: 0; transform: translateY(20px); }
+
+@keyframes pageTransitionSlideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition-slide-down-in { animation: pageTransitionSlideDown 300ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+.page-transition-slide-down-out { opacity: 0; transform: translateY(-20px); }
+
+@keyframes pageTransitionScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.page-transition-scale-in { animation: pageTransitionScale 250ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+.page-transition-scale-out { opacity: 0; transform: scale(0.95); }
+
+/* Stagger Animations */
+@keyframes staggerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.stagger-fade-in { opacity: 0; animation: staggerFadeIn 300ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+
+@keyframes staggerSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-slide-up { opacity: 0; animation: staggerSlideUp 300ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+
+@keyframes staggerScaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.stagger-scale-in { opacity: 0; animation: staggerScaleIn 250ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+
+/* Modal Animations */
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes modalSlideOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.95) translateY(-10px); }
+}
+
+.ant-modal-mask {
+  transition: opacity 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.ant-modal-mask.ant-modal-mask-hidden {
+  opacity: 0;
+}
+
+.ant-modal-wrap .ant-modal {
+  animation: modalSlideIn 300ms cubic-bezier(0, 0, 0.2, 1);
+  transform-origin: top center;
+}
+
+.ant-modal-wrap.ant-modal-hidden .ant-modal {
+  animation: modalSlideOut 200ms cubic-bezier(0.4, 0, 1, 1) reverse;
+}
+
+.ant-modal-content {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile animations */
+@keyframes slideUpFromBottom {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.mobile-action-bar {
+  animation: slideUpFromBottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fabPulse {
+  0% { box-shadow: 0 4px 12px rgba(184, 134, 11, 0.4); }
+  50% { box-shadow: 0 6px 16px rgba(184, 134, 11, 0.6); }
+  100% { box-shadow: 0 4px 12px rgba(184, 134, 11, 0.4); }
+}
+
+.mobile-fab {
+  animation: fabPulse 2s ease-in-out infinite;
+}
+
+/* Micro-interaction keyframes */
+@keyframes shimmerSlide {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-slide {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmerSlide 2s ease-in-out infinite;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.scale-in {
+  animation: scaleIn 400ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ==========================================================================
+   CONSOLIDATED REDUCED-MOTION — all animation overrides in one place
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    opacity: 0;
+  }
+
+  .page-container,
+  main,
+  [data-page-container],
+  .ant-card {
+    animation: none;
+  }
+
+  .page-transition-fade-in,
+  .page-transition-slide-up-in,
+  .page-transition-slide-down-in,
+  .page-transition-scale-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .stagger-fade-in,
+  .stagger-slide-up,
+  .stagger-scale-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .ant-modal-mask,
+  .ant-modal-wrap .ant-modal,
+  .ant-modal-content {
+    animation: none;
+    transition: none;
+  }
+
+  .ant-modal-wrap.ant-modal-hidden .ant-modal {
+    animation: none;
+  }
+
+  .mobile-action-bar,
+  .mobile-fab,
+  .mobile-table-card {
+    animation: none;
+    transition: none;
+  }
+
+  .ant-skeleton-active {
+    animation: none;
+    background: #E5E7EB;
+  }
+
+  *:focus-visible {
+    transition: none;
+  }
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: calc(100vw - 32px);
+    margin: 16px auto;
+  }
+
+  .ant-modal-content {
+    border-radius: 8px;
+  }
+}

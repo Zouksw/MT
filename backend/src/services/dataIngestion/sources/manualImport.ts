@@ -17,7 +17,7 @@ export function parseCSV(
   });
 
   if (result.errors.length > 0) {
-    const critical = result.errors.filter(e => e.type === 'FieldMismatch' ? false : true);
+    const critical = result.errors.filter(e => e.type !=='FieldMismatch');
     if (critical.length > 0) {
       throw new Error(
         `CSV parse error: ${critical.map(e => e.message).join('; ')}`,
@@ -66,13 +66,16 @@ export async function importRows(
     const dateOnly = new Date(normalized.date);
     dateOnly.setHours(0, 0, 0, 0);
 
+    const source = normalized.source || 'manual';
+
     try {
       const existing = await prisma.commodityPrice.findUnique({
         where: {
-          commodityId_interval_date: {
+          commodityId_interval_date_source: {
             commodityId,
             interval,
             date: dateOnly,
+            source,
           },
         },
       });
@@ -83,7 +86,7 @@ export async function importRows(
         low: normalized.low,
         close: normalized.close,
         volume: normalized.volume,
-        source: normalized.source || 'manual',
+        source,
         metadata: (normalized.metadata ?? undefined) as unknown as Prisma.InputJsonValue,
       };
 

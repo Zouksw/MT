@@ -2,6 +2,7 @@
  * Tests for errorHandler utilities
  */
 
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import {
   handleServiceError,
   handleErrorWithFallback,
@@ -13,17 +14,17 @@ import {
 } from '@/utils/errorHandler';
 
 // Mock logger
-jest.mock('../logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
 
-const { logger } = require('../logger');
+import { logger } from '../logger';
 
 describe('errorHandler', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('handleServiceError', () => {

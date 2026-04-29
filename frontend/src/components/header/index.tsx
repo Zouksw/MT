@@ -1,44 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import type { RefineThemedLayoutHeaderProps } from "@refinedev/antd";
-import { useGetIdentity, useGo } from "@refinedev/core";
-import {
-  Avatar,
-  Space,
-  Typography,
-  theme,
-  Badge,
-  Dropdown,
-  Tooltip,
-} from "antd";
-import {
-  BellOutlined,
-  UserOutlined,
-  SettingOutlined,
-  LogoutOutlined,
-  DashboardOutlined,
-  GlobalOutlined,
-} from "@ant-design/icons";
+import type React from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getCachedUser } from "@/utils/auth";
+import { authFetch } from "@/utils/auth";
 import { OnlineStatusCompact } from "@/components/ui/OnlineStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { authFetch } from "@/utils/auth";
+import { useRouter } from "next/navigation";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { LayoutGrid, Settings, LogOut, User, Bell, Globe } from "lucide-react";
 
-const { Text } = Typography;
-const { useToken } = theme;
-
-type IUser = {
-  id: number;
-  name: string;
-  avatar: string;
-};
-
-export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
+export const Header: React.FC<{ sticky?: boolean }> = ({
   sticky = true,
 }) => {
-  const { token } = useToken();
-  const { data: user } = useGetIdentity<IUser>();
-  const go = useGo();
+  const user = getCachedUser();
+  const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentLocale, setCurrentLocale] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -54,10 +36,8 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
     localStorage.setItem("locale", next);
   }, [currentLocale]);
 
-  // Fetch unread alert count
   useEffect(() => {
     let mounted = true;
-
     const load = async () => {
       try {
         const response = await authFetch("/api/alerts/stats");
@@ -66,222 +46,99 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
           const data = result.data || result;
           setUnreadCount(data?.unread || 0);
         }
-      } catch {
-        // Silently ignore - non-critical
-      }
+      } catch { /* non-critical */ }
     };
-
     load();
     const interval = setInterval(load, 30000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
-  const headerStyles: React.CSSProperties = {
-    background: "rgba(255, 255, 255, 0.85)",
-    borderBottom: "1px solid rgba(0, 102, 204, 0.06)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "0 24px",
-    height: "64px",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+  const handleLogout = () => {
+    authFetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      window.location.href = "/login";
+    });
   };
-
-  if (sticky) {
-    headerStyles.position = "sticky";
-    headerStyles.top = 0;
-    headerStyles.zIndex = 100;
-  }
-
-  const userMenuItems = [
-    {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
-      onClick: () => go({ to: "/dashboard", type: "push" }),
-    },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
-      onClick: () => go({ to: "/settings", type: "push" }),
-    },
-    { type: "divider" as const },
-    {
-      key: "logout",
-      icon: <LogoutOutlined />,
-      label: "Sign Out",
-      danger: true,
-      onClick: () => {
-        authFetch("/api/auth/logout", { method: "POST" }).finally(() => {
-          window.location.href = "/login";
-        });
-      },
-    },
-  ];
 
   return (
     <header
-      className="dark:bg-[rgba(15,23,42,0.9)] dark:border-b-[rgba(59,130,246,0.08)]"
-      style={headerStyles}
+      className={`flex justify-between items-center px-6 h-16 bg-white/85 dark:bg-slate-900/90 border-b border-gray-200/60 dark:border-gray-700/40 shadow-sm ${sticky ? "sticky top-0 z-50" : ""}`}
+      style={{ backdropFilter: "blur(8px)" }}
     >
-      {/* Left: Brand Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <a
-          href="/dashboard"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            textDecoration: "none",
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              background: "#171717",
-              borderRadius: 6,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 1px 3px rgba(0, 102, 204, 0.2)",
-            }}
-          >
-            <span
-              style={{
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: 16,
-                fontFamily: "var(--font-geist-sans), sans-serif",
-                lineHeight: 1,
-              }}
-            >
-              I
-            </span>
+      <div className="flex items-center gap-3">
+        <a href="/dashboard" className="flex items-center gap-2 no-underline">
+          <div className="w-8 h-8 bg-[#171717] rounded-md flex items-center justify-center shadow-sm">
+            <span className="text-white font-semibold text-base leading-none">I</span>
           </div>
-          <span
-            style={{
-              fontWeight: 600,
-              fontSize: 14,
-              color: token.colorText,
-              fontFamily: "var(--font-geist-sans), sans-serif",
-            }}
-            className="hidden sm:inline"
-          >
-            TradeMind AI
+          <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 hidden sm:inline">
+            MT
           </span>
         </a>
       </div>
 
-      {/* Right: Actions */}
-      <Space size="middle">
-        {/* Online Status */}
+      <div className="flex items-center gap-2">
         <OnlineStatusCompact position="inline" />
 
         {/* Notification Bell */}
-        <Tooltip title={unreadCount > 0 ? `${unreadCount} unread alerts` : "No new alerts"}>
-          <a
-            href="/alerts"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              color: token.colorTextSecondary,
-              transition: "all 0.2s ease",
-              background: "transparent",
-            }}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <Badge count={unreadCount} size="small" offset={[-2, -2]}>
-              <BellOutlined style={{ fontSize: 18 }} />
-            </Badge>
-          </a>
-        </Tooltip>
+        <a
+          href="/alerts"
+          className="relative flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
+          title={unreadCount > 0 ? `${unreadCount} unread alerts` : "No new alerts"}
+        >
+          <Bell className="size-[18px]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </a>
 
         {/* Locale Switcher */}
-        <Tooltip title={currentLocale === "en" ? "切换到中文" : "Switch to English"}>
-          <button
-            onClick={toggleLocale}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              border: "none",
-              color: token.colorTextSecondary,
-              background: "transparent",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              fontSize: 16,
-            }}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <GlobalOutlined />
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                marginLeft: 4,
-                lineHeight: 1,
-              }}
-            >
-              {currentLocale === "en" ? "EN" : "中"}
-            </span>
-          </button>
-        </Tooltip>
+        <button
+          onClick={toggleLocale}
+          className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
+          title={currentLocale === "en" ? "切换到中文" : "Switch to English"}
+        >
+          <Globe className="size-4" />
+          <span className="text-[11px] font-semibold ml-1 leading-none">
+            {currentLocale === "en" ? "EN" : "中"}
+          </span>
+        </button>
 
-        {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* User Avatar + Dropdown */}
-        <Dropdown
-          menu={{ items: userMenuItems }}
-          trigger={["click"]}
-          placement="bottomRight"
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              cursor: "pointer",
-              padding: "4px 8px 4px 4px",
-              borderRadius: 8,
-              transition: "background 0.2s ease",
-            }}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <Avatar
-              size={32}
-              src={user?.avatar}
-              icon={<UserOutlined />}
-              style={{
-                border: "2px solid",
-                borderImage: "#171717 1",
-                borderRadius: "50%",
-              }}
-            />
-            {(user?.name) && (
-              <Text
-                strong
-                style={{ fontSize: 13 }}
-                className="hidden sm:inline"
-              >
+        {/* User Avatar + DropdownMenu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-accent transition-colors outline-none">
+            <div className="w-8 h-8 rounded-full border-2 border-foreground/20 flex items-center justify-center bg-muted overflow-hidden">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <User className="size-4" />
+              )}
+            </div>
+            {user?.name && (
+              <span className="text-[13px] font-medium text-foreground hidden sm:inline">
                 {user.name}
-              </Text>
+              </span>
             )}
-          </div>
-        </Dropdown>
-      </Space>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+              <LayoutGrid className="size-3.5" />
+              Dashboard
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
+              <Settings className="size-3.5" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+              <LogOut className="size-3.5" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 };

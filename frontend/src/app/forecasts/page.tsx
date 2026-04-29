@@ -1,235 +1,120 @@
 "use client";
 
-import {
-  DateField,
-  DeleteButton,
-  List,
-  ShowButton,
-  useTable,
-  CreateButton,
-} from "@refinedev/antd";
-import { Space, Tag, Badge } from "antd";
-import type { Breakpoint } from "antd";
-import { useList } from "@refinedev/core";
-import {
-  LineChartOutlined,
-  ThunderboltOutlined,
-  ClockCircleOutlined,
-  WarningOutlined,
-  PlusOutlined,
-  DownloadOutlined,
-} from "@ant-design/icons";
-
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { DataTable } from "@/components/tables/DataTable";
-import { Button } from "@/components/ui";
-import { DataPageStats } from "@/components/data/DataPageStats";
+import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, Download, Plus, TrendingUp, Zap, Clock, TriangleAlert } from "lucide-react";
+import { useList, deleteRecord } from "@/lib/api";
+import { Table, type Column } from "@/components/ui/Table";
+import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { useIsMobile } from "@/lib/responsive-utils";
 
+// Stat card component
+function StatCard({
+  label,
+  value,
+  icon,
+  variant,
+  loading,
+}: {
+  label: string;
+  value: number | string;
+  icon?: React.ReactNode;
+  variant?: "primary" | "success" | "warning" | "default";
+  loading?: boolean;
+}) {
+  const variantStyles: Record<string, string> = {
+    primary: "border-primary/20 dark:border-primary/20 bg-primary/5 dark:bg-primary/10",
+    success: "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10",
+    warning: "border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10",
+    default: "",
+  };
+
+  return (
+    <div
+      className={`rounded-lg p-5 shadow-sm border ${
+        variant ? variantStyles[variant] : ""
+      }`}
+    >
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+        {icon}
+        {label}
+      </div>
+      {loading ? (
+        <div className="h-8 w-16 bg-muted rounded animate-pulse" />
+      ) : (
+        <div className="text-2xl font-semibold text-foreground">
+          {typeof value === "number" ? value.toLocaleString() : value}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ForecastList() {
-  const { tableProps } = useTable({
-    syncWithLocation: true,
-    sorters: {
-      initial: [{ field: "timestamp", order: "desc" }],
-    },
-  });
-
+  const router = useRouter();
+  const toast = useToast();
   const isMobile = useIsMobile();
+  const [page, setPage] = useState(1);
+  const pageSize = isMobile ? 10 : 20;
 
-  // Get statistics
-  const forecastStatsResult = useList({
-    resource: "forecasts",
-    pagination: { pageSize: 1000 },
+  // Fetch forecasts for the table
+  const { data: forecasts, loading, mutate } = useList<any>("forecasts", {
+    pageSize: 1000,
+    sort: "timestamp",
+    order: "desc",
   });
 
-  const forecastStats = forecastStatsResult?.result?.data ?? [];
-  const totalForecasts = forecastStats?.length ?? 0;
-  const statsLoading = forecastStatsResult?.query?.isLoading ?? false;
+  // Stats
+  const totalForecasts = forecasts?.length ?? 0;
+  const uniqueModels = new Set((forecasts || []).map((f: any) => f.modelId)).size;
+  const uniqueTimeseries = new Set((forecasts || []).map((f: any) => f.timeseriesId)).size;
+  const anomalyCount = (forecasts || []).filter((f: any) => f.isAnomaly).length ?? 0;
 
-  // Calculate unique models and timeseries
-  const uniqueModels = new Set(forecastStats.map((f: any) => f.modelId)).size;
-  const uniqueTimeseries = new Set(forecastStats.map((f: any) => f.timeseriesId)).size;
+  // Pagination
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return (forecasts || []).slice(start, start + pageSize);
+  }, [forecasts, page, pageSize]);
 
-  // Calculate anomalies
-  const anomalyCount = forecastStats?.filter((f: any) => f.isAnomaly).length ?? 0;
+  const totalPages = Math.ceil((forecasts?.length || 0) / pageSize);
 
-  // Define table columns
-  const columns = [
-    {
-      dataIndex: "id",
-      title: "ID",
-      width: 100,
-      fixed: "left" as const,
-      responsive: ["lg"] as Breakpoint[],
-      render: (id: string) => (
-        <code className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-300 data-text">
-          {id.slice(0, 8)}...
-        </code>
-      ),
-    },
-    {
-      dataIndex: "timestamp",
-      title: "Forecast Time",
-      width: 160,
-      sorter: true,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (value: string) => (
-        <Space direction="vertical" size={0}>
-          <DateField value={value} format="YYYY-MM-DD HH:mm" />
-        </Space>
-      ),
-    },
-    {
-      dataIndex: "timeseries",
-      title: "Time Series",
-      width: 180,
-      ellipsis: true,
-      responsive: ["md", "lg", "xl"] as Breakpoint[],
-      render: (ts: any) => (
-        <Space>
-          <span className="font-semibold text-gray-900 dark:text-gray-50">{ts?.name || "-"}</span>
-        </Space>
-      ),
-    },
-    {
-      dataIndex: "model",
-      title: "Model",
-      width: 140,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (model: any) => {
-        const algo = model?.algorithm;
-        const colors: Record<string, string> = {
-          ARIMA: "blue",
-          PROPHET: "purple",
-          LSTM: "green",
-          TRANSFORMER: "orange",
-          ENSEMBLE: "red",
-        };
-        return algo ? (
-          <Tag color={colors[algo] || "default"}>{algo}</Tag>
-        ) : "-";
-      },
-    },
-    {
-      dataIndex: "predictedValue",
-      title: "Predicted Value",
-      width: 140,
-      align: "right" as const,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (value: any, record: any) => {
-        const numValue = typeof value === "object" ? value.toNumber?.() : Number(value);
-        const unit = record.timeseries?.unit || "";
-        return (
-          <span className="data-text text-[13px] text-gray-700 dark:text-gray-300">
-            {numValue.toFixed(2)} {unit}
-          </span>
-        );
-      },
-    },
-    {
-      dataIndex: "confidence",
-      title: "Confidence",
-      width: 110,
-      align: "center" as const,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (value: any) => {
-        const numValue = typeof value === "object" ? value.toNumber?.() : Number(value);
-        const percentage = (numValue * 100).toFixed(0);
-        const color = numValue >= 0.9 ? "green" : numValue >= 0.7 ? "blue" : "orange";
-        return <Tag color={color}>{percentage}%</Tag>;
-      },
-    },
-    {
-      dataIndex: "lowerBound",
-      title: "Range",
-      width: 160,
-      align: "right" as const,
-      responsive: ["lg", "xl"] as Breakpoint[],
-      render: (_: any, record: any) => {
-        const lower = typeof record.lowerBound === "object"
-          ? record.lowerBound.toNumber?.()
-          : Number(record.lowerBound);
-        const upper = typeof record.upperBound === "object"
-          ? record.upperBound.toNumber?.()
-          : Number(record.upperBound);
-        const unit = record.timeseries?.unit || "";
+  // Helper to get numeric value from possibly-decimal object
+  const toNum = (value: any): number => {
+    if (typeof value === "object" && value !== null && typeof value.toNumber === "function") {
+      return value.toNumber();
+    }
+    return Number(value);
+  };
 
-        if (!lower || !upper) {
-          return <span className="text-gray-400 dark:text-gray-600">-</span>;
-        }
+  // Model algorithm tag color
+  const algoTagColor = (algo: string): "primary" | "info" | "success" | "warning" | "error" | "default" => {
+    const map: Record<string, "primary" | "info" | "success" | "warning" | "error" | "default"> = {
+      ARIMA: "info",
+      PROPHET: "primary",
+      LSTM: "success",
+      TRANSFORMER: "warning",
+      ENSEMBLE: "error",
+    };
+    return map[algo] || "default";
+  };
 
-        return (
-          <span className="data-text text-xs text-gray-700 dark:text-gray-300">
-            [{lower.toFixed(2)}, {upper.toFixed(2)}] {unit}
-          </span>
-        );
-      },
-    },
-    {
-      dataIndex: "isAnomaly",
-      title: "Anomaly",
-      width: 100,
-      align: "center" as const,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (isAnomaly: boolean, record: any) => {
-        const probability = typeof record.anomalyProbability === "object"
-          ? record.anomalyProbability.toNumber?.()
-          : Number(record.anomalyProbability);
-
-        if (isAnomaly) {
-          return (
-            <Space direction="vertical" size={0}>
-              <Badge status="error" text="Yes" />
-              {probability > 0 && (
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 data-text">
-                  {(probability * 100).toFixed(0)}%
-                </span>
-              )}
-            </Space>
-          );
-        }
-        return <Badge status="success" text="No" />;
-      },
-    },
-    {
-      dataIndex: "createdAt",
-      title: "Created At",
-      width: 140,
-      sorter: true,
-      responsive: ["lg", "xl"] as Breakpoint[],
-      render: (value: string) => <DateField value={value} format="YYYY-MM-DD" />,
-    },
-    {
-      title: "Actions",
-      dataIndex: "actions",
-      width: isMobile ? 80 : 120,
-      fixed: "right" as const,
-      render: (_: any, record: any) => (
-        <Space size="small">
-          <ShowButton hideText={!isMobile} size="small" recordItemId={record.id} />
-          <DeleteButton hideText={!isMobile} size="small" recordItemId={record.id} confirmTitle="Delete this forecast?" />
-        </Space>
-      ),
-    },
-  ];
-
-  const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "AI & Anomaly Detection", href: "/ai" },
-    { title: "Forecasts" },
-  ];
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteRecord("forecasts", id);
+      toast.showSuccess("Forecast deleted");
+      mutate();
+    } catch {
+      toast.showError("Failed to delete forecast");
+    }
+  };
 
   // Handle export to CSV
   const handleExport = () => {
-    // Get current data from table
-    const dataSource = tableProps.dataSource || [];
+    const dataSource = forecasts || [];
+    if (dataSource.length === 0) return;
 
-    if (dataSource.length === 0) {
-      return;
-    }
-
-    // Define CSV headers
     const headers = [
       "ID",
       "Forecast Time",
@@ -245,28 +130,17 @@ export default function ForecastList() {
       "Created At",
     ];
 
-    // Convert data to CSV rows
     const csvRows = [
       headers.join(","),
       ...dataSource.map((record: any) => {
         const timeseriesName = record.timeseries?.name || "-";
         const algorithm = record.model?.algorithm || "-";
-        const predictedValue = typeof record.predictedValue === "object"
-          ? record.predictedValue.toNumber?.()
-          : Number(record.predictedValue);
+        const predictedValue = toNum(record.predictedValue);
         const unit = record.timeseries?.unit || "";
-        const confidence = typeof record.confidence === "object"
-          ? record.confidence.toNumber?.()
-          : Number(record.confidence);
-        const lowerBound = typeof record.lowerBound === "object"
-          ? record.lowerBound.toNumber?.()
-          : Number(record.lowerBound);
-        const upperBound = typeof record.upperBound === "object"
-          ? record.upperBound.toNumber?.()
-          : Number(record.upperBound);
-        const anomalyProbability = typeof record.anomalyProbability === "object"
-          ? record.anomalyProbability.toNumber?.()
-          : Number(record.anomalyProbability);
+        const confidence = toNum(record.confidence);
+        const lowerBound = toNum(record.lowerBound);
+        const upperBound = toNum(record.upperBound);
+        const anomalyProbability = toNum(record.anomalyProbability);
 
         return [
           record.id,
@@ -285,99 +159,316 @@ export default function ForecastList() {
       }),
     ];
 
-    // Create blob and download
     const csvContent = csvRows.join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-
     link.setAttribute("href", url);
-    link.setAttribute("download", `forecasts_export_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `forecasts_export_${new Date().toISOString().split("T")[0]}.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
+  // Table columns
+  const columns: Column<any>[] = [
+    {
+      key: "id",
+      title: "ID",
+      dataIndex: "id",
+      width: 100,
+      render: (id: string) => (
+        <code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
+          {id?.slice(0, 8)}...
+        </code>
+      ),
+    },
+    {
+      key: "timestamp",
+      title: "Forecast Time",
+      dataIndex: "timestamp",
+      width: 160,
+      render: (value: string) =>
+        value
+          ? new Date(value).toLocaleString("en-US", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "-",
+    },
+    {
+      key: "timeseries",
+      title: "Time Series",
+      dataIndex: "timeseries",
+      width: 180,
+      render: (ts: any) => (
+        <span className="font-semibold text-foreground">
+          {ts?.name || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "model",
+      title: "Model",
+      dataIndex: "model",
+      width: 140,
+      render: (model: any) => {
+        const algo = model?.algorithm;
+        return algo ? <Tag color={algoTagColor(algo)}>{algo}</Tag> : "-";
+      },
+    },
+    {
+      key: "predictedValue",
+      title: "Predicted Value",
+      dataIndex: "predictedValue",
+      width: 140,
+      align: "right",
+      render: (value: any, record: any) => {
+        const numValue = toNum(value);
+        const unit = record.timeseries?.unit || "";
+        return (
+          <span className="text-[13px] text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>
+            {numValue.toFixed(2)} {unit}
+          </span>
+        );
+      },
+    },
+    {
+      key: "confidence",
+      title: "Confidence",
+      dataIndex: "confidence",
+      width: 110,
+      align: "center",
+      render: (value: any) => {
+        const numValue = toNum(value);
+        const percentage = (numValue * 100).toFixed(0);
+        const color: "success" | "info" | "warning" =
+          numValue >= 0.9 ? "success" : numValue >= 0.7 ? "info" : "warning";
+        return <Tag color={color}>{percentage}%</Tag>;
+      },
+    },
+    {
+      key: "range",
+      title: "Range",
+      width: 160,
+      align: "right",
+      render: (_: any, record: any) => {
+        const lower = toNum(record.lowerBound);
+        const upper = toNum(record.upperBound);
+        const unit = record.timeseries?.unit || "";
+
+        if (!lower || !upper) {
+          return <span className="text-muted-foreground">-</span>;
+        }
+
+        return (
+          <span className="text-xs text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>
+            [{lower.toFixed(2)}, {upper.toFixed(2)}] {unit}
+          </span>
+        );
+      },
+    },
+    {
+      key: "isAnomaly",
+      title: "Anomaly",
+      dataIndex: "isAnomaly",
+      width: 100,
+      align: "center",
+      render: (isAnomaly: boolean, record: any) => {
+        const probability = toNum(record.anomalyProbability);
+
+        if (isAnomaly) {
+          return (
+            <div>
+              <span className="text-sm font-medium text-red-600 dark:text-red-400">Yes</span>
+              {probability > 0 && (
+                <div className="text-[11px] text-muted-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>
+                  {(probability * 100).toFixed(0)}%
+                </div>
+              )}
+            </div>
+          );
+        }
+        return <span className="text-sm font-medium text-green-600 dark:text-green-400">No</span>;
+      },
+    },
+    {
+      key: "createdAt",
+      title: "Created At",
+      dataIndex: "createdAt",
+      width: 140,
+      render: (value: string) =>
+        value
+          ? new Date(value).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
+          : "-",
+    },
+    {
+      key: "actions",
+      title: "Actions",
+      width: isMobile ? 100 : 140,
+      render: (_: any, record: any) => (
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(`/forecasts/show/${record.id}`)}
+          >
+            View
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => handleDelete(record.id)}
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "AI & Anomaly Detection", href: "/ai" },
+    { label: "Forecasts" },
+  ];
+
   return (
-    <PageContainer>
-      <List breadcrumb={false}>
-        <PageHeader
-          title="Forecasts"
-          description="AI-powered time series forecasting and predictions"
-          breadcrumbs={breadcrumbItems}
-          actions={
-            <Space>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExport}
-                icon={<DownloadOutlined />}
-              >
-                {!isMobile && "Export"}
-              </Button>
-              <CreateButton
-                icon={<PlusOutlined />}
-                style={{
-                  background: "#171717",
-                  border: "none",
-                  height: "40px",
-                  borderRadius: "6px",
-                  fontWeight: 600,
-                }}
-              >
-                {!isMobile && "Generate Forecast"}
-              </CreateButton>
-            </Space>
-          }
-        />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+      <div className="mx-auto max-w-[1440px]">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+          {breadcrumbItems.map((item, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && (
+                <ChevronRight className="size-3" />
+              )}
+              {item.href ? (
+                <a href={item.href} className="hover:text-gray-700 dark:hover:text-gray-200">
+                  {item.label}
+                </a>
+              ) : (
+                <span className="text-foreground font-medium">{item.label}</span>
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Forecasts
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              AI-powered time series forecasting and predictions
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              <Download className="size-4 mr-1.5" />
+              {!isMobile && "Export"}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => router.push("/forecasts/create")}
+            >
+              <Plus className="size-4 mr-1.5" />
+              {!isMobile && "Generate Forecast"}
+            </Button>
+          </div>
+        </div>
 
         {/* Statistics Cards */}
-        <DataPageStats
-          items={[
-            {
-              label: "Total Forecasts",
-              value: totalForecasts,
-              icon: <LineChartOutlined />,
-              variant: "primary",
-            },
-            {
-              label: "Active Models",
-              value: uniqueModels,
-              icon: <ThunderboltOutlined />,
-              variant: "success",
-            },
-            {
-              label: "Time Series",
-              value: uniqueTimeseries,
-              icon: <ClockCircleOutlined />,
-            },
-            {
-              label: "Anomalies Detected",
-              value: anomalyCount,
-              icon: <WarningOutlined />,
-              variant: anomalyCount > 0 ? "warning" : "default",
-            },
-          ]}
-          featuredIndex={0}
-          loading={statsLoading}
-        />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            label="Total Forecasts"
+            value={totalForecasts}
+            variant="primary"
+            loading={loading}
+            icon={
+              <TrendingUp className="size-4" />
+            }
+          />
+          <StatCard
+            label="Active Models"
+            value={uniqueModels}
+            variant="success"
+            loading={loading}
+            icon={
+              <Zap className="size-4" />
+            }
+          />
+          <StatCard
+            label="Time Series"
+            value={uniqueTimeseries}
+            loading={loading}
+            icon={
+              <Clock className="size-4" />
+            }
+          />
+          <StatCard
+            label="Anomalies Detected"
+            value={anomalyCount}
+            variant={anomalyCount > 0 ? "warning" : "default"}
+            loading={loading}
+            icon={
+              <TriangleAlert className="size-4" />
+            }
+          />
+        </div>
 
-        {/* Data Table */}
-        <DataTable
-          {...tableProps}
-          rowKey="id"
-          columns={columns}
-          enableZebraStriping={true}
-          stickyHeader={true}
-          scroll={{ x: isMobile ? "max-content" : undefined }}
-          pagination={{
-            pageSize: isMobile ? 10 : 20,
-            showSizeChanger: !isMobile,
-            simple: isMobile,
-          }}
-        />
-      </List>
-    </PageContainer>
+        {/* Table */}
+        <div className="bg-card rounded-lg shadow-sm border">
+          <Table
+            columns={columns}
+            dataSource={paginatedData}
+            rowKey="id"
+            loading={loading}
+            emptyText="No forecasts generated yet"
+          />
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border">
+              <span className="text-sm text-muted-foreground">
+                {((page - 1) * pageSize) + 1}-{Math.min(page * pageSize, forecasts?.length || 0)} of {forecasts?.length || 0} items
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

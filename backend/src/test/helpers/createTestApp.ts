@@ -7,7 +7,7 @@
 
 import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { authRouter } from '@/routes/auth';
 import { datasetsRouter } from '@/routes/datasets';
 import { timeseriesRouter } from '@/routes/timeseries';

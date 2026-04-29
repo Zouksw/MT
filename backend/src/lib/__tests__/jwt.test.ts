@@ -2,6 +2,7 @@
  * Tests for JWT utility functions
  */
 
+import { describe, it, expect, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import {
   generateToken,
@@ -14,7 +15,7 @@ import {
 } from '@/lib/jwt';
 
 // Mock config
-jest.mock('../config', () => ({
+vi.mock('@/lib/config', () => ({
   config: {
     jwt: {
       secret: 'test-secret-key-for-testing',
@@ -27,8 +28,8 @@ jest.mock('../config', () => ({
 }));
 
 // Mock uuid
-jest.mock('uuid', () => ({
-  v4: jest.fn(() => 'mocked-uuid'),
+vi.mock('uuid', () => ({
+  v4: vi.fn(() => 'mocked-uuid'),
 }));
 
 describe('JWT Utilities', () => {
@@ -283,7 +284,7 @@ describe('JWT Utilities', () => {
       const decoded1 = jwt.decode(token1) as jwt.JwtPayload;
 
       // Mock different iat by advancing time
-      jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000);
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000);
 
       const token2 = generateToken('user-123');
       const decoded2 = jwt.decode(token2) as jwt.JwtPayload;
@@ -292,7 +293,7 @@ describe('JWT Utilities', () => {
       expect(token1).not.toBe(token2);
       expect(decoded1.iat).not.toBe(decoded2.iat);
 
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
     it('should generate different JTIs for each token', () => {
@@ -307,7 +308,7 @@ describe('JWT Utilities', () => {
     it('should rethrow unexpected errors in verifyToken', () => {
       // Mock jwt.verify to throw a non-JWT error
       const originalVerify = jwt.verify;
-      (jwt.verify as jest.Mock) = jest.fn(() => {
+      (jwt.verify as vi.Mock) = vi.fn(() => {
         throw new Error('Unexpected database error');
       });
 
@@ -315,7 +316,7 @@ describe('JWT Utilities', () => {
 
       expect(() => verifyToken(token)).toThrow('Unexpected database error');
 
-      (jwt.verify as jest.Mock) = originalVerify;
+      (jwt.verify as vi.Mock) = originalVerify;
     });
 
     it('should handle decodeToken with completely invalid input', () => {
@@ -329,14 +330,14 @@ describe('JWT Utilities', () => {
     it('should handle decodeToken error in catch block', () => {
       // Mock jwt.decode to throw an error
       const originalDecode = jwt.decode;
-      (jwt.decode as jest.Mock) = jest.fn(() => {
+      (jwt.decode as vi.Mock) = vi.fn(() => {
         throw new Error('Decode error');
       });
 
       const result = decodeToken('any-token');
       expect(result).toBeNull();
 
-      (jwt.decode as jest.Mock) = originalDecode;
+      (jwt.decode as vi.Mock) = originalDecode;
     });
   });
 });

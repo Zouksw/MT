@@ -108,7 +108,7 @@ export const config = {
     smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
     smtpUser: process.env.SMTP_USER,
     smtpPass: process.env.SMTP_PASS,
-    from: process.env.EMAIL_FROM || 'noreply@trademind.com',
+    from: process.env.EMAIL_FROM || 'noreply@mt.com',
   },
 
   dataIngestion: {

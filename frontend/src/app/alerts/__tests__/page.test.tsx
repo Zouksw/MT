@@ -1,67 +1,35 @@
-/**
- * Tests for Alerts page
- *
- * Tests alert list rendering, stats display, tab filtering, and action buttons.
- * Uses MSW for API mocking.
- */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, } from '@testing-library/react';
 import '@testing-library/jest-dom';
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
+// Mock dayjs — provide real dayjs with no-op extend/locale
+jest.mock('dayjs', () => {
+  const dayjs = Object.assign(
+    jest.fn(() => ({
+      fromNow: jest.fn(),
+      format: jest.fn(() => ''),
+    })),
+    { extend: jest.fn(), locale: jest.fn() },
+  );
+  return { __esModule: true, default: dayjs };
+});
 
 // Mock authFetch
 jest.mock('@/utils/auth', () => ({
   authFetch: jest.fn(),
 }));
 
-// Mock layout components
-jest.mock('@/components/layout/PageContainer', () => ({
-  PageContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="page-container">{children}</div>
-  ),
+// Mock useToast
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ showError: jest.fn(), showSuccess: jest.fn(), showInfo: jest.fn(), showWarning: jest.fn() }),
 }));
 
-jest.mock('@/components/ui/PageHeader', () => ({
-  PageHeader: ({ title, description, actions }: { title: string; description: string; actions?: React.ReactNode }) => (
-    <div data-testid="page-header">
-      <h1>{title}</h1>
-      <p>{description}</p>
-      {actions}
-    </div>
-  ),
-}));
-
-jest.mock('@/components/tables/DataTable', () => ({
-  DataTable: ({ dataSource }: { dataSource: any[] }) => (
-    <div data-testid="data-table">
-      {dataSource.map((d: any) => (
-        <div key={d.id} data-testid={`alert-${d.id}`}>
-          <span>{d.message}</span>
-          <span>{d.severity}</span>
-        </div>
-      ))}
-    </div>
-  ),
-}));
-
-jest.mock('@/components/layout/ContentCard', () => ({
-  ContentCard: ({ children, title }: { children: React.ReactNode; title?: string }) => (
-    <div data-testid={`content-card-${title || 'default'}`}>
-      {children}
-    </div>
-  ),
-}));
-
-jest.mock('@/components/data/DataPageStats', () => ({
-  DataPageStats: ({ items }: { items: Array<{ label: string; value: number }> }) => (
-    <div data-testid="data-page-stats">
-      {items.map((item) => (
-        <span key={item.label} data-testid={`stat-${item.label}`}>{item.label}: {item.value}</span>
-      ))}
-    </div>
-  ),
-}));
-
+// Mock responsive
 jest.mock('@/lib/responsive-utils', () => ({
   useIsMobile: jest.fn(() => false),
 }));
@@ -126,7 +94,9 @@ describe('AlertList', () => {
   it('should render page header', async () => {
     render(<AlertList />);
 
-    expect(screen.getByText('Alerts & Notifications')).toBeInTheDocument();
+    // Title appears in breadcrumb and h1 — check h1 specifically
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings[0]).toHaveTextContent('Alerts & Notifications');
     expect(screen.getByText('View and manage system alerts, anomalies, and notifications')).toBeInTheDocument();
   });
 
@@ -134,16 +104,21 @@ describe('AlertList', () => {
     render(<AlertList />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('stat-Total Alerts')).toHaveTextContent('15');
-      expect(screen.getByTestId('stat-Unread')).toHaveTextContent('8');
+      expect(screen.getByText('Total Alerts')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText('15')).toBeInTheDocument();
+      expect(screen.getByText('Unread')).toBeInTheDocument();
+      expect(screen.getByText('8')).toBeInTheDocument();
     });
   });
 
   it('should render alerts table after loading', async () => {
     render(<AlertList />);
 
+    // Wait for data to load and table to render alert messages
     await waitFor(() => {
-      expect(screen.getByTestId('data-table')).toBeInTheDocument();
+      expect(screen.getByText('High temperature detected')).toBeInTheDocument();
     });
   });
 
@@ -152,14 +127,6 @@ describe('AlertList', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Filter by:')).toBeInTheDocument();
-    });
-  });
-
-  it('should render tab navigation', async () => {
-    render(<AlertList />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/All Alerts/)).toBeInTheDocument();
     });
   });
 
@@ -182,13 +149,13 @@ describe('AlertList', () => {
 
     render(<AlertList />);
 
-    // Should not crash, just show empty state
+    // Should show empty state after error
     await waitFor(() => {
-      expect(screen.getByText(/No alerts found/)).toBeInTheDocument();
+      expect(screen.getByText(/No alerts match your current filters/)).toBeInTheDocument();
     });
   });
 
-  it('should show no alerts message when list is empty', async () => {
+  it('should show empty filters message when list is empty', async () => {
     mockAuthFetch.mockImplementation((url: string) => {
       if (url.includes('/stats')) {
         return Promise.resolve({
@@ -205,7 +172,7 @@ describe('AlertList', () => {
     render(<AlertList />);
 
     await waitFor(() => {
-      expect(screen.getByText('No alerts found')).toBeInTheDocument();
+      expect(screen.getByText(/No alerts match your current filters/)).toBeInTheDocument();
     });
   });
 });

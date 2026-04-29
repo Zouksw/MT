@@ -2,15 +2,16 @@
  * Tests for AI Access Control middleware
  */
 
-import { Request, Response, NextFunction } from 'express';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Request, Response, NextFunction } from 'express';
 import { checkAIAccess, checkAIEnabled } from '@/middleware/aiAccess';
-import { AuthRequest } from '@/middleware/auth';
+import type { AuthRequest } from '@/middleware/auth';
 
 // Mock logger
-jest.mock('../../lib/logger', () => ({
+vi.mock('@/lib/logger', () => ({
   logger: {
-    warn: jest.fn(),
-    info: jest.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
@@ -22,7 +23,7 @@ describe('AI Access Control Middleware', () => {
   let mockNext: NextFunction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Reset environment variables
     delete process.env.AI_FEATURES_DISABLED;
@@ -36,7 +37,7 @@ describe('AI Access Control Middleware', () => {
       params: {},
       query: {},
       body: {},
-      get: jest.fn((header: string) => {
+      get: vi.fn((header: string) => {
         if (header === 'If-None-Match') return undefined;
         return undefined;
       }),
@@ -44,12 +45,12 @@ describe('AI Access Control Middleware', () => {
 
     mockRes = {
       statusCode: 200,
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
       locals: {},
     };
 
-    mockNext = jest.fn();
+    mockNext = vi.fn();
   });
 
   describe('checkAIAccess', () => {
@@ -64,7 +65,7 @@ describe('AI Access Control Middleware', () => {
 
       expect(mockNext).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('[AI_ACCESS] AI feature accessed by admin')
+        expect.stringContaining('[AI_ACCESS] AI feature accessed by admin@example.com')
       );
     });
 
@@ -94,19 +95,18 @@ describe('AI Access Control Middleware', () => {
       expect(logger.warn).toHaveBeenCalledWith('[AI_ACCESS] Unauthenticated AI access attempt');
     });
 
-    it('should deny access for non-admin user', async () => {
+    it('should allow access for EDITOR role', async () => {
       mockReq.user = {
         id: 'user-123',
         email: 'user@example.com',
-        role: 'USER',
+        role: 'EDITOR',
       };
 
-      expect(() =>
-        checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext)
-      ).toThrow('AI features are only available to administrators');
+      await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('[AI_ACCESS] Non-admin user attempted AI access')
+      expect(mockNext).toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('[AI_ACCESS] AI feature accessed by user@example.com')
       );
     });
 
@@ -162,28 +162,28 @@ describe('AI Access Control Middleware', () => {
       // This test would require jest.isolateModules() which is complex
     });
 
-    it('should deny access for MODERATOR role', async () => {
+    it('should allow access for MODERATOR role', async () => {
       mockReq.user = {
         id: 'moderator-123',
         email: 'moderator@example.com',
         role: 'MODERATOR',
       };
 
-      expect(() =>
-        checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext)
-      ).toThrow('AI features are only available to administrators');
+      await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should deny access for VIEWER role', async () => {
+    it('should allow access for VIEWER role', async () => {
       mockReq.user = {
         id: 'viewer-123',
         email: 'viewer@example.com',
         role: 'VIEWER',
       };
 
-      expect(() =>
-        checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext)
-      ).toThrow('AI features are only available to administrators');
+      await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
     });
   });
 

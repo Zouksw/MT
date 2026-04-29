@@ -2,10 +2,10 @@
  * Tests for ScraperManager
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-jest.mock('@/lib', () => ({
-  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+vi.mock('@/lib', () => ({
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
 import { ScraperManager } from '../scraperManager';
@@ -18,7 +18,7 @@ function createMockScraper(
 ): Scraper {
   return {
     name,
-    fetch: jest.fn(async () => {
+    fetch: vi.fn(async () => {
       if (shouldThrow) throw new Error(`${name} failed`);
       return result ?? { inserted: 0, updated: 0 };
     }),
@@ -29,7 +29,7 @@ describe('ScraperManager', () => {
   let manager: ScraperManager;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     manager = new ScraperManager();
   });
 
@@ -90,7 +90,7 @@ describe('ScraperManager', () => {
     it('should handle non-Error exceptions', async () => {
       const scraper: Scraper = {
         name: 'string-error',
-        fetch: jest.fn(async () => { throw 'string error'; }),
+        fetch: vi.fn(async () => { throw 'string error'; }),
       };
       manager.registerSource('string-error', scraper);
 

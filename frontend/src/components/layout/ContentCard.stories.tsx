@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Button, Space, Typography, Tag } from 'antd';
-import { SettingOutlined, MoreOutlined } from '@ant-design/icons';
 import { ContentCard } from './ContentCard';
+import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 
 const meta: Meta<typeof ContentCard> = {
   title: 'Layout/ContentCard',
@@ -20,29 +20,17 @@ export default meta;
 type Story = StoryObj<typeof ContentCard>;
 
 export const Default: Story = {
-  args: {
-    children: (
-      <Typography.Text>
-        This is a basic content card with some placeholder content. Use it to wrap
-        any content that needs a consistent card container.
-      </Typography.Text>
-    ),
-  },
+  args: { children: <p>This is a basic content card with some placeholder content.</p> },
 };
 
 export const WithTitle: Story = {
   args: {
     title: 'Recent Activity',
     children: (
-      <div>
-        <Typography.Paragraph>
-          Display your content here with a descriptive title above.
-        </Typography.Paragraph>
-        <Space wrap>
-          <Tag color="blue">Dataset Created</Tag>
-          <Tag color="green">Import Complete</Tag>
-          <Tag color="orange">Alert Triggered</Tag>
-        </Space>
+      <div className="flex flex-wrap gap-2">
+        <Tag color="primary">Dataset Created</Tag>
+        <Tag color="success">Import Complete</Tag>
+        <Tag color="warning">Alert Triggered</Tag>
       </div>
     ),
   },
@@ -52,11 +40,7 @@ export const WithSubtitle: Story = {
   args: {
     title: 'System Overview',
     subtitle: 'Last updated 5 minutes ago',
-    children: (
-      <Typography.Text>
-        Cards support both title and subtitle for additional context.
-      </Typography.Text>
-    ),
+    children: <p>Cards support both title and subtitle for additional context.</p>,
   },
 };
 
@@ -64,11 +48,7 @@ export const WithAccent: Story = {
   args: {
     title: 'Featured Dataset',
     accent: true,
-    children: (
-      <Typography.Text>
-        This card has a gradient accent strip at the top for visual emphasis.
-      </Typography.Text>
-    ),
+    children: <p>This card has a gradient accent strip at the top.</p>,
   },
 };
 
@@ -76,26 +56,12 @@ export const WithActions: Story = {
   args: {
     title: 'Time Series Data',
     actions: (
-      <Space>
-        <Button size="small" icon={<SettingOutlined />} />
-        <Button size="small" icon={<MoreOutlined />} />
-      </Space>
+      <div className="flex gap-2">
+        <Button size="sm" variant="ghost">Settings</Button>
+        <Button size="sm" variant="ghost">More</Button>
+      </div>
     ),
-    children: (
-      <Typography.Text>
-        Card headers support action buttons aligned to the right.
-      </Typography.Text>
-    ),
-  },
-};
-
-export const Loading: Story = {
-  args: {
-    title: 'Loading Card',
-    loading: true,
-    children: (
-      <Typography.Text>This content is hidden while loading.</Typography.Text>
-    ),
+    children: <p>Card headers support action buttons aligned to the right.</p>,
   },
 };
 
@@ -105,24 +71,24 @@ export const FullFeatured: Story = {
     subtitle: 'Aggregated statistics for the selected time range',
     accent: true,
     actions: (
-      <Space>
-        <Button size="small">Refresh</Button>
-        <Button size="small" type="primary">Export</Button>
-      </Space>
+      <div className="flex gap-2">
+        <Button size="sm" variant="ghost">Refresh</Button>
+        <Button size="sm" variant="primary">Export</Button>
+      </div>
     ),
     children: (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="grid grid-cols-3 gap-4">
         <div>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>Total Points</Typography.Text>
-          <div><Typography.Text strong style={{ fontSize: 24 }}>1.2M</Typography.Text></div>
+          <span className="text-xs text-gray-500">Total Points</span>
+          <div className="text-2xl font-semibold">1.2M</div>
         </div>
         <div>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>Anomalies</Typography.Text>
-          <div><Typography.Text strong style={{ fontSize: 24, color: '#EF4444' }}>23</Typography.Text></div>
+          <span className="text-xs text-gray-500">Anomalies</span>
+          <div className="text-2xl font-semibold text-red-500">23</div>
         </div>
         <div>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>Uptime</Typography.Text>
-          <div><Typography.Text strong style={{ fontSize: 24, color: '#10B981' }}>99.9%</Typography.Text></div>
+          <span className="text-xs text-gray-500">Uptime</span>
+          <div className="text-2xl font-semibold text-emerald-500">99.9%</div>
         </div>
       </div>
     ),

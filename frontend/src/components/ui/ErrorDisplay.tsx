@@ -1,33 +1,19 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { Alert, Button, Space } from "antd";
-import { ReloadOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import type React from "react";
+import { useEffect } from "react";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "./Toast";
-import { errorHandler, SafeError } from "@/lib/errorHandler";
+import { errorHandler, type SafeError } from "@/lib/errorHandler";
 
 export interface ErrorDisplayProps {
   error: SafeError | Error | unknown;
   retry?: () => void;
   context?: string;
-  showInline?: boolean; // If true, shows inline error without toast
+  showInline?: boolean;
   className?: string;
 }
 
-/**
- * Unified Error Display Component
- *
- * Provides consistent error UX across the application:
- * - Automatically shows toast notification for errors
- * - Displays inline alert for visual feedback
- * - Shows retry button for recoverable errors
- * - Integrates with security-first error handler
- *
- * @example
- * ```tsx
- * {error && <ErrorDisplay error={error} retry={() => refetch()} />}
- * ```
- */
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   error,
   retry,
@@ -37,74 +23,49 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 }) => {
   const { showError } = useToast();
 
-  // Convert error to SafeError
   const safeError: SafeError =
     error instanceof Error && "message" in error && "shouldNotify" in error
       ? (error as SafeError)
       : errorHandler.createSafeError(error);
 
-  // Show toast notification on error (once)
   useEffect(() => {
     if (safeError.shouldNotify) {
-      const message = context ? `${context}: ${safeError.message}` : safeError.message;
-      showError(message, safeError.code);
+      const msg = context ? `${context}: ${safeError.message}` : safeError.message;
+      showError(msg, safeError.code);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - show toast only once on mount
+  }, [safeError.code, showError, safeError.shouldNotify, safeError.message, context]);
 
-  // Don't show inline if showInline is false or if error shouldn't notify
-  if (!showInline || !safeError.shouldNotify) {
-    return null;
-  }
+  if (!showInline || !safeError.shouldNotify) return null;
 
-  // Check if error is recoverable
   const isRecoverable = errorHandler.isRecoverable(safeError);
 
   return (
-    <Alert
-      className={className}
-      type="error"
-      icon={<ExclamationCircleOutlined />}
-      message={safeError.message}
-      description={
-        <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    <div className={`flex items-start gap-3 px-4 py-3 rounded-lg border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 ${className || ""}`} role="alert">
+      <span className="text-sm font-bold mt-0.5">✗</span>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm">{safeError.message}</p>
+        <div className="mt-2">
           {safeError.code && (
-            <small style={{ color: "rgba(255, 255, 255, 0.65)" }}>
-              Error code: {safeError.code}
-            </small>
+            <small className="text-red-600/70 dark:text-red-400/70">Error code: {safeError.code}</small>
           )}
           {isRecoverable && retry && (
-            <Button
-              type="primary"
-              size="small"
-              icon={<ReloadOutlined />}
-              onClick={retry}
-            >
-              Retry
-            </Button>
+            <div className="mt-2">
+              <Button variant="danger" size="sm" onClick={retry}>Retry</Button>
+            </div>
           )}
-        </Space>
-      }
-      showIcon
-      closable={!isRecoverable}
-    />
+        </div>
+      </div>
+    </div>
   );
 };
 
-/**
- * Compact error display for inline use (e.g., in forms, cards)
- */
-export const ErrorInline: React.FC<Omit<ErrorDisplayProps, "showInline">> = (
-  props
-) => {
-  return <ErrorDisplay {...props} showInline={true} />;
-};
+export const ErrorInline: React.FC<Omit<ErrorDisplayProps, "showInline">> = (props) => (
+  <ErrorDisplay {...props} showInline={true} />
+);
 
-/**
- * Error display with toast only (no inline alert)
- */
-export const ErrorToastOnly: React.FC<ErrorDisplayProps> = (props) => {
-  return <ErrorDisplay {...props} showInline={false} />;
-};
+export const ErrorToastOnly: React.FC<ErrorDisplayProps> = (props) => (
+  <ErrorDisplay {...props} showInline={false} />
+);
 
 export default ErrorDisplay;

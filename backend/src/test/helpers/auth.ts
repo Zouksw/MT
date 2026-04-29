@@ -5,7 +5,7 @@
  * authentication tokens, and permissions.
  */
 
-import { User, UserRole } from '@prisma/client';
+import { type User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { generateToken } from '@/lib/jwt';
 

@@ -5,7 +5,7 @@
 
 import { prisma } from '@/lib';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { z } from 'zod';
 
 /**
@@ -121,14 +121,17 @@ export async function validateApiKey(apiKey: string): Promise<{
   user: { id: string; email: string; name: string; role: string };
   apiKey: { id: string; lastCharacters: number };
 } | null> {
-  if (!apiKey || !apiKey.startsWith('iotd_')) {
+  if (!apiKey?.startsWith('iotd_')) {
     return null;
   }
 
-  // Get all active API keys for users
+  // Pre-filter by lastCharacters hash to avoid O(n) bcrypt compares
+  const targetLastChars = getLastCharacters(apiKey);
+
   const activeKeys = await prisma.apiKey.findMany({
     where: {
       isActive: true,
+      lastCharacters: targetLastChars,
       OR: [
         { expiresAt: null },
         { expiresAt: { gte: new Date() } },
@@ -146,7 +149,6 @@ export async function validateApiKey(apiKey: string): Promise<{
     },
   });
 
-  // Find matching key
   for (const key of activeKeys) {
     const isValid = await verifyApiKey(apiKey, key.keyHash);
     if (isValid) {

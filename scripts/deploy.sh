@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# TradeMind AI - Production Deployment Script
+# MT - Production Deployment Script
 #
 # Usage:
 #   ./scripts/deploy.sh              # Normal deploy
@@ -301,7 +301,7 @@ explicit_rollback() {
 main() {
     echo -e "${CYAN}"
     echo "============================================"
-    echo "  TradeMind AI - Production Deployment"
+    echo "  MT - Production Deployment"
     echo "============================================"
     echo -e "${NC}"
 

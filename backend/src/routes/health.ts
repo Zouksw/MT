@@ -3,7 +3,7 @@
  * Provides system health status and readiness checks
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { prisma } from '@/lib';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { success, error } from '@/lib/response';
@@ -50,7 +50,7 @@ const router = Router();
  * GET /health
  * Basic health check
  */
-router.get('/', (req: Request, res: Response) => {
+router.get('/', (_req: Request, res: Response) => {
   return success(res, {
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -98,7 +98,7 @@ router.get('/', (req: Request, res: Response) => {
  * GET /health/ready
  * Readiness check - verifies all services are connected
  */
-router.get('/ready', asyncHandler(async (req: Request, res: Response) => {
+router.get('/ready', asyncHandler(async (_req: Request, res: Response) => {
   const checks = {
     database: false,
     redis: false,
@@ -111,7 +111,7 @@ router.get('/ready', asyncHandler(async (req: Request, res: Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = true;
-  } catch (error) {
+  } catch (_error) {
     allHealthy = false;
   }
 
@@ -181,7 +181,7 @@ router.get('/ready', asyncHandler(async (req: Request, res: Response) => {
  * GET /health/live
  * Liveness check - verifies the process is running
  */
-router.get('/live', (req: Request, res: Response) => {
+router.get('/live', (_req: Request, res: Response) => {
   return success(res, {
     status: 'alive',
     timestamp: new Date().toISOString(),

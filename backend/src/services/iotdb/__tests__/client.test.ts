@@ -3,9 +3,8 @@
  * Core service for interacting with Apache IoTDB time-series database
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IoTDBClient } from '@/services/iotdb/client';
-import { logger } from '@/utils/logger';
 
 // Set environment before importing the module
 process.env.IOTDB_HOST = 'localhost';
@@ -16,17 +15,17 @@ process.env.IOTDB_REST_URL = 'http://localhost:18080';
 process.env.IOTDB_REST_TIMEOUT = '30000';
 
 // Mock logger
-jest.mock('../../../utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
-    error: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
 // Mock global fetch
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 global.fetch = mockFetch as any;
 
 describe('IoTDBClient', () => {
@@ -54,13 +53,13 @@ describe('IoTDBClient', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     client = new IoTDBClient();
     mockFetch.mockResolvedValue(mockSuccessResponse({ code: 200 }));
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('query', () => {

@@ -41,7 +41,7 @@ export function initSentry(): void {
 /**
  * Capture error with additional context
  */
-export function captureError(error: Error, context?: Record<string, any>): void {
+export function captureError(error: Error, context?: Record<string, unknown>): void {
   if (!process.env.SENTRY_DSN) return;
 
   Sentry.withScope((scope) => {
@@ -55,14 +55,14 @@ export function captureError(error: Error, context?: Record<string, any>): void 
 /**
  * Alias for captureError for compatibility
  */
-export function captureException(error: Error, context?: Record<string, any>): void {
+export function captureException(error: Error, context?: Record<string, unknown>): void {
   captureError(error, context);
 }
 
 /**
  * Capture message with level
  */
-export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: Record<string, any>): void {
+export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: Record<string, unknown>): void {
   if (!process.env.SENTRY_DSN) return;
 
   Sentry.withScope((scope) => {
@@ -80,7 +80,7 @@ export function captureMessage(message: string, level: 'info' | 'warning' | 'err
 /**
  * Capture performance data
  */
-export function captureTransaction(name: string, operation: string, context?: Record<string, any>): void {
+export function captureTransaction(name: string, operation: string, context?: Record<string, unknown>): void {
   if (!process.env.SENTRY_DSN) return;
 
   Sentry.withScope((scope) => {

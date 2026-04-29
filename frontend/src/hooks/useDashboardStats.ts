@@ -57,6 +57,11 @@ const fetcher = async (url: string) => {
 export const useDashboardStats = () => {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
+  // If not authenticated, return immediately — don't hang in loading state
+  if (!getAuthToken()) {
+    return { stats: null, loading: false, error: new Error("Not authenticated"), manualRetry: () => {} };
+  }
+
   // Use useRetryableFetch for each API endpoint with automatic retry
   const { data: datasetsData, error: datasetsError, isLoading: datasetsLoading } = useRetryableFetch(
     () => (getAuthToken() ? `${API_BASE}/datasets?page=1&limit=1` : null),

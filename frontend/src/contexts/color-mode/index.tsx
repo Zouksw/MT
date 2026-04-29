@@ -1,6 +1,5 @@
 "use client";
 
-import { App as AntdApp, ConfigProvider, theme } from "antd";
 import React, {
   type PropsWithChildren,
   createContext,
@@ -9,15 +8,13 @@ import React, {
   useState,
 } from "react";
 
-import { lightTheme, darkTheme } from "@/lib/theme";
-
 type ColorModeContextType = {
   mode: string;
   setMode: (mode: string) => void;
 };
 
 export const ColorModeContext = createContext<ColorModeContextType>(
-  {} as ColorModeContextType,
+  {} as ColorModeContextType
 );
 
 type ColorModeContextProviderProps = {
@@ -48,12 +45,9 @@ export const ColorModeContextProvider: React.FC<
     document.documentElement.classList.toggle("dark", newMode === "dark");
   }, []);
 
-  // Apply dark mode class on mount
   React.useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", mode === "dark");
   }, [mode]);
-
-  const { darkAlgorithm, defaultAlgorithm } = theme;
 
   return (
     <ColorModeContext.Provider
@@ -62,14 +56,7 @@ export const ColorModeContextProvider: React.FC<
         mode,
       }}
     >
-      <ConfigProvider
-        theme={{
-          ...(mode === "light" ? lightTheme : darkTheme),
-          algorithm: mode === "light" ? defaultAlgorithm : darkAlgorithm,
-        }}
-      >
-        <AntdApp>{children}</AntdApp>
-      </ConfigProvider>
+      {children}
     </ColorModeContext.Provider>
   );
 };

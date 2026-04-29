@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Form, Input, InputNumber, Select, Button, message, Spin, Row, Col, Tag } from "antd";
-import { AlertOutlined, WarningOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { TriangleAlert, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Tag } from "@/components/ui/Tag";
+import { Table } from "@/components/ui/Table";
+import { useToast } from "@/components/ui/Toast";
 
 import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
-import { ContentCard } from "@/components/layout/ContentCard";
-import { DataTable } from "@/components/tables/DataTable";
-import { LoadingState } from "@/components/ui/LoadingState";
-import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import dynamic from "next/dynamic";
 
 // Dynamic import for heavy chart component
@@ -18,8 +18,8 @@ const AnomalyChart = dynamic(
   () => import("@/components/charts/AnomalyChart").then(mod => ({ default: mod.AnomalyChart })),
   {
     loading: () => (
-      <div style={{ padding: "40px", textAlign: "center" }}>
-        <Spin size="large" />
+      <div className="py-10 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     ),
     ssr: false,
@@ -44,29 +44,49 @@ interface VisualizationResult {
   method: string;
 }
 
+const SEVERITY_TAG_COLORS: Record<string, "success" | "warning" | "error" | "info"> = {
+  LOW: "success",
+  MEDIUM: "warning",
+  HIGH: "error",
+  CRITICAL: "info",
+};
+
 export default function AIAnomaliesPage() {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VisualizationResult | null>(null);
-  const [apiError, setApiError] = useState<Error | null>(null);
+  const [_apiError, setApiError] = useState<string | null>(null);
+  const toast = useToast();
 
-  const severityColors: Record<string, string> = {
-    LOW: "green",
-    MEDIUM: "orange",
-    HIGH: "red",
-    CRITICAL: "purple",
+  // Form state
+  const [formTimeseries, setFormTimeseries] = useState("root.test2");
+  const [formThreshold, setFormThreshold] = useState("2.5");
+  const [formMethod, setFormMethod] = useState("statistical");
+  const [formHistoryPoints, setFormHistoryPoints] = useState("100");
+
+  // Validation
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const methodOptions = [
+    { value: "statistical", label: "Statistical (Z-score)" },
+    { value: "ml", label: "Machine Learning" },
+    { value: "stray", label: "STRAY Algorithm" },
+  ];
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formTimeseries.trim()) newErrors.timeseries = "Please enter time series path";
+    const threshold = parseFloat(formThreshold);
+    if (!formThreshold || Number.isNaN(threshold) || threshold < 0) newErrors.threshold = "Please enter a valid threshold";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const severityIcons: Record<string, React.ReactNode> = {
-    LOW: <ExclamationCircleOutlined />,
-    MEDIUM: <WarningOutlined />,
-    HIGH: <AlertOutlined />,
-    CRITICAL: <ExclamationCircleOutlined />,
-  };
+  const handleDetect = async () => {
+    if (!validate()) return;
 
-  const handleDetect = async (values: any) => {
     setLoading(true);
     setResult(null);
+    setApiError(null);
 
     try {
       const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
@@ -77,10 +97,10 @@ export default function AIAnomaliesPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          timeseries: values.timeseries,
-          threshold: values.threshold,
-          method: values.method || "statistical",
-          historyPoints: values.historyPoints || 100,
+          timeseries: formTimeseries,
+          threshold: parseFloat(formThreshold),
+          method: formMethod || "statistical",
+          historyPoints: parseInt(formHistoryPoints, 10) || 100,
         }),
       });
 
@@ -91,9 +111,11 @@ export default function AIAnomaliesPage() {
 
       const data = await response.json();
       setResult(data);
-      message.success(`Detection completed! Found ${data.statistics.total} anomalies.`);
-    } catch (error: any) {
-      message.error(`Detection failed: ${error.message}`);
+      toast.showSuccess(`Detection completed! Found ${data.statistics.total} anomalies.`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Detection failed";
+      setApiError(msg);
+      toast.showError(`Detection failed: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -105,50 +127,37 @@ export default function AIAnomaliesPage() {
 
   const columns = [
     {
-      title: "Severity",
-      dataIndex: "severity",
       key: "severity",
-      width: 140,
+      title: "Severity",
+      dataIndex: "severity" as keyof Anomaly,
       render: (severity: string) => (
-        <Tag
-          color={severityColors[severity]}
-          icon={severityIcons[severity]}
-          style={{ margin: 0 }}
-        >
+        <Tag color={SEVERITY_TAG_COLORS[severity] || "default"}>
           {severity}
         </Tag>
       ),
-      sorter: (a: Anomaly, b: Anomaly) => {
-        const order = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-        return order[a.severity] - order[b.severity];
-      },
     },
     {
-      title: "Timestamp",
-      dataIndex: "timestamp",
       key: "timestamp",
-      width: 180,
+      title: "Timestamp",
+      dataIndex: "timestamp" as keyof Anomaly,
       render: (ts: number) => formatTimestamp(ts),
     },
     {
-      title: "Value",
-      dataIndex: "value",
       key: "value",
-      width: 120,
+      title: "Value",
+      dataIndex: "value" as keyof Anomaly,
       align: "right" as const,
       render: (val: number) => (
-        <span className="data-text text-[13px] text-gray-700 dark:text-gray-300">
+        <span className="data-text text-[13px] text-foreground">
           {val.toFixed(2)}
         </span>
       ),
     },
     {
-      title: "Anomaly Score",
-      dataIndex: "score",
       key: "score",
-      width: 140,
+      title: "Anomaly Score",
+      dataIndex: "score" as keyof Anomaly,
       align: "right" as const,
-      sorter: (a: Anomaly, b: Anomaly) => b.score - a.score,
       render: (score: number) => (
         <span
           className="font-semibold data-text"
@@ -159,7 +168,7 @@ export default function AIAnomaliesPage() {
                 : score > 3
                 ? "#F59E0B"
                 : score > 2
-                ? "#3B82F6"
+                ? "#B8860B"
                 : "#10B981",
           }}
         >
@@ -171,94 +180,80 @@ export default function AIAnomaliesPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="AI Anomaly Detection"
-        description="Detect anomalies in your time series data using AI"
-      />
+      {/* Page Header */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground">AI Anomaly Detection</h2>
+          <p className="text-sm text-muted-foreground mt-1">Detect anomalies in your time series data using AI</p>
+        </div>
+      </div>
 
-      <ContentCard
-        title="Detection Configuration"
-        subtitle={<span className="text-body-sm">Powered by AI Node</span>}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleDetect}
-          initialValues={{
-            timeseries: "root.test2",
-            threshold: 2.5,
-            method: "statistical",
-            historyPoints: 100,
-          }}
-        >
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
-              <Form.Item
+      {/* Detection Configuration Form */}
+      <div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mb-6">
+        <div className="p-6">
+          <div className="text-lg font-semibold text-foreground flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 shrink-0" />
+            Detection Configuration
+          </div>
+          <div className="text-sm text-muted-foreground mb-4">Powered by AI Node</div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
                 label="Time Series Path"
-                name="timeseries"
-                rules={[{ required: true, message: "Please enter time series path" }]}
-              >
-                <Input placeholder="e.g., root.test2" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
+                placeholder="e.g., root.test2"
+                value={formTimeseries}
+                onChange={(e) => setFormTimeseries(e.target.value)}
+                error={errors.timeseries}
+                fullWidth
+              />
+              <Input
                 label="Threshold (Z-score)"
-                name="threshold"
-                rules={[{ required: true, message: "Please enter threshold" }]}
-                tooltip="Values with Z-score above this threshold will be flagged as anomalies"
-              >
-                <InputNumber min={0} max={10} step={0.1} style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
+                type="number"
+                placeholder="e.g., 2.5"
+                value={formThreshold}
+                onChange={(e) => setFormThreshold(e.target.value)}
+                error={errors.threshold}
+                helperText="Values with Z-score above this threshold will be flagged as anomalies"
+                fullWidth
+              />
+            </div>
 
-          <Form.Item label="Detection Method" name="method">
-            <Select>
-              <Select.Option value="statistical">Statistical (Z-score)</Select.Option>
-              <Select.Option value="ml">Machine Learning</Select.Option>
-              <Select.Option value="stray">STRAY Algorithm</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label="Historical Data Points"
-            name="historyPoints"
-            tooltip="Number of historical data points to display on chart"
-          >
-            <InputNumber
-              min={10}
-              max={1000}
-              step={10}
-              style={{ width: "100%" }}
-              placeholder="e.g., 100"
+            <Select
+              label="Detection Method"
+              options={methodOptions}
+              value={formMethod}
+              onChange={(val) => setFormMethod(val)}
+              fullWidth
             />
-          </Form.Item>
 
-          <Form.Item>
+            <Input
+              label="Historical Data Points"
+              type="number"
+              placeholder="e.g., 100"
+              value={formHistoryPoints}
+              onChange={(e) => setFormHistoryPoints(e.target.value)}
+              helperText="Number of historical data points to display on chart"
+              fullWidth
+            />
+
             <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              size="large"
-              icon={<WarningOutlined />}
-              style={{
-                background: "#171717",
-                border: "none",
-                borderRadius: "6px",
-                fontWeight: 600,
-              }}
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              onClick={handleDetect}
             >
               Detect Anomalies
             </Button>
-          </Form.Item>
-        </Form>
-      </ContentCard>
+          </div>
+        </div>
+      </div>
 
       {loading && (
-        <ContentCard style={{ textAlign: "center" }}>
-          <Spin size="large" tip="Detecting anomalies..." />
-        </ContentCard>
+        <div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] p-6 mb-6 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground mt-3">Detecting anomalies...</p>
+        </div>
       )}
 
       {result && (
@@ -275,48 +270,52 @@ export default function AIAnomaliesPage() {
           />
 
           {/* Statistics Cards */}
-          <Row gutter={[16, 16]} style={{ marginTop: 24, marginBottom: 24 }}>
-            <Col xs={24} sm={12} md={6}>
-              <StatCard
-                title="Total Anomalies"
-                value={result.statistics.total}
-                icon={<AlertOutlined />}
-                variant={result.statistics.total > 0 ? "warning" : "success"}
-              />
-            </Col>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6 mb-6">
+            <StatCard
+              title="Total Anomalies"
+              value={result.statistics.total}
+              icon={
+                <TriangleAlert className="size-5" />
+              }
+              variant={result.statistics.total > 0 ? "warning" : "success"}
+            />
             {result.statistics.bySeverity.CRITICAL !== undefined && (
-              <Col xs={24} sm={12} md={6}>
-                <StatCard
-                  title="Critical"
-                  value={result.statistics.bySeverity.CRITICAL || 0}
-                  icon={<ExclamationCircleOutlined />}
-                  variant="error"
-                />
-              </Col>
+              <StatCard
+                title="Critical"
+                value={result.statistics.bySeverity.CRITICAL || 0}
+                icon={
+                  <AlertCircle className="size-5" />
+                }
+                variant="error"
+              />
             )}
             {result.statistics.bySeverity.HIGH !== undefined && (
-              <Col xs={24} sm={12} md={6}>
-                <StatCard
-                  title="High Severity"
-                  value={result.statistics.bySeverity.HIGH || 0}
-                  icon={<AlertOutlined />}
-                  variant="error"
-                />
-              </Col>
+              <StatCard
+                title="High Severity"
+                value={result.statistics.bySeverity.HIGH || 0}
+                icon={
+                  <TriangleAlert className="size-5" />
+                }
+                variant="error"
+              />
             )}
-          </Row>
+          </div>
 
           {/* Anomaly Details Table */}
-          <ContentCard title="Anomaly Details">
-            <DataTable
-              columns={columns}
-              dataSource={result.anomalies}
-              rowKey={(record) => `${record.timestamp}-${record.severity}`}
-              enableZebraStriping={true}
-              stickyHeader={true}
-              pagination={{ pageSize: 10 }}
-            />
-          </ContentCard>
+          <div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mb-6">
+            <div className="p-6">
+              <div className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                <span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 shrink-0" />
+                Anomaly Details
+              </div>
+              <Table
+                columns={columns}
+                dataSource={result.anomalies}
+                rowKey={(record) => `${record.timestamp}-${record.severity}`}
+                emptyText="No anomalies detected"
+              />
+            </div>
+          </div>
         </>
       )}
     </PageContainer>

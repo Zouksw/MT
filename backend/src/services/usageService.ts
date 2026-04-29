@@ -5,15 +5,15 @@ const PLAN_LIMITS: Record<string, Record<string, number>> = {
   free: {
     watchlists: 1,
     watchlistItems: 5,
-    simAccounts: 1,
+    aiModels: 3,
     signalsPerDay: 10,
     apiCalls: 100,
-    historyDays: 30,
+    historyDays: 7,
   },
   pro: {
     watchlists: 10,
     watchlistItems: 50,
-    simAccounts: 3,
+    aiModels: 7,
     signalsPerDay: 100,
     apiCalls: 5000,
     historyDays: 365,
@@ -21,7 +21,7 @@ const PLAN_LIMITS: Record<string, Record<string, number>> = {
   enterprise: {
     watchlists: Infinity,
     watchlistItems: Infinity,
-    simAccounts: Infinity,
+    aiModels: Infinity,
     signalsPerDay: Infinity,
     apiCalls: Infinity,
     historyDays: Infinity,

@@ -3,11 +3,11 @@ layout: post
 title: "Getting Started with Time Series Forecasting: A Complete Guide"
 date: 2025-03-27 10:00:00 +0000
 tags: [Tutorial, Forecasting, AI]
-excerpt: "Learn how to use IoTDB Enhanced's AI-powered forecasting capabilities to predict future values in your time series data."
+excerpt: "Learn how to use TradeMind AI's AI-powered forecasting capabilities to predict future values in your time series data."
 author: "Sarah Chen"
 ---
 
-Time series forecasting is a powerful tool for predicting future values based on historical data. In this tutorial, we'll walk through everything you need to know to get started with forecasting in IoTDB Enhanced.
+Time series forecasting is a powerful tool for predicting future values based on historical data. In this tutorial, we'll walk through everything you need to know to get started with forecasting in TradeMind AI.
 
 ## What is Time Series Forecasting?
 
@@ -22,7 +22,7 @@ Time series forecasting uses historical data to predict future values. It's used
 
 Before we begin, make sure you have:
 
-1. IoTDB Enhanced installed and running
+1. TradeMind AI installed and running
 2. Some time series data to work with
 3. Basic understanding of REST APIs
 
@@ -45,7 +45,7 @@ curl -X POST http://localhost:8000/api/timeseries/ts-123/data \
 
 ## Step 2: Choose Your Algorithm
 
-IoTDB Enhanced supports multiple forecasting algorithms:
+TradeMind AI supports multiple forecasting algorithms:
 
 ### ARIMA
 Best for: Seasonal data with trends
@@ -194,12 +194,12 @@ POST /api/forecasts/batch
 
 Now that you understand the basics:
 
-1. Explore the [API documentation](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/API.md)
-2. Learn about [anomaly detection](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/blog/)
-3. Set up [automated alerts](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/blog/)
+1. Explore the [API documentation](https://github.com/Zouksw/trademind-ai/blob/main/docs/API.md)
+2. Learn about [anomaly detection](https://github.com/Zouksw/trademind-ai/blob/main/docs/blog/)
+3. Set up [automated alerts](https://github.com/Zouksw/trademind-ai/blob/main/docs/blog/)
 
 Happy forecasting! 🚀
 
 ---
 
-*Questions? Join our [community discussions](https://github.com/Zouksw/iotdb-enhanced/discussions)*
+*Questions? Join our [community discussions](https://github.com/Zouksw/trademind-ai/discussions)*

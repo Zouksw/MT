@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import useSWR, { Key, KeyedMutator } from "swr";
+import useSWR, { type Key, type KeyedMutator } from "swr";
 import { errorHandler } from "@/lib/errorHandler";
 
 export interface RetryableFetchOptions {
@@ -64,7 +64,7 @@ export function useRetryableFetch<T = any>(
   // Calculate delay with exponential backoff
   const getDelay = useCallback(
     (attempts: number): number => {
-      return retryDelay * Math.pow(backoffMultiplier, attempts);
+      return retryDelay * backoffMultiplier ** attempts;
     },
     [retryDelay, backoffMultiplier]
   );
@@ -111,9 +111,7 @@ export function useRetryableFetch<T = any>(
 
         // Schedule retry
         setTimeout(() => {
-          // Trigger SWR to re-fetch
-          // We do this by calling mutate() which will trigger a re-fetch
-          // Note: This is a simplified version - in production you might want more sophisticated retry logic
+          swrResponse.mutate();
         }, delay);
       } else {
         // Max retries exceeded or error not recoverable

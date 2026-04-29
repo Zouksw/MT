@@ -1,245 +1,275 @@
 "use client";
 
-import React from "react";
-import { Row, Col, Tag, Button, Space, Alert, Descriptions, Badge, Modal, message } from "antd";
-import { ArrowLeftOutlined, BellOutlined, InfoCircleOutlined, WarningOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
-import { useGo } from "@refinedev/core";
-import { useOne } from "@refinedev/core";
-import { DateField } from "@refinedev/antd";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ContentCard } from "@/components/layout/ContentCard";
+import { Button } from "@/components/ui/Button";
+import { Tag } from "@/components/ui/Tag";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { useOne } from "@/lib/api";
 import { authFetch } from "@/utils/auth";
 
 interface AlertShowPageProps {
   params: Promise<{ id: string }>;
 }
 
-const SEVERITY_CONFIG = {
-  INFO: {
-    color: "blue",
-    icon: <InfoCircleOutlined />,
-    label: "Info",
-  },
-  WARNING: {
-    color: "orange",
-    icon: <WarningOutlined />,
-    label: "Warning",
-  },
-  ERROR: {
-    color: "red",
-    icon: <CloseCircleOutlined />,
-    label: "Error",
-  },
+const SEVERITY_CONFIG: Record<string, { tagColor: "info" | "warning" | "error"; label: string; alertVariant: "info" | "warning" | "error" }> = {
+  INFO: { tagColor: "info", label: "Info", alertVariant: "info" },
+  WARNING: { tagColor: "warning", label: "Warning", alertVariant: "warning" },
+  ERROR: { tagColor: "error", label: "Error", alertVariant: "error" },
 };
 
-const ALERT_TYPE_CONFIG = {
-  ANOMALY: { label: "Anomaly Detection", icon: "🚨" },
-  FORECAST_READY: { label: "Forecast Ready", icon: "📈" },
+const ALERT_TYPE_CONFIG: Record<string, { label: string; icon: string }> = {
+  ANOMALY: { label: "Anomaly Detection", icon: "\u{1F6A8}" },
+  FORECAST_READY: { label: "Forecast Ready", icon: "\u{1F4C8}" },
   SYSTEM: { label: "System Event", icon: "⚙️" },
-  THRESHOLD: { label: "Threshold Breach", icon: "📊" },
+  THRESHOLD: { label: "Threshold Breach", icon: "\u{1F4CA}" },
 };
 
 export default function AlertShowPage({ params }: AlertShowPageProps) {
   const { id } = React.use(params);
-  const go = useGo();
+  const router = useRouter();
+  const toast = useToast();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  const alertResult = useOne({
-    resource: "alerts",
-    id,
-  });
+  const { data: alert, loading, mutate } = useOne<any>("alerts", id);
 
-  const alert = alertResult?.result?.data;
-  const isLoading = alertResult?.query?.isLoading ?? false;
+  const handleMarkAsRead = async () => {
+    try {
+      const response = await authFetch(`/api/alerts/${id}/read`, { method: "PATCH" });
+      if (!response.ok) throw new Error("Failed to mark alert as read");
+      toast.showSuccess("Alert marked as read");
+      mutate();
+    } catch {
+      toast.showError("Failed to mark alert as read");
+    }
+  };
 
-  if (isLoading) {
+  const handleDelete = async () => {
+    try {
+      const response = await authFetch(`/api/alerts/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete alert");
+      toast.showSuccess("Alert deleted");
+      router.push("/alerts");
+    } catch {
+      toast.showError("Failed to delete alert");
+    } finally {
+      setDeleteModalOpen(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Alert message="Loading alert details..." type="info" />
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-muted p-4 md:p-6">
+        <div className="mx-auto max-w-360">
+          <Alert variant="info">Loading alert details...</Alert>
+        </div>
+      </div>
     );
   }
 
   if (!alert) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Alert message="Alert not found" type="error" />
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-muted p-4 md:p-6">
+        <div className="mx-auto max-w-360">
+          <Alert variant="error">Alert not found</Alert>
+        </div>
+      </div>
     );
   }
 
-  const severityConfig = SEVERITY_CONFIG[alert.severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG.INFO;
-  const typeConfig = ALERT_TYPE_CONFIG[alert.type as keyof typeof ALERT_TYPE_CONFIG] || { label: alert.type, icon: "📢" };
+  const severityConfig = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.INFO;
+  const typeConfig = ALERT_TYPE_CONFIG[alert.type] || { label: alert.type, icon: "\u{1F4E2}" };
 
   return (
-    <PageContainer>
-      <PageHeader
-        title="Alert Details"
-        description="View detailed information about this alert"
-        actions={
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => go({ to: "/alerts", type: "push" })}
-          >
+    <div className="min-h-screen bg-muted p-4 md:p-6">
+      <div className="mx-auto max-w-360">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+          <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
+          <ChevronRight className="size-3" />
+          <a href="/alerts" className="hover:text-gray-700 dark:hover:text-gray-200">Alerts & Notifications</a>
+          <ChevronRight className="size-3" />
+          <span className="text-foreground">Alert Details</span>
+        </nav>
+
+        {/* Page Header */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">Alert Details</h1>
+            <p className="text-sm text-muted-foreground mt-1">View detailed information about this alert</p>
+          </div>
+          <Button variant="ghost" onClick={() => router.push("/alerts")}>
+            <ArrowLeft className="size-4 mr-1.5" />
             Back to Alerts
           </Button>
-        }
-      />
+        </div>
 
-      {/* Status Alert */}
-      <Alert
-        message={
-          <Space>
-            {typeConfig.icon} {typeConfig.label} - {severityConfig.label} Severity
-          </Space>
-        }
-        description={alert.message || alert.description || "No description provided"}
-        type={severityConfig.color === "blue" ? "info" : severityConfig.color === "orange" ? "warning" : "error"}
-        showIcon
-        icon={severityConfig.icon}
-        style={{ marginBottom: 24 }}
-      />
+        {/* Status Alert */}
+        <div className="mb-6">
+          <Alert variant={severityConfig.alertVariant} title={`${typeConfig.icon} ${typeConfig.label} - ${severityConfig.label} Severity`}>
+            {alert.message || alert.description || "No description provided"}
+          </Alert>
+        </div>
 
-      <Row gutter={[24, 24]}>
-        {/* Main Details */}
-        <Col xs={24} lg={16}>
-          <ContentCard title="Alert Information" subtitle="Details about this alert">
-            <Descriptions bordered column={{ xs: 1, sm: 2 }} size="middle">
-              <Descriptions.Item label="Alert ID" span={2}>
-                <code className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-300">
-                  {alert.id}
-                </code>
-              </Descriptions.Item>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Details */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-foreground">Alert Information</h3>
+                <p className="text-sm text-muted-foreground">Details about this alert</p>
+              </CardHeader>
+              <CardBody>
+                <dl className="space-y-4">
+                  {/* Alert ID */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Alert ID</dt>
+                    <dd>
+                      <code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
+                        {alert.id}
+                      </code>
+                    </dd>
+                  </div>
 
-              <Descriptions.Item label="Name" span={2}>
-                <span className="font-semibold text-gray-900 dark:text-gray-50">{alert.name || "Unnamed Alert"}</span>
-              </Descriptions.Item>
+                  {/* Name */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Name</dt>
+                    <dd className="font-semibold text-foreground">{alert.name || "Unnamed Alert"}</dd>
+                  </div>
 
-              <Descriptions.Item label="Type">
-                <Tag icon={<BellOutlined />} color="blue">
-                  {typeConfig.icon} {typeConfig.label}
-                </Tag>
-              </Descriptions.Item>
+                  {/* Type */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Type</dt>
+                    <dd>
+                      <Tag color="info">{typeConfig.icon} {typeConfig.label}</Tag>
+                    </dd>
+                  </div>
 
-              <Descriptions.Item label="Severity">
-                <Tag
-                  color={severityConfig.color}
-                  icon={severityConfig.icon}
-                  className="text-[13px] px-3 py-1"
-                >
-                  {severityConfig.label}
-                </Tag>
-              </Descriptions.Item>
+                  {/* Severity */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Severity</dt>
+                    <dd>
+                      <Tag color={severityConfig.tagColor}>{severityConfig.label}</Tag>
+                    </dd>
+                  </div>
 
-              <Descriptions.Item label="Status">
-                <Badge
-                  status={alert.isRead ? "default" : "processing"}
-                  text={alert.isRead ? "Read" : "Unread"}
-                />
-              </Descriptions.Item>
+                  {/* Status */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Status</dt>
+                    <dd className="flex items-center gap-2">
+                      <span className={`inline-block w-2 h-2 rounded-full ${alert.isRead ? "bg-gray-300" : "bg-blue-500 animate-pulse"}`} />
+                      <span className="text-sm text-foreground">{alert.isRead ? "Read" : "Unread"}</span>
+                    </dd>
+                  </div>
 
-              <Descriptions.Item label="Created At">
-                <DateField value={alert.createdAt} format="YYYY-MM-DD HH:mm:ss" />
-              </Descriptions.Item>
+                  {/* Created At */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Created At</dt>
+                    <dd className="text-sm text-foreground">
+                      {dayjs(alert.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                    </dd>
+                  </div>
 
-              {alert.timeseries && (
-                <Descriptions.Item label="Time Series" span={2}>
-                  <Space>
-                    <span className="font-semibold text-gray-900 dark:text-gray-50">{alert.timeseries.name}</span>
-                    {alert.timeseries.unit && (
-                      <span className="text-body-sm text-gray-500 dark:text-gray-400">({alert.timeseries.unit})</span>
-                    )}
-                  </Space>
-                </Descriptions.Item>
-              )}
+                  {/* Time Series */}
+                  {alert.timeseries && (
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                      <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Time Series</dt>
+                      <dd className="flex items-center gap-2">
+                        <span className="font-semibold text-foreground">{alert.timeseries.name}</span>
+                        {alert.timeseries.unit && (
+                          <span className="text-sm text-muted-foreground">({alert.timeseries.unit})</span>
+                        )}
+                      </dd>
+                    </div>
+                  )}
 
-              {alert.description && (
-                <Descriptions.Item label="Description" span={2}>
-                  <p className="text-body mb-0">
-                    {alert.description}
-                  </p>
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-          </ContentCard>
-        </Col>
+                  {/* Description */}
+                  {alert.description && (
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+                      <dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">Description</dt>
+                      <dd className="text-sm text-foreground">{alert.description}</dd>
+                    </div>
+                  )}
+                </dl>
+              </CardBody>
+            </Card>
+          </div>
 
-        {/* Side Panel */}
-        <Col xs={24} lg={8}>
-          {/* Quick Actions */}
-          <ContentCard title="Quick Actions" subtitle="Available actions for this alert">
-            <Space direction="vertical" style={{ width: "100%" }}>
-              {!alert.isRead && (
-                <Button
-                  type="primary"
-                  block
-                  style={{
-                    background: "#171717",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontWeight: 600,
-                  }}
-                  onClick={async () => {
-                    try {
-                      const response = await authFetch(`/api/alerts/${id}/read`, { method: "PATCH" });
-                      if (!response.ok) {
-                        throw new Error("Failed to mark alert as read");
-                      }
-                      message.success("Alert marked as read");
-                      alertResult.query?.refetch();
-                    } catch {
-                      message.error("Failed to mark alert as read");
-                    }
-                  }}
-                >
-                  Mark as Read
-                </Button>
-              )}
-              <Button danger block onClick={() => {
-                Modal.confirm({
-                  title: "Delete Alert",
-                  icon: <ExclamationCircleOutlined />,
-                  content: "Are you sure you want to delete this alert? This action cannot be undone.",
-                  okText: "Delete",
-                  okType: "danger",
-                  cancelText: "Cancel",
-                  onOk: async () => {
-                    try {
-                      const response = await authFetch(`/api/alerts/${id}`, { method: "DELETE" });
-                      if (!response.ok) {
-                        throw new Error("Failed to delete alert");
-                      }
-                      message.success("Alert deleted");
-                      go({ to: "/alerts", type: "push" });
-                    } catch {
-                      message.error("Failed to delete alert");
-                    }
-                  },
-                });
-              }}>
-                Delete Alert
-              </Button>
-            </Space>
-          </ContentCard>
+          {/* Side Panel */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-foreground">Quick Actions</h3>
+                <p className="text-sm text-muted-foreground">Available actions for this alert</p>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  {!alert.isRead && (
+                    <Button fullWidth onClick={handleMarkAsRead}>
+                      Mark as Read
+                    </Button>
+                  )}
+                  <Button
+                    variant="danger"
+                    fullWidth
+                    onClick={() => setDeleteModalOpen(true)}
+                  >
+                    Delete Alert
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
 
-          {/* Metadata Card */}
-          <ContentCard title="Metadata" subtitle="Alert metadata" style={{ marginTop: 16 }}>
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Created At">
-                <DateField value={alert.createdAt} format="YYYY-MM-DD HH:mm" />
-              </Descriptions.Item>
-              <Descriptions.Item label="Time">
-                <DateField value={alert.createdAt} format="HH:mm:ss" />
-              </Descriptions.Item>
-            </Descriptions>
-          </ContentCard>
-        </Col>
-      </Row>
-    </PageContainer>
+            {/* Metadata Card */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-foreground">Metadata</h3>
+                <p className="text-sm text-muted-foreground">Alert metadata</p>
+              </CardHeader>
+              <CardBody>
+                <dl className="space-y-3">
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-muted-foreground">Created At</dt>
+                    <dd className="text-sm text-foreground">
+                      {dayjs(alert.createdAt).format("YYYY-MM-DD HH:mm")}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-muted-foreground">Time</dt>
+                    <dd className="text-sm text-foreground">
+                      {dayjs(alert.createdAt).format("HH:mm:ss")}
+                    </dd>
+                  </div>
+                </dl>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          title="Delete Alert"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+              <Button variant="danger" onClick={handleDelete}>Delete</Button>
+            </>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete this alert? This action cannot be undone.
+          </p>
+        </Modal>
+      </div>
+    </div>
   );
 }

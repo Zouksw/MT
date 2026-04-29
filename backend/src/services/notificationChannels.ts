@@ -50,7 +50,7 @@ function getEmailTransport(): nodemailer.Transporter | null {
   if (emailTransport) return emailTransport;
 
   const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '587');
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
@@ -93,7 +93,7 @@ async function sendEmail(
   const transport = getEmailTransport();
   if (!transport || to.length === 0) return false;
 
-  const fromAddress = process.env.SMTP_FROM || 'noreply@trademind.local';
+  const fromAddress = process.env.SMTP_FROM || 'noreply@mt.local';
 
   const severityEmoji = payload.severity === 'critical'
     ? '🔴'
@@ -105,10 +105,10 @@ async function sendEmail(
 
   try {
     await transport.sendMail({
-      from: `"TradeMind Alerts" <${fromAddress}>`,
+      from: `"MT Alerts" <${fromAddress}>`,
       to: to.join(', '),
       subject,
-      text: payload.message + '\n\n' + JSON.stringify(payload.data, null, 2),
+      text: `${payload.message}\n\n${JSON.stringify(payload.data, null, 2)}`,
       html: `
         <h2>${severityEmoji} ${payload.type.replace('_', ' ').toUpperCase()}</h2>
         <p><strong>Commodity:</strong> ${payload.commodityId}</p>
@@ -155,7 +155,7 @@ async function sendSlack(
           { title: 'Commodity', value: payload.commodityId, short: true },
           { title: 'Time', value: payload.timestamp, short: false },
         ],
-        footer: 'TradeMind AI Trading Platform',
+        footer: 'MT',
         ts: Math.floor(new Date(payload.timestamp).getTime() / 1000),
       },
     ],

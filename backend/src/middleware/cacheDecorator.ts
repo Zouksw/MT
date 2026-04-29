@@ -13,7 +13,7 @@
  * ```
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { logger } from '@/lib/logger';
 import { redis } from '@/lib/redis';
 
@@ -238,13 +238,13 @@ export function cacheRoute(
     };
 
     // Intercept res.status()
-    res.status = function (code: number) {
+    res.status = (code: number) => {
       statusCode = code;
       return originalStatus(code);
     };
 
     // Intercept res.json()
-    res.json = function (body: any) {
+    res.json = (body: any) => {
       // Only cache successful responses
       const cachePromise = (statusCode >= 200 && statusCode < 300)
         ? (async () => {
@@ -374,7 +374,7 @@ export function cacheFn<T extends (...args: any[]) => Promise<any>>(
     const result = await (async () => {
       // This will be replaced with the actual function when used
       return null as any;
-    // @ts-ignore - spread argument type issue
+    // @ts-expect-error - spread argument type issue
     })(...args);
     // Store in cache
     await setCached(cacheKey, { statusCode: 200, body: result, headers: {} }, ttl);

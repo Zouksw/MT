@@ -10,23 +10,29 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import {
-  DashboardOutlined,
-  DatabaseOutlined,
-  AlertOutlined,
-  ExperimentOutlined,
-  FundOutlined,
-  SettingOutlined,
-  UserOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  BellOutlined,
-  ThunderboltOutlined,
-  ApiOutlined,
-  StockOutlined,
-} from "@ant-design/icons";
 import { useIsMobile } from "@/lib/responsive-utils";
-import { Dropdown, Badge } from "antd";
+import {
+  LayoutGrid,
+  Database,
+  Bell,
+  FlaskConical,
+  Activity,
+  Settings,
+  User,
+  LogOut,
+  Menu,
+  Zap,
+  Terminal,
+  TrendingUp,
+  Target,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export interface NavItem {
   key: string;
@@ -41,63 +47,47 @@ const NAV_ITEMS: NavItem[] = [
   {
     key: "dashboard",
     label: "Dashboard",
-    icon: <DashboardOutlined />,
+    icon: <LayoutGrid className="w-[18px] h-[18px]" />,
     path: "/",
   },
   {
     key: "trading",
     label: "Market",
-    icon: <StockOutlined />,
+    icon: <TrendingUp className="w-[18px] h-[18px]" />,
     path: "/trading",
     children: [
-      { key: "trading-chart", label: "Charts", icon: <FundOutlined />, path: "/trading" },
-      { key: "trading-watchlist", label: "Watchlists", icon: <ThunderboltOutlined />, path: "/trading/watchlist" },
-      { key: "trading-portfolio", label: "Analysis Groups", icon: <DashboardOutlined />, path: "/trading/portfolio" },
-      { key: "trading-sim", label: "Backtest", icon: <ExperimentOutlined />, path: "/trading/sim" },
-      { key: "trading-analytics", label: "Analytics", icon: <FundOutlined />, path: "/trading/analytics" },
-      { key: "trading-community", label: "Community", icon: <UserOutlined />, path: "/trading/community" },
+      { key: "trading-chart", label: "Charts", icon: <Activity className="w-[18px] h-[18px]" />, path: "/trading" },
+      { key: "trading-watchlist", label: "Watchlists", icon: <Zap className="w-[18px] h-[18px]" />, path: "/trading/watchlist" },
+      { key: "trading-portfolio", label: "Analysis Groups", icon: <LayoutGrid className="w-[18px] h-[18px]" />, path: "/trading/portfolio" },
+      { key: "trading-sim", label: "Backtest", icon: <FlaskConical className="w-[18px] h-[18px]" />, path: "/trading/sim" },
+      { key: "trading-analytics", label: "Analytics", icon: <Activity className="w-[18px] h-[18px]" />, path: "/trading/analytics" },
+      { key: "trading-community", label: "Community", icon: <User className="w-[18px] h-[18px]" />, path: "/trading/community" },
     ],
   },
   {
     key: "datasets",
     label: "Datasets",
-    icon: <DatabaseOutlined />,
+    icon: <Database className="w-[18px] h-[18px]" />,
     path: "/datasets",
   },
   {
     key: "timeseries",
     label: "Time Series",
-    icon: <FundOutlined />,
+    icon: <Activity className="w-[18px] h-[18px]" />,
     path: "/timeseries",
   },
   {
     key: "alerts",
     label: "Alerts",
-    icon: <AlertOutlined />,
+    icon: <Bell className="w-[18px] h-[18px]" />,
     path: "/alerts",
   },
 ];
 
 const USER_MENU_ITEMS = [
-  {
-    key: "profile",
-    label: "Profile",
-    icon: <UserOutlined />,
-    path: "/settings/profile",
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    icon: <SettingOutlined />,
-    path: "/settings",
-  },
-  {
-    key: "logout",
-    label: "Logout",
-    icon: <LogoutOutlined />,
-    path: "/login",
-    danger: true,
-  },
+  { key: "profile", label: "Profile", icon: <User className="w-[18px] h-[18px]" />, path: "/settings/profile" },
+  { key: "settings", label: "Settings", icon: <Settings className="w-[18px] h-[18px]" />, path: "/settings" },
+  { key: "logout", label: "Logout", icon: <LogOut className="w-[18px] h-[18px]" />, path: "/login", danger: true },
 ];
 
 /**
@@ -119,11 +109,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     router.push(item.path);
   };
 
-  const handleUserMenuClick = ({ key }: { key: string }) => {
-    const item = USER_MENU_ITEMS.find((i) => i.key === key);
-    if (item) {
-      router.push(item.path);
-    }
+  const handleUserMenuClick = (item: typeof USER_MENU_ITEMS[number]) => {
+    router.push(item.path);
   };
 
   return (
@@ -136,40 +123,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     >
       {/* Logo */}
       <div
-        style={{
-          padding: collapsed ? "16px 12px" : "16px",
-          marginBottom: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: collapsed ? 0 : 12,
-        }}
+        className={`flex items-center mb-4 ${collapsed ? "px-3 py-4 gap-0" : "p-4 gap-3"}`}
       >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            background: "#171717",
-            borderRadius: 6,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#FFFFFF",
-            fontSize: 18,
-            fontWeight: 600,
-            flexShrink: 0,
-          }}
-        >
+        <div className="w-8 h-8 bg-[#171717] dark:bg-foreground rounded-md flex items-center justify-center text-white dark:text-background text-lg font-semibold shrink-0">
           T
         </div>
         {!collapsed && (
-          <span
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-              color: "#111827",
-            }}
-          >
-            TradeMind AI
+          <span className="text-base font-semibold text-gray-900 dark:text-foreground">
+            MT
           </span>
         )}
       </div>
@@ -177,44 +138,40 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       {/* Navigation Items */}
       <nav>
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
+          const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
           const hasChildren = item.children && item.children.length > 0;
 
           return (
             <div key={item.key}>
               <div
-                className={`desktop-nav-item ${isActive && !hasChildren ? "active" : ""}`}
+                className={`desktop-nav-item ${isActive && !hasChildren ? "active" : ""} ${collapsed ? "p-3 justify-center" : "py-2.5 px-3 justify-start"} relative`}
                 onClick={() => handleNavClick(item)}
-                style={{
-                  padding: collapsed ? "12px" : "10px 12px",
-                  justifyContent: collapsed ? "center" : "flex-start",
-                  position: "relative",
-                }}
                 title={collapsed ? item.label : undefined}
               >
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                <span className="text-[18px] shrink-0">{item.icon}</span>
                 {!collapsed && (
                   <>
-                    <span style={{ flex: 1 }}>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
                     {item.badge && item.badge > 0 && (
-                      <Badge count={item.badge} size="small" />
+                      <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                        {item.badge}
+                      </span>
                     )}
                   </>
                 )}
               </div>
               {!collapsed && hasChildren && isActive && (
-                <div style={{ paddingLeft: 20 }}>
-                  {item.children!.map((child) => {
+                <div className="pl-5">
+                  {item.children?.map((child) => {
                     const childActive = pathname === child.path;
                     return (
                       <div
                         key={child.key}
-                        className={`desktop-nav-item ${childActive ? "active" : ""}`}
+                        className={`desktop-nav-item ${childActive ? "active" : ""} py-1.5 px-3 text-[13px]`}
                         onClick={() => handleNavClick(child)}
-                        style={{ padding: "6px 12px", fontSize: 13 }}
                       >
-                        <span style={{ fontSize: 14, flexShrink: 0 }}>{child.icon}</span>
-                        <span style={{ flex: 1 }}>{child.label}</span>
+                        <span className="text-sm shrink-0">{child.icon}</span>
+                        <span className="flex-1">{child.label}</span>
                       </div>
                     );
                   })}
@@ -226,26 +183,35 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       </nav>
 
       {/* User Menu */}
-      <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
-        <Dropdown
-          menu={{
-            items: USER_MENU_ITEMS,
-            onClick: handleUserMenuClick,
-          }}
-          trigger={["click"]}
-          placement="topLeft"
-        >
-          <div
-            className="desktop-nav-item"
-            style={{
-              padding: collapsed ? "12px" : "10px 12px",
-              justifyContent: collapsed ? "center" : "flex-start",
-            }}
-          >
-            <UserOutlined style={{ fontSize: 16 }} />
-            {!collapsed && <span>User Menu</span>}
-          </div>
-        </Dropdown>
+      <div className="mt-auto pt-4 border-t border-gray-200 dark:border-border">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="w-full">
+            <div
+              className={`desktop-nav-item cursor-pointer ${collapsed ? "p-3 justify-center" : "py-2.5 px-3 justify-start"}`}
+            >
+              <User className="w-[18px] h-[18px]" />
+              {!collapsed && <span>User Menu</span>}
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-48">
+            {USER_MENU_ITEMS.map((item) =>
+              item.danger ? (
+                <React.Fragment key={item.key}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={() => handleUserMenuClick(item)}>
+                    {item.icon}
+                    {item.label}
+                  </DropdownMenuItem>
+                </React.Fragment>
+              ) : (
+                <DropdownMenuItem key={item.key} onClick={() => handleUserMenuClick(item)}>
+                  {item.icon}
+                  {item.label}
+                </DropdownMenuItem>
+              )
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );
@@ -264,7 +230,6 @@ export const MobileTabBar: React.FC = () => {
     router.push(item.path);
   };
 
-  // Show only top 4 items on mobile
   const mobileNavItems = NAV_ITEMS.slice(0, 4);
 
   return (
@@ -283,41 +248,54 @@ export const MobileTabBar: React.FC = () => {
             </span>
             <span>{item.label}</span>
             {item.badge && item.badge > 0 && (
-              <Badge
-                count={item.badge}
-                size="small"
-                style={{
-                  position: "absolute",
-                  top: 4,
-                  right: 8,
-                }}
-              />
+              <span
+                className="absolute top-1 right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold"
+              >
+                {item.badge}
+              </span>
             )}
           </div>
         );
       })}
 
-      {/* More menu for additional items */}
-      <Dropdown
-        menu={{
-          items: [
-            { key: "anomalies", label: "Anomalies", icon: <ExperimentOutlined />, onClick: () => router.push("/anomalies") },
-            { key: "forecasts", label: "Forecasts", icon: <FundOutlined />, onClick: () => router.push("/forecasts") },
-            { key: "ai", label: "AI Models", icon: <ThunderboltOutlined />, onClick: () => router.push("/ai/models") },
-            { key: "trading", label: "Market", icon: <DashboardOutlined />, onClick: () => router.push("/trading") },
-            { type: "divider" as const },
-            { key: "apikeys", label: "API Keys", icon: <ApiOutlined />, onClick: () => router.push("/apikeys") },
-            { key: "settings", label: "Settings", icon: <SettingOutlined />, onClick: () => router.push("/settings") },
-          ],
-        }}
-        trigger={["click"]}
-        placement="topRight"
-      >
-        <div className="mobile-tab-item">
-          <MenuFoldOutlined className="mobile-tab-item-icon" />
+      {/* More menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger className="mobile-tab-item outline-none">
+          <Menu className="mobile-tab-item-icon" />
           <span>More</span>
-        </div>
-      </Dropdown>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="end" className="w-48">
+          <DropdownMenuItem onClick={() => router.push("/anomalies")}>
+            <FlaskConical className="size-4" />
+            Anomalies
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/forecasts")}>
+            <Activity className="size-4" />
+            Forecasts
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/ai/models")}>
+            <Zap className="size-4" />
+            AI Models
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/ai/accuracy")}>
+            <Target className="size-4" />
+            Accuracy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/trading")}>
+            <LayoutGrid className="size-4" />
+            Market
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push("/apikeys")}>
+            <Terminal className="size-4" />
+            API Keys
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/settings")}>
+            <Settings className="size-4" />
+            Settings
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </nav>
   );
 };
@@ -342,24 +320,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     <header className="mobile-header">
       {onBack && (
         <div
-          className="mobile-header-action"
+          className="mobile-header-action mr-2"
           onClick={onBack}
-          style={{ marginRight: 8 }}
         >
           ←
         </div>
       )}
 
       <h1
-        className="mobile-header-title"
-        style={{
-          flex: 1,
-          margin: 0,
-          fontSize: 18,
-          fontWeight: 600,
-        }}
+        className="mobile-header-title flex-1 m-0 text-h4 font-semibold"
       >
-        {title || "TradeMind AI"}
+        {title || "MT"}
       </h1>
 
       {action || (
@@ -367,7 +338,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           className="mobile-header-action"
           onClick={() => router.push("/settings/notifications")}
         >
-          <BellOutlined style={{ fontSize: 18 }} />
+          <Bell className="w-[18px] h-[18px]" />
         </div>
       )}
     </header>
@@ -376,8 +347,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
 /**
  * Responsive Navigation Container
- *
- * Automatically renders the appropriate navigation based on device type.
  */
 export interface ResponsiveNavProps {
   renderHeader?: boolean;
@@ -414,19 +383,15 @@ export const ResponsiveNav: React.FC<ResponsiveNavProps> = ({
   }
 
   return (
-    <>
-      <DesktopSidebar
+    <DesktopSidebar
         collapsed={sidebarCollapsed}
         onCollapse={onSidebarCollapse}
       />
-    </>
   );
 };
 
 /**
  * Navigation Layout Wrapper
- *
- * Wraps page content with appropriate layout based on device.
  */
 export interface NavLayoutProps {
   children: React.ReactNode;
@@ -459,7 +424,7 @@ export const NavLayout: React.FC<NavLayoutProps> = ({
             onBack={onBack}
           />
         )}
-        <main style={{ padding: "16px" }}>
+        <main className="p-4">
           {children}
         </main>
         <MobileTabBar />

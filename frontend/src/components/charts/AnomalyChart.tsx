@@ -1,14 +1,10 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Card, Button, Space, Typography, Spin, Alert, Tag, Tooltip as AntTooltip } from "antd";
-import {
-    FileImageOutlined,
-    FileExcelOutlined,
-    ExpandOutlined,
-    CompressOutlined,
-    WarningOutlined,
-} from "@ant-design/icons";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Tag } from "@/components/ui/Tag";
+import { Alert } from "@/components/ui/Alert";
 import dynamic from "next/dynamic";
 import {
     chartColors,
@@ -18,65 +14,67 @@ import {
     lineChartStyles,
     chartAnimations,
 } from "@/lib/chart-config";
+import { ImageIcon, FileEdit, Download, Upload } from "lucide-react";
 
-const { Text } = Typography;
+// Spinner for loading states
+const Spinner = () => (
+    <div className="flex items-center justify-center h-full">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+    </div>
+);
 
 // Dynamic imports for Recharts components to reduce initial bundle size
 const ComposedChart = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
-  {
-    loading: () => (
-      <div className="flex items-center justify-center h-full">
-        <Spin size="large" />
-      </div>
-    ),
-    ssr: false,
-  }
+    () => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
+    {
+        loading: () => <Spinner />,
+        ssr: false,
+    }
 ) as React.ComponentType<any>;
 
 const Line = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Line })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.Line })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const XAxis = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.XAxis })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.XAxis })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const YAxis = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.YAxis })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.YAxis })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const CartesianGrid = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const Tooltip = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Tooltip })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.Tooltip })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const Legend = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Legend })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.Legend })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const ResponsiveContainer = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const Scatter = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Scatter })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.Scatter })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 const Cell = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Cell })),
-  { ssr: false }
+    () => import("recharts").then((mod) => ({ default: mod.Cell })),
+    { ssr: false }
 ) as React.ComponentType<any>;
 
 interface AnomalyPoint {
@@ -116,6 +114,13 @@ const severityFillColors = {
     MEDIUM: `${chartColors.warning}B3`,
     HIGH: `${chartColors.error}B3`,
     CRITICAL: `${chartColors.purple}B3`,
+};
+
+const severityTagColor = {
+    LOW: "success" as const,
+    MEDIUM: "warning" as const,
+    HIGH: "error" as const,
+    CRITICAL: "info" as const,
 };
 
 export const AnomalyChart: React.FC<AnomalyChartProps> = ({
@@ -171,7 +176,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
         const values = chartData.map(d => d.value);
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
         const std = Math.sqrt(
-            values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
+            values.reduce((sum, val) => sum + (val - mean) ** 2, 0) / values.length
         );
         const min = Math.min(...values);
         const max = Math.max(...values);
@@ -252,8 +257,12 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
             const blob = new Blob([csv], { type: 'text/csv' });
             const link = document.createElement('a');
             link.download = `anomaly-${timeseries.replace(/\./g, '-')}-${Date.now()}.csv`;
-            link.href = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
 
             onExport?.('csv');
         } catch (error) {
@@ -264,7 +273,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 
     // Custom tooltip
     const CustomTooltip = ({ active, payload }: any) => {
-        if (active && payload && payload.length) {
+        if (active && payload?.length) {
             const data = payload[0].payload;
             return (
                 <div
@@ -286,7 +295,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
                     {data.isAnomaly && (
                         <>
                             <p style={{ margin: "8px 0 4px 0", fontSize: 12, fontWeight: 600 }}>
-                                <Tag color={severityColors[data.anomalySeverity as keyof typeof severityColors]}>
+                                <Tag color={severityTagColor[data.anomalySeverity as keyof typeof severityTagColor] || "default"}>
                                     {data.anomalySeverity} SEVERITY
                                 </Tag>
                             </p>
@@ -303,233 +312,187 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 
     if (chartData.length === 0) {
         return (
-            <Card
-                variant="borderless"
-                style={{ borderRadius: 4 }}
-                styles={{ body: { padding: "40px", textAlign: "center" } }}
-            >
-                <Spin size="large" tip="Loading anomaly data..." />
+            <Card>
+                <div className="p-10 text-center">
+                    <Spinner />
+                    <p className="mt-3 text-sm text-gray-500">Loading anomaly data...</p>
+                </div>
             </Card>
         );
     }
 
     return (
         <div ref={chartRef}>
-            <Card
-                variant="borderless"
-                style={{ borderRadius: 4 }}
-                styles={{ body: { padding: expanded ? "24px" : "20px" } }}
-            >
-                {/* Header */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                    <Space direction="vertical" size={0}>
-                        <Text strong style={{ fontSize: 16 }}>
-                            Anomaly Detection: {timeseries}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                            Method: {method.toUpperCase()} • {chartData.length} data points • {anomalyStats.total} anomalies
-                        </Text>
-                    </Space>
+            <Card>
+                <div className={expanded ? "p-6" : "p-5"}>
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-5">
+                        <div className="flex flex-col gap-0">
+                            <span className="font-semibold text-base text-gray-900 dark:text-white">
+                                Anomaly Detection: {timeseries}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                Method: {method.toUpperCase()} &bull; {chartData.length} data points &bull; {anomalyStats.total} anomalies
+                            </span>
+                        </div>
 
-                    <Space>
-                        <AntTooltip title="Export as PNG">
+                        <div className="flex gap-2">
                             <Button
-                                icon={<FileImageOutlined />}
+                                variant="ghost"
+                                size="sm"
                                 onClick={exportAsPNG}
-                                loading={exporting}
-                                size="small"
+                                isLoading={exporting}
                                 aria-label="Export anomaly chart as PNG image"
                             >
+                                <ImageIcon className="size-3.5 mr-1" />
                                 PNG
                             </Button>
-                        </AntTooltip>
-                        <AntTooltip title="Export as CSV">
                             <Button
-                                icon={<FileExcelOutlined />}
+                                variant="ghost"
+                                size="sm"
                                 onClick={exportAsCSV}
-                                size="small"
                                 aria-label="Export anomaly data as CSV spreadsheet"
                             >
+                                <FileEdit className="size-3.5 mr-1" />
                                 CSV
                             </Button>
-                        </AntTooltip>
-                        <Button
-                            icon={expanded ? <CompressOutlined /> : <ExpandOutlined />}
-                            onClick={() => setExpanded(!expanded)}
-                            size="small"
-                            aria-label={expanded ? "Collapse anomaly chart to normal size" : "Expand anomaly chart to full size"}
-                        >
-                            {expanded ? "Collapse" : "Expand"}
-                        </Button>
-                    </Space>
-                </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setExpanded(!expanded)}
+                                aria-label={expanded ? "Collapse anomaly chart to normal size" : "Expand anomaly chart to full size"}
+                            >
+                                {expanded ? (
+                                    <Upload className="size-3.5 mr-1" />
+                                ) : (
+                                    <Download className="size-3.5 mr-1" />
+                                )}
+                                {expanded ? "Collapse" : "Expand"}
+                            </Button>
+                        </div>
+                    </div>
 
-                {/* Anomaly Summary Alert */}
-                {anomalyStats.total > 0 && (
-                    <Alert
-                        message={`${anomalyStats.total} Anomalies Detected`}
-                        description={
-                            <Space size={8} wrap>
+                    {/* Anomaly Summary Alert */}
+                    {anomalyStats.total > 0 && (
+                        <Alert variant="warning" title={`${anomalyStats.total} Anomalies Detected`} className="mb-5">
+                            <div className="flex flex-wrap gap-2">
                                 {anomalyStats.bySeverity.CRITICAL > 0 && (
-                                    <Tag color="purple">Critical: {anomalyStats.bySeverity.CRITICAL}</Tag>
+                                    <Tag color="info">Critical: {anomalyStats.bySeverity.CRITICAL}</Tag>
                                 )}
                                 {anomalyStats.bySeverity.HIGH > 0 && (
-                                    <Tag color="red">High: {anomalyStats.bySeverity.HIGH}</Tag>
+                                    <Tag color="error">High: {anomalyStats.bySeverity.HIGH}</Tag>
                                 )}
                                 {anomalyStats.bySeverity.MEDIUM > 0 && (
-                                    <Tag color="orange">Medium: {anomalyStats.bySeverity.MEDIUM}</Tag>
+                                    <Tag color="warning">Medium: {anomalyStats.bySeverity.MEDIUM}</Tag>
                                 )}
                                 {anomalyStats.bySeverity.LOW > 0 && (
-                                    <Tag color="green">Low: {anomalyStats.bySeverity.LOW}</Tag>
+                                    <Tag color="success">Low: {anomalyStats.bySeverity.LOW}</Tag>
                                 )}
-                            </Space>
-                        }
-                        type="warning"
-                        icon={<WarningOutlined />}
-                        style={{ marginBottom: 20 }}
-                        showIcon
-                    />
-                )}
+                            </div>
+                        </Alert>
+                    )}
 
-                {/* Statistics */}
-                {stats && (
-                    <div
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                            gap: 12,
-                            marginBottom: 20,
-                        }}
-                    >
-                        <div
-                            style={{
-                                padding: "12px",
-                                background: chartColors.purple,
-                                borderRadius: 4,
-                                textAlign: "center",
-                                opacity: 0.15,
-                            }}
-                        >
-                            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Mean</div>
-                            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
-                                {formatValue(stats.mean)}
+                    {/* Statistics */}
+                    {stats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                            <div className="p-3 rounded text-center" style={{ background: chartColors.purple, opacity: 0.15 }}>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Mean</div>
+                                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {formatValue(stats.mean)}
+                                </div>
+                            </div>
+                            <div className="p-3 rounded text-center" style={{ background: chartColors.success, opacity: 0.15 }}>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Std Dev</div>
+                                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {formatValue(stats.std)}
+                                </div>
+                            </div>
+                            <div className="p-3 rounded text-center" style={{ background: chartColors.warning, opacity: 0.15 }}>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Range</div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {formatValue(stats.min)} - {formatValue(stats.max)}
+                                </div>
+                            </div>
+                            <div className="p-3 rounded text-center" style={{ background: chartColors.error, opacity: 0.15 }}>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Anomalies</div>
+                                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {anomalyStats.total}
+                                </div>
                             </div>
                         </div>
-                        <div
-                            style={{
-                                padding: "12px",
-                                background: chartColors.success,
-                                borderRadius: 4,
-                                textAlign: "center",
-                                opacity: 0.15,
-                            }}
+                    )}
+
+                    {/* Chart */}
+                    <ResponsiveContainer width="100%" height={expanded ? height * 1.5 : height}>
+                        <ComposedChart
+                            data={chartData}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                            role="img"
+                            aria-label={`Anomaly detection chart for ${timeseries}. ${anomalies.length} anomalies detected using ${method} method.`}
                         >
-                            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Std Dev</div>
-                            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
-                                {formatValue(stats.std)}
-                            </div>
+                            <CartesianGrid
+                                strokeDasharray={chartGridStyles.strokeDasharray}
+                                stroke={chartGridStyles.stroke}
+                                strokeWidth={chartGridStyles.strokeWidth}
+                            />
+                            <XAxis
+                                dataKey="timestamp"
+                                tickFormatter={formatTimestamp}
+                                stroke={chartAxisStyles.stroke}
+                                tick={chartAxisStyles.tick}
+                            />
+                            <YAxis
+                                tickFormatter={formatValue}
+                                stroke={chartAxisStyles.stroke}
+                                tick={chartAxisStyles.tick}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend />
+
+                            {/* Normal data line */}
+                            <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke={lineChartStyles.stroke}
+                                strokeWidth={lineChartStyles.strokeWidth}
+                                dot={false}
+                                activeDot={lineChartStyles.activeDot}
+                                isAnimationActive={true}
+                                animationDuration={chartAnimations.duration}
+                                name="Time Series"
+                            />
+
+                            {/* Anomaly points as scatter */}
+                            <Scatter
+                                data={anomalyScatterData}
+                                fill={severityFillColors.HIGH}
+                                name="Anomalies"
+                            >
+                                {anomalyScatterData.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={severityFillColors[entry.anomalySeverity as keyof typeof severityFillColors]}
+                                    />
+                                ))}
+                            </Scatter>
+                        </ComposedChart>
+                    </ResponsiveContainer>
+
+                    {/* Legend info */}
+                    <div className="mt-4 flex justify-center gap-6 text-xs">
+                        <div className="flex items-center gap-2">
+                            <div style={{ width: 20, height: 3, background: lineChartStyles.stroke }} />
+                            <span style={{ color: chartColors.gray600 }}>Time Series Data</span>
                         </div>
-                        <div
-                            style={{
-                                padding: "12px",
-                                background: chartColors.warning,
-                                borderRadius: 4,
-                                textAlign: "center",
-                                opacity: 0.15,
-                            }}
-                        >
-                            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Range</div>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: chartColors.gray900 }}>
-                                {formatValue(stats.min)} - {formatValue(stats.max)}
-                            </div>
-                        </div>
-                        <div
-                            style={{
-                                padding: "12px",
-                                background: chartColors.error,
-                                borderRadius: 4,
-                                textAlign: "center",
-                                opacity: 0.15,
-                            }}
-                        >
-                            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Anomalies</div>
-                            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
-                                {anomalyStats.total}
-                            </div>
-                        </div>
+                        {Object.entries(severityColors).map(([severity, color]) => (
+                            anomalyStats.bySeverity[severity] > 0 && (
+                                <div key={severity} className="flex items-center gap-2">
+                                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: color }} />
+                                    <span style={{ color: chartColors.gray600 }}>{severity} Severity</span>
+                                </div>
+                            )
+                        )).filter(Boolean)}
                     </div>
-                )}
-
-                {/* Chart */}
-                <ResponsiveContainer width="100%" height={expanded ? height * 1.5 : height}>
-                    <ComposedChart
-                        data={chartData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                        role="img"
-                        aria-label={`Anomaly detection chart for ${timeseries}. ${anomalies.length} anomalies detected using ${method} method.`}
-                    >
-                        <CartesianGrid
-                            strokeDasharray={chartGridStyles.strokeDasharray}
-                            stroke={chartGridStyles.stroke}
-                            strokeWidth={chartGridStyles.strokeWidth}
-                        />
-                        <XAxis
-                            dataKey="timestamp"
-                            tickFormatter={formatTimestamp}
-                            stroke={chartAxisStyles.stroke}
-                            tick={chartAxisStyles.tick}
-                        />
-                        <YAxis
-                            tickFormatter={formatValue}
-                            stroke={chartAxisStyles.stroke}
-                            tick={chartAxisStyles.tick}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-
-                        {/* Normal data line */}
-                        <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke={lineChartStyles.stroke}
-                            strokeWidth={lineChartStyles.strokeWidth}
-                            dot={false}
-                            activeDot={lineChartStyles.activeDot}
-                            isAnimationActive={true}
-                            animationDuration={chartAnimations.duration}
-                            name="Time Series"
-                        />
-
-                        {/* Anomaly points as scatter */}
-                        <Scatter
-                            data={anomalyScatterData}
-                            fill={severityFillColors.HIGH}
-                            name="Anomalies"
-                        >
-                            {anomalyScatterData.map((entry, index) => (
-                                <Cell
-                                    key={`cell-${index}`}
-                                    fill={severityFillColors[entry.anomalySeverity as keyof typeof severityFillColors]}
-                                />
-                            ))}
-                        </Scatter>
-                    </ComposedChart>
-                </ResponsiveContainer>
-
-                {/* Legend info */}
-                <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 24, fontSize: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 20, height: 3, background: lineChartStyles.stroke }} />
-                        <span style={{ color: chartColors.gray600 }}>Time Series Data</span>
-                    </div>
-                    {Object.entries(severityColors).map(([severity, color]) => (
-                        anomalyStats.bySeverity[severity] > 0 && (
-                            <div key={severity} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <div style={{ width: 12, height: 12, borderRadius: "50%", background: color }} />
-                                <span style={{ color: chartColors.gray600 }}>{severity} Severity</span>
-                            </div>
-                        )
-                    )).filter(Boolean)}
                 </div>
             </Card>
         </div>

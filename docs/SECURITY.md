@@ -1,10 +1,10 @@
 ---
-title: "IoTDB Enhanced 安全配置指南"
-en_title: "IoTDB Enhanced Security Configuration Guide"
+title: "MT 安全配置指南"
+en_title: "MT Security Configuration Guide"
 version: "1.1.0"
 last_updated: "2026-03-04"
 status: "stable"
-maintainer: "IoTDB Enhanced Team"
+maintainer: "MT Team"
 reviewers:
   - "Security Engineer"
   - "DevOps Engineer"
@@ -23,11 +23,11 @@ related_docs:
 changes:
   - version: "1.1.0"
     date: "2026-03-04"
-    author: "IoTDB Enhanced Team"
+    author: "MT Team"
     changes: "更新 - 添加 Phase 1 & 2 安全改进（SQL注入防护、Token存储、CSRF保护、AI功能安全）"
   - version: "1.0.0"
     date: "2026-03-03"
-    author: "IoTDB Enhanced Team"
+    author: "MT Team"
     changes: "初始版本 - 整合安全配置、密钥管理和安全加固指南"
 next_review: "2026-09-04"
 approval:
@@ -36,9 +36,9 @@ approval:
   approved_date: "2026-03-04"
 ---
 
-# IoTDB Enhanced 安全配置指南
+# MT 安全配置指南
 
-本文档提供了 IoTDB Enhanced 平台的安全配置完整指南，包括密钥管理、基础安全配置、高级安全加固、安全检查清单和应急响应流程。
+本文档提供了 MT 平台的安全配置完整指南，包括密钥管理、基础安全配置、高级安全加固、安全检查清单和应急响应流程。
 
 ---
 
@@ -81,7 +81,7 @@ approval:
 
 ### 安全威胁模型
 
-IoTDB Enhanced 平台面临的主要安全威胁包括：
+MT 平台面临的主要安全威胁包括：
 
 | 威胁类型 | 描述 | 风险等级 | 缓解措施 |
 |---------|------|---------|---------|
@@ -157,7 +157,7 @@ echo "DATABASE_PASSWORD=$DATABASE_PASSWORD"
 
 ```bash
 # 编辑后端环境变量
-cd /root/iotdb-enhanced/backend
+cd /root/backend
 cp .env.example .env
 
 # 将生成的密钥添加到 .env 文件
@@ -182,8 +182,8 @@ cd /opt/iotdb-ainode/apache-iotdb-2.0.5-all-bin
 
 ```bash
 # 确保 .env 文件权限安全
-chmod 600 /root/iotdb-enhanced/backend/.env
-chmod 600 /root/iotdb-enhanced/frontend/.env.local
+chmod 600 /root/backend/.env
+chmod 600 /root/frontend/.env.local
 ```
 
 ### 密钥轮换策略
@@ -650,8 +650,8 @@ sudo tail -f /var/log/syslog
 
 | 文件 | 路径 | 用途 |
 |------|------|------|
-| 环境变量 | `/root/iotdb-enhanced/backend/.env` | 后端配置 |
-| 环境变量 | `/root/iotdb-enhanced/frontend/.env.local` | 前端配置 |
+| 环境变量 | `/root/backend/.env` | 后端配置 |
+| 环境变量 | `/root/frontend/.env.local` | 前端配置 |
 | Nginx 配置 | `/etc/nginx/nginx.conf` | Web 服务器配置 |
 | 防火墙规则 | `/etc/iptables/rules.v4` | iptables 规则 |
 | 日志目录 | `/var/log/` | 系统日志 |

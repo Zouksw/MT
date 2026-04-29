@@ -11,7 +11,7 @@
  */
 
 import { logger } from './logger';
-import { initSentry, captureMessage, captureException } from './sentry';
+import { captureMessage, } from './sentry';
 
 /**
  * Performance metric data point
@@ -315,12 +315,12 @@ export class PerformanceMonitor {
    * Global cleanup to prevent memory leaks
    */
   private performGlobalCleanup(): void {
-    const now = Date.now();
+    const _now = Date.now();
     let totalMetrics = 0;
     let totalEvicted = 0;
 
     for (const [name, metrics] of this.metrics.entries()) {
-      const beforeLength = metrics.length;
+      const _beforeLength = metrics.length;
       
       // Remove old metrics
       this.cleanupMetrics(name);

@@ -121,7 +121,7 @@ class ValidationRules {
   port: ValidationRule = {
     validate: (value: string) => {
       const num = Number(value);
-      if (isNaN(num) || num < 1 || num > 65535) return false;
+      if (Number.isNaN(num) || num < 1 || num > 65535) return false;
       return Number.isInteger(num);
     },
     message: 'Port must be a number between 1 and 65535',
@@ -151,7 +151,7 @@ class ValidationRules {
     return {
       validate: (value: any) => {
         const num = Number(value);
-        if (isNaN(num)) return false;
+        if (Number.isNaN(num)) return false;
         return num >= min && num <= max;
       },
       message: `${fieldName} must be between ${min} and ${max}`,

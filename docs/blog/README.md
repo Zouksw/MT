@@ -1,6 +1,6 @@
-# IoTDB Enhanced Blog
+# TradeMind AI Blog
 
-Welcome to the IoTDB Enhanced blog! This blog is built with [Jekyll](https://jekyllrb.com/) and hosted on [GitHub Pages](https://pages.github.com/).
+Welcome to the TradeMind AI blog! This blog is built with [Jekyll](https://jekyllrb.com/) and hosted on [GitHub Pages](https://pages.github.com/).
 
 ## 🚀 Quick Start
 
@@ -130,7 +130,7 @@ git push origin main
 3. GitHub Actions will build and deploy automatically
 4. Your blog will be available at:
 ```
-https://your-username.github.io/iotdb-enhanced/blog/
+https://your-username.github.io/trademind-ai/blog/
 ```
 
 ### Manual Deployment
@@ -164,9 +164,9 @@ google_analytics: UA-XXXXXXXXX-X
 
 The blog is part of the main project documentation:
 
-- **Main Site**: https://your-username.github.io/iotdb-enhanced/
-- **Blog**: https://your-username.github.io/iotdb-enhanced/blog/
-- **Docs**: https://your-username.github.io/iotdb-enhanced/docs/
+- **Main Site**: https://your-username.github.io/trademind-ai/
+- **Blog**: https://your-username.github.io/trademind-ai/blog/
+- **Docs**: https://your-username.github.io/trademind-ai/docs/
 
 ## 📝 Content Guidelines
 
@@ -207,9 +207,9 @@ We welcome blog post contributions! Please:
 ## 📧 Contact
 
 Questions about the blog? Contact us at:
-- **Email**: blog@iotdb-enhanced.com
-- **GitHub Discussions**: https://github.com/Zouksw/iotdb-enhanced/discussions
-- **Issues**: https://github.com/Zouksw/iotdb-enhanced/issues
+- **Email**: blog@trademind-ai.com
+- **GitHub Discussions**: https://github.com/Zouksw/trademind-ai/discussions
+- **Issues**: https://github.com/Zouksw/trademind-ai/issues
 
 ---
 

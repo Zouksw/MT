@@ -4,7 +4,7 @@
  */
 
 import rateLimit from 'express-rate-limit';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 /**
  * Generic rate limiter configuration
@@ -22,7 +22,8 @@ export const createRateLimiter = (options: {
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     skipSuccessfulRequests: options.skipSuccessfulRequests || false,
-    handler: (req: Request, res: Response) => {
+    skip: (_req: Request) => process.env.NODE_ENV === 'development',
+    handler: (_req: Request, res: Response) => {
       res.status(429).json({
         error: 'Too many requests',
         message: options.message || 'Too many requests from this IP, please try again later.',

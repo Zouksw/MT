@@ -1,23 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Typography,
-  Row,
-  Col,
-  Card,
-  Select,
-  Spin,
-  ConfigProvider,
-  Space,
-  Alert,
-} from "antd";
-import { HeatMapOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
+import { Alert } from "@/components/ui/Alert";
+import { Select } from "@/components/ui/Select";
 import CorrelationMatrixChart from "@/components/trading/CorrelationMatrix";
-
-const { Text } = Typography;
 
 export default function AnalysisPage() {
   const [matrixData, setMatrixData] = useState<{
@@ -33,10 +23,8 @@ export default function AnalysisPage() {
       setLoading(true);
       try {
         const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
 
         const res = await fetch(
           `/api/signals/correlation/matrix?window=${windowDays}`,
@@ -50,38 +38,23 @@ export default function AnalysisPage() {
             return;
           }
         }
-        // Demo fallback
-        const commodities = [
-          "brisket-80-90",
-          "8-piece-set",
-          "sirloin-short-rib",
-          "sirloin-eye",
-        ];
+        const commodities = ["brisket-80-90", "8-piece-set", "sirloin-short-rib", "sirloin-eye"];
         const n = commodities.length;
         const matrix = Array.from({ length: n }, (_, i) =>
           Array.from({ length: n }, (_, j) => {
             if (i === j) return 1;
-            const v = Math.random() * 2 - 1;
-            return Math.round(v * 100) / 100;
+            return Math.round((Math.random() * 2 - 1) * 100) / 100;
           })
         );
-        // Make symmetric
         for (let i = 0; i < n; i++)
           for (let j = i + 1; j < n; j++) matrix[j][i] = matrix[i][j];
         setMatrixData({ commodities, matrix });
         setIsDemoData(true);
       } catch {
-        const commodities = [
-          "brisket-80-90",
-          "8-piece-set",
-          "sirloin-short-rib",
-          "sirloin-eye",
-        ];
+        const commodities = ["brisket-80-90", "8-piece-set", "sirloin-short-rib", "sirloin-eye"];
         const n = commodities.length;
         const matrix = Array.from({ length: n }, (_, i) =>
-          Array.from({ length: n }, (_, j) =>
-            i === j ? 1 : Math.round((Math.random() * 2 - 1) * 100) / 100
-          )
+          Array.from({ length: n }, (_, j) => i === j ? 1 : Math.round((Math.random() * 2 - 1) * 100) / 100)
         );
         for (let i = 0; i < n; i++)
           for (let j = i + 1; j < n; j++) matrix[j][i] = matrix[i][j];
@@ -95,92 +68,70 @@ export default function AnalysisPage() {
   }, [windowDays]);
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: "#F59E0B" } }}>
-      <PageContainer>
-        <PageHeader
-          title="Correlation Analysis"
-          description="Pearson correlation between commodity prices. 30-day rolling window, UTC timezone alignment."
-        />
+    <PageContainer>
+      <PageHeader
+        title="Correlation Analysis"
+        description="Pearson correlation between commodity prices. 30-day rolling window, UTC timezone alignment."
+      />
 
-        {isDemoData && (
-          <Alert
-            type="info"
-            message="Showing demo correlation data. Connect to live data for real commodity analysis."
-            showIcon
-            style={{ marginBottom: 16 }}
+      {isDemoData && (
+        <Alert variant="info" className="mb-4">Showing demo correlation data. Connect to live data for real commodity analysis.</Alert>
+      )}
+
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Rolling Window:</span>
+          <Select
+            value={String(windowDays)}
+            onChange={(v) => setWindowDays(Number(v))}
+            options={[
+              { label: "7 days", value: "7" },
+              { label: "14 days", value: "14" },
+              { label: "30 days", value: "30" },
+              { label: "90 days", value: "90" },
+            ]}
           />
-        )}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {matrixData?.commodities?.length || 0} commodities
+        </span>
+      </div>
 
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-          <Col>
-            <Space>
-              <Text type="secondary">Rolling Window:</Text>
-              <Select
-                value={windowDays}
-                onChange={setWindowDays}
-                style={{ width: 150 }}
-                options={[
-                  { label: "7 days", value: 7 },
-                  { label: "14 days", value: 14 },
-                  { label: "30 days", value: 30 },
-                  { label: "90 days", value: 90 },
-                ]}
-              />
-            </Space>
-          </Col>
-          <Col>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {matrixData?.commodities?.length || 0} commodities
-            </Text>
-          </Col>
-        </Row>
-
-        <Card
-          title={
-            <Space>
-              <HeatMapOutlined />
-              <span>Price Correlation Matrix</span>
-            </Space>
-          }
-          loading={loading}
-        >
-          {matrixData ? (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <LayoutGrid className="size-5 text-primary" />
+            <CardTitle>Price Correlation Matrix</CardTitle>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          )}
+          {matrixData && !loading && (
             <CorrelationMatrixChart
               commodities={matrixData.commodities}
               matrix={matrixData.matrix}
               loading={loading}
             />
-          ) : (
-            <div style={{ textAlign: "center", padding: 40 }}>
-              <Spin />
-            </div>
           )}
-        </Card>
+        </CardBody>
+      </Card>
 
-        <Card
-          style={{ marginTop: 16 }}
-          size="small"
-          title={<Text strong>Reading the Matrix</Text>}
-        >
-          <Row gutter={24}>
-            <Col span={8}>
-              <Text style={{ fontSize: 12 }}>
-                <strong>+1.0</strong> — Perfect positive correlation (prices move together)
-              </Text>
-            </Col>
-            <Col span={8}>
-              <Text style={{ fontSize: 12 }}>
-                <strong>0.0</strong> — No linear relationship
-              </Text>
-            </Col>
-            <Col span={8}>
-              <Text style={{ fontSize: 12 }}>
-                <strong>−1.0</strong> — Perfect negative correlation (prices move opposite)
-              </Text>
-            </Col>
-          </Row>
-        </Card>
-      </PageContainer>
-    </ConfigProvider>
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Reading the Matrix</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <p className="text-sm"><strong>+1.0</strong> — Perfect positive correlation (prices move together)</p>
+            <p className="text-sm"><strong>0.0</strong> — No linear relationship</p>
+            <p className="text-sm"><strong>&minus;1.0</strong> — Perfect negative correlation (prices move opposite)</p>
+          </div>
+        </CardBody>
+      </Card>
+    </PageContainer>
   );
 }

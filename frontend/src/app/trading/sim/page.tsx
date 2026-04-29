@@ -1,30 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  ConfigProvider,
-  Card,
-  Button,
-  Statistic,
-  Row,
-  Col,
-  Table,
-  Tag,
-  Modal,
-  Form,
-  InputNumber,
-  Select,
-  Space,
-  Spin,
-  Empty,
-  message,
-} from "antd";
-import {
-  PlusOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  ThunderboltOutlined,
-} from "@ant-design/icons";
+import type React from "react";
+import { useState } from "react";
+import { Plus, FileBarChart, Zap } from "lucide-react";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Table } from "@/components/ui/Table";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Modal } from "@/components/ui/Modal";
+import { Tag } from "@/components/ui/Tag";
+import { useToast } from "@/components/ui/Toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useSimAccounts, useSimAccount } from "@/lib/simulation";
@@ -33,228 +19,264 @@ export default function SimulationPage() {
   const { accounts, loading, mutate } = useSimAccounts();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const toast = useToast();
 
-  const handleCreate = async (values: { name: string; initialBalance: number }) => {
+  const handleCreate = async (name: string) => {
     const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token) headers.Authorization = `Bearer ${token}`;
 
     const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const res = await fetch(`${base}/api/sim/accounts`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ ...values, initialBalance: 0 }),
+      body: JSON.stringify({ name, initialBalance: 0 }),
     });
 
     if (res.ok) {
-      message.success("Account created");
+      toast.showSuccess("Account created");
       setCreateOpen(false);
       mutate();
     } else {
-      message.error("Failed to create account");
+      toast.showError("Failed to create account");
     }
   };
 
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: "#F59E0B",
-          colorPrimaryBg: "#FEF3C7",
-          colorPrimaryBgHover: "#FDE68A",
-        },
-      }}
-    >
-      <PageContainer>
-        <PageHeader
-          title="Prediction Backtest"
-          description="Verify AI prediction accuracy against historical price movements"
-          actions={
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateOpen(true)}
-            >
-              New Backtest
-            </Button>
-          }
-        />
+    <PageContainer>
+      <PageHeader
+        title="Prediction Backtest"
+        description="Verify AI prediction accuracy against historical price movements"
+        actions={
+          <Button
+            onClick={() => setCreateOpen(true)}
+            icon={
+              <Plus className="size-4" />
+            }
+          >
+            New Backtest
+          </Button>
+        }
+      />
 
-        {loading ? (
-          <Spin />
-        ) : accounts.length === 0 ? (
-          <Card>
-            <Empty description="No backtest accounts yet. Create one to start verifying predictions!">
-              <Button type="primary" onClick={() => setCreateOpen(true)}>
-                Create Backtest
-              </Button>
-            </Empty>
-          </Card>
-        ) : (
-          <Row gutter={[16, 16]}>
-            {/* Account cards */}
-            <Col xs={24} lg={8}>
-              <div className="space-y-3">
-                {accounts.map((a) => (
-                  <Card
-                    key={a.id}
-                    hoverable
-                    className={selectedId === a.id ? "ring-2 ring-amber-400" : ""}
-                    onClick={() => setSelectedId(a.id)}
-                    size="small"
-                  >
-                    <div className="font-medium mb-2">{a.name}</div>
-                    <Row gutter={8}>
-                      <Col span={12}>
-                        <Statistic
-                          title="Predictions"
-                          value={a.tradeCount}
-                          valueStyle={{ fontSize: 14 }}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title="Score"
-                          value={a.pnl}
-                          precision={2}
-                          valueStyle={{
-                            fontSize: 14,
-                            color: a.pnl >= 0 ? "#22c55e" : "#ef4444",
-                          }}
-                          prefix={a.pnl >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                        />
-                      </Col>
-                    </Row>
-                    <div className="mt-2 text-xs text-gray-400">
-                      {a.tradeCount} predictions · {a.orderCount} entries
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : accounts.length === 0 ? (
+        <Card>
+          <CardBody>
+            <div className="text-center py-8">
+              <FileBarChart className="size-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 mb-4">No backtest accounts yet. Create one to start verifying predictions!</p>
+              <Button onClick={() => setCreateOpen(true)}>Create Backtest</Button>
+            </div>
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Account cards */}
+          <div className="space-y-3">
+            {accounts.map((a) => (
+              <Card
+                key={a.id}
+                hover
+                className={selectedId === a.id ? "ring-2 ring-primary" : ""}
+                onClick={() => setSelectedId(a.id)}
+              >
+                <CardBody>
+                  <div className="font-medium mb-2">{a.name}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-gray-500">Predictions</p>
+                      <p className="text-sm font-mono" style={{ fontSize: 14 }}>{a.tradeCount}</p>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            </Col>
+                    <div>
+                      <p className="text-xs text-gray-500">Score</p>
+                      <p
+                        className="text-sm font-mono"
+                        style={{ fontSize: 14, color: a.pnl >= 0 ? "#22c55e" : "#ef4444" }}
+                      >
+                        {a.pnl >= 0 ? "↑" : "↓"}{a.pnl.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-400">
+                    {a.tradeCount} predictions · {a.orderCount} entries
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
 
-            {/* Account detail */}
-            <Col xs={24} lg={16}>
-              {selectedId ? (
-                <AccountDetail accountId={selectedId} />
-              ) : (
-                <Card>
-                  <Empty description="Select an account" />
-                </Card>
-              )}
-            </Col>
-          </Row>
-        )}
+          {/* Account detail */}
+          <div className="lg:col-span-2">
+            {selectedId ? (
+              <AccountDetail accountId={selectedId} />
+            ) : (
+              <Card>
+                <CardBody>
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Select an account</p>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
 
-        <Modal
-          title="Create Backtest Account"
-          open={createOpen}
-          onCancel={() => setCreateOpen(false)}
-          footer={null}
-        >
-          <Form onFinish={handleCreate} layout="vertical">
-            <Form.Item name="name" label="Account Name" rules={[{ required: true }]}>
-              <input className="w-full border rounded px-3 py-2" placeholder="My Backtest" />
-            </Form.Item>
-            <Form.Item name="initialBalance" initialValue={0} hidden><input /></Form.Item>
-            <Button type="primary" htmlType="submit" block>
-              Create
-            </Button>
-          </Form>
-        </Modal>
-      </PageContainer>
-    </ConfigProvider>
+      <CreateAccountModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={handleCreate}
+      />
+    </PageContainer>
   );
+}
+
+function CreateAccountModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (name: string) => void }) {
+  const [name, setName] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      onSubmit(name.trim());
+      setName("");
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Create Backtest Account">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Account Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="My Backtest"
+          fullWidth
+          required
+        />
+        <Button type="submit" fullWidth>
+          Create
+        </Button>
+      </form>
+    </Modal>
+  );
+}
+
+interface TradeRecord {
+  id: string;
+  commodity: { name: string };
+  side: string;
+  quantity: number;
+  entryPrice: number;
+  realizedPnl: number | null;
 }
 
 function AccountDetail({ accountId }: { accountId: string }) {
   const { account, loading } = useSimAccount(accountId);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const _toast = useToast();
 
-  if (loading || !account) return <Spin />;
+  if (loading || !account) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const tradeColumns = [
     {
-      title: "Commodity",
-      dataIndex: ["commodity", "name"],
       key: "commodity",
+      title: "Commodity",
+      render: (_v: unknown, record: TradeRecord) => record.commodity.name,
     },
     {
-      title: "Side",
-      dataIndex: "side",
       key: "side",
-      render: (side: string) => (
-        <Tag color={side === "BUY" ? "green" : "red"}>{side}</Tag>
+      title: "Side",
+      render: (_v: unknown, record: TradeRecord) => (
+        <Tag color={record.side === "BUY" ? "success" : "error"}>{record.side}</Tag>
       ),
     },
     {
-      title: "Qty",
-      dataIndex: "quantity",
       key: "quantity",
-      render: (v: number) => v.toFixed(2),
+      title: "Qty",
+      render: (_v: unknown, record: TradeRecord) => record.quantity.toFixed(2),
     },
     {
-      title: "Entry",
-      dataIndex: "entryPrice",
       key: "entry",
-      render: (v: number) => v.toFixed(2),
+      title: "Entry",
+      render: (_v: unknown, record: TradeRecord) => record.entryPrice.toFixed(2),
     },
     {
-      title: "Result",
-      dataIndex: "realizedPnl",
       key: "pnl",
-      render: (v: number | null) =>
-        v != null ? (
-          <Tag color={v >= 0 ? "green" : "red"}>
-            {v >= 0 ? "Correct" : "Incorrect"}
+      title: "Result",
+      render: (_v: unknown, record: TradeRecord) =>
+        record.realizedPnl != null ? (
+          <Tag color={record.realizedPnl >= 0 ? "success" : "error"}>
+            {record.realizedPnl >= 0 ? "Correct" : "Incorrect"}
           </Tag>
         ) : (
-          <Tag color="blue">Pending</Tag>
+          <Tag color="info">Pending</Tag>
         ),
     },
   ];
 
   return (
     <div className="space-y-4">
-      <Card size="small">
-        <Row gutter={16}>
-          <Col span={6}>
-            <Statistic title="Predictions" value={account.openTradeCount + account.pendingOrderCount} />
-          </Col>
-          <Col span={6}>
-            <Statistic
-              title="Score"
-              value={account.totalPnl}
-              precision={2}
-              valueStyle={{ color: account.totalPnl >= 0 ? "#22c55e" : "#ef4444" }}
-            />
-          </Col>
-          <Col span={6}>
-            <Statistic title="Open Predictions" value={account.openTradeCount} />
-          </Col>
-          <Col span={6}>
-            <Space direction="vertical" align="end">
-              <Button icon={<ThunderboltOutlined />} onClick={() => setOrderModalOpen(true)}>
-                Enter Prediction
+      <Card>
+        <CardBody>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-gray-500">Predictions</p>
+              <p className="text-lg font-semibold font-mono">{account.openTradeCount + account.pendingOrderCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Score</p>
+              <p
+                className="text-lg font-semibold font-mono"
+                style={{ color: account.totalPnl >= 0 ? "#22c55e" : "#ef4444" }}
+              >
+                {account.totalPnl.toFixed(2)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Open Predictions</p>
+              <p className="text-lg font-semibold font-mono">{account.openTradeCount}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <Button size="sm" onClick={() => setOrderModalOpen(true)}>
+                <span className="flex items-center gap-1">
+                  <Zap className="size-3.5" />
+                  Enter Prediction
+                </span>
               </Button>
               <span className="text-xs text-gray-400">{account.pendingOrderCount} pending</span>
-            </Space>
-          </Col>
-        </Row>
+            </div>
+          </div>
+        </CardBody>
       </Card>
 
-      <Card title="Recent Predictions" size="small">
-        {account.recentTrades.length === 0 ? (
-          <Empty description="No predictions yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-        ) : (
-          <Table
-            dataSource={account.recentTrades}
-            columns={tradeColumns}
-            rowKey="id"
-            size="small"
-            pagination={false}
-          />
-        )}
+      <Card>
+        <Card>
+          <CardBody>
+            <h3 className="font-semibold mb-3">Recent Predictions</h3>
+            {account.recentTrades.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-gray-500 text-sm">No predictions yet</p>
+              </div>
+            ) : (
+              <Table
+                dataSource={account.recentTrades}
+                columns={tradeColumns}
+                rowKey="id"
+                emptyText="No predictions yet"
+              />
+            )}
+          </CardBody>
+        </Card>
       </Card>
 
       <OrderModal
@@ -275,57 +297,72 @@ function OrderModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const [form] = Form.useForm();
+  const [commodityId, setCommodityId] = useState("");
+  const [side, setSide] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
 
-  const handleSubmit = async (values: { commodityId: string; side: string; type: string; quantity: number }) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commodityId || !side || !quantity) return;
+
     setSubmitting(true);
     try {
       const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (token) headers.Authorization = `Bearer ${token}`;
 
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(`${base}/api/sim/accounts/${accountId}/orders`, {
         method: "POST",
         headers,
-        body: JSON.stringify(values),
+        body: JSON.stringify({ commodityId, side, type: "MARKET", quantity: parseFloat(quantity) }),
       });
 
       if (res.ok) {
-        message.success("Prediction entered");
+        toast.showSuccess("Prediction entered");
         onClose();
-        form.resetFields();
+        setCommodityId("");
+        setSide("");
+        setQuantity("");
       } else {
         const data = await res.json();
-        message.error(data.error?.message || "Failed to enter prediction");
+        toast.showError(data.error?.message || "Failed to enter prediction");
       }
     } catch {
-      message.error("Network error");
+      toast.showError("Network error");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal title="New Prediction" open={open} onCancel={onClose} footer={null}>
-      <Form form={form} onFinish={handleSubmit} layout="vertical">
-        <Form.Item name="commodityId" label="Commodity" rules={[{ required: true }]}>
-          <Select placeholder="Select commodity" />
-        </Form.Item>
-        <Form.Item name="side" label="Direction" rules={[{ required: true }]}>
-          <Select>
-            <Select.Option value="BUY">Predict Up</Select.Option>
-            <Select.Option value="SELL">Predict Down</Select.Option>
-          </Select>
-        </Form.Item>
-        <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>
-          <InputNumber min={0.01} className="w-full" />
-        </Form.Item>
-        <Button type="primary" htmlType="submit" loading={submitting} block>
+    <Modal open={open} onClose={onClose} title="New Prediction">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input label="Commodity" value={commodityId} onChange={(e) => setCommodityId(e.target.value)} fullWidth required />
+        <Select
+          label="Direction"
+          value={side}
+          onChange={setSide}
+          options={[
+            { value: "BUY", label: "Predict Up" },
+            { value: "SELL", label: "Predict Down" },
+          ]}
+          fullWidth
+        />
+        <Input
+          label="Quantity"
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          fullWidth
+          required
+        />
+        <Button type="submit" isLoading={submitting} fullWidth>
           Enter Prediction
         </Button>
-      </Form>
+      </form>
     </Modal>
   );
 }

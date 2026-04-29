@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { success } from '@/lib/response';
 import { prisma } from '@/lib';

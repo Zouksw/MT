@@ -27,18 +27,13 @@ jest.mock('@/lib/tokenManager', () => ({
   },
 }));
 
-jest.mock('@/lib/csrf', () => ({
-  csrfProtection: {
-    getHeaders: jest.fn(() => ({})),
-  },
-}));
+// csrf module no longer exists — authFetch does not add CSRF headers
 
 // Mock fetch globally
 global.fetch = jest.fn();
 
 describe('auth utilities', () => {
   const { tokenManager } = require('@/lib/tokenManager');
-  const { csrfProtection } = require('@/lib/csrf');
 
   const localStorageMock = (() => {
     let store: Record<string, string> = {};
@@ -188,21 +183,19 @@ describe('auth utilities', () => {
       );
     });
 
-    it('should include CSRF headers for non-GET requests', async () => {
+    it('should include content-type header for POST requests', async () => {
       tokenManager.getToken.mockReturnValue('test-token');
-      csrfProtection.getHeaders.mockReturnValue({ 'x-csrf-token': 'test-csrf' });
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
       });
 
       await authFetch('/api/test', { method: 'POST' });
 
-      expect(csrfProtection.getHeaders).toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledWith(
         'http://localhost:8000/api/test',
         expect.objectContaining({
           headers: expect.objectContaining({
-            'x-csrf-token': 'test-csrf',
+            'Content-Type': 'application/json',
           }),
         })
       );

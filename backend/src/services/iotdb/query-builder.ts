@@ -95,7 +95,7 @@ export function buildBatchInsertSQL(records: IoTDBInsertRecord[]): string {
     return `INSERT INTO ${r.device}(${measurements}, timestamp) VALUES (${r.timestamp}, ${values})`;
   });
 
-  return sqlStatements.join('; ') + ';';
+  return `${sqlStatements.join('; ')};`;
 }
 
 /**
@@ -114,15 +114,15 @@ export function buildSelectQuery(params: {
   const whereClause: string[] = [];
 
   if (params.startTime !== undefined) {
-    const startTime = parseInt(String(params.startTime));
-    if (isNaN(startTime)) {
+    const startTime = parseInt(String(params.startTime), 10);
+    if (Number.isNaN(startTime)) {
       throw new Error('Invalid startTime: must be a number');
     }
     whereClause.push(`time >= ${startTime}`);
   }
   if (params.endTime !== undefined) {
-    const endTime = parseInt(String(params.endTime));
-    if (isNaN(endTime)) {
+    const endTime = parseInt(String(params.endTime), 10);
+    if (Number.isNaN(endTime)) {
       throw new Error('Invalid endTime: must be a number');
     }
     whereClause.push(`time <= ${endTime}`);

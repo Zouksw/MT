@@ -1,16 +1,8 @@
 "use client";
 
-import React from "react";
-import { Card, Typography, Row, Col } from "antd";
-import {
-  DatabaseOutlined,
-  ThunderboltOutlined,
-  EyeOutlined,
-  ExperimentOutlined,
-} from "@ant-design/icons";
+import type React from "react";
 import { useRouter } from "next/navigation";
-
-const { Title } = Typography;
+import { Database, Zap, Eye, FlaskConical } from "lucide-react";
 
 interface QuickAction {
   key: string;
@@ -22,84 +14,43 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
-  {
-    key: "create-timeseries",
-    title: "New Time Series",
-    description: "Create a new time series",
-    icon: <DatabaseOutlined />,
-    path: "/timeseries",
-    primary: true,
-  },
-  {
-    key: "create-forecast",
-    title: "New Forecast",
-    description: "Generate AI predictions",
-    icon: <ThunderboltOutlined />,
-    path: "/forecasts/create",
-  },
-  {
-    key: "view-alerts",
-    title: "View Alerts",
-    description: "Check active alerts",
-    icon: <EyeOutlined />,
-    path: "/alerts",
-  },
-  {
-    key: "detect-anomalies",
-    title: "Detect Anomalies",
-    description: "Run anomaly detection",
-    icon: <ExperimentOutlined />,
-    path: "/ai/anomalies",
-  },
+  { key: "create-timeseries", title: "New Time Series", description: "Create a new time series", icon: <Database className="size-5" />, path: "/timeseries", primary: true },
+  { key: "create-forecast", title: "New Forecast", description: "Generate AI predictions", icon: <Zap className="size-5" />, path: "/forecasts/create" },
+  { key: "view-alerts", title: "View Alerts", description: "Check active alerts", icon: <Eye className="size-5" />, path: "/alerts" },
+  { key: "detect-anomalies", title: "Detect Anomalies", description: "Run anomaly detection", icon: <FlaskConical className="size-5" />, path: "/ai/anomalies" },
 ];
 
 export const QuickActions: React.FC = () => {
   const router = useRouter();
 
   return (
-    <Card
-      variant="borderless"
-      styles={{ body: { padding: "16px" } }}
-    >
-      <Title level={5} className="!text-base !mb-4">
-        Quick Actions
-      </Title>
-      <Row gutter={[12, 12]}>
+    <div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-4">
+      <h5 className="text-base font-semibold mb-4">Quick Actions</h5>
+      <div className="grid grid-cols-2 gap-3">
         {quickActions.map((action, i) => (
-          <Col xs={12} sm={12} md={12} lg={12} key={action.key}>
-            <button
-              onClick={() => router.push(action.path)}
-              className={`
-                group relative w-full flex items-center gap-3 p-4 rounded-lg
-                text-left transition-shadow duration-200
-                stagger-slide-up
-                ${action.primary
-                  ? "bg-primary text-white hover:bg-primary-hover shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,rgba(0,0,0,0.04)_0px_8px_8px_-8px]"
-                  : "bg-white dark:bg-gray-800/80 shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]"
-                }
-              `}
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110 ${
-                action.primary
-                  ? "bg-white/20"
-                  : "bg-gray-50 dark:bg-gray-700 text-primary"
-              }`}>
-                <span className="text-lg">{action.icon}</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={`font-semibold text-sm leading-tight ${!action.primary ? "text-gray-900 dark:text-white" : ""}`}>
-                  {action.title}
-                </div>
-                <div className={`text-xs mt-0.5 ${action.primary ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
-                  {action.description}
-                </div>
-              </div>
-            </button>
-          </Col>
+          <button
+            key={action.key}
+            onClick={() => router.push(action.path)}
+            className={`group relative w-full flex items-center gap-3 p-4 rounded-lg text-left transition-shadow duration-200 stagger-slide-up ${
+              action.primary
+                ? "bg-primary text-white hover:bg-primary-hover border border-primary"
+                : "bg-card/80 border border hover:border-primary"
+            }`}
+            style={{ animationDelay: `${i * 50}ms` }}
+          >
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110 ${
+              action.primary ? "bg-white/20" : "bg-gray-50 dark:bg-gray-700 text-amber-600"
+            }`}>
+              {action.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className={`font-semibold text-sm leading-tight ${!action.primary ? "text-gray-900 dark:text-white" : ""}`}>{action.title}</div>
+              <div className={`text-xs mt-0.5 ${action.primary ? "text-white/80" : "text-muted-foreground"}`}>{action.description}</div>
+            </div>
+          </button>
         ))}
-      </Row>
-    </Card>
+      </div>
+    </div>
   );
 };
 

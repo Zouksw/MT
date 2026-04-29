@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from '@/config/swagger';
 
@@ -9,7 +9,7 @@ router.use('/', swaggerUi.serve);
 router.get('/', swaggerUi.setup(swaggerSpec));
 
 // Serve raw JSON spec at GET /api/docs.json
-router.get('/json', (req: Request, res: Response) => {
+router.get('/json', (_req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });

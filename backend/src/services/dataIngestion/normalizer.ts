@@ -1,4 +1,4 @@
-import { logger } from '@/lib';
+
 
 export interface FieldMapping {
   date: string;
@@ -87,7 +87,7 @@ function parseDate(value: unknown): Date {
   if (typeof value === 'number') return new Date(value);
   if (typeof value === 'string') {
     const d = new Date(value);
-    if (!isNaN(d.getTime())) return d;
+    if (!Number.isNaN(d.getTime())) return d;
     const parts = value.match(/^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})/);
     if (parts) return new Date(+parts[1], +parts[2] - 1, +parts[3]);
   }
@@ -100,7 +100,7 @@ function parseNumber(value: unknown): number | undefined {
   if (typeof value === 'string') {
     const cleaned = value.replace(/[,¥$€]/g, '');
     const n = Number(cleaned);
-    return isNaN(n) ? undefined : n;
+    return Number.isNaN(n) ? undefined : n;
   }
   return undefined;
 }

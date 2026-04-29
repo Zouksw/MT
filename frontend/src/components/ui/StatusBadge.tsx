@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react";
-import { Tag, theme } from "antd";
-import type { TagProps } from "antd";
+import type React from "react";
 
 export type StatusType =
   | "active"
@@ -14,85 +12,37 @@ export type StatusType =
   | "error"
   | "default";
 
-export interface StatusBadgeProps extends Omit<TagProps, "color"> {
+export interface StatusBadgeProps {
   status: StatusType | string;
   text?: string;
+  className?: string;
 }
 
-/**
- * StatusBadge - Status indicators with semantic colors
- *
- * Provides a standardized badge component for status display with:
- * - Semantic color mapping
- * - Custom status support
- * - Consistent styling
- * - Ant Design Tag integration
- */
-export const StatusBadge: React.FC<StatusBadgeProps> = ({
-  status,
-  text,
-  ...props
-}) => {
-  const { token } = theme.useToken();
+const statusColors: Record<StatusType, { bg: string; text: string }> = {
+  active: { bg: "bg-emerald-50 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400" },
+  inactive: { bg: "bg-muted", text: "text-muted-foreground" },
+  pending: { bg: "bg-amber-50 dark:bg-amber-950", text: "text-amber-700 dark:text-amber-400" },
+  processing: { bg: "bg-blue-50 dark:bg-blue-950", text: "text-blue-700 dark:text-blue-400" },
+  success: { bg: "bg-emerald-50 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400" },
+  warning: { bg: "bg-amber-50 dark:bg-amber-950", text: "text-amber-700 dark:text-amber-400" },
+  error: { bg: "bg-red-50 dark:bg-red-950", text: "text-red-700 dark:text-red-400" },
+  default: { bg: "bg-muted", text: "text-muted-foreground" },
+};
 
-  // Map status types to colors
-  const statusColorMap: Record<StatusType, string> = {
-    active: token.colorSuccess,
-    inactive: token.colorTextSecondary,
-    pending: token.colorWarning,
-    processing: token.colorPrimary,
-    success: token.colorSuccess,
-    warning: token.colorWarning,
-    error: token.colorError,
-    default: token.colorTextSecondary,
-  };
-
-  const getBadgeColor = (statusValue: StatusType | string): string => {
-    if (statusValue in statusColorMap) {
-      return statusColorMap[statusValue as StatusType];
-    }
-    return statusColorMap.default;
-  };
-
-  const badgeStyle: React.CSSProperties = {
-    borderRadius: 4,
-    padding: "2px 8px",
-    fontSize: 12,
-    fontWeight: 500,
-    border: "none",
-    backgroundColor: `${getBadgeColor(status)}15`,
-    color: getBadgeColor(status),
-  };
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, text, className }) => {
+  const colors = statusColors[status as StatusType] || statusColors.default;
 
   return (
-    <Tag
-      style={badgeStyle}
-      {...props}
-    >
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${colors.bg} ${colors.text} ${className || ""}`}>
       {text || status}
-    </Tag>
+    </span>
   );
 };
 
-// Pre-configured status badges for common use cases
-export const ActiveBadge: React.FC<{ text?: string }> = ({
-  text = "Active"
-}) => <StatusBadge status="active" text={text} />;
-
-export const InactiveBadge: React.FC<{ text?: string }> = ({
-  text = "Inactive"
-}) => <StatusBadge status="inactive" text={text} />;
-
-export const PendingBadge: React.FC<{ text?: string }> = ({
-  text = "Pending"
-}) => <StatusBadge status="pending" text={text} />;
-
-export const SuccessBadge: React.FC<{ text?: string }> = ({
-  text = "Success"
-}) => <StatusBadge status="success" text={text} />;
-
-export const ErrorBadge: React.FC<{ text?: string }> = ({
-  text = "Error"
-}) => <StatusBadge status="error" text={text} />;
+export const ActiveBadge: React.FC<{ text?: string }> = ({ text = "Active" }) => <StatusBadge status="active" text={text} />;
+export const InactiveBadge: React.FC<{ text?: string }> = ({ text = "Inactive" }) => <StatusBadge status="inactive" text={text} />;
+export const PendingBadge: React.FC<{ text?: string }> = ({ text = "Pending" }) => <StatusBadge status="pending" text={text} />;
+export const SuccessBadge: React.FC<{ text?: string }> = ({ text = "Success" }) => <StatusBadge status="success" text={text} />;
+export const ErrorBadge: React.FC<{ text?: string }> = ({ text = "Error" }) => <StatusBadge status="error" text={text} />;
 
 export default StatusBadge;

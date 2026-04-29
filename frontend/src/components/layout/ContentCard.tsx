@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { Card, theme } from "antd";
+import type React from "react";
 
 export interface ContentCardProps {
   className?: string;
@@ -12,21 +11,9 @@ export interface ContentCardProps {
   style?: React.CSSProperties;
   loading?: boolean;
   hoverable?: boolean;
-  /** Show a gradient accent strip at the top of the card */
   accent?: boolean;
 }
 
-/**
- * ContentCard - Card with consistent styling
- *
- * Provides a standardized card component with:
- * - 8px border radius
- * - Subtle shadow
- * - Optional title with colored dot prefix
- * - Optional header actions
- * - Optional gradient accent strip at top
- * - Loading state support
- */
 export const ContentCard: React.FC<ContentCardProps> = ({
   title,
   subtitle,
@@ -34,79 +21,33 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   children,
   className = "",
   accent = false,
-  ...props
+  style,
 }) => {
-  const { token } = theme.useToken();
-
-  const cardStyle: React.CSSProperties = {
-    borderRadius: 8,
-    boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px",
-    marginBottom: token.marginLG,
-    transition: "box-shadow 0.2s ease",
-  };
-
-  const header = title || actions ? (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: token.marginMD,
-      }}
-    >
-      <div>
-        {title && (
-          <div
-            style={{
-              fontSize: token.fontSizeLG,
-              fontWeight: 600,
-              color: token.colorText,
-              margin: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            {/* Colored dot prefix */}
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "#171717",
-                flexShrink: 0,
-                display: "inline-block",
-              }}
-            />
-            {title}
-          </div>
-        )}
-        {subtitle && (
-          <div
-            style={{
-              fontSize: token.fontSizeSM,
-              color: token.colorTextSecondary,
-              marginTop: token.marginXS,
-            }}
-          >
-            {subtitle}
-          </div>
-        )}
-      </div>
-      {actions && <div>{actions}</div>}
-    </div>
-  ) : undefined;
-
   return (
-    <Card
-      className={`content-card ${accent ? "content-card--accent" : ""} ${className}`}
-      style={cardStyle}
-      title={header}
-      variant="borderless"
-      {...props}
+    <div
+      className={`bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mb-6 transition-shadow duration-200 ${accent ? "border-t-2 border-t-primary" : ""} ${className}`}
+      style={style}
     >
-      {children}
-    </Card>
+      {(title || actions) && (
+        <div className="flex justify-between items-center gap-4 p-6 pb-0">
+          <div>
+            {title && (
+              <div className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 flex-shrink-0" />
+                {title}
+              </div>
+            )}
+            {subtitle && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {subtitle}
+              </div>
+            )}
+          </div>
+          {actions && <div>{actions}</div>}
+        </div>
+      )}
+      <div className="p-6">{children}</div>
+    </div>
   );
 };
 

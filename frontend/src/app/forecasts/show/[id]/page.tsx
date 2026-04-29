@@ -10,55 +10,55 @@
 
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
-import {
-  Row,
-  Col,
-  Statistic,
-  Card,
-  Table,
-  Tag,
-  Button,
-  Space,
-  Alert,
-  Modal,
-  message,
-} from "antd";
-import {
-  EditOutlined,
-  DeleteOutlined,
-  LineChartOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-} from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
-import type { Forecast } from "@/types/api";
+import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import { authFetch } from "@/utils/auth";
-import { DetailPageLayout, DetailSection } from "@/components/layout/DetailPageLayout";
-import { useIsMobile } from "@/lib/responsive-utils";
+import { Table, type Column } from "@/components/ui/Table";
+import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { Home, ChevronRight, Edit3, Trash2, Check, TrendingUp, Clock } from "lucide-react";
 
 interface ForecastDetailParams {
   id?: string;
 }
 
-interface ForecastWithDetails extends Forecast {
+interface PredictedValueRow {
+  key: number;
+  index: number;
+  value: number;
+  lower?: number;
+  upper?: number;
+}
+
+interface ForecastWithDetails extends Record<string, any> {
+  id: string;
+  timeseries?: { name: string; unit?: string };
   algorithm?: string;
   horizon?: number;
   accuracy?: number;
   mae?: number;
   rmse?: number;
   status?: "pending" | "running" | "completed" | "failed";
+  predictedValues: number[];
+  confidenceIntervals?: { lower?: number[]; upper?: number[] };
+  startTime: string;
+  endTime: string;
+  modelId?: string;
+  model?: { algorithm?: string };
+  createdAt: string;
 }
 
 export default function ForecastDetailPage() {
   const params = useParams() as ForecastDetailParams;
   const router = useRouter();
+  const toast = useToast();
   const [forecast, setForecast] = useState<ForecastWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const fetchForecast = useCallback(async () => {
     if (!params.id) {
@@ -87,228 +87,360 @@ export default function ForecastDetailPage() {
   }, [fetchForecast]);
 
   const handleDelete = async () => {
-    Modal.confirm({
-      title: "Delete Forecast",
-      icon: <ExclamationCircleOutlined />,
-      content: "Are you sure you want to delete this forecast? This action cannot be undone.",
-      okText: "Delete",
-      okType: "danger",
-      cancelText: "Cancel",
-      onOk: async () => {
-        try {
-          const response = await authFetch(`/api/forecasts/${params.id}`, { method: "DELETE" });
-          if (!response.ok) {
-            throw new Error("Failed to delete forecast");
-          }
-          message.success("Forecast deleted");
-          router.push("/forecasts");
-        } catch {
-          message.error("Failed to delete forecast");
-        }
-      },
-    });
+    try {
+      const response = await authFetch(`/api/forecasts/${params.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete forecast");
+      }
+      toast.showSuccess("Forecast deleted");
+      router.push("/forecasts");
+    } catch {
+      toast.showError("Failed to delete forecast");
+    }
   };
 
   if (loading) {
     return (
-      <DetailPageLayout
-        title="Forecast Details"
-        loading={loading}
-      />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="flex items-center justify-center min-h-100">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </div>
     );
   }
 
   if (error || !forecast) {
     return (
-      <DetailPageLayout
-        title="Forecast"
-        error={error || "Forecast not found"}
-      />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="max-w-md mx-auto mt-20">
+          <div className="bg-card rounded-lg shadow-sm border border p-6 text-center">
+            <h3 className="text-lg font-semibold text-red-500 mb-3">Error</h3>
+            <p className="text-muted-foreground mb-6">
+              {error || "Forecast not found"}
+            </p>
+            <Button variant="primary" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  const breadcrumb = [
-    { label: "Forecasts", href: "/forecasts" },
-    { label: forecast.id.substring(0, 8) || "Detail" }
-  ];
+  // Build predicted values data for the table
+  const predictedValuesData: PredictedValueRow[] = (
+    forecast.predictedValues || []
+  ).map((value, index) => ({
+    key: index,
+    index: index + 1,
+    value,
+    lower: forecast.confidenceIntervals?.lower?.[index],
+    upper: forecast.confidenceIntervals?.upper?.[index],
+  }));
 
-  const actions = [
+  // Table columns for predicted values
+  const predictedValuesColumns: Column<PredictedValueRow>[] = [
     {
-      icon: <EditOutlined />,
-      label: "Edit",
-      href: `/forecasts/edit/${forecast.id}`
+      key: "index",
+      title: "#",
+      dataIndex: "index",
+      width: 80,
     },
     {
-      icon: <DeleteOutlined />,
-      label: "Delete",
-      danger: true,
-      onClick: handleDelete
-    }
+      key: "value",
+      title: "Predicted Value",
+      dataIndex: "value",
+      render: (value: number) => (
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>
+          {value.toFixed(4)}
+        </span>
+      ),
+    },
+    {
+      key: "lower",
+      title: "Lower Bound",
+      dataIndex: "lower",
+      render: (lower?: number) =>
+        lower !== undefined ? (
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>
+            {lower.toFixed(4)}
+          </span>
+        ) : (
+          "-"
+        ),
+    },
+    {
+      key: "upper",
+      title: "Upper Bound",
+      dataIndex: "upper",
+      render: (upper?: number) =>
+        upper !== undefined ? (
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>
+            {upper.toFixed(4)}
+          </span>
+        ) : (
+          "-"
+        ),
+    },
   ];
 
+  const statusColor =
+    forecast.status === "completed"
+      ? "#22c55e"
+      : forecast.status === "failed"
+      ? "#ef4444"
+      : "#f59e0b";
+
   return (
-    <DetailPageLayout
-      title={forecast.timeseries?.name || "Forecast"}
-      subtitle={`Created ${new Date(forecast.createdAt).toLocaleString()}`}
-      breadcrumb={breadcrumb}
-      actions={actions}
-    >
-      {/* Summary Card */}
-      <DetailSection title="Forecast Summary" colSpan={isMobile ? 24 : 8}>
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <Statistic
-            title="Status"
-            value={forecast.status || "completed"}
-            valueStyle={{
-              color: forecast.status === "completed" ? "#22c55e" :
-                     forecast.status === "failed" ? "#ef4444" : "#f59e0b"
-            }}
-            prefix={<CheckCircleOutlined />}
-          />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 md:p-6">
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Delete Forecast"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to delete this forecast? This action cannot be
+          undone.
+        </p>
+      </Modal>
 
-          <Statistic
-            title="Algorithm"
-            value={forecast.algorithm || "arima"}
-            suffix={<Tag color="blue">AI Model</Tag>}
-          />
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+        <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">
+          <Home className="size-4" />
+        </a>
+        <ChevronRight className="size-3" />
+        <a
+          href="/forecasts"
+          className="hover:text-gray-700 dark:hover:text-gray-200"
+        >
+          Forecasts
+        </a>
+        <ChevronRight className="size-3" />
+        <span className="text-gray-900 dark:text-gray-100 font-medium">
+          {forecast.id.substring(0, 8)}
+        </span>
+      </nav>
 
-          <Statistic
-            title="Forecast Horizon"
-            value={forecast.horizon || forecast.predictedValues?.length || 0}
-            suffix="steps"
-          />
-
-          {forecast.accuracy !== undefined && (
-            <Statistic
-              title="Accuracy"
-              value={forecast.accuracy}
-              precision={2}
-              suffix="%"
-              valueStyle={{ color: forecast.accuracy > 80 ? "#22c55e" : "#f59e0b" }}
-            />
-          )}
-        </Space>
-      </DetailSection>
-
-      {/* Chart Card */}
-      <DetailSection title="Forecast Visualization" colSpan={isMobile ? 24 : 16}>
-        <Alert
-          message="Forecast chart will be displayed here"
-          description="This will show the predicted values with confidence intervals"
-          type="info"
-          showIcon
-          style={{ marginBottom: "16px" }}
-        />
-        <div className="h-[300px] flex items-center justify-center bg-info/10 rounded-lg border border-dashed border-info/30">
-          <LineChartOutlined className="text-[48px] text-info" />
-          <span className="text-body text-gray-500 dark:text-gray-400 ml-4">
-            Chart visualization
-          </span>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            {forecast.timeseries?.name || "Forecast"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Created {new Date(forecast.createdAt).toLocaleString()}
+          </p>
         </div>
-      </DetailSection>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => router.push(`/forecasts/edit/${forecast.id}`)}
+          >
+            <Edit3 className="size-4 mr-1.5" />
+            Edit
+          </Button>
+          <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
+            <Trash2 className="size-4 mr-1.5" />
+            Delete
+          </Button>
+        </div>
+      </div>
+
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        {/* Summary Card */}
+        <div className="bg-card rounded-lg shadow-sm border border p-6">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Forecast Summary
+          </h3>
+          <div className="space-y-6">
+            <div>
+              <span className="text-sm text-muted-foreground">
+                Status
+              </span>
+              <div className="mt-1 flex items-center gap-2">
+                <Check
+                  className="size-5"
+                  style={{ color: statusColor }}
+                />
+                <span
+                  className="text-lg font-semibold"
+                  style={{ color: statusColor }}
+                >
+                  {forecast.status || "completed"}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-sm text-muted-foreground">
+                Algorithm
+              </span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-lg font-semibold text-foreground">
+                  {forecast.algorithm || "arima"}
+                </span>
+                <Tag color="info">AI Model</Tag>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-sm text-muted-foreground">
+                Forecast Horizon
+              </span>
+              <div className="mt-1 text-lg font-semibold text-foreground">
+                {forecast.horizon ||
+                  forecast.predictedValues?.length ||
+                  0}{" "}
+                steps
+              </div>
+            </div>
+
+            {forecast.accuracy !== undefined && (
+              <div>
+                <span className="text-sm text-muted-foreground">
+                  Accuracy
+                </span>
+                <div
+                  className="mt-1 text-lg font-semibold"
+                  style={{
+                    color: forecast.accuracy > 80 ? "#22c55e" : "#f59e0b",
+                  }}
+                >
+                  {forecast.accuracy.toFixed(2)}%
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Chart Card */}
+        <div className="bg-card rounded-lg shadow-sm border border p-6 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Forecast Visualization
+          </h3>
+          <Alert
+            variant="info"
+            title="Forecast chart will be displayed here"
+            className="mb-4"
+          >
+            This will show the predicted values with confidence intervals
+          </Alert>
+          <div className="h-75 flex items-center justify-center bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-dashed border-blue-200 dark:border-blue-800/30">
+            <TrendingUp
+              className="size-12 text-blue-500 mr-4"
+            />
+            <span className="text-muted-foreground">
+              Chart visualization
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Parameters Card */}
-      <DetailSection title="Forecast Parameters" colSpan={24}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8}>
-            <Card size="small" title="Time Range">
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <span className="text-body">
-                  <ClockCircleOutlined /> Start:{" "}
-                  {new Date(forecast.startTime).toLocaleString()}
-                </span>
-                <span className="text-body">
-                  <ClockCircleOutlined /> End:{" "}
-                  {new Date(forecast.endTime).toLocaleString()}
-                </span>
-              </Space>
-            </Card>
-          </Col>
+      <div className="bg-card rounded-lg shadow-sm border border p-6 mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Forecast Parameters
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Time Range */}
+          <div className="border border rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-foreground mb-2">
+              Time Range
+            </h4>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5" />
+                Start: {new Date(forecast.startTime).toLocaleString()}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5" />
+                End: {new Date(forecast.endTime).toLocaleString()}
+              </div>
+            </div>
+          </div>
 
-          <Col xs={24} sm={12} md={8}>
-            <Card size="small" title="Model">
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <span className="text-body">Model ID: {forecast.modelId?.substring(0, 8)}...</span>
-                <span className="text-body">Type: {forecast.model?.algorithm || "arima"}</span>
-              </Space>
-            </Card>
-          </Col>
+          {/* Model */}
+          <div className="border border rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-foreground mb-2">
+              Model
+            </h4>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div>
+                Model ID: {forecast.modelId?.substring(0, 8)}...
+              </div>
+              <div>
+                Type: {forecast.model?.algorithm || "arima"}
+              </div>
+            </div>
+          </div>
 
-          <Col xs={24} sm={12} md={8}>
-            <Card size="small" title="Performance Metrics">
-              <Space direction="vertical" style={{ width: "100%" }}>
-                {forecast.mae !== undefined && (
-                  <span className="text-body data-text">MAE: {forecast.mae.toFixed(4)}</span>
-                )}
-                {forecast.rmse !== undefined && (
-                  <span className="text-body data-text">RMSE: {forecast.rmse.toFixed(4)}</span>
-                )}
-              </Space>
-            </Card>
-          </Col>
-        </Row>
-      </DetailSection>
+          {/* Performance Metrics */}
+          <div className="border border rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-foreground mb-2">
+              Performance Metrics
+            </h4>
+            <div className="space-y-1 text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
+              {forecast.mae !== undefined && (
+                <div className="text-muted-foreground">
+                  MAE: {forecast.mae.toFixed(4)}
+                </div>
+              )}
+              {forecast.rmse !== undefined && (
+                <div className="text-muted-foreground">
+                  RMSE: {forecast.rmse.toFixed(4)}
+                </div>
+              )}
+              {forecast.mae === undefined && forecast.rmse === undefined && (
+                <div className="text-gray-400">No metrics available</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Predicted Values Table */}
-      <DetailSection title="Predicted Values" colSpan={24}>
+      <div className="bg-card rounded-lg shadow-sm border border p-6 mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Predicted Values
+        </h3>
         <Table
           columns={predictedValuesColumns}
-          dataSource={forecast.predictedValues.map((value, index) => ({
-            key: index,
-            index: index + 1,
-            value,
-            lower: forecast.confidenceIntervals?.lower?.[index],
-            upper: forecast.confidenceIntervals?.upper?.[index]
-          }))}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: "max-content" }}
-          size={isMobile ? "small" : "large"}
+          dataSource={predictedValuesData}
+          rowKey="key"
+          emptyText="No predicted values"
         />
-      </DetailSection>
+      </div>
 
       {/* Historical Runs */}
-      <DetailSection title="Historical Runs" colSpan={24} extra={<Button type="link">View All</Button>}>
-        <Alert
-          message="Historical forecast runs will be displayed here"
-          description="Compare different forecast runs for the same time series"
-          type="info"
-          showIcon={false}
-        />
-      </DetailSection>
-    </DetailPageLayout>
+      <div className="bg-card rounded-lg shadow-sm border border p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Historical Runs
+          </h3>
+          <Button variant="ghost" size="sm">
+            View All
+          </Button>
+        </div>
+        <Alert variant="info">
+          Historical forecast runs will be displayed here. Compare different
+          forecast runs for the same time series.
+        </Alert>
+      </div>
+    </div>
   );
 }
-
-// Table columns for predicted values
-const predictedValuesColumns: ColumnsType<{
-  key: number;
-  index: number;
-  value: number;
-  lower?: number;
-  upper?: number;
-}> = [
-  {
-    title: "#",
-    dataIndex: "index",
-    key: "index",
-    width: 80
-  },
-  {
-    title: "Predicted Value",
-    dataIndex: "value",
-    key: "value",
-    render: (value) => <span className="data-text">{value.toFixed(4)}</span>
-  },
-  {
-    title: "Lower Bound",
-    dataIndex: "lower",
-    key: "lower",
-    render: (lower) => lower !== undefined ? <span className="data-text">{lower.toFixed(4)}</span> : "-"
-  },
-  {
-    title: "Upper Bound",
-    dataIndex: "upper",
-    key: "upper",
-    render: (upper) => upper !== undefined ? <span className="data-text">{upper.toFixed(4)}</span> : "-"
-  }
-];

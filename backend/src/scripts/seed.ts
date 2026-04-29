@@ -1,12 +1,11 @@
 import { prisma } from '@/lib';
-import bcrypt from 'bcrypt';
 
 async function main() {
   console.log('🌱 Starting database seed...');
 
   // Get first user
   const user = await prisma.user.findFirst({
-    where: { email: 'admin@trademind.com' },
+    where: { email: 'admin@mt.com' },
   });
 
   if (!user) {
@@ -37,10 +36,10 @@ async function main() {
   // Create dataset
   const dataset = await prisma.dataset.upsert({
     where: {
-      id: user.id + '-demo-dataset',
+      id: `${user.id}-demo-dataset`,
     },
     create: {
-      id: user.id + '-demo-dataset',
+      id: `${user.id}-demo-dataset`,
       ownerId: user.id,
       organization_id: organization.id,
       name: 'Demo IoT Sensor Data',
@@ -60,10 +59,10 @@ async function main() {
   // Create timeseries
   const tempSeries = await prisma.timeseries.upsert({
     where: {
-      id: dataset.id + '-temperature',
+      id: `${dataset.id}-temperature`,
     },
     create: {
-      id: dataset.id + '-temperature',
+      id: `${dataset.id}-temperature`,
       datasetId: dataset.id,
       name: 'Temperature Sensor',
       slug: 'temperature-sensor',
@@ -78,10 +77,10 @@ async function main() {
 
   const pressureSeries = await prisma.timeseries.upsert({
     where: {
-      id: dataset.id + '-pressure',
+      id: `${dataset.id}-pressure`,
     },
     create: {
-      id: dataset.id + '-pressure',
+      id: `${dataset.id}-pressure`,
       datasetId: dataset.id,
       name: 'Pressure Sensor',
       slug: 'pressure-sensor',
@@ -96,10 +95,10 @@ async function main() {
 
   const vibrationSeries = await prisma.timeseries.upsert({
     where: {
-      id: dataset.id + '-vibration',
+      id: `${dataset.id}-vibration`,
     },
     create: {
-      id: dataset.id + '-vibration',
+      id: `${dataset.id}-vibration`,
       datasetId: dataset.id,
       name: 'Vibration Sensor',
       slug: 'vibration-sensor',

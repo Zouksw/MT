@@ -8,7 +8,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, BadRequestError } from '@/middleware/errorHandler';
 import { generateSignal, getAllModels } from '@/services/tradingSignals';
 import { getAllCachedPredictions } from '@/services/predictionCache';
@@ -16,6 +16,7 @@ import { getAllModelAccuracy, getModelAccuracy } from '@/services/mapeTracking';
 import { computeCorrelation, computeCorrelationMatrix, getAvailableCommodities } from '@/services/correlationAnalysis';
 import { checkSignalChange } from '@/services/alertNotifications';
 import { runBacktest } from '@/services/backtesting';
+import { prisma } from '@/lib';
 import { cacheRoute } from '@/middleware/cacheDecorator';
 import { success } from '@/lib/response';
 
@@ -58,7 +59,7 @@ router.get(
   cacheRoute('signals:models-accuracy', 600),
   asyncHandler(async (req: AuthRequest, res) => {
     const commodityId = req.query.commodityId as string | undefined;
-    const days = parseInt(req.query.days as string) || 30;
+    const days = parseInt(req.query.days as string, 10) || 30;
 
     const accuracy = await getAllModelAccuracy(commodityId, days);
 
@@ -81,7 +82,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res) => {
     const { modelId } = req.params;
     const commodityId = req.query.commodityId as string | undefined;
-    const days = parseInt(req.query.days as string) || 30;
+    const days = parseInt(req.query.days as string, 10) || 30;
 
     const accuracy = await getModelAccuracy(modelId, commodityId, days);
 
@@ -115,6 +116,56 @@ router.get(
 );
 
 /**
+ * GET /api/signals/models/:modelId/predictions
+ *
+ * Get verified prediction logs for a model with predicted vs actual values.
+ * Supports pagination and commodity filter.
+ */
+router.get(
+  '/models/:modelId/predictions',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { modelId } = req.params;
+    const commodityId = req.query.commodityId as string | undefined;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
+    const offset = parseInt(req.query.offset as string, 10) || 0;
+
+    const where: any = {
+      modelId,
+      status: 'verified',
+    };
+    if (commodityId) where.commodityId = commodityId;
+
+    const [logs, total] = await Promise.all([
+      prisma.predictionLog.findMany({
+        where,
+        select: {
+          id: true,
+          commodityId: true,
+          timeseriesPath: true,
+          horizon: true,
+          predictedValues: true,
+          actualValues: true,
+          lowerBounds: true,
+          upperBounds: true,
+          confidence: true,
+          mape: true,
+          status: true,
+          predictedAt: true,
+          verifiedAt: true,
+        },
+        orderBy: { predictedAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.predictionLog.count({ where }),
+    ]);
+
+    success(res, { predictions: logs, total, limit, offset });
+  })
+);
+
+/**
  * GET /api/signals/correlation
  *
  * Compute Pearson correlation between two commodities
@@ -130,7 +181,7 @@ router.get(
       throw new BadRequestError('Query params "a" and "b" (commodity slugs) are required');
     }
 
-    const windowDays = parseInt(window || '30');
+    const windowDays = parseInt(window || '30', 10);
     const result = await computeCorrelation(a, b, windowDays);
 
     res.json({ success: true, data: result });
@@ -149,7 +200,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res) => {
     const { commodities, window } = req.query as { commodities?: string; window?: string };
 
-    const windowDays = parseInt(window || '30');
+    const windowDays = parseInt(window || '30', 10);
 
     let commodityIds: string[];
     if (commodities) {
@@ -238,7 +289,7 @@ router.get(
   cacheRoute('signals:predictions', 300),
   asyncHandler(async (req: AuthRequest, res) => {
     const { commodityId } = req.params;
-    const horizon = parseInt(req.query.horizon as string) || 10;
+    const horizon = parseInt(req.query.horizon as string, 10) || 10;
     const models = getAllModels();
 
     const predictions = await getAllCachedPredictions(commodityId, horizon, models);

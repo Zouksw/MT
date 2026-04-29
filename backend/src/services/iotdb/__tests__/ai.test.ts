@@ -9,7 +9,8 @@
  * - AI Node availability checks
  */
 
-import { IoTDBAIService, PredictionRequest, AnomalyDetectionRequest } from '../ai';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { IoTDBAIService, type PredictionRequest, type AnomalyDetectionRequest } from '../ai';
 
 describe('IoTDBAIService', () => {
   let aiService: IoTDBAIService;

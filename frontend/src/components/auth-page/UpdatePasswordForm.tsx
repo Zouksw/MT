@@ -1,185 +1,146 @@
-/**
- * Modern Update Password Form Component
- */
-
 "use client";
 
-import React from "react";
-import { Form, Input, message, Button, Progress } from "antd";
+import type React from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LockOutlined } from "@ant-design/icons";
-import axios from "axios";
 
 import { validationRules, required, confirmation } from "@/lib/validation";
 import { sanitizer } from "@/lib/sanitizer";
 import { errorHandler } from "@/lib/errorHandler";
-import { csrfProtection } from "@/lib/csrf";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export function UpdatePasswordForm({ token }: { token: string }) {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
-  const [passwordStrength, setPasswordStrength] = React.useState(0);
+  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPasswordVal, setConfirmPasswordVal] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const router = useRouter();
+  const toast = useToast();
 
-  // Calculate password strength
-  const calculatePasswordStrength = (password: string): number => {
-    if (!password) return 0;
-
-    let strength = 0;
-    // Length check (up to 40 points)
-    if (password.length >= 8) strength += 20;
-    if (password.length >= 12) strength += 20;
-
-    // Character variety (up to 60 points)
-    if (/[a-z]/.test(password)) strength += 15;
-    if (/[A-Z]/.test(password)) strength += 15;
-    if (/[0-9]/.test(password)) strength += 15;
-    if (/[^a-zA-Z0-9]/.test(password)) strength += 15;
-
-    return Math.min(strength, 100);
+  const calculateStrength = (pw: string): number => {
+    if (!pw) return 0;
+    let s = 0;
+    if (pw.length >= 8) s += 20;
+    if (pw.length >= 12) s += 20;
+    if (/[a-z]/.test(pw)) s += 15;
+    if (/[A-Z]/.test(pw)) s += 15;
+    if (/[0-9]/.test(pw)) s += 15;
+    if (/[^a-zA-Z0-9]/.test(pw)) s += 15;
+    return Math.min(s, 100);
   };
 
-  const getPasswordStrengthColor = (strength: number): string => {
-    if (strength < 40) return "#EF4444"; // error red
-    if (strength < 70) return "#F59E0B"; // warning orange
-    return "#10B981"; // success green
+  const strengthColor = (s: number) =>
+    s < 40 ? "bg-red-500" : s < 70 ? "bg-amber-500" : "bg-green-500";
+  const strengthText = (s: number) =>
+    s < 40 ? "Weak" : s < 70 ? "Medium" : "Strong";
+
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    const pwErr = validationRules.validateAll(password, [required("Password")]);
+    if (pwErr) errs.password = pwErr;
+    if (
+      !confirmation("password").validate(confirmPasswordVal, { password })
+    ) {
+      errs.confirmPassword = "Passwords do not match";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  const getPasswordStrengthText = (strength: number): string => {
-    if (strength < 40) return "Weak";
-    if (strength < 70) return "Medium";
-    return "Strong";
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const password = e.target.value;
-    setPasswordStrength(calculatePasswordStrength(password));
-  };
-
-  const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
-      const axiosInstance = axios.create({
-        baseURL: API_URL,
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          token: sanitizer.sanitizeString(token, 500),
+          password,
+        }),
       });
 
-      // Add CSRF token
-      const csrfHeaders = csrfProtection.getHeaders();
-      axiosInstance.defaults.headers.common = {
-        ...axiosInstance.defaults.headers.common,
-        ...csrfHeaders,
-      };
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `${res.status} ${res.statusText}`);
+      }
 
-      await axiosInstance.post("/auth/reset-password", {
-        token: sanitizer.sanitizeString(token, 500),
-        password: values.password,
-      });
-
-      message.success("Password updated successfully!");
+      toast.showSuccess("Password updated successfully!");
       setTimeout(() => router.push("/login"), 500);
     } catch (error: unknown) {
       const safeError = errorHandler.handleApiError(error);
-      message.error(safeError.message);
+      toast.showError(safeError.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    borderRadius: "8px",
-    padding: "12px 16px",
-    fontSize: "15px",
-    border: "1px solid #e5e7eb",
-    transition: "all 0.2s",
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    height: "48px",
-    borderRadius: "8px",
-    fontSize: "16px",
-    fontWeight: 600,
-    background: "#171717",
-    border: "none",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-  };
-
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleSubmit}
-      validateTrigger="onBlur"
-      requiredMark={false}
-    >
-      <Form.Item
-        label={<span style={{ fontWeight: 500, color: "#374151", fontSize: "15px" }}>New Password</span>}
-        name="password"
-        rules={[validationRules.getAntRule(required("Password"))]}
-        extra={
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 12, marginBottom: 4, color: "#6B7280" }}>
-              Must be at least 8 characters with uppercase, lowercase, and numbers
-            </div>
-            {passwordStrength > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <Progress
-                  percent={passwordStrength}
-                  strokeColor={getPasswordStrengthColor(passwordStrength)}
-                  showInfo={false}
-                  size="small"
-                />
-                <div style={{ fontSize: 11, color: getPasswordStrengthColor(passwordStrength), marginTop: 2 }}>
-                  Password strength: {getPasswordStrengthText(passwordStrength)}
-                </div>
-              </div>
-            )}
-          </div>
-        }
-      >
-        <Input.Password
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <div>
+        <Input
+          label="New Password"
+          type="password"
           placeholder="Enter your new password"
-          size="large"
-          style={inputStyle}
-          prefix={<LockOutlined style={{ fontSize: 16, color: "#9ca3af" }} />}
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setPasswordStrength(calculateStrength(e.target.value));
+          }}
+          error={errors.password}
+          fullWidth
           autoComplete="new-password"
-          onChange={handlePasswordChange}
         />
-      </Form.Item>
+        <p className="mt-1 text-xs text-muted-foreground">
+          At least 8 characters with uppercase, lowercase, and numbers
+        </p>
+        {passwordStrength > 0 && (
+          <div className="mt-2">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${strengthColor(passwordStrength)}`}
+                style={{ width: `${passwordStrength}%` }}
+              />
+            </div>
+            <p
+              className={`text-xs mt-1 ${passwordStrength < 40 ? "text-red-500" : passwordStrength < 70 ? "text-amber-500" : "text-green-500"}`}
+            >
+              Password strength: {strengthText(passwordStrength)}
+            </p>
+          </div>
+        )}
+      </div>
 
-      <Form.Item
-        label={<span style={{ fontWeight: 500, color: "#374151", fontSize: "15px" }}>Confirm Password</span>}
-        name="confirmPassword"
-        dependencies={["password"]}
-        rules={[
-          validationRules.getAntRule(required("Confirm Password")),
-          validationRules.getAntRule(confirmation("password")),
-        ]}
+      <Input
+        label="Confirm Password"
+        type="password"
+        placeholder="Confirm your new password"
+        value={confirmPasswordVal}
+        onChange={(e) => setConfirmPasswordVal(e.target.value)}
+        error={errors.confirmPassword}
+        fullWidth
+        autoComplete="new-password"
+      />
+
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        isLoading={loading}
+        className="h-12 text-base"
       >
-        <Input.Password
-          placeholder="Confirm your new password"
-          size="large"
-          style={inputStyle}
-          prefix={<LockOutlined style={{ fontSize: 16, color: "#9ca3af" }} />}
-          autoComplete="new-password"
-        />
-      </Form.Item>
-
-      <Form.Item style={{ marginBottom: 0 }}>
-        <Button
-          type="primary"
-          htmlType="submit"
-          style={buttonStyle}
-          className="w-full"
-          disabled={loading}
-          loading={loading}
-        >
-          {loading ? "Updating..." : "Update Password"}
-        </Button>
-      </Form.Item>
-    </Form>
+        {loading ? "Updating..." : "Update Password"}
+      </Button>
+    </form>
   );
 }

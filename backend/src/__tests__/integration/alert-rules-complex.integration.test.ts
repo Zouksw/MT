@@ -9,24 +9,24 @@
  * - Anomaly severity filtering
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, expect, vi } from 'vitest';
 
 // Mock Prisma to avoid database access
-jest.mock('@/lib', () => {
+vi.mock('@/lib', () => {
   return {
     prisma: {
       alertRule: {
-        create: jest.fn<any>((data: any) => Promise.resolve({
+        create: vi.fn<any>((data: any) => Promise.resolve({
           id: 'test-rule-id',
           ...data.data,
           lastTriggeredAt: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         })),
-        update: jest.fn<any>().mockResolvedValue({}),
+        update: vi.fn<any>().mockResolvedValue({}),
       },
     },
-    logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+    logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
   };
 });
 

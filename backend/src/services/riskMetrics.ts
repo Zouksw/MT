@@ -138,7 +138,7 @@ export function computeRiskReport(
     ? (equityCurve[equityCurve.length - 1] / 100000) - 1
     : 0;
   const annualizedReturn = totalDays > 0
-    ? Math.pow(1 + totalReturn, 252 / totalDays) - 1
+    ? (1 + totalReturn) ** (252 / totalDays) - 1
     : 0;
 
   return {

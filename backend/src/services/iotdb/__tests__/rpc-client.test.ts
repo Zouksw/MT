@@ -1,12 +1,12 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock child_process spawn
-jest.mock('child_process', () => ({
-  spawn: jest.fn(),
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
 }));
 
 // Mock iotdb config
-jest.mock('../client', () => ({
+vi.mock('@/services/iotdb/client', () => ({
   iotdbConfig: {
     host: 'localhost',
     port: 6667,
@@ -15,10 +15,10 @@ jest.mock('../client', () => ({
   },
 }));
 
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 import * as RpcClientModule from '@/services/iotdb/rpc-client';
 
-const spawnMock = spawn as jest.Mock;
+const spawnMock = spawn as vi.Mock;
 
 // Try to get the class export
 const IoTDBRPCClientClass = RpcClientModule.IoTDBRPCClient ||
@@ -31,19 +31,19 @@ describe('IoTDBRPCClient', () => {
   let mockCli: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers(); // Use fake timers to avoid actual setTimeout
+    vi.clearAllMocks();
+    vi.useFakeTimers(); // Use fake timers to avoid actual setTimeout
 
     // Create mock CLI process
     mockStdin = {
-      write: jest.fn(),
+      write: vi.fn(),
     };
 
     mockCli = {
       stdin: mockStdin,
       stdout: null as any,
       stderr: null as any,
-      on: jest.fn((event: string, handler: any) => {
+      on: vi.fn((event: string, handler: any) => {
         if (event === 'close') {
           (mockCli as any).closeHandler = handler;
         }
@@ -52,11 +52,11 @@ describe('IoTDBRPCClient', () => {
         }
         return mockCli;
       }),
-      kill: jest.fn(),
+      kill: vi.fn(),
     };
 
     mockCli.stdout = {
-      on: jest.fn((event: string, handler: any) => {
+      on: vi.fn((event: string, handler: any) => {
         if (event === 'data') {
           (mockCli.stdout as any).dataHandler = handler;
         }
@@ -64,7 +64,7 @@ describe('IoTDBRPCClient', () => {
     };
 
     mockCli.stderr = {
-      on: jest.fn((event: string, handler: any) => {
+      on: vi.fn((event: string, handler: any) => {
         if (event === 'data') {
           (mockCli.stderr as any).dataHandler = handler;
         }
@@ -84,7 +84,7 @@ describe('IoTDBRPCClient', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers(); // Restore real timers after each test
+    vi.useRealTimers(); // Restore real timers after each test
   });
 
   describe('constructor', () => {
@@ -259,8 +259,8 @@ describe('IoTDBRPCClient', () => {
       const sqlCall = calls.find((call: any[]) => call[0]?.includes('INSERT INTO'));
 
       expect(sqlCall).toBeDefined();
-      expect(sqlCall![0]).toContain('INSERT INTO root.test(time,');
-      expect(sqlCall![0]).toContain(') VALUES (1000,');
+      expect(sqlCall?.[0]).toContain('INSERT INTO root.test(time,');
+      expect(sqlCall?.[0]).toContain(') VALUES (1000,');
 
       if (mockCli.closeHandler) {
         mockCli.closeHandler(0);
@@ -341,7 +341,7 @@ describe('IoTDBRPCClient', () => {
     });
 
     test('should handle timeout', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       const promise = client.createTimeseries({
         path: 'root.test.temp',
@@ -349,13 +349,13 @@ describe('IoTDBRPCClient', () => {
         encoding: 'PLAIN',
       });
 
-      jest.advanceTimersByTime(30000);
+      vi.advanceTimersByTime(30000);
 
       expect(mockCli.kill).toHaveBeenCalled();
 
       await expect(promise).rejects.toThrow('CLI execution timeout');
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     }, 35000);
   });
 });

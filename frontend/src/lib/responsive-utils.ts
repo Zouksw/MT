@@ -7,7 +7,17 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { breakpointValues, type Breakpoint } from "./breakpoints";
+
+type Breakpoint = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+
+const breakpointValues: Record<Breakpoint, number> = {
+  xs: 320,
+  sm: 640,
+  md: 768,
+  lg: 1024,
+  xl: 1280,
+  "2xl": 1536,
+};
 
 /**
  * useBreakpoint Hook

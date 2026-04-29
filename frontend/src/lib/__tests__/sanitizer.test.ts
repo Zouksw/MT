@@ -154,7 +154,7 @@ describe('sanitizer', () => {
     });
 
     it('should limit filename length', () => {
-      const longName = 'a'.repeat(300) + '.txt';
+      const longName = `${'a'.repeat(300)}.txt`;
       const output = sanitizer.sanitizeFileName(longName);
 
       expect(output.length).toBeLessThanOrEqual(255);

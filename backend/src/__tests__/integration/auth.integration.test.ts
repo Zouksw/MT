@@ -5,10 +5,9 @@
  * Automatically skipped if database services are unavailable.
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 // Build a minimal Express app with real routes + error handler
 import express from 'express';
@@ -17,7 +16,7 @@ import { errorHandler } from '@/middleware/errorHandler';
 
 const TEST_PREFIX = `real-auth-${Date.now()}`;
 const TEST_PASSWORD = 'SecurePass123!';
-let TEST_PASSWORD_HASH: string;
+let _TEST_PASSWORD_HASH: string;
 
 let prisma: PrismaClient;
 let app: express.Application;
@@ -38,7 +37,7 @@ async function checkDatabaseAvailable(): Promise<boolean> {
 
 async function hashPassword(password: string): Promise<string> {
   // Use real bcrypt, not the mock from jest.setup.js
-  const realBcrypt = jest.requireActual('bcryptjs') as typeof import('bcryptjs');
+  const realBcrypt = await vi.importActual('bcryptjs') as typeof import('bcryptjs');
   const salt = await realBcrypt.genSalt(4); // Low rounds for speed
   return realBcrypt.hash(password, salt);
 }
@@ -49,7 +48,7 @@ describe('Auth Integration Tests', () => {
     if (!dbAvailable) return;
 
     prisma = new PrismaClient({ log: ['error'] });
-    TEST_PASSWORD_HASH = await hashPassword(TEST_PASSWORD);
+    _TEST_PASSWORD_HASH = await hashPassword(TEST_PASSWORD);
 
     app = express();
     app.use(express.json());
@@ -74,7 +73,7 @@ describe('Auth Integration Tests', () => {
   beforeEach(() => {
     if (!dbAvailable) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      jest.skip();
+      vi.skip();
     }
   });
 

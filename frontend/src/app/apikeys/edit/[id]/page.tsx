@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { Form, Input, Button, Row, Col, Typography, Space, Alert, Switch } from "antd";
-import { ArrowLeftOutlined, KeyOutlined } from "@ant-design/icons";
-import { useGo, useInvalidate, useNotification } from "@refinedev/core";
-import { useOne } from "@refinedev/core";
-
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ContentCard } from "@/components/layout/ContentCard";
-
-const { Text } = Typography;
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
+import { Alert } from "@/components/ui/Alert";
+import { ArrowLeft, } from "lucide-react";
 
 interface ApiKeyEditPageProps {
   params: Promise<{ id: string }>;
@@ -18,41 +15,69 @@ interface ApiKeyEditPageProps {
 
 export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
   const { id } = React.use(params);
-  const go = useGo();
-  const invalidate = useInvalidate();
-  const { open } = useNotification();
-  const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  const router = useRouter();
+  const toast = useToast();
 
-  // Get API key data
-  const apiKeyResult = useOne({
-    resource: "apikeys",
-    id,
-  });
+  const [_loading, _setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [apiKey, setApiKey] = useState<any>(null);
+  const [isLoadingKey, setIsLoadingKey] = useState(true);
 
-  const apiKey = apiKeyResult?.result?.data;
-  const isLoadingKey = apiKeyResult?.query?.isLoading ?? false;
+  // Form state
+  const [name, setName] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
-  // Set form values when data is loaded
-  if (apiKey && !form.isFieldsTouched()) {
-    form.setFieldsValue({
-      name: apiKey.name,
-      isActive: apiKey.isActive,
-    });
-  }
+  // Fetch API key data
+  useEffect(() => {
+    async function fetchKey() {
+      try {
+        const { tokenManager } = await import("@/lib/tokenManager");
+        const token = tokenManager.getToken();
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/api-keys/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch API key");
+        const result = await response.json();
+        const data = result.data || result;
+        setApiKey(data);
+        if (!initialized) {
+          setName(data.name || "");
+          setIsActive(data.isActive ?? true);
+          setInitialized(true);
+        }
+      } catch {
+        toast.showError("Failed to load API key data");
+      } finally {
+        setIsLoadingKey(false);
+      }
+    }
+    fetchKey();
+  }, [id, initialized, toast]);
 
-  const handleSubmit = async (values: any) => {
-    setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.showError("Please enter a name");
+      return;
+    }
+
+    setSaving(true);
     try {
-      const { tokenManager } = await import('@/lib/tokenManager');
+      const { tokenManager } = await import("@/lib/tokenManager");
       const token = tokenManager.getToken();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/api-keys/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/api-keys/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(values),
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), isActive }),
       });
 
       if (!response.ok) {
@@ -60,152 +85,162 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
         throw new Error(error.error || "Failed to update API key");
       }
 
-      open?.({
-        type: "success",
-        message: "API Key Updated Successfully",
-        description: `The API key has been updated.`,
-      });
-
-      invalidate({
-        resource: "apikeys",
-        invalidates: ["list"],
-      });
+      toast.showSuccess("API Key Updated Successfully", "The API key has been updated.");
 
       setTimeout(() => {
-        go({ to: "/apikeys", type: "push" });
+        router.push("/apikeys");
       }, 1000);
     } catch (error: any) {
-      open?.({
-        type: "error",
-        message: "Failed to Update API Key",
-        description: error.message,
-      });
+      toast.showError("Failed to Update API Key", error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   if (isLoadingKey) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Alert message="Loading API key data..." type="info" />
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-muted p-4 md:p-6">
+        <div className="mx-auto max-w-2xl">
+          <Card>
+            <CardBody>
+              <Alert variant="info">Loading API key data...</Alert>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
     );
   }
 
   if (!apiKey) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Alert message="API key not found" type="error" />
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-muted p-4 md:p-6">
+        <div className="mx-auto max-w-2xl">
+          <Card>
+            <CardBody>
+              <Alert variant="error">API key not found</Alert>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <PageContainer>
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <PageHeader
-          title="Edit API Key"
-          description={`Update API key: ${apiKey.name}`}
-          actions={
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => go({ to: "/apikeys", type: "push" })}
-            >
-              Back to API Keys
-            </Button>
-          }
-        />
-
-        <Alert
-          message="API Key Settings"
-          description="You can update the name or active status of your API key. The key value itself cannot be changed for security reasons."
-          type="info"
-          showIcon
-          icon={<KeyOutlined />}
-          style={{ marginBottom: 24 }}
-        />
-
-        <ContentCard title="API Key Details" subtitle="Update API key information">
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
+    <div className="min-h-screen bg-muted p-4 md:p-6">
+      <div className="mx-auto max-w-[700px]">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Edit API Key</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Update API key: {apiKey.name}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            icon={<ArrowLeft className="size-[14px]" />}
+            onClick={() => router.push("/apikeys")}
           >
-            {/* API Key Name */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>API Key Name</span>}
-                  name="name"
-                  rules={[{ required: true, message: "Please enter a name" }]}
-                >
-                  <Input
-                    placeholder="e.g., Production App Key"
-                    size="large"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+            Back to API Keys
+          </Button>
+        </div>
 
-            {/* Key Information - Read Only */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24} md={12}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Key ID</Text>
-                <div style={{ fontSize: 14, fontFamily: "monospace", marginTop: 4 }}>
-                  {apiKey.id.slice(0, 8)}...
-                </div>
-              </Col>
-              <Col xs={24} md={12}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Last Characters</Text>
-                <div style={{ fontSize: 14, fontFamily: "monospace", marginTop: 4 }}>
-                  ...{apiKey.lastCharacters?.toString(16).toUpperCase().padStart(8, "0") || "N/A"}
-                </div>
-              </Col>
-            </Row>
+        {/* Info alert */}
+        <div className="mb-6">
+          <Alert variant="info" title="API Key Settings">
+            You can update the name or active status of your API key. The key value itself cannot be changed for security reasons.
+          </Alert>
+        </div>
 
-            {/* Active Status */}
-            <Form.Item
-              label={<span style={{ fontWeight: 500 }}>Status</span>}
-              name="isActive"
-              valuePropName="checked"
-              tooltip="Enable or disable this API key"
-            >
-              <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-            </Form.Item>
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>API Key Details</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Update API key information
+                </p>
+              </div>
+            </CardHeader>
+            <CardBody>
+              <div className="flex flex-col gap-6">
+                {/* API Key Name */}
+                <Input
+                  label="API Key Name"
+                  placeholder="e.g., Production App Key"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  fullWidth
+                />
 
-            {/* Usage Statistics - Read Only */}
-            {apiKey.usageCount !== undefined && (
-              <div style={{ marginBottom: 24 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Usage Statistics</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Text>Total requests: </Text>
-                  <Text strong>{apiKey.usageCount}</Text>
-                </div>
-                {apiKey.lastUsedAt && (
+                {/* Key Information - Read Only */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>Last used: </Text>
-                    <Text>{new Date(apiKey.lastUsedAt).toLocaleString()}</Text>
+                    <span className="block text-xs text-muted-foreground mb-1">Key ID</span>
+                    <div className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                      {apiKey.id.slice(0, 8)}...
+                    </div>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-muted-foreground mb-1">Last Characters</span>
+                    <div className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                      ...{apiKey.lastCharacters?.toString(16).toUpperCase().padStart(8, "0") || "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Status */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Status
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsActive(!isActive)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      isActive ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isActive ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                  <span className="ml-3 text-sm text-foreground">
+                    {isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+
+                {/* Usage Statistics - Read Only */}
+                {apiKey.usageCount !== undefined && (
+                  <div>
+                    <span className="block text-xs text-muted-foreground mb-2">Usage Statistics</span>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                      Total requests: <span className="font-semibold">{apiKey.usageCount}</span>
+                    </div>
+                    {apiKey.lastUsedAt && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Last used: {new Date(apiKey.lastUsedAt).toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
 
-            <Space style={{ width: "100%", marginTop: 24 }}>
-              <Button type="primary" size="large" htmlType="submit" loading={loading} style={{ flex: 1 }}>
-                Update API Key
-              </Button>
-              <Button size="large" onClick={() => go({ to: "/apikeys", type: "push" })}>
-                Cancel
-              </Button>
-            </Space>
-          </Form>
-        </ContentCard>
+                {/* Form actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button variant="primary" isLoading={saving} type="submit">
+                    Update API Key
+                  </Button>
+                  <Button variant="ghost" onClick={() => router.push("/apikeys")}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </form>
       </div>
-    </PageContainer>
+    </div>
   );
 }

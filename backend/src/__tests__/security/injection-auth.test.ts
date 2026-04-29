@@ -9,38 +9,38 @@
  * using parameterized queries.
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 
 // Mock dependencies
-jest.mock('@/lib', () => ({
+vi.mock('@/lib', () => ({
   prisma: {
-    user: { findUnique: jest.fn(), create: jest.fn() },
+    user: { findUnique: vi.fn(), create: vi.fn() },
     dataset: {
-      findMany: jest.fn().mockResolvedValue([]),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
-    organizations: { findFirst: jest.fn(), create: jest.fn() },
-    $transaction: jest.fn((cb: any) => cb({})),
+    organizations: { findFirst: vi.fn(), create: vi.fn() },
+    $transaction: vi.fn((cb: any) => cb({})),
   },
-  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
-jest.mock('@/utils/logger', () => ({
-  error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn(),
+vi.mock('@/utils/logger', () => ({
+  error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn(),
 }));
 
-jest.mock('@/middleware/cacheDecorator', () => ({
-  cacheRoute: () => (req: any, res: any, next: any) => next(),
-  invalidateCache: jest.fn().mockResolvedValue(undefined),
+vi.mock('@/middleware/cacheDecorator', () => ({
+  cacheRoute: () => (_req: any, _res: any, next: any) => next(),
+  invalidateCache: vi.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@/middleware/auth', () => ({
+vi.mock('@/middleware/auth', () => ({
   authenticate: (req: any, _res: any, next: any) => {
     if (req.headers.authorization === 'Bearer valid-admin-token') {
       req.user = { id: 'admin-user-id', role: 'admin' };
@@ -56,18 +56,18 @@ jest.mock('@/middleware/auth', () => ({
   },
 }));
 
-jest.mock('@/services/authLockout', () => ({
-  checkAccountLockout: jest.fn().mockResolvedValue({ locked: false }),
-  recordFailedLogin: jest.fn(),
-  clearFailedLoginAttempts: jest.fn(),
+vi.mock('@/services/authLockout', () => ({
+  checkAccountLockout: vi.fn().mockResolvedValue({ locked: false }),
+  recordFailedLogin: vi.fn(),
+  clearFailedLoginAttempts: vi.fn(),
 }));
 
-jest.mock('@/services/tokenBlacklist', () => ({
-  blacklistToken: jest.fn(),
-  isTokenBlacklisted: jest.fn().mockResolvedValue(false),
+vi.mock('@/services/tokenBlacklist', () => ({
+  blacklistToken: vi.fn(),
+  isTokenBlacklisted: vi.fn().mockResolvedValue(false),
 }));
 
-const { prisma } = require('@/lib');
+import { prisma } from '@/lib';
 import { datasetsRouter } from '@/routes/datasets';
 
 /**
@@ -144,7 +144,7 @@ describe('Security: Authentication Bypass', () => {
     app = express();
     app.use(express.json());
     app.use('/datasets', datasetsRouter);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('should reject request without token', async () => {
@@ -186,11 +186,11 @@ describe('Security: Privilege Escalation', () => {
     app = express();
     app.use(express.json());
     app.use('/datasets', datasetsRouter);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('VIEWER cannot delete datasets they do not own', async () => {
-    (prisma.dataset.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.dataset.findUnique as vi.Mock).mockResolvedValue({
       id: 'ds-1',
       ownerId: 'admin-user-id',
       owner: { id: 'admin-user-id', name: 'Admin', email: 'admin@example.com' },
@@ -203,7 +203,7 @@ describe('Security: Privilege Escalation', () => {
   });
 
   test('VIEWER cannot update datasets they do not own', async () => {
-    (prisma.dataset.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.dataset.findUnique as vi.Mock).mockResolvedValue({
       id: 'ds-1',
       ownerId: 'admin-user-id',
       owner: { id: 'admin-user-id', name: 'Admin', email: 'admin@example.com' },
@@ -217,7 +217,7 @@ describe('Security: Privilege Escalation', () => {
   });
 
   test('VIEWER cannot import data to datasets they do not own', async () => {
-    (prisma.dataset.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.dataset.findUnique as vi.Mock).mockResolvedValue({
       id: 'ds-1',
       ownerId: 'admin-user-id',
     });

@@ -4,7 +4,7 @@
  * Pre-defined user data for testing different scenarios
  */
 
-import { User, UserRole } from '@prisma/client';
+import { type User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 /**
@@ -140,7 +140,7 @@ export const passwordFixtures = {
   weak: '123',
   medium: 'password123',
   strong: 'Str0ng!Pass@#$%',
-  veryLong: 'a'.repeat(100) + '1A!',
+  veryLong: `${'a'.repeat(100)}1A!`,
 };
 
 /**

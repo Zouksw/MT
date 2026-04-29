@@ -37,7 +37,7 @@ export function getLuminance(color: string | RGB): number {
     const normalized = val / 255;
     return normalized <= 0.03928
       ? normalized / 12.92
-      : Math.pow((normalized + 0.055) / 1.055, 2.4);
+      : ((normalized + 0.055) / 1.055) ** 2.4;
   });
 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -106,9 +106,9 @@ export function meetsWCAG_AAA(
  */
 export const DESIGN_COLORS = {
   // Primary colors
-  primary: "#0a72ef",
-  "primary-hover": "#0055A3",
-  "primary-light": "#EEF2FF",
+  primary: "#B8860B",
+  "primary-hover": "#9A7209",
+  "primary-light": "#FDF6E3",
 
   // Secondary colors
   secondary: "#475569",
@@ -118,7 +118,7 @@ export const DESIGN_COLORS = {
   success: "#10B981",
   warning: "#F59E0B",
   error: "#EF4444",
-  info: "#3B82F6",
+  info: "#D4A030",
 
   // Neutral colors
   white: "#FFFFFF",

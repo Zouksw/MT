@@ -1,14 +1,14 @@
 /**
- * Unified Chart Configuration for TradeMind AI
+ * Unified Chart Configuration for MT
  * Provides consistent styling for all Recharts components
  */
 
 // Chart color palette - professional and accessible
 export const chartColors = {
   // Primary colors - matching design system
-  primary: "#0a72ef",
-  primaryLight: "#66B3FF",
-  primaryDark: "#0055A3",
+  primary: "#B8860B",
+  primaryLight: "#D4A030",
+  primaryDark: "#9A7209",
 
   // Semantic colors
   success: "#10B981",
@@ -17,7 +17,7 @@ export const chartColors = {
   info: "#0EA5E9",
 
   // Data visualization colors (colorblind-friendly palette)
-  blue: "#3B82F6",
+  blue: "#B8860B",
   purple: "#8B5CF6",
   pink: "#EC4899",
   orange: "#F97316",

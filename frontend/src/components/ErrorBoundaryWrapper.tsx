@@ -1,7 +1,7 @@
 "use client";
 
 import ErrorBoundary from "./ErrorBoundary";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface ErrorBoundaryWrapperProps {
   children: ReactNode;

@@ -1,10 +1,10 @@
 ---
-title: "IoTDB Enhanced Platform Changelog"
-en_title: "IoTDB Enhanced Platform Changelog"
+title: "MT Platform Changelog"
+en_title: "MT Platform Changelog"
 version: "1.0.0"
 last_updated: "2026-03-13"
 status: "active"
-maintainer: "IoTDB Enhanced Team"
+maintainer: "MT Team"
 reviewers:
   - "Release Manager"
   - "Project Maintainer"
@@ -20,7 +20,7 @@ related_docs:
 changes:
   - version: "1.0.0"
     date: "2026-03-10"
-    author: "IoTDB Enhanced Team"
+    author: "MT Team"
     changes: "Added YAML metadata header"
 next_review: "2026-09-10"
 approval:
@@ -31,7 +31,7 @@ approval:
 
 # Changelog
 
-All notable changes to the IoTDB Enhanced Platform will be documented in this file.
+All notable changes to the MT Platform will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -490,7 +490,7 @@ curl -X POST http://localhost:8000/api/iotdb/ai/predict \
 ## [1.0.0] - 2026-03-03
 
 ### Added
-- Initial release of IoTDB Enhanced Platform
+- Initial release of MT Platform
 - Apache IoTDB 2.0.5 integration
 - AI-powered time series prediction and anomaly detection
 - RESTful API with Swagger documentation
@@ -578,7 +578,7 @@ curl -X POST http://localhost:8000/api/iotdb/ai/predict \
   - `.env.production.template` - Production environment template
   - Symlinks for backward compatibility
 - **Cleaned Directory Structure** - Removed duplicate and obsolete files
-  - Removed duplicate `/root/iotdb-enhanced/` project directory
+  - Removed duplicate `/root/` project directory
   - Cleaned up 4+ Claude worktrees (~10MB storage recovered)
   - Removed 9 unused dependencies across projects
 
@@ -702,7 +702,7 @@ npm test
 5. **Set up automated backups**:
    ```bash
    crontab -e
-   # Add: 0 2 * * * /root/iotdb-enhanced/scripts/auto-backup.sh
+   # Add: 0 2 * * * /root/scripts/auto-backup.sh
    ```
 
 6. **Enable monitoring** (optional):
@@ -712,6 +712,6 @@ npm test
 
 ---
 
-[1.2.0]: https://github.com/Zouksw/iotdb-enhanced/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/Zouksw/iotdb-enhanced/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/Zouksw/iotdb-enhanced/releases/tag/v1.0.0
+[1.2.0]: https://github.com/Zouksw/trademind-ai/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/Zouksw/trademind-ai/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Zouksw/trademind-ai/releases/tag/v1.0.0

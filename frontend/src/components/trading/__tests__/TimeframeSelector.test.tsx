@@ -2,7 +2,6 @@
  * Tests for TimeframeSelector component
  */
 
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TimeframeSelector from '../TimeframeSelector';
 

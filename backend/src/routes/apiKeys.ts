@@ -3,13 +3,12 @@
  * Endpoints for managing API keys
  */
 
-import { Router, Request, Response } from 'express';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { Router, type Response } from 'express';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { apiKeyCreationLimiter } from '@/middleware/rateLimiter';
 import { asyncHandler, UnauthorizedError } from '@/middleware/errorHandler';
 import {
   createApiKey,
-  validateApiKey,
   listApiKeys,
   revokeApiKey,
   deleteApiKey,

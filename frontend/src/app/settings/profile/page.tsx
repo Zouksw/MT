@@ -1,40 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Button,
-  Form,
-  Input,
-  Avatar,
-  Space,
-  Typography,
-  Card,
-  Row,
-  Col,
-  message,
-  Descriptions,
-  Divider,
-  Alert,
-  Statistic,
-  Row as AntRow,
-} from "antd";
-import {
-  UserOutlined,
-  MailOutlined,
-  LockOutlined,
-  SaveOutlined,
-  CameraOutlined,
-  SecurityScanOutlined,
-  DatabaseOutlined,
-  BranchesOutlined,
-} from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Alert";
+import { useToast } from "@/components/ui/Toast";
 import { authFetch, getAuthToken, setCachedUser } from "@/utils/auth";
-
-const { Title, Text } = Typography;
+import { User } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -44,11 +21,7 @@ interface UserProfile {
   avatarUrl?: string;
   createdAt: string;
   lastLoginAt: string;
-  _count: {
-    datasets: number;
-    models: number;
-    ownedOrganizations: number;
-  };
+  _count: { datasets: number; models: number; ownedOrganizations: number };
 }
 
 export default function ProfileSettingsPage() {
@@ -56,8 +29,14 @@ export default function ProfileSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [form] = Form.useForm();
-  const [passwordForm] = Form.useForm();
+  const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const toast = useToast();
+  const _router = useRouter();
 
   const fetchUserProfile = useCallback(async () => {
     setLoading(true);
@@ -66,84 +45,74 @@ export default function ProfileSettingsPage() {
       const response = await authFetch("/api/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!response.ok) throw new Error("Failed to fetch profile");
-
       const data = await response.json();
       setUser(data.user);
       setCachedUser(data.user);
-      form.setFieldsValue({
-        name: data.user.name,
-        avatarUrl: data.user.avatarUrl || "",
-      });
+      setName(data.user.name || "");
+      setAvatarUrl(data.user.avatarUrl || "");
     } catch {
-      message.error("Failed to load profile");
+      toast.showError("Failed to load profile");
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [toast.showError]);
 
-  useEffect(() => {
-    fetchUserProfile();
-  }, [fetchUserProfile]);
+  useEffect(() => { fetchUserProfile(); }, [fetchUserProfile]);
 
-  const handleProfileUpdate = async (values: { name: string; avatarUrl: string }) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setErrors({ name: "Name is required" });
+      return;
+    }
     setSaving(true);
     try {
       const token = getAuthToken();
       const response = await authFetch("/api/auth/me", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: values.name,
-          avatarUrl: values.avatarUrl || undefined,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name, avatarUrl: avatarUrl || undefined }),
       });
-
       if (!response.ok) throw new Error("Failed to update profile");
-
       const data = await response.json();
       setUser(data.user);
       setCachedUser(data.user);
-      message.success("Profile updated successfully");
+      toast.showSuccess("Profile updated successfully");
     } catch {
-      message.error("Failed to update profile");
+      toast.showError("Failed to update profile");
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePasswordChange = async (values: {
-    currentPassword: string;
-    newPassword: string;
-  }) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!currentPassword) errs.currentPassword = "Current password is required";
+    if (!newPassword || newPassword.length < 8) errs.newPassword = "Must be at least 8 characters";
+    if (newPassword !== confirmPassword) errs.confirmPassword = "Passwords do not match";
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
     setChangingPassword(true);
     try {
       const token = getAuthToken();
       const response = await authFetch("/api/auth/change-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          currentPassword: values.currentPassword,
-          newPassword: values.newPassword,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to change password");
       }
-
-      message.success("Password changed successfully. Please login again.");
-      passwordForm.resetFields();
+      toast.showSuccess("Password changed successfully. Please login again.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setErrors({});
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Failed to change password");
+      toast.showError(error instanceof Error ? error.message : "Failed to change password");
     } finally {
       setChangingPassword(false);
     }
@@ -152,229 +121,99 @@ export default function ProfileSettingsPage() {
   if (loading) {
     return (
       <PageContainer>
-        <Card loading />
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-muted rounded w-48" />
+          <div className="h-64 bg-muted rounded-xl" />
+        </div>
       </PageContainer>
     );
   }
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Profile Settings"
-        description="Manage your personal information and preferences"
-      />
+      <PageHeader title="Profile Settings" description="Manage your personal information and preferences" />
 
-      <Row gutter={[24, 24]}>
-        {/* Profile Overview Card */}
-        <Col xs={24} lg={8}>
-          <Card>
-            <Space direction="vertical" style={{ width: "100%" }} align="center" size="large">
-              <Avatar
-                size={100}
-                src={user?.avatarUrl}
-                icon={<UserOutlined />}
-                style={{ border: "3px solid #0a72ef" }}
-              />
-              <div style={{ textAlign: "center" }}>
-                <Title level={4} style={{ fontSize: "18px", marginBottom: 4 }}>
-                  {user?.name || "User"}
-                </Title>
-                <Text type="secondary">{user?.email}</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
-                    Role: {user?.role}
-                  </Text>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Overview */}
+        <div>
+          <div className="bg-card border rounded-xl p-6">
+            <div className="flex flex-col items-center">
+              <div className="w-24 h-24 rounded-full border-3 border-primary flex items-center justify-center bg-muted overflow-hidden">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="size-10 text-gray-400" />
+                )}
               </div>
-            </Space>
+              <h4 className="text-lg font-semibold text-foreground mt-4 mb-0.5">{user?.name || "User"}</h4>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <p className="text-xs text-gray-400 mt-1">Role: {user?.role}</p>
+            </div>
 
-            <Divider />
+            <hr className="my-4 border" />
 
-            {/* Account Statistics */}
-            <AntRow gutter={[16, 16]}>
-              <Col span={8}>
-                <Statistic
-                  title="Datasets"
-                  value={user?._count.datasets || 0}
-                  prefix={<DatabaseOutlined />}
-                  valueStyle={{ fontSize: 20, color: "#0a72ef" }}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="Models"
-                  value={user?._count.models || 0}
-                  prefix={<SecurityScanOutlined />}
-                  valueStyle={{ fontSize: 20, color: "#10B981" }}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="Orgs"
-                  value={user?._count.ownedOrganizations || 0}
-                  prefix={<BranchesOutlined />}
-                  valueStyle={{ fontSize: 20, color: "#8B5CF6" }}
-                />
-              </Col>
-            </AntRow>
-          </Card>
-        </Col>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-xl font-semibold text-primary">{user?._count.datasets || 0}</div>
+                <div className="text-xs text-gray-500">Datasets</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold text-green-500">{user?._count.models || 0}</div>
+                <div className="text-xs text-gray-500">Models</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold text-purple-500">{user?._count.ownedOrganizations || 0}</div>
+                <div className="text-xs text-gray-500">Orgs</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        {/* Profile Form and Password Change */}
-        <Col xs={24} lg={16}>
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            {/* Edit Profile */}
-            <ContentCard title="Edit Profile" subtitle={<UserOutlined />}>
-              <Form
-                form={form}
-                layout="vertical"
-                onFinish={handleProfileUpdate}
-                initialValues={{
-                  name: user?.name,
-                  avatarUrl: user?.avatarUrl || "",
-                }}
-              >
-                <Form.Item
-                  label="Display Name"
-                  name="name"
-                  rules={[{ required: true, message: "Please enter your name" }]}
-                >
-                  <Input prefix={<UserOutlined />} placeholder="Your display name" size="large" />
-                </Form.Item>
+        {/* Forms */}
+        <div className="lg:col-span-2 space-y-6">
+          <ContentCard title="Edit Profile">
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <Input label="Display Name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} fullWidth />
+              <Input label="Email Address" value={user?.email || ""} disabled fullWidth />
+              <Input label="Avatar URL" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://your-avatar-url.com/image.png" fullWidth />
+              <Button type="submit" variant="primary" isLoading={saving}>Save Changes</Button>
+            </form>
+          </ContentCard>
 
-                <Form.Item
-                  label="Email Address"
-                  tooltip="Email cannot be changed"
-                >
-                  <Input
-                    prefix={<MailOutlined />}
-                    value={user?.email}
-                    disabled
-                    size="large"
-                  />
-                </Form.Item>
+          <ContentCard title="Change Password">
+            <Alert variant="info" className="mb-4">
+              After changing your password, you will need to login again on all devices.
+            </Alert>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <Input label="Current Password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} error={errors.currentPassword} fullWidth />
+              <Input label="New Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} error={errors.newPassword} placeholder="Min. 8 characters" fullWidth />
+              <Input label="Confirm New Password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} error={errors.confirmPassword} fullWidth />
+              <Button type="submit" variant="danger" isLoading={changingPassword}>Change Password</Button>
+            </form>
+          </ContentCard>
 
-                <Form.Item
-                  label="Avatar URL"
-                  name="avatarUrl"
-                  tooltip="Enter a URL for your profile image"
-                >
-                  <Input
-                    prefix={<CameraOutlined />}
-                    placeholder="https://your-avatar-url.com/image.png"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    icon={<SaveOutlined />}
-                    loading={saving}
-                    size="large"
-                  >
-                    Save Changes
-                  </Button>
-                </Form.Item>
-              </Form>
-            </ContentCard>
-
-            {/* Change Password */}
-            <ContentCard title="Change Password" subtitle={<LockOutlined />}>
-              <Alert
-                message="Password Security"
-                description="After changing your password, you will need to login again on all devices."
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-
-              <Form
-                form={passwordForm}
-                layout="vertical"
-                onFinish={handlePasswordChange}
-              >
-                <Form.Item
-                  label="Current Password"
-                  name="currentPassword"
-                  rules={[{ required: true, message: "Please enter your current password" }]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder="Current password"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="New Password"
-                  name="newPassword"
-                  rules={[
-                    { required: true, message: "Please enter a new password" },
-                    { min: 8, message: "Password must be at least 8 characters" },
-                  ]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder="New password (min. 8 characters)"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Confirm New Password"
-                  name="confirmPassword"
-                  dependencies={["newPassword"]}
-                  rules={[
-                    { required: true, message: "Please confirm your new password" },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue("newPassword") === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject(new Error("Passwords do not match"));
-                      },
-                    }),
-                  ]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder="Confirm new password"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button
-                    danger
-                    htmlType="submit"
-                    icon={<LockOutlined />}
-                    loading={changingPassword}
-                    size="large"
-                  >
-                    Change Password
-                  </Button>
-                </Form.Item>
-              </Form>
-            </ContentCard>
-
-            {/* Account Info */}
-            <ContentCard title="Account Information" subtitle={<UserOutlined />}>
-              <Descriptions column={{ xs: 1, sm: 2 }} bordered size="middle">
-                <Descriptions.Item label="User ID">{user?.id}</Descriptions.Item>
-                <Descriptions.Item label="Role">{user?.role}</Descriptions.Item>
-                <Descriptions.Item label="Account Created">
-                  {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Last Login">
-                  {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "N/A"}
-                </Descriptions.Item>
-              </Descriptions>
-            </ContentCard>
-          </Space>
-        </Col>
-      </Row>
+          <ContentCard title="Account Information">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">User ID</div>
+                <div className="text-sm font-mono">{user?.id}</div>
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Role</div>
+                <div className="text-sm">{user?.role}</div>
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Account Created</div>
+                <div className="text-sm">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</div>
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Last Login</div>
+                <div className="text-sm">{user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "N/A"}</div>
+              </div>
+            </div>
+          </ContentCard>
+        </div>
+      </div>
     </PageContainer>
   );
 }

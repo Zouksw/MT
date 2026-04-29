@@ -18,10 +18,15 @@
     bottom: 0;
     width: 256px;
     background: #FFFFFF;
-    border-right: 1px solid #E5E7EB;
+    box-shadow: rgba(0,0,0,0.08) 0px 0px 0px 1px;
     padding: 16px;
     overflow-y: auto;
     z-index: 100;
+  }
+
+  .dark .desktop-sidebar {
+    background: #111;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   /* Navigation item hover effect */
@@ -39,18 +44,32 @@
     margin-bottom: 4px;
   }
 
+  .dark .desktop-nav-item {
+    color: #D1D5DB;
+  }
+
   .desktop-nav-item:hover {
-    background: rgba(0, 102, 204, 0.08);
-    color: #0a72ef;
+    background: rgba(184, 134, 11, 0.08);
+    color: #B8860B;
+  }
+
+  .dark .desktop-nav-item:hover {
+    background: rgba(184, 134, 11, 0.15);
+    color: #D4A843;
   }
 
   .desktop-nav-item.active {
-    background: #0a72ef;
+    background: #B8860B;
+    color: #FFFFFF;
+  }
+
+  .dark .desktop-nav-item.active {
+    background: #B8860B;
     color: #FFFFFF;
   }
 
   .desktop-nav-item:focus-visible {
-    outline: 2px solid #0a72ef;
+    outline: 2px solid #B8860B;
     outline-offset: 2px;
   }
 
@@ -66,14 +85,18 @@
     margin-top: 8px;
     min-width: 200px;
     background: #FFFFFF;
-    border: 1px solid #E5E7EB;
     border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: rgba(0,0,0,0.08) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 4px 12px;
     padding: 8px 0;
     opacity: 0;
     visibility: hidden;
     transform: translateY(-8px);
     transition: all 0.2s ease;
+  }
+
+  .dark .desktop-user-menu-content {
+    background: #1F2937;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0px 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   .desktop-user-menu:hover .desktop-user-menu-content,
@@ -102,17 +125,21 @@
   /* Button hover enhancement */
   .ant-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 102, 204, 0.2);
+    box-shadow: 0 4px 8px rgba(184, 134, 11, 0.2);
   }
 
   .ant-btn-primary:hover {
-    background: #0052A3;
-    border-color: #0052A3;
+    background: #9A7209;
+    border-color: #9A7209;
   }
 
   /* Table row hover */
   .ant-table-tbody > tr:hover {
     background: #F9FAFB;
+  }
+
+  .dark .ant-table-tbody > tr:hover {
+    background: #374151;
   }
 
   /* Link hover animation */
@@ -121,7 +148,7 @@
   }
 
   a:hover {
-    color: #0a72ef;
+    color: #B8860B;
   }
 
   /* Icon button hover */
@@ -137,9 +164,18 @@
     color: #6B7280;
   }
 
+  .dark .icon-button {
+    color: #9CA3AF;
+  }
+
   .icon-button:hover {
     background: #F3F4F6;
-    color: #0a72ef;
+    color: #B8860B;
+  }
+
+  .dark .icon-button:hover {
+    background: #374151;
+    color: #D4A843;
   }
 
   /* Tooltip enhancement */
@@ -157,7 +193,7 @@
 @media (min-width: 1024px) {
   /* Focus visible styles for keyboard navigation */
   *:focus-visible {
-    outline: 2px solid #0a72ef;
+    outline: 2px solid #B8860B;
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -167,7 +203,7 @@
     position: absolute;
     top: -40px;
     left: 0;
-    background: #0a72ef;
+    background: #B8860B;
     color: #FFFFFF;
     padding: 8px 16px;
     z-index: 10000;
@@ -190,6 +226,12 @@
     font-size: 11px;
     color: #6B7280;
     font-family: monospace;
+  }
+
+  .dark [data-keyboard-hint]::after {
+    background: #374151;
+    border-color: #4B5563;
+    color: #9CA3AF;
   }
 }
 
@@ -230,7 +272,7 @@
   }
 
   .ant-breadcrumb-link:hover {
-    color: #0a72ef;
+    color: #B8860B;
   }
 }
 
@@ -285,8 +327,8 @@
   .ant-input:focus,
   .ant-select-focused .ant-select-selector,
   .ant-picker-focused {
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-    border-color: #0a72ef;
+    box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.1);
+    border-color: #B8860B;
   }
 
   /* Form label styling */
@@ -294,6 +336,10 @@
     font-weight: 500;
     font-size: 13px;
     color: #374151;
+  }
+
+  .dark .ant-form-item-label > label {
+    color: #D1D5DB;
   }
 }
 
@@ -317,7 +363,7 @@
     justify-content: flex-end;
     gap: 12px;
     padding: 16px 24px;
-    border-top: 1px solid #E5E7EB;
+    box-shadow: rgba(0,0,0,0.06) 0px -1px 0px 0px;
   }
 }
 
@@ -329,22 +375,22 @@
   /* Hide navigation */
   .desktop-sidebar,
   .desktop-header {
-    display: none !important;
+    display: none;
   }
 
   /* Reset margins */
   .desktop-main-content {
-    margin: 0 !important;
-    padding: 0 !important;
+    margin: 0;
+    padding: 0;
   }
 
   /* Table styling for print */
   .ant-table-wrapper {
-    border: 1px solid #E5E7EB;
+    box-shadow: rgba(0,0,0,0.08) 0px 0px 0px 1px;
   }
 
   /* Hide action columns */
   .desktop-print-hide {
-    display: none !important;
+    display: none;
   }
 }

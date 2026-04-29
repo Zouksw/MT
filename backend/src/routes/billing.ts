@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, BadRequestError } from '@/middleware/errorHandler';
 import { success } from '@/lib/response';
 import { prisma } from '@/lib';
@@ -12,19 +12,19 @@ const PLANS = [
     id: 'free',
     name: 'Free',
     price: 0,
-    features: ['5 watchlist items', '3 AI models', '10 signals/day', '30-day history'],
+    features: ['5 watchlist items', '3 AI prediction models', '10 signals/day', '7-day price history'],
   },
   {
     id: 'pro',
     name: 'Professional',
     price: 49,
-    features: ['50 watchlist items', 'All 7 AI models', '100 signals/day', '1-year history', 'API access'],
+    features: ['50 watchlist items', 'All 7 AI models', '100 signals/day', '1-year history', 'Backtest reports', 'API access'],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
     price: 199,
-    features: ['Unlimited everything', 'Custom AI models', 'Priority support', 'API access'],
+    features: ['Unlimited everything', 'Custom AI models', 'Priority inference', 'Full history', 'Private deployment', 'API access'],
   },
 ];
 

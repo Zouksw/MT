@@ -1,0 +1,88 @@
+/**
+ * Layout styles — page containers, headers, background patterns
+ */
+
+/* Page container */
+.page-container {
+  min-height: 100vh;
+  background-color: #f9faffb3;
+  padding: 24px;
+}
+
+.dark .page-container {
+  background-color: #0a0a0a;
+}
+
+/* Page header */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: #B8860B;
+  margin-top: 16px;
+}
+
+.dark .page-header::after {
+  background: linear-gradient(to right, #D4A030, rgba(184, 134, 11, 0.2), transparent);
+}
+
+.page-header__title {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #171717;
+  margin: 0 0 8px 0;
+}
+
+.dark .page-header__title {
+  color: #f9faffb3;
+}
+
+.page-header__description {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.dark .page-header__description {
+  color: #9ca3af;
+}
+
+.page-header h3,
+.page-header .ant-typography {
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+/* Background patterns */
+.bg-pattern-dots {
+  background-image: radial-gradient(circle, rgba(184, 134, 11, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .bg-pattern-dots {
+  background-image: radial-gradient(circle, rgba(184, 134, 11, 0.03) 1px, transparent 1px);
+}
+
+.bg-mesh-gradient {
+  position: relative;
+}
+
+.bg-mesh-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(184, 134, 11, 0.06), transparent),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(184, 134, 11, 0.04), transparent);
+}
+
+.dark .bg-mesh-gradient::before {
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(184, 134, 11, 0.08), transparent),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(212, 160, 48, 0.05), transparent);
+}

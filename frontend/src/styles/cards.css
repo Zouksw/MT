@@ -1,0 +1,172 @@
+/**
+ * Card styles — content cards, glass cards, stat cards
+ * Dark mode: surface #171717, shadow-as-border technique
+ */
+
+/* Unified card base classes */
+
+.card-base {
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  border: none;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .card-base {
+  background-color: #171717;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.card-base:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.dark .card-base:hover {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card-elevated {
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  border: none;
+  box-shadow: var(--shadow-card), 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .card-elevated {
+  background-color: #1f1f1f;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 16px -4px rgba(0, 0, 0, 0.3);
+}
+
+/* Glass Card Base — shadow-as-border */
+.glass-card {
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-card:hover {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Content card */
+.content-card {
+  background-color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.dark .content-card {
+  background-color: #171717;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.dark .content-card:hover {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Content card with accent strip */
+.content-card--accent {
+  position: relative;
+}
+
+.content-card--accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #B8860B;
+  border-radius: 8px 8px 0 0;
+}
+
+.dark .content-card--accent::before {
+  background: linear-gradient(90deg, #B8860B, #D4A030);
+}
+
+/* Gradient Text - Professional Blue (limited use) */
+.gradient-text {
+  color: #B8860B;
+  font-weight: 600;
+}
+
+.dark .gradient-text {
+  color: #D4A030;
+  font-weight: 600;
+}
+
+/* Ant Design Card */
+.ant-card {
+  border: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .ant-card {
+  background-color: #171717;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.ant-card:hover {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dark .ant-card:hover {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Stat card — gradient top accent, background tint */
+.stat-card {
+  border-left: none;
+  border-top: 3px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.stat-card:hover {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.dark .stat-card:hover {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stat-card--primary::before { background: #B8860B; }
+.stat-card--success::before { background: linear-gradient(90deg, #10B981, #34D399); }
+.stat-card--warning::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.stat-card--error::before { background: linear-gradient(90deg, #EF4444, #F87171); }
+.stat-card--default::before { background: linear-gradient(90deg, #64748B, #94A3B8); }
+
+/* Stat card subtle background tint */
+.stat-card--primary { background-color: rgba(184, 134, 11, 0.04); }
+.stat-card--success { background-color: rgba(16, 185, 129, 0.04); }
+.stat-card--warning { background-color: rgba(245, 158, 11, 0.04); }
+.stat-card--error { background-color: rgba(239, 68, 68, 0.04); }
+
+.dark .stat-card--primary { background-color: rgba(184, 134, 11, 0.06); }
+.dark .stat-card--success { background-color: rgba(52, 211, 153, 0.06); }
+.dark .stat-card--warning { background-color: rgba(251, 191, 36, 0.06); }
+.dark .stat-card--error { background-color: rgba(248, 113, 113, 0.06); }

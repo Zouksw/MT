@@ -4,7 +4,7 @@
  */
 
 import helmet from 'helmet';
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { ZodError, z } from 'zod';
 
 /**
@@ -72,7 +72,7 @@ export const validate =
  */
 export const detectSqlInjection = (req: Request, res: Response, next: NextFunction) => {
   const sqlInjectionPatterns = [
-    /(\%27)|(\')|(\-\-)|(\%23)|(#)/i,
+    /(%27)|(')|(--)|(%23)|(#)/i,
     // OR/AND followed by = (potential tautology attack) but exclude safe patterns
     /(\bor\b|\band\b)(?!.*(?:select|from|where|group|order|having|limit)).*?=/i,
     /exec(\s|\+)+(s|x)p\w+/i,

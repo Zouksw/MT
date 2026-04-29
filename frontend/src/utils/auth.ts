@@ -5,7 +5,6 @@
  */
 
 import { tokenManager } from "@/lib/tokenManager";
-import { csrfProtection } from "@/lib/csrf";
 
 /**
  * Cached user data
@@ -75,7 +74,6 @@ export const authFetch = async (
   options: RequestInit = {}
 ): Promise<Response> => {
   const token = tokenManager.getToken();
-  const csrfHeaders = csrfProtection.getHeaders();
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -84,12 +82,7 @@ export const authFetch = async (
 
   // Add auth header if token exists
   if (token) {
-    (headers as any)['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Add CSRF token for non-GET requests
-  if (options.method && options.method !== 'GET') {
-    Object.assign(headers, csrfHeaders);
+    (headers as Record<string, string>).Authorization = `Bearer ${token}`;
   }
 
   return fetch(`${API_BASE}${url}`, {

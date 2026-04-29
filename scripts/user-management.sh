@@ -1,5 +1,5 @@
 #!/bin/bash
-# TradeMind AI - User Management Script
+# MT - User Management Script
 # ========================================
 # 统一用户管理脚本：创建管理员、修改密码
 

@@ -4,12 +4,12 @@
  * Handles security-related endpoints including audit logs
  */
 
-import { Router, Response } from 'express';
-import { Prisma } from '@prisma/client';
+import { Router, type Response } from 'express';
+import type { Prisma } from '@prisma/client';
 import { prisma, logger } from '@/lib';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
-import { error, success, successWithMessage, unauthorized, forbidden } from '@/lib/response';
+import { error, success, forbidden } from '@/lib/response';
 
 const router = Router();
 
@@ -278,8 +278,8 @@ router.get('/audit', authenticate, asyncHandler(async (req: AuthRequest, res: Re
   }
 
   // Parse pagination parameters
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  const pageNum = parseInt(page as string, 10);
+  const limitNum = parseInt(limit as string, 10);
   const skip = (pageNum - 1) * limitNum;
 
   // Fetch logs with pagination

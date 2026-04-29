@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# TradeMind AI - Database Restore Script
+# MT - Database Restore Script
 #
 # Restores a PostgreSQL database from a backup file created by backup-db.sh.
 # Supports both plain SQL and gzip-compressed backups.

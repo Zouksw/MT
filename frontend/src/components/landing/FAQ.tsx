@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import {
-  CloudServerOutlined,
-  ThunderboltOutlined,
-  SecurityScanOutlined,
-  ApiOutlined,
-  TeamOutlined,
-  DownOutlined,
-} from "@ant-design/icons";
+  Cloud,
+  Lightning,
+  ShieldCheck,
+  Plugs,
+  Users,
+  Bell,
+} from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { MotionReveal } from "@/components/ui/MotionReveal";
+import { SPRING_DEFAULTS } from "@/lib/motion";
 
 interface FAQItem {
   question: string;
@@ -18,138 +22,136 @@ interface FAQItem {
 
 const faqs: FAQItem[] = [
   {
-    question: "What is TradeMind AI?",
+    question: "What is MT?",
     answer:
-      "TradeMind AI is an enterprise-grade time series database platform built on Apache IoTDB. It provides real-time analytics, AI-powered forecasting, anomaly detection, and a modern web interface for managing your IoT data at scale.",
-    icon: <CloudServerOutlined />,
+      "MT is a commodity market information and analytics platform. It tracks 55+ commodities with real-time prices, multi-factor analysis (weather, forex, tariffs, shipping), and an AI signal engine with 7 models that generate independent price predictions.",
+    icon: <Cloud size={20} weight="duotone" />,
   },
   {
-    question: "How does AI-powered forecasting work?",
+    question: "How does the AI signal engine work?",
     answer:
-      "Our platform provides pre-trained AI models including ARIMA, Prophet, LSTM, and Transformer architectures. Generate accurate predictions with confidence intervals directly on your time series data — no model training required.",
-    icon: <ThunderboltOutlined />,
+      "Our platform runs 7 independent AI models — ARIMA, HoltWinters, ExponentialSmoothing, Naive, STL, Timer-XL, and Sundial — on each commodity. Each model generates its own price forecast and signal (bullish/bearish/neutral) with a confidence score. You can compare model accuracy using MAPE metrics.",
+    icon: <Lightning size={20} weight="duotone" />,
   },
   {
-    question: "Is my data secure?",
+    question: "What commodities are covered?",
     answer:
-      "Absolutely. We implement enterprise-grade security including encryption at rest and in transit, role-based access control (RBAC), API key management, and secure session management.",
-    icon: <SecurityScanOutlined />,
+      "We cover 55+ commodities including beef and livestock, grains and oilseeds (corn, soybeans, wheat), energy (crude oil, natural gas), metals (gold, silver, copper), and soft commodities (coffee, sugar, cotton). Coverage is expanding regularly.",
+    icon: <ShieldCheck size={20} weight="duotone" />,
   },
   {
-    question: "Can I integrate with my existing systems?",
+    question: "What market factors do you analyze?",
     answer:
-      "Yes. TradeMind AI provides a RESTful API, WebSocket support for real-time updates, and native IoTDB protocol compatibility. You can also use our SDKs and integrate with popular data pipelines.",
-    icon: <ApiOutlined />,
+      "We track weather patterns, currency exchange rates, import/export tariffs, shipping and freight costs, and supply/demand fundamentals. Each factor's correlation with commodity prices is visualized so you can see what's driving movements.",
+    icon: <Plugs size={20} weight="duotone" />,
   },
   {
-    question: "What deployment options are available?",
+    question: "Is this a trading platform?",
     answer:
-      "You can deploy on any cloud platform (AWS, GCP, Azure) using managed services like AWS RDS, ElastiCache, or Cloud SQL. We provide comprehensive deployment guides for Docker, Kubernetes, and traditional VM setups.",
-    icon: <CloudServerOutlined />,
+      "No. MT is an information and analytics platform. We provide data, analysis, and AI-generated signals to inform your decisions. We do not execute trades, manage accounts, or handle funds.",
+    icon: <Users size={20} weight="duotone" />,
   },
   {
-    question: "Do you offer enterprise support?",
+    question: "Can I set up price alerts?",
     answer:
-      "Yes. Our Enterprise plan includes dedicated support, SLA guarantees, custom integrations, and priority access to new features. Contact our sales team for more information.",
-    icon: <TeamOutlined />,
+      "Yes. You can configure custom price thresholds for any commodity. When a price hits your target or an AI model detects a breakout or reversal, you receive an instant notification with details and severity level.",
+    icon: <Bell size={20} weight="duotone" />,
   },
 ];
 
 export default function FAQ() {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-
-  const toggleFAQ = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   return (
-    <section id="faq" className="bg-white dark:bg-gray-900 px-6 py-16 md:py-24 lg:py-32">
-      <div className="mx-auto max-w-3xl">
+    <section id="faq" className="bg-white dark:bg-gray-900 px-6 py-24 md:py-36 lg:py-48">
+      <div className="mx-auto max-w-5xl">
         {/* Header */}
-        <div className="mb-12 text-center md:mb-16">
-          <div className="mb-4 inline-block rounded border border-primary/20 bg-primary/8 px-4 py-1.5">
-            <span className="text-sm font-semibold text-primary uppercase tracking-wide">FAQ</span>
-          </div>
-          <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl">
-            Frequently Asked Questions
-          </h2>
-          <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
-            Everything you need to know about TradeMind AI
-          </p>
+        <div className="mb-12 md:mb-16">
+          <MotionReveal>
+            <span className="mb-4 inline-block rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium bg-muted text-muted-foreground">
+              FAQ
+            </span>
+          </MotionReveal>
+          <MotionReveal delay={0.1}>
+            <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl" style={{ letterSpacing: "-0.04em" }}>
+              Frequently Asked Questions
+            </h2>
+          </MotionReveal>
+          <MotionReveal delay={0.15}>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Everything you need to know about MT
+            </p>
+          </MotionReveal>
         </div>
 
-        {/* FAQ Items */}
-        <div className="space-y-3">
-          {faqs.map((faq, index) => {
-            const isExpanded = expandedIndex === index;
-            return (
-              <div
-                key={index}
-                className={`rounded-lg transition-all duration-300 ${
-                  isExpanded
-                    ? "border border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/5"
-                    : "shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-white dark:bg-gray-800/50 hover:shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.06)_0px_4px_4px,rgba(0,0,0,0.04)_0px_8px_8px_-8px,#fafafa_0px_0px_0px_1px]"
-                }`}
-              >
+        {/* Side-by-side layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+          {/* Left: Questions list */}
+          <MotionReveal>
+            <div className="space-y-1" role="tablist" aria-label="FAQ questions">
+              {faqs.map((faq, index) => (
                 <button
-                  onClick={() => toggleFAQ(index)}
-                  className="flex w-full items-start gap-4 px-5 py-4 text-left md:px-6 md:py-5"
-                  aria-expanded={isExpanded}
-                >
-                  {/* Icon */}
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300 ${
-                      isExpanded
-                        ? "bg-primary/20 text-primary"
-                        : "bg-gray-50 text-gray-400 dark:bg-gray-700 dark:text-gray-500"
-                    }`}
-                  >
-                    <span className="text-lg">{faq.icon}</span>
-                  </div>
-
-                  {/* Question */}
-                  <span
-                    className={`flex-1 text-base font-semibold transition-colors duration-300 md:text-lg ${
-                      isExpanded ? "text-primary" : "text-gray-900 dark:text-white"
-                    }`}
-                  >
-                    {faq.question}
-                  </span>
-
-                  {/* Chevron */}
-                  <DownOutlined
-                    className={`shrink-0 text-gray-400 transition-transform duration-300 ${
-                      isExpanded ? "rotate-180 text-primary" : ""
-                    }`}
-                  />
-                </button>
-
-                {/* Answer — with slide-down animation */}
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${
-                    isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                  key={index}
+                  role="tab"
+                  aria-selected={selectedIndex === index}
+                  onClick={() => setSelectedIndex(index)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-all duration-200 border-l-2 ${
+                    selectedIndex === index
+                      ? "bg-primary/5 border-l-primary text-primary"
+                      : "border-l-transparent text-foreground hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-l-gray-300"
                   }`}
                 >
-                  <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-4 pl-[4.5rem] md:px-6 md:pl-[4.75rem]">
-                    <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400 md:text-base">
-                      {faq.answer}
-                    </p>
+                  <div className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+                    selectedIndex === index ? "bg-primary/15 text-primary" : "bg-muted text-gray-400"
+                  }`}>
+                    {faq.icon}
                   </div>
+                  <span className={`text-sm font-medium ${selectedIndex === index ? "text-primary" : ""}`}>
+                    {faq.question}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </MotionReveal>
+
+          {/* Right: Selected answer */}
+          <div className="min-h-[320px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedIndex}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={SPRING_DEFAULTS}
+                className="rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-gray-950 p-6 md:p-8"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    {faqs[selectedIndex].icon}
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {faqs[selectedIndex].question}
+                  </h3>
                 </div>
-              </div>
-            );
-          })}
+                <p className="text-base leading-relaxed text-foreground">
+                  {faqs[selectedIndex].answer}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Contact CTA */}
-        <div className="mt-12 rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px,#fafafa_0px_0px_0px_1px] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px,rgba(255,255,255,0.04)_0px_2px_2px] bg-gray-50 dark:bg-gray-800/50 p-8 text-center md:mt-16">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Still have questions?
-          </h3>
-          <p className="mt-2 text-gray-500 dark:text-gray-400">
-            Contact our support team for personalized assistance
-          </p>
-        </div>
+        <MotionReveal className="mt-12 md:mt-16">
+          <div className="rounded-2xl outline outline-black/5 dark:outline-white/10 p-8 text-center">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Still have questions?
+            </h3>
+            <p className="mt-2 text-muted-foreground">
+              Contact our support team for personalized assistance
+            </p>
+          </div>
+        </MotionReveal>
       </div>
     </section>
   );

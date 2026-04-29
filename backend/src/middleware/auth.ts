@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { prisma, jwtUtils, config, logger } from '@/lib';
+import type { Request, Response, NextFunction } from 'express';
+import { prisma, jwtUtils, logger } from '@/lib';
 import { isTokenBlacklisted } from '@/services/tokenBlacklist';
 
 export interface AuthRequest extends Request {
@@ -58,14 +58,14 @@ export const authenticate = async (
               gte: fifteenMinutesAgo,
             },
           },
-        }).then(count => {
+        }).then(_count => {
         }).catch(err => {
           logger.error(`Failed to count active sessions: ${err}`);
         });
       }
 
       next();
-    } catch (error) {
+    } catch (_error) {
       return res.status(401).json({ success: false, error: { message: 'Invalid or expired token', code: 'UNAUTHORIZED' } });
     }
   } catch (error) {
@@ -76,7 +76,7 @@ export const authenticate = async (
 
 export const optionalAuth = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -109,7 +109,7 @@ export const optionalAuth = async (
       }
     }
     next();
-  } catch (error) {
+  } catch (_error) {
     next();
   }
 };

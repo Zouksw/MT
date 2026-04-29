@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# TradeMind AI - Health Check Script
+# MT - Health Check Script
 #
 # Verifies health of all services after deployment.
 # Can be run standalone or as part of deployment.
@@ -305,7 +305,7 @@ check_cpu() {
 
 main() {
   echo "=========================================="
-  echo "  TradeMind AI Health Check"
+  echo "  MT Health Check"
   echo "=========================================="
   echo "Started at: $(date)"
   echo "Timeout: ${TIMEOUT}s"

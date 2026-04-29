@@ -48,7 +48,7 @@ describe('useDashboardStats', () => {
     mockUseRetryableFetch.mockImplementation((_key: any, _fetcher: any) => {
       // Return different data based on call order
       const callIndex = mockUseRetryableFetch.mock.calls.length - 1;
-      const dataMap: any[] = [
+      const _dataMap: any[] = [
         { total: 10, data: [] },       // datasets
         { total: 25, data: [] },       // timeseries
         { total: 5, data: [] },        // forecasts
@@ -118,7 +118,7 @@ describe('useDashboardStats', () => {
 
   it('should handle missing auth token', async () => {
     const { getAuthToken } = require('@/utils/auth');
-    getAuthToken.mockReturnValue(null);
+    getAuthToken.mockReturnValueOnce(null);
 
     // When auth token is null, useRetryableFetch gets null key and returns default
     mockUseRetryableFetch.mockImplementation(() => ({

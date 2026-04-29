@@ -1,11 +1,11 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock logger
-jest.mock('../../utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -13,7 +13,7 @@ describe('Config Module', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     // Reset environment variables
     process.env = { ...originalEnv };
   });
@@ -254,7 +254,7 @@ describe('Config Module', () => {
 
       const config = await import('../config');
 
-      expect(config.config.email.from).toBe('noreply@trademind.com');
+      expect(config.config.email.from).toBe('noreply@mt.com');
     });
 
     test('should use default SMTP port when not set', async () => {

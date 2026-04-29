@@ -1,15 +1,10 @@
 "use client";
 
 import React from "react";
-import { Typography, Breadcrumb } from "antd";
-import type { BreadcrumbProps } from "antd";
-import { HomeOutlined, RightOutlined } from "@ant-design/icons";
-import { theme } from "antd";
-
-const { Title, Text } = Typography;
+import { ChevronRight } from "lucide-react";
 
 export interface BreadcrumbItem {
-  key: string;
+  key?: string;
   label: string;
   href?: string;
 }
@@ -18,21 +13,10 @@ export interface PageHeaderProps {
   title: string;
   description?: string;
   actions?: React.ReactNode;
-  breadcrumbs?: BreadcrumbProps["items"];
+  breadcrumbs?: BreadcrumbItem[];
   showBackButton?: boolean;
 }
 
-/**
- * PageHeader - Consistent page headers with title, description, and actions
- *
- * Provides a standardized header for pages with:
- * - Page title using Outfit display font
- * - Optional description
- * - Optional action buttons
- * - Optional breadcrumbs with chevron separator
- * - Gradient bottom border
- * - Fade-in animation on mount
- */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   description,
@@ -40,75 +24,44 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   breadcrumbs,
   showBackButton = false,
 }) => {
-  const { token } = theme.useToken();
-
-  const headerStyle: React.CSSProperties = {
-    marginBottom: token.marginLG,
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: token.fontSizeHeading3,
-    fontWeight: 600,
-    lineHeight: 1.25,
-    color: token.colorText,
-    margin: "0 0 8px 0",
-    fontFamily: "var(--font-geist-sans), sans-serif",
-    letterSpacing: "-0.02em",
-  };
-
-  const descriptionStyle: React.CSSProperties = {
-    fontSize: token.fontSizeSM,
-    color: token.colorTextSecondary,
-    margin: 0,
-  };
-
-  const breadcrumbItems = showBackButton
-    ? [
-        {
-          title: (
-            <span style={{ display: "flex", alignItems: "center" }}>
-              <HomeOutlined />
-            </span>
-          ),
-          href: "/",
-        },
-        ...(breadcrumbs || []),
-      ]
+  const items = showBackButton
+    ? [{ label: "Home", href: "/" }, ...(breadcrumbs || [])]
     : breadcrumbs;
 
   return (
-    <div className="page-header page-transition-fade-in" style={headerStyle}>
-      {breadcrumbItems && breadcrumbItems.length > 0 && (
-        <Breadcrumb
-          items={breadcrumbItems}
-          separator={<RightOutlined style={{ fontSize: 10, color: "#94A3B8" }} />}
-          style={{ marginBottom: token.marginMD }}
-        />
+    <div className="mb-6 animate-[fadeIn_0.3s_ease-out]">
+      {items && items.length > 0 && (
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+          {items.map((item, i) => (
+            <React.Fragment key={item.key || i}>
+              {i > 0 && (
+                <ChevronRight className="size-3 text-gray-400" />
+              )}
+              {item.href ? (
+                <a href={item.href} className="hover:text-gray-700 dark:hover:text-gray-200">
+                  {item.label}
+                </a>
+              ) : (
+                <span className="text-foreground font-medium">{item.label}</span>
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: actions ? "flex-start" : "flex-start",
-          gap: token.marginMD,
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <Title style={titleStyle}>{title}</Title>
+      <div className="flex justify-between items-start gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight m-0 mb-2">
+            {title}
+          </h1>
           {description && (
-            <Text style={descriptionStyle}>{description}</Text>
+            <p className="text-sm text-muted-foreground m-0">
+              {description}
+            </p>
           )}
         </div>
         {actions && (
-          <div
-            style={{
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: token.marginSM,
-            }}
-          >
+          <div className="shrink-0 flex items-center gap-2">
             {actions}
           </div>
         )}

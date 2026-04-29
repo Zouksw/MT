@@ -1,42 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Space,
-  Typography,
-  Tag,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  InputNumber,
-  Switch,
-  Alert,
-  message,
-  Popconfirm,
-  Row,
-  Col,
-  Card,
-} from "antd";
-import type { Breakpoint } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CheckCircleOutlined,
-  BellOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Table } from "@/components/ui/Table";
+import { useToast } from "@/components/ui/Toast";
 
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
-import { DataTable } from "@/components/tables/DataTable";
 import { authFetch } from "@/utils/auth";
 import { useIsMobile } from "@/lib/responsive-utils";
-
-const { Text } = Typography;
+import { Pencil, Trash2, Plus, Bell, CircleCheck, TriangleAlert } from "lucide-react";
 
 interface AlertRule {
   id: string;
@@ -84,12 +64,13 @@ export default function AlertRules() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const toast = useToast();
 
   const fetchRules = useCallback(async () => {
     setLoading(true);
     try {
-      // Since rules are stored in user preferences, we need to get user data
       const response = await authFetch(`${API_BASE}/api/auth/me`);
 
       if (!response.ok) throw new Error("Failed to fetch alert rules");
@@ -100,11 +81,11 @@ export default function AlertRules() {
 
       setRules(alertRules);
     } catch {
-      message.error("Failed to load alert rules");
+      toast.showError("Failed to load alert rules");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   const fetchTimeseries = useCallback(async () => {
     try {
@@ -115,9 +96,9 @@ export default function AlertRules() {
       const data = await response.json();
       setTimeseries(data.timeseries || data.data || []);
     } catch {
-      message.error("Failed to fetch timeseries");
+      toast.showError("Failed to fetch timeseries");
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchRules();
@@ -142,10 +123,11 @@ export default function AlertRules() {
 
       if (!response.ok) throw new Error("Failed to delete alert rule");
 
-      message.success("Alert rule deleted");
+      toast.showSuccess("Alert rule deleted");
+      setConfirmDelete(null);
       fetchRules();
     } catch {
-      message.error("Failed to delete alert rule");
+      toast.showError("Failed to delete alert rule");
     }
   };
 
@@ -157,169 +139,155 @@ export default function AlertRules() {
       });
 
       fetchRules();
-      message.success(`Alert rule ${!rule.enabled ? "enabled" : "disabled"}`);
+      toast.showSuccess(`Alert rule ${!rule.enabled ? "enabled" : "disabled"}`);
     } catch {
-      message.error("Failed to update alert rule");
+      toast.showError("Failed to update alert rule");
     }
   };
 
   const columns = [
     {
-      title: "Name",
-      dataIndex: "name",
       key: "name",
+      title: "Name",
       width: 180,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (name: string, record: AlertRule) => (
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ fontSize: 13 }}>{name}</Text>
-          <Text type="secondary" style={{ fontSize: 11 }}>
+      render: (_value: unknown, record: AlertRule) => (
+        <div>
+          <span className="font-semibold" style={{ fontSize: 13 }}>{record.name}</span>
+          <br />
+          <span className="text-gray-400" style={{ fontSize: 11 }}>
             {record.id.slice(0, 8)}...
-          </Text>
-        </Space>
+          </span>
+        </div>
       ),
     },
     {
-      title: "Type",
-      dataIndex: "type",
       key: "type",
+      title: "Type",
       width: 140,
-      responsive: ["md", "lg", "xl"] as Breakpoint[],
-      render: (type: string) => {
-        const colors: Record<string, string> = {
-          ANOMALY: "red",
-          FORECAST_READY: "blue",
-          SYSTEM: "green",
-        };
-        const icons: Record<string, string> = {
-          ANOMALY: "🚨",
-          FORECAST_READY: "📈",
-          SYSTEM: "⚙️",
+      render: (_value: unknown, record: AlertRule) => {
+        const colors: Record<string, "error" | "info" | "success"> = {
+          ANOMALY: "error",
+          FORECAST_READY: "info",
+          SYSTEM: "success",
         };
         return (
-          <Tag color={colors[type]} style={{ margin: 0 }}>
-            {icons[type]} {type.replace(/_/g, " ")}
+          <Tag color={colors[record.type] || "default"}>
+            {record.type.replace(/_/g, " ")}
           </Tag>
         );
       },
     },
     {
-      title: "Condition",
-      dataIndex: "condition",
       key: "condition",
+      title: "Condition",
       width: 140,
-      responsive: ["md", "lg", "xl"] as Breakpoint[],
-      render: (condition: AlertCondition) => {
-        if (condition.type === "threshold") {
+      render: (_value: unknown, record: AlertRule) => {
+        if (record.condition.type === "threshold") {
           return (
-            <Tag style={{ margin: 0 }}>
-              Value {condition.operator} {condition.value}
+            <Tag color="default">
+              Value {record.condition.operator} {record.condition.value}
             </Tag>
           );
         }
-        if (condition.type === "anomaly") {
-          return <Tag color="orange" style={{ margin: 0 }}>Anomaly</Tag>;
+        if (record.condition.type === "anomaly") {
+          return <Tag color="warning">Anomaly</Tag>;
         }
-        return <Tag style={{ margin: 0 }}>{condition.type}</Tag>;
+        return <Tag color="default">{record.condition.type}</Tag>;
       },
     },
     {
-      title: "Severity",
-      dataIndex: "severity",
       key: "severity",
+      title: "Severity",
       width: 100,
-      align: "center" as const,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (severity: string) => {
-        const colors: Record<string, string> = {
-          INFO: "blue",
-          WARNING: "orange",
-          ERROR: "red",
+      render: (_value: unknown, record: AlertRule) => {
+        const colors: Record<string, "info" | "warning" | "error"> = {
+          INFO: "info",
+          WARNING: "warning",
+          ERROR: "error",
         };
         return (
-          <Tag color={colors[severity]} style={{ margin: 0 }}>
-            {severity}
+          <Tag color={colors[record.severity] || "default"}>
+            {record.severity}
           </Tag>
         );
       },
     },
     {
-      title: "Notifications",
-      dataIndex: "notificationChannels",
       key: "notificationChannels",
+      title: "Notifications",
       width: 140,
-      responsive: ["lg", "xl"] as Breakpoint[],
-      render: (channels: NotificationChannel[]) => (
-        <Space size={4} wrap>
-          {channels.map((ch, idx) => (
-            <Tag key={idx} icon={<BellOutlined />} style={{ margin: 0 }}>
-              {ch.type}
-            </Tag>
+      render: (_value: unknown, record: AlertRule) => (
+        <div className="flex flex-wrap gap-1">
+          {record.notificationChannels.map((ch, idx) => (
+            <Tag key={idx} color="default">{ch.type}</Tag>
           ))}
-        </Space>
+        </div>
       ),
     },
     {
-      title: "Cooldown",
-      dataIndex: "cooldownMinutes",
       key: "cooldownMinutes",
+      title: "Cooldown",
       width: 100,
-      responsive: ["lg", "xl"] as Breakpoint[],
-      render: (cooldown?: number) => (cooldown ? `${cooldown} min` : "-"),
+      render: (_value: unknown, record: AlertRule) =>
+        record.cooldownMinutes ? `${record.cooldownMinutes} min` : "-",
     },
     {
-      title: "Status",
-      dataIndex: "enabled",
       key: "enabled",
+      title: "Status",
       width: 100,
-      align: "center" as const,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (enabled: boolean) => (
-        <Tag color={enabled ? "green" : "default"} style={{ margin: 0 }}>
-          {enabled ? "Active" : "Inactive"}
+      render: (_value: unknown, record: AlertRule) => (
+        <Tag color={record.enabled ? "success" : "default"}>
+          {record.enabled ? "Active" : "Inactive"}
         </Tag>
       ),
     },
     {
-      title: "Actions",
       key: "actions",
+      title: "Actions",
       width: isMobile ? 80 : 160,
-      fixed: "right" as const,
-      render: (_: any, record: AlertRule) => (
-        <Space size="small">
+      render: (_value: unknown, record: AlertRule) => (
+        <div className="flex items-center gap-2">
           <Button
-            size="small"
-            icon={<EditOutlined />}
+            size="sm"
+            variant="ghost"
             onClick={() => handleEdit(record)}
+            icon={
+              <Pencil className="size-3.5" />
+            }
           >
             {!isMobile && "Edit"}
           </Button>
-          <Switch
-            size="small"
-            checked={record.enabled}
-            onChange={() => handleToggleEnabled(record)}
-          />
+          <button
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${record.enabled ? "bg-green-500" : "bg-gray-300"}`}
+            onClick={() => handleToggleEnabled(record)}
+            type="button"
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${record.enabled ? "translate-x-4" : "translate-x-1"}`}
+            />
+          </button>
           {!isMobile && (
-            <Popconfirm
-              title="Delete Alert Rule"
-              description="Are you sure you want to delete this alert rule?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Delete"
-              cancelText="Cancel"
-              okButtonProps={{ danger: true }}
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => setConfirmDelete(record.id)}
+              icon={
+                <Trash2 className="size-3.5" />
+              }
+              aria-label="Delete"
             >
-              <Button size="small" icon={<DeleteOutlined />} danger />
-            </Popconfirm>
+              {""}
+            </Button>
           )}
-        </Space>
+        </div>
       ),
     },
   ];
 
   const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "Alerts & Notifications", href: "/alerts" },
-    { title: "Alert Rules" },
+    { label: "Home", href: "/" },
+    { label: "Alerts & Notifications", href: "/alerts" },
+    { label: "Alert Rules" },
   ];
 
   // Statistics
@@ -334,63 +302,57 @@ export default function AlertRules() {
         description="Configure automated alert rules for monitoring your time series data"
         breadcrumbs={breadcrumbItems}
         actions={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+          <Button
+            onClick={handleCreate}
+            icon={
+              <Plus className="size-4" />
+            }
+          >
             {!isMobile && "Create Rule"}
           </Button>
         }
       />
 
       {/* Statistics Cards */}
-      <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]} style={{ marginBottom: isMobile ? 16 : 24 }}>
-        <Col xs={12} sm={12} md={8}>
-          <StatCard
-            title="Total Rules"
-            value={totalRules}
-            icon={<BellOutlined />}
-            variant="primary"
-          />
-        </Col>
-        <Col xs={12} sm={12} md={8}>
-          <StatCard
-            title="Active Rules"
-            value={activeRules}
-            icon={<CheckCircleOutlined />}
-            variant="success"
-          />
-        </Col>
-        <Col xs={12} sm={12} md={8}>
-          <StatCard
-            title="Error Severity"
-            value={errorSeverityRules}
-            icon={<WarningOutlined />}
-            variant="error"
-          />
-        </Col>
-      </Row>
+      <div className={`grid grid-cols-3 gap-${isMobile ? 2 : 4} mb-${isMobile ? 4 : 6}`}>
+        <StatCard
+          title="Total Rules"
+          value={totalRules}
+          icon={
+            <Bell className="size-4" />
+          }
+          variant="primary"
+        />
+        <StatCard
+          title="Active Rules"
+          value={activeRules}
+          icon={
+            <CircleCheck className="size-4" />
+          }
+          variant="success"
+        />
+        <StatCard
+          title="Error Severity"
+          value={errorSeverityRules}
+          icon={
+            <TriangleAlert className="size-4" />
+          }
+          variant="error"
+        />
+      </div>
 
       {/* Info Alert */}
-      <Alert
-        message="About Alert Rules"
-        description="Alert rules automatically monitor your timeseries data and send notifications when specific conditions are met. You can set up rules based on thresholds, anomalies, or forecast availability."
-        type="info"
-        showIcon
-        style={{ marginBottom: isMobile ? 16 : 24 }}
-      />
+      <Alert variant="info" title="About Alert Rules" className={`mb-${isMobile ? 4 : 6}`}>
+        Alert rules automatically monitor your timeseries data and send notifications when specific conditions are met. You can set up rules based on thresholds, anomalies, or forecast availability.
+      </Alert>
 
       {/* Rules Table */}
-      <DataTable
+      <Table
         columns={columns}
         dataSource={rules}
         loading={loading}
         rowKey="id"
-        enableZebraStriping={true}
-        stickyHeader={true}
-        scroll={{ x: isMobile ? "max-content" : undefined }}
-        pagination={{
-          pageSize: isMobile ? 10 : 20,
-          showSizeChanger: !isMobile,
-          simple: isMobile,
-        }}
+        emptyText="No alert rules configured"
       />
 
       {/* Create/Edit Modal */}
@@ -404,6 +366,21 @@ export default function AlertRules() {
           fetchRules();
         }}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={confirmDelete !== null}
+        onClose={() => setConfirmDelete(null)}
+        title="Delete Alert Rule"
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => confirmDelete && handleDelete(confirmDelete)}>Delete</Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">Are you sure you want to delete this alert rule?</p>
+      </Modal>
     </PageContainer>
   );
 }
@@ -418,35 +395,59 @@ interface AlertRuleModalProps {
 }
 
 function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: AlertRuleModalProps) {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [conditionType, setConditionType] = useState<string>("threshold");
+  const toast = useToast();
+
+  // Form state
+  const [name, setName] = useState("");
+  const [timeseriesId, setTimeseriesId] = useState("");
+  const [type, setType] = useState("");
+  const [conditionType, setConditionType] = useState("threshold");
+  const [conditionOperator, setConditionOperator] = useState(">");
+  const [conditionValue, setConditionValue] = useState("");
+  const [severity, setSeverity] = useState("");
+  const [cooldownMinutes, setCooldownMinutes] = useState("");
   const [notificationChannels, setNotificationChannels] = useState<NotificationChannel[]>([
     { type: "email", config: {} },
   ]);
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (visible && editingRule) {
-      form.setFieldsValue(editingRule);
+      setName(editingRule.name);
+      setType(editingRule.type);
       setConditionType(editingRule.condition.type || "threshold");
+      setConditionOperator(editingRule.condition.operator || ">");
+      setConditionValue(editingRule.condition.value?.toString() || "");
+      setSeverity(editingRule.severity);
+      setCooldownMinutes(editingRule.cooldownMinutes?.toString() || "");
       setNotificationChannels(editingRule.notificationChannels || [{ type: "email", config: {} }]);
     } else if (visible) {
-      form.resetFields();
+      setName("");
+      setTimeseriesId("");
+      setType("");
       setConditionType("threshold");
+      setConditionOperator(">");
+      setConditionValue("");
+      setSeverity("");
+      setCooldownMinutes("");
       setNotificationChannels([{ type: "email", config: {} }]);
     }
-  }, [visible, editingRule, form]);
+  }, [visible, editingRule]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     try {
       const payload = {
-        ...values,
+        name,
+        timeseriesId,
+        type,
         condition: {
           type: conditionType,
-          ...values.condition,
+          ...(conditionType === "threshold" ? { operator: conditionOperator, value: parseFloat(conditionValue) } : {}),
         },
+        severity,
+        cooldownMinutes: cooldownMinutes ? parseInt(cooldownMinutes, 10) : undefined,
         notificationChannels,
       };
 
@@ -461,10 +462,10 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
 
       if (!response.ok) throw new Error("Failed to save alert rule");
 
-      message.success(editingRule ? "Alert rule updated" : "Alert rule created");
+      toast.showSuccess(editingRule ? "Alert rule updated" : "Alert rule created");
       onSave();
     } catch {
-      message.error("Failed to save alert rule");
+      toast.showError("Failed to save alert rule");
     } finally {
       setLoading(false);
     }
@@ -472,182 +473,199 @@ function AlertRuleModal({ visible, editingRule, timeseries, onClose, onSave }: A
 
   return (
     <Modal
-      title={editingRule ? "Edit Alert Rule" : "Create Alert Rule"}
       open={visible}
-      onCancel={onClose}
-      onOk={() => form.submit()}
-      confirmLoading={loading}
-      width={isMobile ? "95%" : 700}
+      onClose={onClose}
+      title={editingRule ? "Edit Alert Rule" : "Create Alert Rule"}
+      width="max-w-2xl"
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item
-          name="name"
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
           label="Rule Name"
-          rules={[{ required: true, message: "Please enter a name" }]}
-        >
-          <Input placeholder="e.g., High Temperature Alert" />
-        </Form.Item>
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., High Temperature Alert"
+          fullWidth
+          required
+        />
 
-        <Form.Item
-          name="timeseriesId"
+        <Select
           label="Timeseries"
-          rules={[{ required: true, message: "Please select a timeseries" }]}
-        >
-          <Select placeholder="Select a timeseries" showSearch optionFilterProp="children">
-            {timeseries.map((ts) => (
-              <Select.Option key={ts.id} value={ts.id}>
-                {ts.name} ({ts.dataset.name})
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
+          value={timeseriesId}
+          onChange={setTimeseriesId}
+          options={timeseries.map((ts) => ({
+            value: ts.id,
+            label: `${ts.name} (${ts.dataset.name})`,
+          }))}
+          placeholder="Select a timeseries"
+          fullWidth
+        />
 
-        <Form.Item
-          name="type"
+        <Select
           label="Alert Type"
-          rules={[{ required: true, message: "Please select alert type" }]}
-        >
-          <Select>
-            <Select.Option value="ANOMALY">Anomaly Detection</Select.Option>
-            <Select.Option value="FORECAST_READY">Forecast Ready</Select.Option>
-            <Select.Option value="SYSTEM">System Event</Select.Option>
-          </Select>
-        </Form.Item>
+          value={type}
+          onChange={setType}
+          options={[
+            { value: "ANOMALY", label: "Anomaly Detection" },
+            { value: "FORECAST_READY", label: "Forecast Ready" },
+            { value: "SYSTEM", label: "System Event" },
+          ]}
+          fullWidth
+        />
 
-        <Form.Item label="Condition">
-          <Input.Group compact>
-            <Form.Item
-              name={["condition", "type"]}
-              noStyle
-              rules={[{ required: true, message: "Required" }]}
-            >
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Condition</label>
+          <div className="flex gap-2">
+            <div className="w-2/5">
               <Select
-                style={{ width: "40%" }}
-                onChange={(value) => setConditionType(value)}
-              >
-                <Select.Option value="threshold">Threshold</Select.Option>
-                <Select.Option value="anomaly">Anomaly</Select.Option>
-                <Select.Option value="forecast">Forecast Ready</Select.Option>
-              </Select>
-            </Form.Item>
-
+                value={conditionType}
+                onChange={(val) => { setConditionType(val); }}
+                options={[
+                  { value: "threshold", label: "Threshold" },
+                  { value: "anomaly", label: "Anomaly" },
+                  { value: "forecast", label: "Forecast Ready" },
+                ]}
+                fullWidth
+              />
+            </div>
             {conditionType === "threshold" && (
               <>
-                <Form.Item name={["condition", "operator"]} noStyle initialValue=">">
-                  <Select style={{ width: "30%" }}>
-                    <Select.Option value=">">Greater than</Select.Option>
-                    <Select.Option value="<">Less than</Select.Option>
-                    <Select.Option value="=">Equals</Select.Option>
-                    <Select.Option value=">=">Greater or equal</Select.Option>
-                    <Select.Option value="<=">Less or equal</Select.Option>
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  name={["condition", "value"]}
-                  noStyle
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <InputNumber style={{ width: "30%" }} placeholder="Value" />
-                </Form.Item>
+                <div className="w-3/10">
+                  <Select
+                    value={conditionOperator}
+                    onChange={setConditionOperator}
+                    options={[
+                      { value: ">", label: "Greater than" },
+                      { value: "<", label: "Less than" },
+                      { value: "=", label: "Equals" },
+                      { value: ">=", label: "Greater or equal" },
+                      { value: "<=", label: "Less or equal" },
+                    ]}
+                    fullWidth
+                  />
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    value={conditionValue}
+                    onChange={(e) => setConditionValue(e.target.value)}
+                    placeholder="Value"
+                    fullWidth
+                  />
+                </div>
               </>
             )}
-          </Input.Group>
-        </Form.Item>
+          </div>
+        </div>
 
-        <Form.Item
-          name="severity"
+        <Select
           label="Severity"
-          rules={[{ required: true, message: "Please select severity" }]}
-        >
-          <Select>
-            <Select.Option value="INFO">Info</Select.Option>
-            <Select.Option value="WARNING">Warning</Select.Option>
-            <Select.Option value="ERROR">Error</Select.Option>
-          </Select>
-        </Form.Item>
+          value={severity}
+          onChange={setSeverity}
+          options={[
+            { value: "INFO", label: "Info" },
+            { value: "WARNING", label: "Warning" },
+            { value: "ERROR", label: "Error" },
+          ]}
+          fullWidth
+        />
 
-        <Form.Item
-          name="cooldownMinutes"
+        <Input
           label="Cooldown (minutes)"
-          tooltip="Minimum time between alerts for this rule"
-        >
-          <InputNumber min={0} placeholder="e.g., 5" style={{ width: "100%" }} />
-        </Form.Item>
+          type="number"
+          value={cooldownMinutes}
+          onChange={(e) => setCooldownMinutes(e.target.value)}
+          placeholder="e.g., 5"
+          helperText="Minimum time between alerts for this rule"
+          fullWidth
+        />
 
-        <Form.Item label="Notification Channels">
-          <Space direction="vertical" style={{ width: "100%" }}>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">Notification Channels</label>
+          <div className="space-y-3">
             {notificationChannels.map((channel, index) => (
-              <Card key={index} size="small">
-                <Form.Item label="Channel Type" style={{ marginBottom: 8 }}>
-                  <Select
-                    value={channel.type}
-                    onChange={(value) => {
-                      const newChannels = [...notificationChannels];
-                      newChannels[index] = { type: value, config: {} };
-                      setNotificationChannels(newChannels);
-                    }}
-                  >
-                    <Select.Option value="email">Email</Select.Option>
-                    <Select.Option value="webhook">Webhook</Select.Option>
-                    <Select.Option value="slack">Slack</Select.Option>
-                  </Select>
-                </Form.Item>
-
-                {channel.type === "email" && (
-                  <Form.Item label="Email Address" style={{ marginBottom: 0 }}>
-                    <Input
-                      placeholder="your-email@example.com"
-                      value={channel.config.email}
-                      onChange={(e) => {
+              <Card key={index}>
+                <CardBody>
+                  <div className="space-y-3">
+                    <Select
+                      label="Channel Type"
+                      value={channel.type}
+                      onChange={(value) => {
                         const newChannels = [...notificationChannels];
-                        newChannels[index] = {
-                          ...channel,
-                          config: { ...channel.config, email: e.target.value },
-                        };
+                        newChannels[index] = { type: value as "email" | "webhook" | "slack", config: {} };
                         setNotificationChannels(newChannels);
                       }}
+                      options={[
+                        { value: "email", label: "Email" },
+                        { value: "webhook", label: "Webhook" },
+                        { value: "slack", label: "Slack" },
+                      ]}
+                      fullWidth
                     />
-                  </Form.Item>
-                )}
 
-                {channel.type === "webhook" && (
-                  <Form.Item label="Webhook URL" style={{ marginBottom: 0 }}>
-                    <Input
-                      placeholder="https://your-webhook-url.com"
-                      value={channel.config.webhookUrl}
-                      onChange={(e) => {
-                        const newChannels = [...notificationChannels];
-                        newChannels[index] = {
-                          ...channel,
-                          config: { ...channel.config, webhookUrl: e.target.value },
-                        };
-                        setNotificationChannels(newChannels);
-                      }}
-                    />
-                  </Form.Item>
-                )}
+                    {channel.type === "email" && (
+                      <Input
+                        label="Email Address"
+                        placeholder="your-email@example.com"
+                        value={channel.config.email || ""}
+                        onChange={(e) => {
+                          const newChannels = [...notificationChannels];
+                          newChannels[index] = {
+                            ...channel,
+                            config: { ...channel.config, email: e.target.value },
+                          };
+                          setNotificationChannels(newChannels);
+                        }}
+                        fullWidth
+                      />
+                    )}
 
-                {channel.type === "slack" && (
-                  <Form.Item label="Slack Webhook URL" style={{ marginBottom: 0 }}>
-                    <Input
-                      placeholder="https://hooks.slack.com/services/..."
-                      value={channel.config.slackWebhookUrl}
-                      onChange={(e) => {
-                        const newChannels = [...notificationChannels];
-                        newChannels[index] = {
-                          ...channel,
-                          config: { ...channel.config, slackWebhookUrl: e.target.value },
-                        };
-                        setNotificationChannels(newChannels);
-                      }}
-                    />
-                  </Form.Item>
-                )}
+                    {channel.type === "webhook" && (
+                      <Input
+                        label="Webhook URL"
+                        placeholder="https://your-webhook-url.com"
+                        value={channel.config.webhookUrl || ""}
+                        onChange={(e) => {
+                          const newChannels = [...notificationChannels];
+                          newChannels[index] = {
+                            ...channel,
+                            config: { ...channel.config, webhookUrl: e.target.value },
+                          };
+                          setNotificationChannels(newChannels);
+                        }}
+                        fullWidth
+                      />
+                    )}
+
+                    {channel.type === "slack" && (
+                      <Input
+                        label="Slack Webhook URL"
+                        placeholder="https://hooks.slack.com/services/..."
+                        value={channel.config.slackWebhookUrl || ""}
+                        onChange={(e) => {
+                          const newChannels = [...notificationChannels];
+                          newChannels[index] = {
+                            ...channel,
+                            config: { ...channel.config, slackWebhookUrl: e.target.value },
+                          };
+                          setNotificationChannels(newChannels);
+                        }}
+                        fullWidth
+                      />
+                    )}
+                  </div>
+                </CardBody>
               </Card>
             ))}
-          </Space>
-        </Form.Item>
-      </Form>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4">
+          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+          <Button type="submit" isLoading={loading}>
+            {editingRule ? "Update Rule" : "Create Rule"}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

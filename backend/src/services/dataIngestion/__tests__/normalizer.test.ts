@@ -2,7 +2,7 @@
  * Tests for data ingestion normalizer
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from 'vitest';
 import {
   detectFieldMapping,
   normalizePriceEntry,
@@ -68,8 +68,8 @@ describe('detectFieldMapping', () => {
     const mapping = detectFieldMapping(headers);
 
     expect(mapping.metadata).toBeDefined();
-    expect(mapping.metadata!.factory_code).toBe('factory_code');
-    expect(mapping.metadata!.origin_country).toBe('origin_country');
+    expect(mapping.metadata?.factory_code).toBe('factory_code');
+    expect(mapping.metadata?.origin_country).toBe('origin_country');
   });
 
   it('should throw if no date column found', () => {
@@ -258,8 +258,8 @@ describe('normalizePriceEntry', () => {
     const result = normalizePriceEntry(row, mapping);
 
     expect(result.metadata).toBeDefined();
-    expect(result.metadata!.factory_code).toBe('847');
-    expect(result.metadata!.origin_country).toBe('AUS');
+    expect(result.metadata?.factory_code).toBe('847');
+    expect(result.metadata?.origin_country).toBe('AUS');
   });
 
   it('should skip null/empty metadata values', () => {

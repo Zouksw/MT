@@ -195,7 +195,7 @@ jobs:
         run: cd frontend && pnpm run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: frontend/.next
@@ -239,14 +239,14 @@ jobs:
           pnpm run build
 
       - name: Upload backend build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-build
           path: backend/dist/
           retention-days: 7
 
       - name: Upload frontend build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: frontend/.next/
@@ -310,7 +310,7 @@ jobs:
       - name: Verify deployment
         run: |
           sleep 30
-          curl -f ${{ secrets.APP_URL }}/api/health || exit 1
+          curl -f ${{ secrets.APP_URL }}/health || exit 1
           echo "Deployment verification successful!"
 
       - name: Notify deployment success

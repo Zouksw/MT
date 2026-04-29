@@ -3,11 +3,11 @@ layout: post
 title: "Security First: How We Protect Your Time Series Data"
 date: 2025-03-26 14:00:00 +0000
 tags: [Security, Best Practices]
-excerpt: "Learn about the enterprise-grade security features built into IoTDB Enhanced, from JWT authentication to comprehensive audit logging."
+excerpt: "Learn about the enterprise-grade security features built into TradeMind AI, from JWT authentication to comprehensive audit logging."
 author: "Alex Kumar"
 ---
 
-At IoTDB Enhanced, we take security seriously. Your time series data is valuable, and we've built enterprise-grade security into every layer of the platform. Here's how we protect your data.
+At TradeMind AI, we take security seriously. Your time series data is valuable, and we've built enterprise-grade security into every layer of the platform. Here's how we protect your data.
 
 ## 🔐 Authentication & Authorization
 
@@ -199,15 +199,15 @@ Before deploying to production:
 If you discover a security issue:
 
 1. **Don't panic** - We're here to help
-2. **Report it privately** - security@iotdb-enhanced.com
+2. **Report it privately** - security@trademind-ai.com
 3. **Include details** - Steps to reproduce, impact assessment
 4. **We'll respond** - Within 24 hours with a plan
 
 ## 📚 Learn More
 
-- [Security Documentation](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/SECURITY.md)
-- [API Security Best Practices](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/API.md#security)
-- [Deployment Security](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/deployment/DEPLOYMENT-CHECKLIST.md)
+- [Security Documentation](https://github.com/Zouksw/trademind-ai/blob/main/docs/SECURITY.md)
+- [API Security Best Practices](https://github.com/Zouksw/trademind-ai/blob/main/docs/API.md#security)
+- [Deployment Security](https://github.com/Zouksw/trademind-ai/blob/main/docs/deployment/DEPLOYMENT-CHECKLIST.md)
 
 ---
 
@@ -215,4 +215,4 @@ If you discover a security issue:
 
 ---
 
-*Found a security issue? Please report it responsibly to security@iotdb-enhanced.com*
+*Found a security issue? Please report it responsibly to security@trademind-ai.com*

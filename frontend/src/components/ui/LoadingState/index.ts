@@ -1,2 +1,2 @@
-export { LoadingState, TimeoutWarning } from "../LoadingState";
+export { LoadingState } from "../LoadingState";
 export type { LoadingStateProps } from "../LoadingState";

@@ -7,9 +7,8 @@
  * MAPE = (1/n) * Σ(|actual - predicted| / |actual|) * 100
  */
 
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib';
-import { logger } from '@/lib';
 
 export interface LogPredictionParams {
   modelId: string;
@@ -66,7 +65,7 @@ export async function verifyPrediction(
   for (let i = 0; i < n; i++) {
     const actual = actualValues[i];
     const pred = predicted[i];
-    if (actual !== 0 && isFinite(actual) && isFinite(pred)) {
+    if (actual !== 0 && Number.isFinite(actual) && Number.isFinite(pred)) {
       sumAbsPctError += Math.abs((actual - pred) / actual);
       validCount++;
     }

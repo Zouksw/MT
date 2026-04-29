@@ -1,34 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState, } from "react";
 import {
-  Button,
-  Dropdown,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  DatePicker,
-  Spin,
-  message,
-  Progress,
-  Space,
-  Typography,
-  Tag,
-  Alert,
-  Divider,
-  Row,
-  Col,
-  Card,
-} from "antd";
-import {
-  DownloadOutlined,
-  FileTextOutlined,
-  FileOutlined,
-  CloudDownloadOutlined,
-  CheckCircleOutlined,
-} from "@ant-design/icons";
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Download, CircleCheck, Info } from "lucide-react";
+
 // Native download function (no external dependency needed)
 const downloadFile = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
@@ -41,13 +22,9 @@ const downloadFile = (blob: Blob, filename: string) => {
   window.URL.revokeObjectURL(url);
 };
 
-const { Text, Paragraph } = Typography;
-const { RangePicker } = DatePicker;
-
 interface ExportFormat {
   id: string;
   name: string;
-  icon: React.ReactNode;
   extension: string;
   mimeType: string;
   description: string;
@@ -76,7 +53,6 @@ const exportFormats: ExportFormat[] = [
   {
     id: "csv",
     name: "CSV",
-    icon: <FileTextOutlined />,
     extension: "csv",
     mimeType: "text/csv",
     description: "Comma-separated values, compatible with Excel",
@@ -84,7 +60,6 @@ const exportFormats: ExportFormat[] = [
   {
     id: "json",
     name: "JSON",
-    icon: <FileOutlined />,
     extension: "json",
     mimeType: "application/json",
     description: "JavaScript Object Notation",
@@ -92,7 +67,6 @@ const exportFormats: ExportFormat[] = [
   {
     id: "txt",
     name: "Plain Text",
-    icon: <FileTextOutlined />,
     extension: "txt",
     mimeType: "text/plain",
     description: "Simple text format with timestamp and value",
@@ -106,7 +80,28 @@ export const DataExport: React.FC<DataExportProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [form] = Form.useForm();
+
+  const [formState, setFormState] = useState({
+    timeseries: defaultTimeseries,
+    format: "csv",
+    limit: 10000,
+    startDate: "",
+    endDate: "",
+  });
+
+
+  const showToast = (type: "success" | "warning" | "error", msg: string) => {
+    // Simple toast via DOM for now — replace with useToast if available
+    const el = document.createElement("div");
+    el.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
+      type === "success" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" :
+      type === "warning" ? "bg-amber-50 text-amber-800 border border-amber-200" :
+      "bg-red-50 text-red-800 border border-red-200"
+    }`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 3000);
+  };
 
   const exportData = async (config: ExportConfig) => {
     setExporting(true);
@@ -150,7 +145,7 @@ export const DataExport: React.FC<DataExportProps> = ({
       const data: DataPoint[] = result.data || [];
 
       if (data.length === 0) {
-        message.warning("No data available for the specified criteria");
+        showToast("warning", "No data available for the specified criteria");
         setExporting(false);
         setProgress(0);
         return;
@@ -178,7 +173,7 @@ export const DataExport: React.FC<DataExportProps> = ({
       }
 
       setProgress(100);
-      message.success(`Exported ${data.length} records to ${filename}`);
+      showToast("success", `Exported ${data.length} records to ${filename}`);
 
       onExportComplete?.(filename, data.length);
 
@@ -186,23 +181,19 @@ export const DataExport: React.FC<DataExportProps> = ({
         setModalVisible(false);
         setExporting(false);
         setProgress(0);
-        form.resetFields();
+        setFormState({ timeseries: defaultTimeseries, format: "csv", limit: 10000, startDate: "", endDate: "" });
       }, 1000);
     } catch (error: any) {
-      message.error(`Export failed: ${error.message}`);
+      showToast("error", `Export failed: ${error.message}`);
       setExporting(false);
       setProgress(0);
     }
   };
 
   const exportToCSV = async (data: DataPoint[], filename: string) => {
-    // Create CSV manually (no external dependency)
     const header = "timestamp,value\n";
     const rows = data
-      .map(
-        (point) =>
-          `${new Date(point.timestamp).toISOString()},${point.value.toFixed(6)}`
-      )
+      .map((point) => `${new Date(point.timestamp).toISOString()},${point.value.toFixed(6)}`)
       .join("\n");
     const csv = header + rows;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -212,7 +203,7 @@ export const DataExport: React.FC<DataExportProps> = ({
   const exportToJSON = async (data: DataPoint[], filename: string) => {
     const json = JSON.stringify(
       {
-        timeseries: form.getFieldValue("timeseries"),
+        timeseries: formState.timeseries,
         exportTime: new Date().toISOString(),
         recordCount: data.length,
         data: data.map((point) => ({
@@ -229,213 +220,206 @@ export const DataExport: React.FC<DataExportProps> = ({
 
   const exportToTxt = async (data: DataPoint[], filename: string) => {
     const txt = data
-      .map(
-        (point) =>
-          `${new Date(point.timestamp).toISOString()}\t${point.value.toFixed(6)}`
-      )
+      .map((point) => `${new Date(point.timestamp).toISOString()}\t${point.value.toFixed(6)}`)
       .join("\n");
     const blob = new Blob([txt], { type: "text/plain;charset=utf-8;" });
     downloadFile(blob, filename);
   };
 
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
+  const handleExport = () => {
+    if (!formState.timeseries) return;
 
-      const config: ExportConfig = {
-        timeseries: values.timeseries,
-        format: values.format,
-        limit: values.limit,
-      };
+    const config: ExportConfig = {
+      timeseries: formState.timeseries,
+      format: formState.format,
+      limit: formState.limit,
+    };
 
-      // Add time range if specified
-      if (values.timeRange && values.timeRange.length === 2) {
-        config.startTime = values.timeRange[0].valueOf();
-        config.endTime = values.timeRange[1].valueOf();
-      }
-
-      exportData(config);
-    } catch {
-      // Validation failed
+    if (formState.startDate) {
+      config.startTime = new Date(formState.startDate).getTime();
     }
+    if (formState.endDate) {
+      config.endTime = new Date(formState.endDate).getTime();
+    }
+
+    exportData(config);
   };
 
-  const exportMenuItems = exportFormats.map((format) => ({
-    key: format.id,
-    label: (
-      <Space>
-        {format.icon}
-        <span>{format.name}</span>
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          ({format.extension})
-        </Text>
-      </Space>
-    ),
-    onClick: () => {
-      form.setFieldsValue({ format: format.id });
-      setModalVisible(true);
-    },
-  }));
+  const selectedFormat = exportFormats.find((f) => f.id === formState.format);
 
   return (
     <>
-      <Dropdown menu={{ items: exportMenuItems }} trigger={["click"]}>
-        <Button
-          type="primary"
-          icon={<CloudDownloadOutlined />}
-          size="large"
-          style={{
-            background: "#171717",
-            border: "none",
-            borderRadius: "6px",
-            fontWeight: 600,
-          }}
-        >
+      {/* Export Button with DropdownMenu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold hover:opacity-90 transition-opacity outline-none">
+          <Download className="size-4" />
           Export Data
-        </Button>
-      </Dropdown>
-
-      <Modal
-        title={
-          <Space>
-            <DownloadOutlined />
-            <span>Export Data</span>
-          </Space>
-        }
-        open={modalVisible}
-        onCancel={() => {
-          if (!exporting) {
-            setModalVisible(false);
-            form.resetFields();
-          }
-        }}
-        onOk={handleModalOk}
-        okText={exporting ? "Exporting..." : "Export"}
-        okButtonProps={{ loading: exporting, disabled: exporting }}
-        cancelButtonProps={{ disabled: exporting }}
-        width={600}
-      >
-        <Spin spinning={exporting} tip="Preparing export...">
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{
-              timeseries: defaultTimeseries,
-              format: "csv",
-              limit: 10000,
-            }}
-          >
-            <Form.Item
-              label="Time Series"
-              name="timeseries"
-              rules={[{ required: true, message: "Please enter time series path" }]}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {exportFormats.map((format) => (
+            <DropdownMenuItem
+              key={format.id}
+              onClick={() => {
+                setFormState((s) => ({ ...s, format: format.id }));
+                setModalVisible(true);
+              }}
             >
-              <Input placeholder="e.g., root.test2" />
-            </Form.Item>
+              <span>{format.name}</span>
+              <span className="ml-auto text-xs text-muted-foreground">.{format.extension}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-            <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  label="Export Format"
-                  name="format"
-                  rules={[{ required: true, message: "Please select format" }]}
-                >
-                  <Select>
-                    {exportFormats.map((format) => (
-                      <Select.Option key={format.id} value={format.id}>
-                        <Space>
-                          {format.icon}
-                          <span>{format.name}</span>
-                        </Space>
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  label="Max Records"
-                  name="limit"
-                  rules={[{ required: true, message: "Please enter limit" }]}
-                  tooltip="Maximum number of records to export"
-                >
-                  <InputNumber min={1} max={1000000} style={{ width: "100%" }} />
-                </Form.Item>
-              </Col>
-            </Row>
+      {/* Modal */}
+      {modalVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { if (!exporting) { setModalVisible(false); } }} />
+          <div className="relative bg-card rounded-xl shadow-xl w-full max-w-150 mx-4 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 px-6 py-4 border-b border">
+              <Download className="size-5 text-gray-500" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Export Data</h3>
+            </div>
 
-            <Form.Item
-              label="Time Range"
-              name="timeRange"
-              tooltip="Optional: specify a time range to filter data"
-            >
-              <RangePicker
-                showTime
-                style={{ width: "100%" }}
-                placeholder={["Start Time", "End Time"]}
-              />
-            </Form.Item>
-
-            {exporting && (
-              <>
-                <Divider />
-                <div style={{ marginBottom: 16 }}>
-                  <Text strong>Export Progress</Text>
+            {/* Modal Body */}
+            <div className="p-6">
+              {exporting && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                  <span className="ml-3 text-sm text-gray-500">Preparing export...</span>
                 </div>
-                <Progress percent={progress} status="active" />
-                <div style={{ marginTop: 12 }}>
-                  {progress === 100 && (
-                    <Alert
-                      message="Export completed successfully!"
-                      type="success"
-                      icon={<CheckCircleOutlined />}
-                      showIcon
+              )}
+
+              <div className={exporting ? "opacity-50 pointer-events-none" : ""}>
+                {/* Time Series */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-foreground mb-1">Time Series</label>
+                  <input
+                    type="text"
+                    value={formState.timeseries}
+                    onChange={(e) => setFormState((s) => ({ ...s, timeseries: e.target.value }))}
+                    placeholder="e.g., root.test2"
+                    className="w-full px-3 py-2 border border-input rounded-md text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                  />
+                </div>
+
+                {/* Format + Limit row */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Export Format</label>
+                    <select
+                      value={formState.format}
+                      onChange={(e) => setFormState((s) => ({ ...s, format: e.target.value }))}
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                    >
+                      {exportFormats.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name} (.{f.extension})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Max Records</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={1000000}
+                      value={formState.limit}
+                      onChange={(e) => setFormState((s) => ({ ...s, limit: parseInt(e.target.value, 10) || 1 }))}
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                     />
-                  )}
+                  </div>
                 </div>
-              </>
-            )}
 
-            <Divider />
+                {/* Time Range */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Start Time</label>
+                    <input
+                      type="datetime-local"
+                      value={formState.startDate}
+                      onChange={(e) => setFormState((s) => ({ ...s, startDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">End Time</label>
+                    <input
+                      type="datetime-local"
+                      value={formState.endDate}
+                      onChange={(e) => setFormState((s) => ({ ...s, endDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
 
-            <Card size="small" style={{ background: "#f9fafb" }}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Export Format Info</Text>
+                {/* Progress */}
+                {exporting && (
+                  <div className="mb-4">
+                    <div className="h-1 text-xs font-medium text-foreground mb-2">Export Progress</div>
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    {progress === 100 && (
+                      <div className="mt-3 flex items-center gap-2 text-sm text-emerald-600">
+                        <CircleCheck className="size-4" />
+                        Export completed successfully!
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <hr className="border my-4" />
+
+                {/* Format info */}
+                {selectedFormat && (
+                  <div className="p-3 bg-muted rounded-lg mb-4">
+                    <div className="text-sm font-medium text-foreground mb-1">Export Format Info</div>
+                    <p className="text-sm text-muted-foreground mb-2">{selectedFormat.description}</p>
+                    <div className="flex gap-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-foreground">{selectedFormat.extension.toUpperCase()}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-foreground">MIME: {selectedFormat.mimeType}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tips */}
+                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Info className="size-4 text-blue-500 shrink-0 mt-0.5" />
+                  <div className="text-xs text-blue-700 dark:text-blue-300">
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>Large datasets may take longer to process</li>
+                      <li>CSV format is recommended for Excel compatibility</li>
+                      <li>Use time range filter to reduce export size</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <Form.Item noStyle shouldUpdate={(prev, curr) => prev.format !== curr.format}>
-                {() => {
-                  const format = exportFormats.find((f) => f.id === form.getFieldValue("format"));
-                  return format ? (
-                    <>
-                      <Paragraph style={{ marginBottom: 8, fontSize: 13 }}>
-                        {format.description}
-                      </Paragraph>
-                      <Space>
-                        <Tag>{format.extension.toUpperCase()}</Tag>
-                        <Tag>MIME: {format.mimeType}</Tag>
-                      </Space>
-                    </>
-                  ) : null;
-                }}
-              </Form.Item>
-            </Card>
+            </div>
 
-            <Alert
-              message="Export Tips"
-              description={
-                <ul style={{ margin: 0, paddingLeft: 16 }}>
-                  <li>Large datasets may take longer to process</li>
-                  <li>CSV format is recommended for Excel compatibility</li>
-                  <li>Use time range filter to reduce export size</li>
-                </ul>
-              }
-              type="info"
-              showIcon
-              style={{ marginTop: 16 }}
-            />
-          </Form>
-        </Spin>
-      </Modal>
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border">
+              <button
+                onClick={() => { if (!exporting) { setModalVisible(false); } }}
+                disabled={exporting}
+                className="px-4 py-2 rounded-md border border-input text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting || !formState.timeseries}
+                className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
+              >
+                {exporting ? "Exporting..." : "Export"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

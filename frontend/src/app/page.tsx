@@ -2,10 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { verifyAuthentication } from "@/utils/auth";
-
-const LandingPage = dynamic(() => import("./landing/page"), { ssr: false });
 
 export default function IndexPage() {
   const router = useRouter();
@@ -16,16 +13,16 @@ export default function IndexPage() {
         const authenticated = await verifyAuthentication();
         if (authenticated) {
           router.push("/dashboard");
+        } else {
+          router.push("/landing");
         }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Auth check failed:', error);
+      } catch {
+        router.push("/landing");
       }
     };
 
     checkAuth();
   }, [router]);
 
-  // Show landing page immediately, redirect happens in background if authenticated
-  return <LandingPage />;
+  return null;
 }

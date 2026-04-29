@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Card, Typography, Button, Space, Tag, Spin, Alert } from "antd";
-import {
-  PlayCircleOutlined,
-  PauseCircleOutlined,
-  ReloadOutlined,
-  SyncOutlined,
-  DisconnectOutlined,
-} from "@ant-design/icons";
 import dynamic from "next/dynamic";
+import {
+  Loader,
+  Play,
+  Pause,
+  RefreshCw,
+  CircleX,
+  CircleAlert,
+  X,
+} from "lucide-react";
 import {
   chartColors,
   chartTooltipStyles,
@@ -20,15 +21,13 @@ import {
   chartAnimations,
 } from "@/lib/chart-config";
 
-const { Text } = Typography;
-
 // Dynamic imports for Recharts components to reduce initial bundle size
 const LineChart = dynamic(
   () => import("recharts").then((mod) => ({ default: mod.LineChart })),
   {
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <Spin size="large" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     ),
     ssr: false,
@@ -115,7 +114,7 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
     const max = Math.max(...values);
     const sum = values.reduce((a, b) => a + b, 0);
     const mean = sum / values.length;
-    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
     const std = Math.sqrt(variance);
     const last = values[values.length - 1];
 
@@ -237,9 +236,6 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-
-      // Note: wsRef was unused in this component (using polling instead of WebSocket)
-      // Kept for potential future WebSocket implementation
     };
   }, []);
 
@@ -247,13 +243,12 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
   useEffect(() => {
     if (isConnected && !isPaused) {
       // Updates are already started via startUpdates button
-      // This effect ensures polling is active when connected
     }
   }, [isConnected, isPaused]);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+    if (active && payload?.length) {
       return (
         <div
           style={{
@@ -277,156 +272,114 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
   };
 
   return (
-    <Card
-      variant="borderless"
-      style={{ borderRadius: 4 }}
-      styles={{ body: { padding: "20px" } }}
-    >
+    <div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-5">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <Space direction="vertical" size={0}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Text strong style={{ fontSize: 15 }}>
-              Real-Time Data
-            </Text>
+      <div className="flex justify-between items-center mb-5">
+        <div className="flex flex-col gap-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-[15px] text-gray-900 dark:text-white">Real-Time Data</span>
             {isConnected && (
-              <Tag
-                color="success"
-                icon={<SyncOutlined spin />}
-                style={{ margin: 0 }}
-              >
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <Loader className="size-3 animate-spin" />
                 LIVE
-              </Tag>
+              </span>
             )}
             {isPaused && isConnected && (
-              <Tag color="warning" style={{ margin: 0 }}>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                 PAUSED
-              </Tag>
+              </span>
             )}
           </div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {timeseries}
-          </Text>
-        </Space>
+          <span className="text-xs text-muted-foreground">{timeseries}</span>
+        </div>
 
-        <Space>
+        <div className="flex gap-2">
           {!isConnected ? (
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
+            <button
               onClick={startUpdates}
-              loading={loading}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
               aria-label="Start real-time data monitoring"
             >
+              <Play className="size-4" fill="currentColor" />
               Start
-            </Button>
+            </button>
           ) : (
             <>
-              <Button
-                icon={isPaused ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
+              <button
                 onClick={togglePause}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
                 aria-label={isPaused ? "Resume real-time updates" : "Pause real-time updates"}
               >
+                {isPaused ? (
+                  <Play className="size-4" fill="currentColor" />
+                ) : (
+                  <Pause className="size-4" fill="currentColor" />
+                )}
                 {isPaused ? "Resume" : "Pause"}
-              </Button>
-              <Button
-                icon={<ReloadOutlined />}
+              </button>
+              <button
                 onClick={clearData}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
                 aria-label="Clear all chart data"
               >
+                <RefreshCw className="size-4" />
                 Clear
-              </Button>
-              <Button
-                danger
-                icon={<DisconnectOutlined />}
+              </button>
+              <button
                 onClick={() => {
                   stopUpdates();
                   onDisconnect?.();
                 }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-red-300 dark:border-red-700 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 aria-label="Stop real-time monitoring"
               >
+                <CircleX className="size-4" />
                 Stop
-              </Button>
+              </button>
             </>
           )}
-        </Space>
+        </div>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <Alert
-          message="Connection Error"
-          description={error}
-          type="error"
-          closable
-          onClose={() => setError(null)}
-          style={{ marginBottom: 16 }}
-        />
+        <div className="flex items-start gap-3 p-3 mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <CircleAlert className="size-5 text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">Connection Error</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 dark:hover:text-red-300">
+            <X className="size-4" />
+          </button>
+        </div>
       )}
 
       {/* Statistics */}
       {showStatistics && statistics && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              padding: "12px",
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: 4,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Current</div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.warning }}>
+        <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="p-3 bg-card border border rounded text-center">
+            <div className="text-[11px] text-gray-500 mb-1 font-medium">Current</div>
+            <div className="text-lg font-semibold" style={{ color: chartColors.warning }}>
               {formatValue(statistics.last)}
             </div>
           </div>
-          <div
-            style={{
-              padding: "12px",
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: 4,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Min</div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.success }}>
+          <div className="p-3 bg-card border border rounded text-center">
+            <div className="text-[11px] text-gray-500 mb-1 font-medium">Min</div>
+            <div className="text-lg font-semibold" style={{ color: chartColors.success }}>
               {formatValue(statistics.min)}
             </div>
           </div>
-          <div
-            style={{
-              padding: "12px",
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: 4,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Max</div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.primary }}>
+          <div className="p-3 bg-card border border rounded text-center">
+            <div className="text-[11px] text-gray-500 mb-1 font-medium">Max</div>
+            <div className="text-lg font-semibold" style={{ color: chartColors.primary }}>
               {formatValue(statistics.max)}
             </div>
           </div>
-          <div
-            style={{
-              padding: "12px",
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: 4,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Mean</div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.purple }}>
+          <div className="p-3 bg-card border border rounded text-center">
+            <div className="text-[11px] text-gray-500 mb-1 font-medium">Mean</div>
+            <div className="text-lg font-semibold" style={{ color: chartColors.purple }}>
               {formatValue(statistics.mean)}
             </div>
           </div>
@@ -436,18 +389,12 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
       {/* Chart */}
       {data.length === 0 ? (
         <div
-          style={{
-            height,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: chartColors.gray50,
-            borderRadius: 4,
-          }}
+          className="flex items-center justify-center bg-muted rounded"
+          style={{ height }}
         >
-          <div style={{ textAlign: "center", color: "#9ca3af" }}>
-            <SyncOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-            <div style={{ fontSize: 14 }}>
+          <div className="text-center text-gray-400">
+            <Loader className="size-12 mx-auto mb-4 animate-spin" strokeWidth={1.5} />
+            <div className="text-sm">
               {isConnected ? "Waiting for data..." : "Click Start to begin real-time monitoring"}
             </div>
           </div>
@@ -518,11 +465,11 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 
       {/* Footer Info */}
       {data.length > 0 && (
-        <div style={{ marginTop: 16, fontSize: 12, color: "#9ca3af", textAlign: "center" }}>
-          Showing {data.length} data point{data.length !== 1 ? "s" : ""} • Refresh every {refreshInterval / 1000}s
+        <div className="mt-4 text-xs text-gray-400 text-center">
+          Showing {data.length} data point{data.length !== 1 ? "s" : ""} &bull; Refresh every {refreshInterval / 1000}s
         </div>
       )}
-    </Card>
+    </div>
   );
 };
 

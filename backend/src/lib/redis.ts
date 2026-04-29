@@ -10,7 +10,7 @@
  * if initRedis() wasn't called.
  */
 
-import { createClient, RedisClientType } from 'redis';
+import { createClient, type RedisClientType } from 'redis';
 import { logger } from './logger';
 
 let redisClient: RedisClientType | null = null;

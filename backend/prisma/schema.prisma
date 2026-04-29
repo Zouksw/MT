@@ -481,7 +481,7 @@ model CommodityPrice {
   createdAt    DateTime  @default(now()) @map("created_at")
   commodity    Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
 
-  @@unique([commodityId, interval, date])
+  @@unique([commodityId, interval, date, source])
   @@index([commodityId, interval, date(sort: Desc)])
   @@index([commodityId, date(sort: Desc)])
   @@map("commodity_prices")

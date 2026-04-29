@@ -9,7 +9,6 @@
  */
 
 import { prisma } from '@/lib';
-import { logger } from '@/lib';
 
 export interface BacktestWindow {
   days: number;

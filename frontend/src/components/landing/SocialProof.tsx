@@ -1,84 +1,73 @@
 "use client";
 
-import React from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Lightning,
+  ChartLineUp,
+  Flask,
+  Globe,
+} from "@phosphor-icons/react";
+import { StaggerContainer, StaggerChild } from "@/components/ui/MotionReveal";
 
-/**
- * SocialProof - Horizontal scrolling logo marquee
- *
- * CSS-only marquee animation (no JS library needed).
- * Shows trusted-by company names with a subtle scroll effect.
- * Fade edges with mask-image gradient.
- */
-const companies = [
-  "Siemens Energy",
-  "ABB Group",
-  "Honeywell",
-  "Bosch IoT",
-  "Schneider Electric",
-  "GE Digital",
-  "Tesla Energy",
-  "Shell Digital",
-  "Samsung SDS",
-  "Hitachi Vantara",
+function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const [value, setValue] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      setValue(target);
+      return;
+    }
+
+    hasAnimated.current = true;
+    const duration = 1200;
+    const start = performance.now();
+
+    function animate(now: number) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      setValue(Math.round(target * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  }, [target]);
+
+  return (
+    <span ref={ref} className="font-mono text-2xl md:text-3xl font-semibold text-primary dark:text-primary tabular-nums">
+      {value}{suffix}
+    </span>
+  );
+}
+
+const stats = [
+  { icon: <Flask size={22} weight="duotone" />, numericValue: 55, suffix: "+", label: "Commodities tracked" },
+  { icon: <Lightning size={22} weight="duotone" />, numericValue: 7, suffix: "", label: "AI prediction models" },
+  { icon: <ChartLineUp size={22} weight="duotone" />, numericValue: 24, suffix: "/7", label: "Real-time data feeds" },
+  { icon: <Globe size={22} weight="duotone" />, numericValue: 5, suffix: "+", label: "Data sources" },
 ];
 
 export const SocialProof: React.FC = () => {
-  // Duplicate items for seamless loop
-  const items = [...companies, ...companies];
-
   return (
-    <section className="py-10 border-t border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+    <section className="py-12 shadow-[0_-1px_0_0_rgba(0,0,0,0.05),0_1px_0_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.08),0_1px_0_0_rgba(255,255,255,0.08)] bg-white dark:bg-[#0a0a0a]">
       <div className="max-w-6xl mx-auto px-6">
-        <p className="text-center text-sm font-medium text-gray-400 dark:text-gray-500 mb-6 tracking-wide uppercase">
-          Trusted by industry leaders
-        </p>
-
-        <div className="relative overflow-hidden">
-          {/* Fade edges */}
-          <div
-            className="absolute inset-y-0 left-0 w-24 z-10"
-            style={{
-              background: "linear-gradient(to right, var(--gray-50, #F8FAFC), transparent)",
-            }}
-          />
-          <div
-            className="absolute inset-y-0 right-0 w-24 z-10"
-            style={{
-              background: "linear-gradient(to left, var(--gray-50, #F8FAFC), transparent)",
-            }}
-          />
-
-          {/* Marquee container */}
-          <div
-            className="flex items-center gap-12 whitespace-nowrap"
-            style={{
-              animation: "marquee 30s linear infinite",
-            }}
-          >
-            {items.map((company, i) => (
-              <span
-                key={`${company}-${i}`}
-                className="text-lg font-display font-semibold text-gray-300 dark:text-gray-600 select-none flex-shrink-0"
-              >
-                {company}
-              </span>
-            ))}
-          </div>
-        </div>
+        <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+          {stats.map((stat, i) => (
+            <StaggerChild key={i} className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="text-muted-foreground">{stat.icon}</span>
+                <AnimatedNumber target={stat.numericValue} suffix={stat.suffix} />
+              </div>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+            </StaggerChild>
+          ))}
+        </StaggerContainer>
       </div>
-
-      {/* Marquee keyframes */}
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          @keyframes marquee {
-            0%, 100% { transform: translateX(0); }
-          }
-        }
-      `}</style>
     </section>
   );
 };

@@ -9,15 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Vercel Primary - Develop Blue
+        // Primary — Gold accent (Vercel-style: accent only, NOT on buttons)
         primary: {
-          DEFAULT: "#0a72ef",
-          hover: "#0055A3",
-          active: "#004080",
-          light: "#ebf5ff",
+          DEFAULT: "#B8860B",
+          hover: "#9A7209",
+          active: "#7D5D07",
+          light: "#FDF6E3",
         },
 
-        // Secondary - Slate Blue
+        // Secondary
         secondary: {
           DEFAULT: "#475569",
           hover: "#334155",
@@ -26,46 +26,46 @@ const config: Config = {
 
         // Semantic colors
         success: {
-          DEFAULT: "#10B981",
-          light: "#D1FAE5",
-          dark: "#047857",
+          DEFAULT: "#16A34A",
+          light: "#F0FDF4",
+          dark: "#15803D",
         },
         warning: {
-          DEFAULT: "#F59E0B",
-          light: "#FEF3C7",
+          DEFAULT: "#D97706",
+          light: "#FFFBEB",
           dark: "#B45309",
         },
         error: {
-          DEFAULT: "#EF4444",
-          light: "#FEE2E2",
+          DEFAULT: "#DC2626",
+          light: "#FEF2F2",
           dark: "#B91C1C",
         },
         info: {
-          DEFAULT: "#3B82F6",
-          light: "#DBEAFE",
-          dark: "#1D4ED8",
+          DEFAULT: "#B8860B",
+          light: "#FDF6E3",
+          dark: "#8B6914",
         },
 
-        // Neutrals - Cool grays
+        // Neutrals — standard Tailwind gray
         gray: {
-          50: "#F8FAFC",
-          100: "#F1F5F9",
-          200: "#E2E8F0",
-          300: "#CBD5E1",
-          400: "#94A3B8",
-          500: "#64748B",
-          600: "#475569",
-          700: "#334155",
-          800: "#1E293B",
-          900: "#0F172A",
-          950: "#020617",
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          200: "#E5E7EB",
+          300: "#D1D5DB",
+          400: "#9CA3AF",
+          500: "#6B7280",
+          600: "#4B5563",
+          700: "#374151",
+          800: "#1F2937",
+          900: "#111827",
+          950: "#0A0A0A",
         },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Geist", "Arial", "sans-serif"],
-        display: ["var(--font-geist-sans)", "Geist", "Arial", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "Geist Mono", "monospace"],
-        code: ["var(--font-geist-mono)", "Geist Mono", "monospace"],
+        sans: ["var(--font-geist-sans)", "Arial", "Apple Color Emoji", "Segoe UI Emoji", "sans-serif"],
+        display: ["var(--font-geist-sans)", "Arial", "Apple Color Emoji", "Segoe UI Emoji", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Roboto Mono", "Menlo", "monospace"],
+        code: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Roboto Mono", "Menlo", "monospace"],
       },
       fontSize: {
         "display": ["48px", { lineHeight: "1.1", letterSpacing: "-2.4px" }],
@@ -81,26 +81,30 @@ const config: Config = {
         "data-sm": ["12px", { lineHeight: "1.4" }],
         "code": ["13px", { lineHeight: "1.6" }],
       },
-      spacing: {
-        "2xs": "4px",
-        "3xs": "8px", // alias for xs
-      },
       borderRadius: {
         "sm": "4px",
-        "md": "6px",
-        "lg": "8px",
-        "xl": "12px",
+        "md": "8px",
+        "lg": "12px",
+        "xl": "16px",
         "2xl": "16px",
         "pill": "9999px",
       },
       boxShadow: {
-        "shadow-border": "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px",
-        "ring-border": "rgb(235, 235, 235) 0px 0px 0px 1px",
-        "card": "rgba(0,0,0,0.08) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 2px, rgba(0,0,0,0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px",
-        "card-hover": "rgba(0,0,0,0.08) 0px 0px 0px 1px, rgba(0,0,0,0.06) 0px 4px 4px, rgba(0,0,0,0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px",
-        "card-hover-dark": "rgba(0,0,0,0.3) 0px 0px 0px 1px, rgba(0,0,0,0.2) 0px 4px 4px, rgba(0,0,0,0.2) 0px 8px 8px -8px",
-        "button-hover": "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 4px 4px",
-        "focus": "hsla(212, 100%, 48%, 1) 0px 0px 0px 2px",
+        "shadow-border": "0 0 0 1px rgba(0, 0, 0, 0.05)",
+        "ring-border": "0 0 0 1px rgba(0, 0, 0, 0.1)",
+        "card": "0 0 0 1px rgba(0, 0, 0, 0.05)",
+        "card-hover": "0 0 0 1px rgba(0, 0, 0, 0.08)",
+        "card-hover-dark": "0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3)",
+        "card-elevated": "0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.08)",
+        "card-elevated-dark": "0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.3)",
+        "button-hover": "0 0 0 1px rgba(0, 0, 0, 0.08)",
+        "focus": "0 0 0 2px rgba(184, 134, 11, 0.6)",
+        "shadow-border-dark": "0 0 0 1px rgba(255, 255, 255, 0.08)",
+        "card-dark": "0 0 0 1px rgba(255, 255, 255, 0.08)",
+      },
+      transitionTimingFunction: {
+        'enter': 'cubic-bezier(0, 0, 0.2, 1)',
+        'exit': 'cubic-bezier(0.4, 0, 1, 1)',
       },
       animation: {
         "skeleton-pulse": "skeleton-pulse 1.5s ease-in-out infinite",

@@ -2,7 +2,7 @@
  * Animation Utility Library
  *
  * Centralized animation constants and utilities for consistent motion design
- * across the TradeMind AI application.
+ * across the MT application.
  *
  * Design Principles:
  * - Micro: 50-100ms - Tooltips, tiny state changes
@@ -29,6 +29,8 @@ export const EASING = {
   ENTER: 'cubic-bezier(0, 0, 0.2, 1)',      // ease-out
   EXIT: 'cubic-bezier(0.4, 0, 1, 1)',       // ease-in
   MOVE: 'cubic-bezier(0.4, 0, 0.2, 1)',     // ease-in-out
+  SPRING: 'cubic-bezier(0.34, 1.56, 0.64, 1)', // spring-like overshoot
+  SMOOTH: 'cubic-bezier(0.16, 1, 0.3, 1)',  // premium deceleration
 } as const;
 
 // Animation combinations (duration + easing)

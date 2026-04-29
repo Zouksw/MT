@@ -38,7 +38,7 @@ chmod 600 /root/.secrets.tmp
 ```bash
 # 安装 BFG
 wget https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg-1.14.0.jar
-java -jar bfg-1.14.0.jar --replace-text passwords.txt /root/iotdb-enhanced
+java -jar bfg-1.14.0.jar --replace-text passwords.txt /root/trademind-ai
 
 # passwords.txt 内容：
 # IOTDB_PASSWORD=root→IOTDB_PASSWORD=***REMOVED***
@@ -136,12 +136,12 @@ apt-get install awscli
 
 # 存储密钥
 aws secretsmanager create-secret \
-  --name iotdb-enhanced/jwt-secret \
+  --name trademind-ai/jwt-secret \
   --secret-string "$(openssl rand -base64 64)"
 
 # 检索密钥（应用启动时）
 aws secretsmanager get-secret-value \
-  --secret-id iotdb-enhanced/jwt-secret \
+  --secret-id trademind-ai/jwt-secret \
   --query SecretString \
   --output text
 ```
@@ -152,12 +152,12 @@ aws secretsmanager get-secret-value \
 # 配置 Vault 服务器
 
 # 存储密钥
-vault kv put secret/iotdb-enhanced \
+vault kv put secret/trademind-ai \
   jwt_secret="$(openssl rand -base64 64)" \
   iotdb_password="$(openssl rand -base64 32)"
 
 # 检索密钥
-vault kv get -field=jwt_secret secret/iotdb-enhanced
+vault kv get -field=jwt_secret secret/trademind-ai
 ```
 
 ### 2. CI/CD 集成
@@ -187,7 +187,7 @@ jobs:
         id: secrets
         run: |
           JWT_SECRET=$(aws secretsmanager get-secret-value \
-            --secret-id iotdb-enhanced/jwt-secret \
+            --secret-id trademind-ai/jwt-secret \
             --query SecretString --output text)
           echo "jwt_secret=$JWT_SECRET" >> $GITHUB_OUTPUT
       

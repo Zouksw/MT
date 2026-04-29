@@ -90,6 +90,9 @@ export interface PortfolioData {
   createdAt: string;
 }
 
+// Alias for repositioned naming
+export type AnalysisGroupData = PortfolioData;
+
 export function usePortfolios() {
   const { data, error, mutate } = useSWR<{ success: boolean; data: { portfolios: PortfolioData[] } }>(
     "/portfolios",

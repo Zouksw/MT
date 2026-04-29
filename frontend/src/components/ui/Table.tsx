@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 export interface Column<T> {
   key: string;
@@ -57,13 +57,13 @@ export function Table<T extends Record<string, any>>({
     return (
       <div className="overflow-x-auto">
         <table className={`min-w-full divide-y divide-gray-200 dark:divide-gray-700 ${className}`.trim()}>
-          <thead className="bg-gray-50 dark:bg-gray-900">
+          <thead className="bg-muted">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   scope="col"
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${column.className || ""}`.trim()}
+                  className={`px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${column.className || ""}`.trim()}
                   style={{ width: column.width }}
                 >
                   {column.title}
@@ -71,12 +71,12 @@ export function Table<T extends Record<string, any>>({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
             {[1, 2, 3, 4, 5].map((i) => (
               <tr key={i}>
                 {columns.map((column) => (
                   <td key={`${i}-${column.key}`} className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded animate-pulse"></div>
                   </td>
                 ))}
               </tr>
@@ -90,7 +90,7 @@ export function Table<T extends Record<string, any>>({
   if (!dataSource || dataSource.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-body text-gray-500 dark:text-gray-400">{emptyText}</p>
+        <p className="text-body text-muted-foreground">{emptyText}</p>
       </div>
     );
   }
@@ -98,13 +98,13 @@ export function Table<T extends Record<string, any>>({
   return (
     <div className="overflow-x-auto">
       <table className={`min-w-full divide-y divide-gray-200 dark:divide-gray-700 ${className}`.trim()}>
-        <thead className="bg-gray-50 dark:bg-gray-900">
+        <thead className="bg-muted">
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${column.className || ""}`.trim()}
+                className={`px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${column.className || ""}`.trim()}
                 style={{ width: column.width }}
               >
                 {column.title}
@@ -112,13 +112,13 @@ export function Table<T extends Record<string, any>>({
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
           {dataSource.map((record, rowIndex) => {
             const rowProps = onRow?.(record, rowIndex);
             return (
               <tr
                 key={getRowKey(record, rowIndex)}
-                className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150 ${rowProps?.className || ""}`.trim()}
+                className={`hover:bg-accent/50 transition-colors duration-150 ${rowProps?.className || ""}`.trim()}
                 onClick={rowProps?.onClick}
                 onDoubleClick={rowProps?.onDoubleClick}
                 style={{ height: "48px" }}

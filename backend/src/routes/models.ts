@@ -1,13 +1,12 @@
 import { success, paginated, successWithMessage } from '@/lib/response';
 import { Router } from 'express';
-import { z } from 'zod';
-import { Prisma, ModelAlgorithm } from '@prisma/client';
+import { Prisma, type ModelAlgorithm } from '@prisma/client';
 import { prisma, logger } from '@/lib';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { checkAIAccess } from '@/middleware/aiAccess';
 import { asyncHandler, NotFoundError, BadRequestError } from '@/middleware/errorHandler';
-import { getPagination, paginationSchema, limitSchema } from '@/schemas/common';
-import { modelsQuerySchema, trainModelSchema, predictSchema, forecastsQuerySchema } from '@/schemas/models';
+import { getPagination, limitSchema } from '@/schemas/common';
+import { modelsQuerySchema, trainModelSchema, predictSchema, } from '@/schemas/models';
 import { getIoTDBClient } from '../../config/iotdb';
 
 const router = Router();

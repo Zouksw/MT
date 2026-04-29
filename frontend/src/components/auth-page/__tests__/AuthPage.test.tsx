@@ -5,7 +5,6 @@
  * and navigation links.
  */
 
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -28,7 +27,7 @@ jest.mock('../UpdatePasswordForm', () => ({
 import { AuthPage } from '../index';
 
 // Get the mocked push function from jest.setup.js
-const mockPush = jest.fn();
+const _mockPush = jest.fn();
 
 describe('AuthPage', () => {
   it('should render login page title and description', () => {
@@ -91,18 +90,18 @@ describe('AuthPage', () => {
     expect(screen.getByText('Privacy Policy')).toBeInTheDocument();
   });
 
-  it('should render TradeMind AI branding on left panel', () => {
+  it('should render MT branding on left panel', () => {
     render(<AuthPage type="login" />);
 
-    expect(screen.getByText('TradeMind AI')).toBeInTheDocument();
+    expect(screen.getByText('MT')).toBeInTheDocument();
   });
 
   it('should render feature highlights on left panel', () => {
     render(<AuthPage type="login" />);
 
-    expect(screen.getByText('Lightning Fast')).toBeInTheDocument();
-    expect(screen.getByText('AI-Powered Insights')).toBeInTheDocument();
-    expect(screen.getByText('Enterprise Security')).toBeInTheDocument();
+    expect(screen.getByText('55+ Commodities')).toBeInTheDocument();
+    expect(screen.getByText('7 AI Models')).toBeInTheDocument();
+    expect(screen.getByText('Multi-Factor Analysis')).toBeInTheDocument();
   });
 
   it('should navigate to register when Sign up clicked', () => {

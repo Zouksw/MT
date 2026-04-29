@@ -1,6 +1,6 @@
 /**
- * Design Tokens for TradeMind AI Frontend
- * Modern Minimalist Design System
+ * Design Tokens for MT Frontend
+ * Vercel/Tailwind-inspired: pure black/white + gold accent
  */
 
 // ============================================================================
@@ -8,41 +8,41 @@
 // ============================================================================
 
 export const lightColors = {
-  // Primary - Refined Blue
-  primary: "#0a72ef",
-  primaryBg: "#E6F0FA",
-  primaryBgHover: "#D6E6F8",
-  primaryBorder: "#66B3FF",
-  primaryBorderHover: "#3399FF",
-  primaryText: "#0055A3",
-  primaryTextHover: "#004488",
+  // Primary - Gold accent (Vercel-style: accent only, NOT on buttons/bg)
+  primary: "#B8860B",
+  primaryBg: "#FDF6E3",
+  primaryBgHover: "#FAECC8",
+  primaryBorder: "#D4A030",
+  primaryBorderHover: "#B8860B",
+  primaryText: "#8B6914",
+  primaryTextHover: "#6B520E",
 
   // Secondary - Neutral Gray
   secondary: "#6B7280",
   secondaryBg: "#F3F4F6",
   secondaryText: "#4B5563",
 
-  // Success - Refined Green
-  success: "#10B981",
-  successBg: "#ECFDF5",
-  successBorder: "#6EE7B7",
+  // Success - Green
+  success: "#16A34A",
+  successBg: "#F0FDF4",
+  successBorder: "#86EFAC",
 
-  // Warning - Refined Amber
-  warning: "#F59E0B",
+  // Warning - Amber
+  warning: "#D97706",
   warningBg: "#FFFBEB",
   warningBorder: "#FCD34D",
 
-  // Error - Refined Red
-  error: "#EF4444",
+  // Error - Red
+  error: "#DC2626",
   errorBg: "#FEF2F2",
   errorBorder: "#FCA5A5",
 
-  // Info - Refined Sky
-  info: "#0EA5E9",
-  infoBg: "#E0F2FE",
-  infoBorder: "#7DD3FC",
+  // Info - Gold (same as primary)
+  info: "#B8860B",
+  infoBg: "#FDF6E3",
+  infoBorder: "#D4A030",
 
-  // Neutral Grays (Tailwind-inspired scale)
+  // Neutral Grays — standard Tailwind gray scale
   gray50: "#F9FAFB",
   gray100: "#F3F4F6",
   gray200: "#E5E7EB",
@@ -54,9 +54,9 @@ export const lightColors = {
   gray800: "#1F2937",
   gray900: "#111827",
 
-  // Background Layers
+  // Background Layers — pure white
   bgContainer: "#FFFFFF",
-  bgLayout: "#F9FAFB",
+  bgLayout: "#FFFFFF",
   bgSpotlight: "#FFFFFF",
   bgElevated: "#FFFFFF",
 
@@ -70,12 +70,15 @@ export const lightColors = {
   border: "#E5E7EB",
   borderSecondary: "#F3F4F6",
 
-  // Accent Colors (for data visualization)
-  accent1: "#6366F1", // Indigo
-  accent2: "#8B5CF6", // Violet
-  accent3: "#EC4899", // Pink
-  accent4: "#14B8A6", // Teal
-  accent5: "#F97316", // Orange
+  // Accent Colors (for data visualization — warm earth palette)
+  accent1: "#B8860B",  // Gold
+  accent2: "#3D6B4F",  // Forest
+  accent3: "#DC2626",  // Red
+  accent4: "#D97706",  // Amber
+  accent5: "#6B5B4E",  // Umber
+  accent6: "#8B7355",  // Bronze
+  accent7: "#A0522D",  // Sienna
+  accent8: "#556B2F",  // Olive
 };
 
 // ============================================================================
@@ -83,14 +86,14 @@ export const lightColors = {
 // ============================================================================
 
 export const darkColors = {
-  // Primary - Lighter for dark mode
-  primary: "#3B82F6",
-  primaryBg: "#1E3A5F",
-  primaryBgHover: "#2563EB",
-  primaryBorder: "#60A5FA",
-  primaryBorderHover: "#93C5FD",
-  primaryText: "#93C5FD",
-  primaryTextHover: "#BFDBFE",
+  // Primary - Brighter gold for dark surfaces
+  primary: "#D4A030",
+  primaryBg: "rgba(184, 134, 11, 0.15)",
+  primaryBgHover: "rgba(184, 134, 11, 0.25)",
+  primaryBorder: "rgba(212, 160, 48, 0.4)",
+  primaryBorderHover: "rgba(212, 160, 48, 0.6)",
+  primaryText: "#E0B440",
+  primaryTextHover: "#F0C850",
 
   // Secondary
   secondary: "#9CA3AF",
@@ -99,25 +102,25 @@ export const darkColors = {
 
   // Success
   success: "#34D399",
-  successBg: "#064E3B",
-  successBorder: "#10B981",
+  successBg: "rgba(52, 211, 153, 0.15)",
+  successBorder: "rgba(52, 211, 153, 0.3)",
 
   // Warning
   warning: "#FBBF24",
-  warningBg: "#451A03",
-  warningBorder: "#F59E0B",
+  warningBg: "rgba(251, 191, 36, 0.15)",
+  warningBorder: "rgba(251, 191, 36, 0.3)",
 
   // Error
   error: "#F87171",
-  errorBg: "#450A0A",
-  errorBorder: "#EF4444",
+  errorBg: "rgba(248, 113, 113, 0.15)",
+  errorBorder: "rgba(248, 113, 113, 0.3)",
 
   // Info
-  info: "#38BDF8",
-  infoBg: "#0C4A6E",
-  infoBorder: "#0EA5E9",
+  info: "#D4A030",
+  infoBg: "rgba(184, 134, 11, 0.15)",
+  infoBorder: "rgba(212, 160, 48, 0.3)",
 
-  // Neutral Grays - Dark Mode (inverted for contrast)
+  // Neutral Grays - Dark Mode (inverted)
   gray50: "#111827",
   gray100: "#1F2937",
   gray200: "#374151",
@@ -129,7 +132,7 @@ export const darkColors = {
   gray800: "#F3F4F6",
   gray900: "#F9FAFB",
 
-  // Background Layers
+  // Background Layers — dark
   bgContainer: "#1F2937",
   bgLayout: "#111827",
   bgSpotlight: "#374151",
@@ -145,12 +148,15 @@ export const darkColors = {
   border: "#374151",
   borderSecondary: "#1F2937",
 
-  // Accent Colors
-  accent1: "#818CF8", // Indigo (lighter)
-  accent2: "#A78BFA", // Violet (lighter)
-  accent3: "#F472B6", // Pink (lighter)
-  accent4: "#2DD4BF", // Teal (lighter)
-  accent5: "#FB923C", // Orange (lighter)
+  // Accent Colors (lighter for dark mode)
+  accent1: "#D4A030",
+  accent2: "#4E8766",
+  accent3: "#F87171",
+  accent4: "#FBBF24",
+  accent5: "#9CA3AF",
+  accent6: "#B8A080",
+  accent7: "#D2691E",
+  accent8: "#6B8E23",
 };
 
 // ============================================================================
@@ -158,42 +164,36 @@ export const darkColors = {
 // ============================================================================
 
 export const typography = {
-  // Font Family
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   fontFamilyMono:
     '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
 
-  // Font Sizes (in rem, base 16px)
-  fontSizeXS: "0.75rem", // 12px
-  fontSizeSM: "0.875rem", // 14px
-  fontSizeBase: "1rem", // 16px
-  fontSizeLG: "1.125rem", // 18px
-  fontSizeXL: "1.25rem", // 20px
-  fontSize2XL: "1.5rem", // 24px
-  fontSize3XL: "1.875rem", // 30px
-  fontSize4XL: "2.25rem", // 36px
-  fontSize5XL: "3rem", // 48px
+  fontSizeXS: "0.75rem",
+  fontSizeSM: "0.875rem",
+  fontSizeBase: "1rem",
+  fontSizeLG: "1.125rem",
+  fontSizeXL: "1.25rem",
+  fontSize2XL: "1.5rem",
+  fontSize3XL: "1.875rem",
+  fontSize4XL: "2.25rem",
+  fontSize5XL: "3rem",
 
-  // Heading Sizes
-  fontSizeHeading1: "2.25rem", // 36px
-  fontSizeHeading2: "1.875rem", // 30px
-  fontSizeHeading3: "1.5rem", // 24px
-  fontSizeHeading4: "1.25rem", // 20px
-  fontSizeHeading5: "1.125rem", // 18px
+  fontSizeHeading1: "2.25rem",
+  fontSizeHeading2: "1.875rem",
+  fontSizeHeading3: "1.5rem",
+  fontSizeHeading4: "1.25rem",
+  fontSizeHeading5: "1.125rem",
 
-  // Font Weights
   fontWeightNormal: 400,
   fontWeightMedium: 500,
   fontWeightSemibold: 600,
   fontWeightBold: 600,
 
-  // Line Heights
   lineHeightTight: 1.25,
   lineHeightBase: 1.5,
   lineHeightRelaxed: 1.75,
 
-  // Letter Spacing
   letterSpacingTight: "-0.025em",
   letterSpacingNormal: "0",
   letterSpacingWide: "0.025em",
@@ -204,40 +204,36 @@ export const typography = {
 // ============================================================================
 
 export const spacing = {
-  // Base spacing scale
   spacing0: 0,
-  spacing1: "0.25rem", // 4px
-  spacing2: "0.5rem", // 8px
-  spacing3: "0.75rem", // 12px
-  spacing4: "1rem", // 16px
-  spacing5: "1.25rem", // 20px
-  spacing6: "1.5rem", // 24px
-  spacing8: "2rem", // 32px
-  spacing10: "2.5rem", // 40px
-  spacing12: "3rem", // 48px
-  spacing16: "4rem", // 64px
-  spacing20: "5rem", // 80px
-  spacing24: "6rem", // 96px
+  spacing1: "0.25rem",
+  spacing2: "0.5rem",
+  spacing3: "0.75rem",
+  spacing4: "1rem",
+  spacing5: "1.25rem",
+  spacing6: "1.5rem",
+  spacing8: "2rem",
+  spacing10: "2.5rem",
+  spacing12: "3rem",
+  spacing16: "4rem",
+  spacing20: "5rem",
+  spacing24: "6rem",
 
-  // Component-specific padding
-  paddingXS: "0.5rem", // 8px
-  paddingSM: "0.75rem", // 12px
-  paddingMD: "1rem", // 16px
-  paddingLG: "1.5rem", // 24px
-  paddingXL: "2rem", // 32px
+  paddingXS: "0.5rem",
+  paddingSM: "0.75rem",
+  paddingMD: "1rem",
+  paddingLG: "1.5rem",
+  paddingXL: "2rem",
 
-  // Component-specific margins
-  marginXS: "0.5rem", // 8px
-  marginSM: "0.75rem", // 12px
-  marginMD: "1rem", // 16px
-  marginLG: "1.5rem", // 24px
-  marginXL: "2rem", // 32px
+  marginXS: "0.5rem",
+  marginSM: "0.75rem",
+  marginMD: "1rem",
+  marginLG: "1.5rem",
+  marginXL: "2rem",
 
-  // Layout gaps
-  gapSM: "0.75rem", // 12px
-  gapMD: "1rem", // 16px
-  gapLG: "1.5rem", // 24px
-  gapXL: "2rem", // 32px
+  gapSM: "0.75rem",
+  gapMD: "1rem",
+  gapLG: "1.5rem",
+  gapXL: "2rem",
 };
 
 // ============================================================================
@@ -245,36 +241,33 @@ export const spacing = {
 // ============================================================================
 
 export const borderRadius = {
-  XS: 2, // Small elements: tags, badges
-  SM: 3, // Inputs, buttons
-  MD: 4, // Cards, panels - reduced from 8 for more professional look
-  LG: 6, // Large cards, modals - reduced from 12
-  XL: 8, // Hero sections, special containers - reduced from 16
-  Full: 9999, // Pills, avatar circles
+  XS: 2,
+  SM: 4,
+  MD: 8,
+  LG: 12,
+  XL: 16,
+  Full: 9999,
 };
 
 // ============================================================================
-// SHADOWS
+// SHADOWS — minimal, Vercel-style (mostly none)
 // ============================================================================
 
 export const shadows = {
-  // Light shadows (subtle depth) - lighter for cleaner look
   XS: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-  SM: "0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-  MD: "0 2px 4px 0 rgba(0, 0, 0, 0.08)",
-  LG: "0 4px 8px 0 rgba(0, 0, 0, 0.08)",
-  XL: "0 8px 16px 0 rgba(0, 0, 0, 0.08)",
+  SM: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+  MD: "0 1px 3px 0 rgba(0, 0, 0, 0.06)",
+  LG: "0 2px 4px 0 rgba(0, 0, 0, 0.06)",
+  XL: "0 4px 8px 0 rgba(0, 0, 0, 0.06)",
 
-  // Dark mode shadows (more opaque)
   darkSM: "0 1px 3px 0 rgba(0, 0, 0, 0.4)",
-  darkMD: "0 4px 6px -1px rgba(0, 0, 0, 0.4)",
-  darkLG: "0 10px 15px -3px rgba(0, 0, 0, 0.4)",
+  darkMD: "0 2px 4px 0 rgba(0, 0, 0, 0.4)",
+  darkLG: "0 4px 8px 0 rgba(0, 0, 0, 0.4)",
 
-  // Colored shadows for accents - lighter
-  primary: "0 2px 8px 0 rgba(0, 102, 204, 0.12)",
-  success: "0 2px 8px 0 rgba(16, 185, 129, 0.12)",
-  warning: "0 2px 8px 0 rgba(245, 158, 11, 0.12)",
-  error: "0 2px 8px 0 rgba(239, 68, 68, 0.12)",
+  primary: "0 0 0 1px rgba(0, 0, 0, 0.05)",
+  success: "0 0 0 1px rgba(0, 0, 0, 0.05)",
+  warning: "0 0 0 1px rgba(0, 0, 0, 0.05)",
+  error: "0 0 0 1px rgba(0, 0, 0, 0.05)",
 };
 
 // ============================================================================
@@ -282,41 +275,35 @@ export const shadows = {
 // ============================================================================
 
 export const componentTokens = {
-  // Button
   buttonHeightSM: 32,
   buttonHeightMD: 40,
   buttonHeightLG: 48,
   buttonPaddingSM: "0.5rem 1rem",
   buttonPaddingMD: "0.625rem 1.25rem",
   buttonPaddingLG: "0.75rem 1.5rem",
-  buttonBorderRadius: 3, // Reduced from 6
+  buttonBorderRadius: 9999,
 
-  // Input
   inputHeightSM: 32,
   inputHeightMD: 40,
   inputHeightLG: 48,
   inputPadding: "0.625rem 0.875rem",
-  inputBorderRadius: 3, // Reduced from 6
+  inputBorderRadius: 8,
 
-  // Card
   cardPadding: "1.5rem",
-  cardBorderRadius: 4, // Reduced from 12
+  cardBorderRadius: 16,
   cardMarginBottom: "1.5rem",
 
-  // Table
   tableHeaderBg: "transparent",
   tableCellPadding: "1rem 1.25rem",
-  tableRowHoverBg: "rgba(0, 102, 204, 0.04)",
-  tableBorderRadius: 4, // Reduced from 8
+  tableRowHoverBg: "rgba(0, 0, 0, 0.02)",
+  tableBorderRadius: 12,
 
-  // Modal
-  modalBorderRadius: 6, // Reduced from 12
+  modalBorderRadius: 16,
   modalPadding: "1.5rem",
   modalHeaderPadding: "1.5rem 1.5rem 1rem",
   modalFooterPadding: "1rem 1.5rem 1.5rem",
 
-  // Tag/Badge
-  tagBorderRadius: 2, // Reduced from 4
+  tagBorderRadius: 9999,
   tagPaddingXS: "0.125rem 0.5rem",
   tagPaddingSM: "0.25rem 0.625rem",
   tagPaddingMD: "0.375rem 0.75rem",
@@ -326,15 +313,9 @@ export const componentTokens = {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-/**
- * Get color tokens based on mode
- */
 export const getColors = (mode: "light" | "dark") =>
   mode === "light" ? lightColors : darkColors;
 
-/**
- * Get shadow based on mode
- */
 export const getShadow = (level: keyof typeof shadows, mode: "light" | "dark") => {
   if (mode === "dark" && (level === "SM" || level === "MD" || level === "LG")) {
     return shadows[`dark${level}`];

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The IoTDB Enhanced platform integrates Apache IoTDB 2.0.5 AI Node, providing advanced time-series forecasting, anomaly detection, and machine learning capabilities.
+The TradeMind AI platform integrates Apache IoTDB 2.0.5 AI Node, providing advanced time-series forecasting, anomaly detection, and machine learning capabilities.
 
 ## Installation Status
 

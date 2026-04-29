@@ -1,211 +1,96 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo } from "react";
-import { Table, theme } from "antd";
-import type { TableProps as AntTableProps } from "antd";
-import { EmptyState, EmptyStateType } from "@/components/ui/EmptyState";
-import { useIsMobile } from "@/lib/responsive-utils";
+import type React from "react";
 
-export interface DataTableProps<T = any> extends Omit<AntTableProps<T>, "className"> {
-  enableZebraStriping?: boolean;
-  stickyHeader?: boolean;
-  compact?: boolean;
-  emptyStateType?: EmptyStateType;
-  emptyStateTitle?: string;
-  emptyStateDescription?: string;
-  emptyStateActionText?: string;
-  emptyStateOnAction?: () => void;
+export interface DataTableColumn<T = any> {
+  key: string;
+  header: string;
+  dataIndex?: string;
+  render?: (row: T) => React.ReactNode;
+  width?: number | string;
 }
 
-/**
- * DataTable - Enhanced table wrapper with consistent styling
- *
- * Provides:
- * - Desktop: standard table with zebra striping
- * - Mobile: automatic card view per row
- * - Consistent styling and pagination
- */
-export const DataTable = <T extends Record<string, any>>({
-  enableZebraStriping = true,
-  stickyHeader = true,
-  compact = false,
-  rowClassName,
-  pagination,
-  emptyStateType = "data",
-  emptyStateTitle,
-  emptyStateDescription,
-  emptyStateActionText,
-  emptyStateOnAction,
+export interface DataTableProps<T = any> {
+  columns: DataTableColumn<T>[];
+  data: T[];
+  loading?: boolean;
+  pagination?: { page: number; pageSize: number; total: number; onChange: (page: number) => void };
+  emptyText?: string;
+  enableZebraStriping?: boolean;
+  compact?: boolean;
+}
+
+export function DataTable<T extends Record<string, any>>({
   columns,
-  ...props
-}: DataTableProps<T>) => {
-  const { token } = theme.useToken();
-  const styleRef = useRef<HTMLStyleElement | null>(null);
-  const isMobile = useIsMobile();
-
-  const styleContent = useMemo(() => `
-    .data-table .ant-table {
-      border-radius: ${token.borderRadiusLG}px;
-      overflow: hidden;
-    }
-
-    .data-table--striped .ant-table-tbody > tr.ant-table-row:nth-child(even) {
-      background-color: ${token.colorBgLayout};
-    }
-
-    .data-table-row-zebra {
-      background-color: ${token.colorBgLayout};
-    }
-
-    .data-table .ant-table-tbody > tr.ant-table-row:hover > td {
-      background-color: ${token.colorPrimaryBg} !important;
-    }
-
-    .data-table .ant-table-thead > tr > th {
-      font-weight: 600;
-      font-size: ${token.fontSizeSM}px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: ${token.colorTextSecondary};
-      background-color: transparent !important;
-      border-bottom: 1px solid ${token.colorBorder};
-    }
-
-    .data-table .ant-table-tbody > tr > td {
-      border-bottom: 1px solid ${token.colorBorderSecondary};
-    }
-
-    .data-table .ant-pagination {
-      padding: ${token.paddingLG}px ${token.paddingLG}px 0;
-      border-top: 1px solid ${token.colorBorder};
-      margin: 0;
-    }
-
-    .data-table--compact .ant-table-tbody > tr > td {
-      padding: ${token.paddingSM}px ${token.paddingMD}px;
-    }
-
-    .data-table--compact .ant-table-thead > tr > th {
-      padding: ${token.paddingSM}px ${token.paddingMD}px;
-    }
-  `, [token.borderRadiusLG, token.colorBgLayout, token.colorPrimaryBg,
-      token.fontSizeSM, token.colorTextSecondary, token.colorBorder,
-      token.colorBorderSecondary, token.paddingLG, token.paddingSM, token.paddingMD]);
-
-  useEffect(() => {
-    if (!styleRef.current) {
-      const el = document.createElement("style");
-      el.setAttribute("data-data-table", "");
-      document.head.appendChild(el);
-      styleRef.current = el;
-    }
-    styleRef.current.textContent = styleContent;
-    return () => {
-      if (styleRef.current && !document.querySelector(".data-table")) {
-        styleRef.current.remove();
-        styleRef.current = null;
-      }
-    };
-  }, [styleContent]);
-
-  const dataSource = props.dataSource as T[] | undefined;
-  const isEmpty = !dataSource || dataSource.length === 0;
-
-  const getRowClassName = (record: T, index: number | undefined, _?: any): string => {
-    const classes: string[] = [];
-    if (enableZebraStriping && index !== undefined && index % 2 === 1) {
-      classes.push("data-table-row-zebra");
-    }
-    if (typeof rowClassName === "function") {
-      classes.push(rowClassName(record, index ?? -1, _));
-    } else if (typeof rowClassName === "string") {
-      classes.push(rowClassName);
-    }
-    return classes.join(" ");
-  };
-
-  const defaultPagination = pagination || false;
-
-  const paginationConfig = {
-    showSizeChanger: true,
-    showTotal: (total: number, range: [number, number]) =>
-      `${range[0]}-${range[1]} of ${total} items`,
-    pageSizeOptions: ["10", "20", "50", "100"] as ("10" | "20" | "50" | "100")[],
-    position: ["bottomRight"] as ["bottomRight"],
-    ...defaultPagination,
-  };
-
-  // Mobile card view
-  if (isMobile && !isEmpty && dataSource) {
-    const visibleColumns = (columns || []).filter(
-      (col) => col.title && col.key !== "actions"
-    );
-
+  data,
+  loading = false,
+  pagination,
+  emptyText = "No data",
+  enableZebraStriping = true,
+  compact = false,
+}: DataTableProps<T>) {
+  if (loading) {
     return (
-      <div className="space-y-3">
-        {dataSource.map((record, rowIndex) => (
-          <div
-            key={rowIndex}
-            className="rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800/80 p-4 transition-all duration-200 active:scale-[0.98]"
-            style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px" }}
-          >
-            {visibleColumns.map((col) => {
-              const value = record[(col as any).dataIndex as string];
-              if (value === undefined || value === null) return null;
-
-              return (
-                <div key={col.key as string} className="flex items-center justify-between py-1.5">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    {col.title as string}
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white data-text">
-                    {col.render
-                      ? (col.render(value, record, rowIndex) as React.ReactNode)
-                      : String(value)}
-                  </span>
-                </div>
-              );
-            })}
+      <div className="overflow-hidden rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+        <div className="animate-pulse">
+          <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 flex gap-4">
+            {columns.map((col) => <div key={col.key} className="h-4 bg-muted rounded flex-1" />)}
           </div>
-        ))}
-        {/* Mobile pagination — simplified for card view */}
-        {pagination && defaultPagination && (
-          <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700">
-            {dataSource.length} items shown
-          </div>
-        )}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="px-4 py-3 flex gap-4 border-t border-gray-100 dark:border-gray-800">
+              {columns.map((col) => <div key={col.key} className="h-4 bg-muted rounded flex-1" />)}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (isEmpty) {
-    return (
-      <EmptyState
-        type={emptyStateType}
-        title={emptyStateTitle}
-        description={emptyStateDescription}
-        actionText={emptyStateActionText}
-        onAction={emptyStateOnAction}
-      />
-    );
+  if (!data || data.length === 0) {
+    return <div className="text-center py-12 text-gray-400">{emptyText}</div>;
   }
 
+  const getCellValue = (row: T, col: DataTableColumn<T>) => {
+    if (col.render) return col.render(row);
+    if (col.dataIndex) return String((row as any)[col.dataIndex] ?? "");
+    return String((row as any)[col.key] ?? "");
+  };
+
   return (
-    <Table<T>
-      {...props}
-      columns={columns}
-      rowClassName={getRowClassName}
-      sticky={stickyHeader ? { offsetHeader: 64 } : undefined}
-      pagination={paginationConfig}
-      size={compact ? "small" : "middle"}
-      className={`data-table ${enableZebraStriping ? "data-table--striped" : ""} ${compact ? "data-table--compact" : ""}`}
-      style={{
-        fontSize: token.fontSize,
-        borderRadius: token.borderRadiusLG,
-        overflow: "hidden",
-      }}
-    />
+    <div className="overflow-x-auto rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200/60 dark:border-gray-700/60">
+            {columns.map((col) => (
+              <th key={col.key} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider" style={col.width ? { width: col.width } : undefined}>
+                {col.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={(row as any).id ?? i} className={`border-b border-gray-100 dark:border-gray-800 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors ${enableZebraStriping && i % 2 === 1 ? "bg-gray-50/50 dark:bg-gray-800/30" : ""}`}>
+              {columns.map((col) => (
+                <td key={col.key} className={`px-4 ${compact ? "py-2" : "py-3"}`}>
+                  {getCellValue(row, col)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {pagination && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200/60 dark:border-gray-700/60 text-xs text-gray-500">
+          <span>Page {pagination.page} of {Math.ceil(pagination.total / pagination.pageSize)}</span>
+          <div className="flex gap-2">
+            <button disabled={pagination.page <= 1} onClick={() => pagination.onChange(pagination.page - 1)} className="px-2 py-1 rounded border border disabled:opacity-50">Prev</button>
+            <button disabled={pagination.page >= Math.ceil(pagination.total / pagination.pageSize)} onClick={() => pagination.onChange(pagination.page + 1)} className="px-2 py-1 rounded border border disabled:opacity-50">Next</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
-};
+}
 
 export default DataTable;

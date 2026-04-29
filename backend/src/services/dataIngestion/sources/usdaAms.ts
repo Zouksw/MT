@@ -91,10 +91,10 @@ async function updateAMSPrices(): Promise<ScraperResult> {
     date.setHours(0, 0, 0, 0);
 
     const price = Number(latest[config.priceField]);
-    if (!price || isNaN(price)) continue;
+    if (!price || Number.isNaN(price)) continue;
 
     const existing = await prisma.commodityPrice.findUnique({
-      where: { commodityId_interval_date: { commodityId: commodity.id, interval: 'daily', date } },
+      where: { commodityId_interval_date_source: { commodityId: commodity.id, interval: 'daily', date, source: 'usda_ams' } },
     });
 
     const priceData = {

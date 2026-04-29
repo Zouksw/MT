@@ -3,13 +3,13 @@
  *
  * Provides multi-layered security for AI features:
  * - Feature flag control
- * - Role-based access (ADMIN only)
+ * - Role-based access (any authenticated user)
  * - IP whitelist (optional)
  * - Audit logging
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { AuthRequest } from './auth';
+import type { Request, Response, NextFunction } from 'express';
+import type { AuthRequest } from './auth';
 import { ForbiddenError, ServiceUnavailableError } from './errorHandler';
 import { logger } from '@/lib';
 
@@ -33,11 +33,11 @@ function getClientIp(req: Request): string {
  *
  * Security layers:
  * 1. Feature flag check
- * 2. User role verification (ADMIN only)
+ * 2. User authentication verification
  * 3. IP whitelist (if configured)
  * 4. Audit logging
  */
-export function checkAIAccess(req: AuthRequest, res: Response, next: NextFunction) {
+export function checkAIAccess(req: AuthRequest, _res: Response, next: NextFunction) {
   // Layer 1: Check feature flag
   if (process.env.AI_FEATURES_DISABLED === 'true') {
     logger.warn('[AI_ACCESS] AI features are disabled');
@@ -46,19 +46,11 @@ export function checkAIAccess(req: AuthRequest, res: Response, next: NextFunctio
     );
   }
 
-  // Layer 2: Check user role - only ADMIN can use AI features
+  // Layer 2: Check authentication
   if (!req.user) {
     logger.warn('[AI_ACCESS] Unauthenticated AI access attempt');
     throw new ForbiddenError(
       'Authentication required for AI features.'
-    );
-  }
-
-  if (req.user.role !== 'ADMIN') {
-    const clientIp = getClientIp(req);
-    logger.warn(`[AI_ACCESS] Non-admin user attempted AI access: ${req.user.email} (${req.user.role}) from ${clientIp}`);
-    throw new ForbiddenError(
-      'AI features are only available to administrators.'
     );
   }
 
@@ -75,7 +67,7 @@ export function checkAIAccess(req: AuthRequest, res: Response, next: NextFunctio
 
   // Layer 4: Log successful access
   const clientIp = getClientIp(req);
-  logger.info(`[AI_ACCESS] AI feature accessed by admin ${req.user.email} from ${clientIp}`);
+  logger.info(`[AI_ACCESS] AI feature accessed by ${req.user.email} (${req.user.role}) from ${clientIp}`);
 
   next();
 }
@@ -84,7 +76,7 @@ export function checkAIAccess(req: AuthRequest, res: Response, next: NextFunctio
  * Middleware to check if AI features are enabled
  * (for informational endpoints like /api/iotdb/ai/models)
  */
-export function checkAIEnabled(req: Request, res: Response, next: NextFunction) {
+export function checkAIEnabled(_req: Request, res: Response, next: NextFunction) {
   if (process.env.AI_FEATURES_DISABLED === 'true') {
     // Return 503 with informative message
     return res.status(503).json({

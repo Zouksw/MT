@@ -1,4 +1,4 @@
-import { describe, test, expect } from '@jest/globals';
+import { describe, test, expect } from 'vitest';
 import {
   datasetsQuerySchema,
   createDatasetSchema,
@@ -17,9 +17,6 @@ import {
   updateAlertSchema,
   resolveAlertSchema,
 } from '@/schemas/alerts';
-import {
-  anomaliesQuerySchema as iotdbAnomaliesQuerySchema,
-} from '@/routes/anomalies';
 import {
   modelsQuerySchema,
   trainModelSchema,

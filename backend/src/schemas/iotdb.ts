@@ -4,8 +4,13 @@
 
 import { z } from 'zod';
 
+const BLOCKED_SQL_PATTERNS = /\b(DROP|DELETE|TRUNCATE|ALTER|GRANT|REVOKE|CREATE|INSERT|UPDATE|LOAD|FLUSH|KILL|SHUTDOWN|MERGE|MOVE|RENAME)\b/i;
+
 export const sqlQuerySchema = z.object({
-  sql: z.string().min(1),
+  sql: z.string().min(1).refine(
+    (sql) => !BLOCKED_SQL_PATTERNS.test(sql.trim()),
+    'Only SELECT queries are allowed through the SQL endpoint. Use dedicated endpoints for data modification.',
+  ),
 });
 
 export const createTimeseriesSchema = z.object({

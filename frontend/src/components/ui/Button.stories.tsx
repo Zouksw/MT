@@ -1,10 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import {
-  PlusOutlined,
-  DeleteOutlined,
-  SearchOutlined,
-  DownloadOutlined,
-} from '@ant-design/icons';
 import { Button } from './Button';
 
 const meta: Meta<typeof Button> = {
@@ -12,14 +6,8 @@ const meta: Meta<typeof Button> = {
   component: Button,
   tags: ['autodocs'],
   argTypes: {
-    variant: {
-      control: 'select',
-      options: ['primary', 'secondary', 'ghost', 'danger'],
-    },
-    size: {
-      control: 'select',
-      options: ['sm', 'md', 'lg'],
-    },
+    variant: { control: 'select', options: ['primary', 'secondary', 'ghost', 'danger'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg'] },
     isLoading: { control: 'boolean' },
     fullWidth: { control: 'boolean' },
     disabled: { control: 'boolean' },
@@ -30,33 +18,10 @@ const meta: Meta<typeof Button> = {
 export default meta;
 type Story = StoryObj<typeof Button>;
 
-export const Default: Story = {
-  args: {
-    children: 'Primary Button',
-    variant: 'primary',
-  },
-};
-
-export const Secondary: Story = {
-  args: {
-    children: 'Secondary Button',
-    variant: 'secondary',
-  },
-};
-
-export const Ghost: Story = {
-  args: {
-    children: 'Ghost Button',
-    variant: 'ghost',
-  },
-};
-
-export const Danger: Story = {
-  args: {
-    children: 'Danger Button',
-    variant: 'danger',
-  },
-};
+export const Default: Story = { args: { children: 'Primary Button', variant: 'primary' } };
+export const Secondary: Story = { args: { children: 'Secondary Button', variant: 'secondary' } };
+export const Ghost: Story = { args: { children: 'Ghost Button', variant: 'ghost' } };
+export const Danger: Story = { args: { children: 'Danger Button', variant: 'danger' } };
 
 export const AllVariants: Story = {
   render: () => (
@@ -71,7 +36,7 @@ export const AllVariants: Story = {
 
 export const AllSizes: Story = {
   render: () => (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <Button size="sm">Small</Button>
       <Button size="md">Medium</Button>
       <Button size="lg">Large</Button>
@@ -82,37 +47,9 @@ export const AllSizes: Story = {
 export const WithIcon: Story = {
   render: () => (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <Button variant="primary" icon={<PlusOutlined />}>
-        Add Item
-      </Button>
-      <Button variant="danger" icon={<DeleteOutlined />}>
-        Delete
-      </Button>
-      <Button variant="ghost" icon={<SearchOutlined />}>
-        Search
-      </Button>
-      <Button variant="secondary" icon={<DownloadOutlined />}>
-        Download
-      </Button>
-    </div>
-  ),
-};
-
-export const Disabled: Story = {
-  render: () => (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <Button variant="primary" disabled>
-        Primary Disabled
-      </Button>
-      <Button variant="secondary" disabled>
-        Secondary Disabled
-      </Button>
-      <Button variant="ghost" disabled>
-        Ghost Disabled
-      </Button>
-      <Button variant="danger" disabled>
-        Danger Disabled
-      </Button>
+      <Button variant="primary" icon={<span>+</span>}>Add Item</Button>
+      <Button variant="danger" icon={<span>&times;</span>}>Delete</Button>
+      <Button variant="ghost" icon={<span>&darr;</span>}>Download</Button>
     </div>
   ),
 };
@@ -120,15 +57,8 @@ export const Disabled: Story = {
 export const Loading: Story = {
   render: () => (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <Button variant="primary" isLoading>
-        Saving...
-      </Button>
-      <Button variant="secondary" isLoading>
-        Loading...
-      </Button>
-      <Button variant="danger" isLoading>
-        Deleting...
-      </Button>
+      <Button variant="primary" isLoading>Saving...</Button>
+      <Button variant="secondary" isLoading>Loading...</Button>
     </div>
   ),
 };
@@ -136,15 +66,8 @@ export const Loading: Story = {
 export const FullWidth: Story = {
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 400 }}>
-      <Button variant="primary" fullWidth>
-        Full Width Primary
-      </Button>
-      <Button variant="ghost" fullWidth>
-        Full Width Ghost
-      </Button>
-      <Button variant="danger" fullWidth icon={<DeleteOutlined />}>
-        Full Width With Icon
-      </Button>
+      <Button variant="primary" fullWidth>Full Width Primary</Button>
+      <Button variant="ghost" fullWidth>Full Width Ghost</Button>
     </div>
   ),
 };

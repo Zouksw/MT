@@ -69,8 +69,8 @@ describe('AnomalyChart', () => {
       />
     );
 
-    // Antd Spin renders an aria-busy spinner
-    expect(document.querySelector('.ant-spin')).toBeInTheDocument();
+    // Loading spinner uses animate-spin
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 
   it('should render chart header with timeseries name', () => {
@@ -163,7 +163,13 @@ describe('AnomalyChart', () => {
 
   it('should call onExport when CSV export clicked', () => {
     const onExport = jest.fn();
-    global.URL.createObjectURL = jest.fn(() => 'blob:test');
+    // Mock Blob and URL APIs for JSDOM
+    const mockUrl = 'blob:test';
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = jest.fn(() => mockUrl);
+    URL.revokeObjectURL = jest.fn();
+
     render(
       <AnomalyChart
         timeseries="root.test.temp"
@@ -175,6 +181,9 @@ describe('AnomalyChart', () => {
 
     fireEvent.click(screen.getByLabelText('Export anomaly data as CSV spreadsheet'));
     expect(onExport).toHaveBeenCalledWith('csv');
+
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
   it('should render with anomalies only (no historical data)', () => {

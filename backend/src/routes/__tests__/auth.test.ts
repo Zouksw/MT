@@ -1,229 +1,144 @@
-/**
- * Tests for auth route utilities and logic
- */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import {
+  createPrismaProxy,
+  createLoggerMock,
+  createJwtUtilsMock,
+  createConfigMock,
+  passThrough,
+} from '@/test-helpers';
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-
-// Mock bcryptjs
-jest.mock('bcryptjs', () => ({
-  hash: jest.fn().mockResolvedValue('$2b$12$hashedpasswordvalue'),
-  compare: jest.fn().mockResolvedValue(true),
+vi.mock('@/lib', () => ({
+  prisma: createPrismaProxy(),
+  logger: createLoggerMock(),
+  jwtUtils: createJwtUtilsMock(),
+  config: createConfigMock(),
 }));
 
-// Mock the services that are used by auth routes
-const mockCheckAccountLockout = jest.fn();
-const mockRecordFailedLogin = jest.fn();
-const mockClearFailedLoginAttempts = jest.fn();
-const mockFormatLockoutTime = jest.fn();
-const mockBlacklistToken = jest.fn();
-
-jest.mock('../../services/authLockout', () => ({
-  checkAccountLockout: (...args: any[]) => mockCheckAccountLockout(...args),
-  recordFailedLogin: (...args: any[]) => mockRecordFailedLogin(...args),
-  clearFailedLoginAttempts: (...args: any[]) => mockClearFailedLoginAttempts(...args),
-  formatLockoutTime: (...args: any[]) => mockFormatLockoutTime(...args),
+vi.mock('@/services/authLockout', () => ({
+  checkAccountLockout: vi.fn().mockResolvedValue({ isLocked: false }),
+  recordFailedLogin: vi.fn(),
+  clearFailedLoginAttempts: vi.fn(),
+  formatLockoutTime: vi.fn().mockReturnValue('15 minutes'),
 }));
 
-jest.mock('../../services/tokenBlacklist', () => ({
-  blacklistToken: (...args: any[]) => mockBlacklistToken(...args),
+vi.mock('@/services/tokenBlacklist', () => ({
+  blacklistToken: vi.fn(),
+  isTokenBlacklisted: vi.fn().mockResolvedValue(false),
 }));
 
-describe('Auth Route Logic Tests', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+vi.mock('@/middleware/rateLimiter', () => ({
+  authRateLimiter: passThrough,
+  registrationRateLimiter: passThrough,
+  passwordResetRateLimiter: passThrough,
+}));
 
-  describe('Password handling', () => {
-    it('should hash password with bcrypt', async () => {
-      const bcrypt = require('bcryptjs');
-      const password = 'TestPassword123!';
-      const hash = await bcrypt.hash(password, 12);
+vi.mock('bcryptjs', () => ({
+  default: { hash: vi.fn().mockResolvedValue('$2b$12$hashed'), compare: vi.fn().mockResolvedValue(true) },
+  hash: vi.fn().mockResolvedValue('$2b$12$hashed'),
+  compare: vi.fn().mockResolvedValue(true),
+}));
 
-      expect(hash).toBeDefined();
-      expect(hash).toBe('$2b$12$hashedpasswordvalue');
-    });
+import { prisma } from '@/lib';
+import { authRouter } from '@/routes/auth';
 
-    it('should compare password correctly', async () => {
-      const bcrypt = require('bcryptjs');
-      const password = 'TestPassword123!';
+function createApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/auth', authRouter);
+  return app;
+}
 
-      const isValid = await bcrypt.compare(password, 'hash');
-      const isInvalid = await bcrypt.compare('wrongpassword', 'hash');
+describe('Auth Routes', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
 
-      expect(isValid).toBe(true);
-      expect(isInvalid).toBe(true); // Mock returns true for everything
-    });
-
-    it('should hash with specified rounds for security', async () => {
-      const bcrypt = require('bcryptjs');
-      const password = 'TestPassword123!';
-      const hash = await bcrypt.hash(password, 4);
-
-      expect(hash).toBe('$2b$12$hashedpasswordvalue');
-    });
-  });
-
-  describe('Account lockout integration', () => {
-    it('should check account lockout status', async () => {
-      mockCheckAccountLockout.mockResolvedValue({
-        locked: false,
+  describe('POST /api/auth/register', () => {
+    it('should register a new user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-1', email: 'test@example.com', name: 'Test', role: 'EDITOR',
       });
 
-      const result = await mockCheckAccountLockout('user-123');
+      const res = await request(createApp())
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', password: 'SecurePass123', name: 'Test' });
 
-      expect(result.locked).toBe(false);
-      expect(mockCheckAccountLockout).toHaveBeenCalledWith('user-123');
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('token');
+      expect(res.body.data).toHaveProperty('refreshToken');
+      expect(res.body.data.user.email).toBe('test@example.com');
     });
 
-    it('should get lockout time format', () => {
-      mockFormatLockoutTime.mockReturnValue('15 minutes');
+    it('should reject duplicate email', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
 
-      const time = mockFormatLockoutTime(900000);
+      const res = await request(createApp())
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', password: 'SecurePass123', name: 'Test' });
 
-      expect(time).toBe('15 minutes');
-      expect(mockFormatLockoutTime).toHaveBeenCalledWith(900000);
+      expect(res.status).toBe(409);
     });
 
-    it('should record failed login attempt', async () => {
-      mockRecordFailedLogin.mockResolvedValue({
-        attempts: 2,
-        shouldLockout: false,
-        lockedUntil: null,
-      });
+    it('should reject invalid email', async () => {
+      const res = await request(createApp())
+        .post('/api/auth/register')
+        .send({ email: 'not-an-email', password: 'SecurePass123', name: 'Test' });
 
-      const result = await mockRecordFailedLogin('user-123', '127.0.0.1', 'TestAgent');
-
-      expect(result.attempts).toBe(2);
-      expect(result.shouldLockout).toBe(false);
+      expect(res.status).toBe(400);
     });
 
-    it('should clear failed login attempts on success', async () => {
-      mockClearFailedLoginAttempts.mockResolvedValue();
+    it('should reject missing password', async () => {
+      const res = await request(createApp())
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', name: 'Test' });
 
-      await mockClearFailedLoginAttempts('user-123');
-
-      expect(mockClearFailedLoginAttempts).toHaveBeenCalledWith('user-123');
+      expect(res.status).toBe(400);
     });
   });
 
-  describe('Token management', () => {
-    it('should blacklist token on logout', async () => {
-      mockBlacklistToken.mockResolvedValue(true);
-
-      const result = await mockBlacklistToken('access-token', 'logout');
-
-      expect(result).toBe(true);
-      expect(mockBlacklistToken).toHaveBeenCalledWith('access-token', 'logout');
-    });
-  });
-
-  describe('User data validation', () => {
-    it('should validate email format', () => {
-      const validEmails = [
-        'test@example.com',
-        'user.name@example.com',
-        'user+tag@example.co.uk',
-      ];
-
-      const invalidEmails = [
-        'invalid',
-        'invalid@',
-        '@example.com',
-        'user @example.com',
-      ];
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      validEmails.forEach(email => {
-        expect(emailRegex.test(email)).toBe(true);
+  describe('POST /api/auth/login', () => {
+    it('should login with valid credentials', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1', email: 'test@example.com', name: 'Test',
+        passwordHash: 'hashed', role: 'user',
       });
 
-      invalidEmails.forEach(email => {
-        expect(emailRegex.test(email)).toBe(false);
-      });
+      const res = await request(createApp())
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'SecurePass123' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('token');
+      expect(res.body.data).toHaveProperty('refreshToken');
+      expect(res.body.data).toHaveProperty('sessionId');
     });
 
-    it('should validate password strength', () => {
-      const strongPasswords = [
-        'Password123!',
-        'SecurePass@2024',
-        'MyP@ssw0rd',
-      ];
-
-      const weakPasswords = [
-        'short',
-        'nouppercase123!',
-        'NOLOWERCASE123!',
-        'Password!', // no number
-        'Password123', // no special char
-      ];
-
-      // At least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
-      const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-      strongPasswords.forEach(password => {
-        expect(strongPasswordRegex.test(password)).toBe(true);
+    it('should reject wrong password', async () => {
+      const bcrypt = await import('bcryptjs');
+      (bcrypt.compare as any).mockResolvedValue(false);
+      (bcrypt.default.compare as any).mockResolvedValue(false);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1', email: 'test@example.com', passwordHash: 'hashed', role: 'user',
       });
 
-      weakPasswords.forEach(password => {
-        expect(strongPasswordRegex.test(password)).toBe(false);
-      });
-    });
-  });
+      const res = await request(createApp())
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'WrongPass' });
 
-  describe('Role assignment', () => {
-    it('should have valid user roles', () => {
-      const validRoles = ['ADMIN', 'EDITOR', 'VIEWER'];
-
-      validRoles.forEach(role => {
-        expect(['ADMIN', 'EDITOR', 'VIEWER']).toContain(role);
-      });
+      expect(res.status).toBe(401);
     });
 
-    it('should default to EDITOR role for new users', () => {
-      const defaultRole = 'EDITOR';
+    it('should reject non-existent user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
 
-      expect(['ADMIN', 'EDITOR', 'VIEWER']).toContain(defaultRole);
-      expect(defaultRole).toBe('EDITOR');
-    });
-  });
+      const res = await request(createApp())
+        .post('/api/auth/login')
+        .send({ email: 'nobody@example.com', password: 'SecurePass123' });
 
-  describe('Session management', () => {
-    it('should calculate session expiration', () => {
-      const expiresDays = 7;
-      const expirationTime = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
-
-      const timeDiff = expirationTime.getTime() - Date.now();
-      const expectedDays = 7 * 24 * 60 * 60 * 1000;
-
-      expect(timeDiff).toBeGreaterThanOrEqual(expectedDays - 1000);
-      expect(timeDiff).toBeLessThanOrEqual(expectedDays + 1000);
-    });
-
-    it('should track IP address and user agent', () => {
-      const sessionData = {
-        ipAddress: '127.0.0.1',
-        userAgent: 'Mozilla/5.0',
-      };
-
-      expect(sessionData.ipAddress).toMatch(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
-      expect(sessionData.userAgent).toContain('Mozilla');
-    });
-  });
-
-  describe('Error scenarios', () => {
-    it('should handle database errors gracefully', async () => {
-      mockCheckAccountLockout.mockRejectedValue(new Error('Database connection failed'));
-
-      await expect(mockCheckAccountLockout('user-123')).rejects.toThrow('Database connection failed');
-    });
-
-    it('should handle token blacklist errors', async () => {
-      mockBlacklistToken.mockRejectedValue(new Error('Redis connection failed'));
-
-      const result = await mockBlacklistToken('token', 'logout').catch(() => false);
-
-      expect(result).toBeFalsy();
+      expect(res.status).toBe(401);
     });
   });
 });

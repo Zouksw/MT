@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useCallback } from "react";
-import { message } from "antd";
+import { toast as sonnerToast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -9,15 +9,8 @@ export interface ToastOptions {
   type?: ToastType;
   duration?: number;
   description?: string;
-  onClick?: () => void;
 }
 
-/**
- * Toast Notification Context
- *
- * Provides easy access to toast notifications throughout the app.
- * Wraps Ant Design message API with consistent styling.
- */
 interface ToastContextType {
   showToast: (message: string, options?: ToastOptions) => void;
   showSuccess: (message: string, description?: string) => void;
@@ -26,120 +19,56 @@ interface ToastContextType {
   showInfo: (message: string, description?: string) => void;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
-
-/**
- * Toast Provider Component
- */
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [messageApi, messageContextHolder] = message.useMessage();
-
-  const showToast = useCallback((msg: string, options: ToastOptions = {}) => {
-    const { type = "info", duration = 3, description, onClick: _onClick } = options;
-
-    // Map types to Ant Design methods
-    const methods = {
-      success: messageApi.success,
-      error: messageApi.error,
-      warning: messageApi.warning,
-      info: messageApi.info,
-    };
-
-    const method = methods[type as keyof typeof methods];
-
-    if (description || _onClick) {
-      method({ content: msg, duration });
-    } else {
-      method(msg, duration);
-    }
-  }, [messageApi]);
-
-  const showSuccess = useCallback(
-    (msg: string, description?: string) => {
-      showToast(msg, { type: "success", description });
-    },
-    [showToast]
-  );
-
-  const showError = useCallback(
-    (msg: string, _description?: string) => {
-      showToast(msg, { type: "error", duration: 5 });
-    },
-    [showToast]
-  );
-
-  const showWarning = useCallback(
-    (msg: string, description?: string) => {
-      showToast(msg, { type: "warning", description });
-    },
-    [showToast]
-  );
-
-  const showInfo = useCallback(
-    (msg: string, description?: string) => {
-      showToast(msg, { type: "info", description });
-    },
-    [showToast]
-  );
-
-  return (
-    <ToastContext.Provider
-      value={{ showToast, showSuccess, showError, showWarning, showInfo }}
-    >
-      {children}
-      {messageContextHolder}
-    </ToastContext.Provider>
-  );
+const DURATIONS: Record<ToastType, number> = {
+  success: 3000,
+  error: 5000,
+  warning: 3000,
+  info: 3000,
 };
 
-/**
- * Hook to use toast notifications
- *
- * @example
- * ```tsx
- * const { showSuccess, showError } = useToast();
- *
- * const handleSave = async () => {
- *   try {
- *     await saveData();
- *     showSuccess("Saved successfully!");
- *   } catch (error) {
- *     showError("Failed to save", error.message);
- *   }
- * };
- * ```
- */
-export const useToast = (): ToastContextType => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error("useToast must be used within ToastProvider");
-  }
-  return context;
+const toastContext: ToastContextType = {
+  showToast: (message, options = {}) => {
+    const type = options.type || "info";
+    const duration = options.duration
+      ? options.duration * 1000
+      : DURATIONS[type];
+    sonnerToast[type](message, {
+      description: options.description,
+      duration,
+    });
+  },
+  showSuccess: (message, description) => {
+    sonnerToast.success(message, {
+      description,
+      duration: DURATIONS.success,
+    });
+  },
+  showError: (message, description) => {
+    sonnerToast.error(message, {
+      description,
+      duration: DURATIONS.error,
+    });
+  },
+  showWarning: (message, description) => {
+    sonnerToast.warning(message, {
+      description,
+      duration: DURATIONS.warning,
+    });
+  },
+  showInfo: (message, description) => {
+    sonnerToast.info(message, {
+      description,
+      duration: DURATIONS.info,
+    });
+  },
 };
 
-/**
- * Convenience hooks for specific toast types
- */
-export const useSuccess = () => {
-  const { showSuccess } = useToast();
-  return showSuccess;
-};
+export const useToast = (): ToastContextType => toastContext;
 
-export const useError = () => {
-  const { showError } = useToast();
-  return showError;
-};
+export const useSuccess = () => toastContext.showSuccess;
+export const useError = () => toastContext.showError;
+export const useWarning = () => toastContext.showWarning;
+export const useInfo = () => toastContext.showInfo;
 
-export const useWarning = () => {
-  const { showWarning } = useToast();
-  return showWarning;
-};
-
-export const useInfo = () => {
-  const { showInfo } = useToast();
-  return showInfo;
-};
-
-export default ToastProvider;
+export { Toaster as ToastProvider };
+export default Toaster;

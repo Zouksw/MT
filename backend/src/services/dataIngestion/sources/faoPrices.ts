@@ -65,16 +65,16 @@ async function updateFAOPrices(): Promise<ScraperResult> {
 
     // Use the most recent row (last in array, sorted by year)
     const latest = rows[rows.length - 1];
-    const year = parseInt(latest.Year);
+    const year = parseInt(latest.Year, 10);
     const value = parseFloat(latest.Value);
 
-    if (!value || isNaN(value) || !year) continue;
+    if (!value || Number.isNaN(value) || !year) continue;
 
     // FAO data is annual, use Jan 1 of the year
     const date = new Date(year, 0, 1);
 
     const existing = await prisma.commodityPrice.findUnique({
-      where: { commodityId_interval_date: { commodityId: commodity.id, interval: 'daily', date } },
+      where: { commodityId_interval_date_source: { commodityId: commodity.id, interval: 'daily', date, source: 'fao_faostat' } },
     });
 
     const priceData = {

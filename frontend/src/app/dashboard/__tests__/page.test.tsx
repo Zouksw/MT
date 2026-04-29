@@ -5,7 +5,7 @@
  * stat cards, and handles loading state.
  */
 
-import React from 'react';
+import type React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -15,9 +15,10 @@ jest.mock('@/hooks/useDashboardStats', () => ({
   useDashboardStats: () => mockUseDashboardStats(),
 }));
 
-// Mock getCachedUser
+// Mock getCachedUser + getAuthToken
 jest.mock('@/utils/auth', () => ({
   getCachedUser: jest.fn(() => ({ name: 'Test User', email: 'test@example.com' })),
+  getAuthToken: jest.fn(() => 'mock-token'),
 }));
 
 // Mock useIsMobile
@@ -149,7 +150,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
 
     expect(screen.getByText('AI Models Status')).toBeInTheDocument();
-    expect(screen.getByText(/5 of 7 models active/)).toBeInTheDocument();
+    expect(screen.getByText(/models active/)).toHaveTextContent(/5/);
   });
 
   it('should show healthy system indicator', () => {

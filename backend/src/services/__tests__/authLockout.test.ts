@@ -3,6 +3,7 @@
  * Tests account lockout functionality for brute force protection
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   checkAccountLockout,
   recordFailedLogin,
@@ -12,26 +13,26 @@ import {
 import { redis } from '@/lib/redis';
 
 // Mock Redis
-jest.mock('../../lib/redis');
+vi.mock('@/lib/redis');
 
 describe('authLockout service', () => {
   const mockRedis = {
-    incr: jest.fn(),
-    expire: jest.fn(),
-    get: jest.fn(),
-    set: jest.fn(),
-    del: jest.fn(),
-    ttl: jest.fn(),
+    incr: vi.fn(),
+    expire: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+    del: vi.fn(),
+    ttl: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock the redis() function to return the mockRedis client
-    (redis as jest.MockedFunction<typeof redis>).mockResolvedValue(mockRedis as any);
+    (redis as vi.MockedFunction<typeof redis>).mockResolvedValue(mockRedis as any);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('recordFailedLogin', () => {

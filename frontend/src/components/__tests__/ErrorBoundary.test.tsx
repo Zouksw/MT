@@ -1,12 +1,5 @@
-/**
- * ErrorBoundary Component Tests
- *
- * Tests that the error boundary catches rendering errors,
- * displays fallback UI, and provides recovery options.
- */
 
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, } from '@testing-library/react';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 // Suppress console.error for expected error boundary calls

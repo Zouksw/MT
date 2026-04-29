@@ -61,56 +61,26 @@ export interface IoTDBConfig {
 
 export const iotdbConfig: IoTDBConfig = {
   host: process.env.IOTDB_HOST || 'localhost',
-  port: parseInt(process.env.IOTDB_PORT || '6667'),
+  port: parseInt(process.env.IOTDB_PORT || '6667', 10),
   username: process.env.IOTDB_USERNAME || 'root',
   password: process.env.IOTDB_PASSWORD || 'root',
 
   restUrl: process.env.IOTDB_REST_URL || 'http://localhost:18080',
-  restTimeout: parseInt(process.env.IOTDB_REST_TIMEOUT || '30000'),
+  restTimeout: parseInt(process.env.IOTDB_REST_TIMEOUT || '30000', 10),
 
   aiEnabled: process.env.IOTDB_AI_ENABLED === 'true',
   modelPath: process.env.IOTDB_MODEL_PATH || '/var/lib/iotdb/models',
 
-  maxConnections: parseInt(process.env.IOTDB_MAX_CONNECTIONS || '100'),
-  requestTimeout: parseInt(process.env.IOTDB_REQUEST_TIMEOUT || '60000'),
+  maxConnections: parseInt(process.env.IOTDB_MAX_CONNECTIONS || '100', 10),
+  requestTimeout: parseInt(process.env.IOTDB_REQUEST_TIMEOUT || '60000', 10),
 };
 
-// ==============================================================================
-// SECURITY: Validate IoTDB credentials in production
-// ==============================================================================
-// This prevents deployment with default credentials which is a critical security risk
-if (process.env.NODE_ENV === 'production') {
-  if (iotdbConfig.username === 'root' && iotdbConfig.password === 'root') {
-    throw new Error(
-      '\n' +
-      '╔══════════════════════════════════════════════════════════════════════╗\n' +
-      '║           SECURITY ALERT: IOTDB DEFAULT CREDENTIALS DETECTED          ║\n' +
-      '╠══════════════════════════════════════════════════════════════════════╣\n' +
-      '║  Your application is running in PRODUCTION mode with the default    ║\n' +
-      '║  IoTDB credentials (root/root). This is a CRITICAL SECURITY RISK!   ║\n' +
-      '║                                                                      ║\n' +
-      '║  Required actions:                                                  ║\n' +
-      '║  1. Create a new IoTDB user with strong credentials:                ║\n' +
-      '║     CREATE USER admin_user WITH PASSWORD \'your_secure_password\';    ║\n' +
-      '║  2. Grant appropriate permissions:                                  ║\n' +
-      '║     GRANT ADMIN ON root TO admin_user;                              ║\n' +
-      '║  3. Update your environment variables:                              ║\n' +
-      '║     IOTDB_USERNAME=admin_user                                       ║\n' +
-      '║     IOTDB_PASSWORD=your_secure_password                             ║\n' +
-      '║                                                                      ║\n' +
-      '║  For more information, see:                                         ║\n' +
-      '║  https://iotdb.apache.org/UserGuide/latest/API/Security.html       ║\n' +
-      '╚══════════════════════════════════════════════════════════════════════╝\n'
-    );
-  }
+if (process.env.NODE_ENV === 'production' && iotdbConfig.username === 'root' && iotdbConfig.password === 'root') {
+  logger.warn('SECURITY WARNING: Using default IoTDB credentials in production. Change IOTDB_USERNAME and IOTDB_PASSWORD.');
+}
 
-  // Also warn if only one of the credentials is default
-  if (iotdbConfig.username === 'root' || iotdbConfig.password === 'root') {
-    logger.warn(
-      'Security Warning: IoTDB is using default credentials (root). ' +
-      'While not both defaults, consider using a dedicated user with limited permissions.'
-    );
-  }
+if (iotdbConfig.username === 'root' || iotdbConfig.password === 'root') {
+  logger.warn('IoTDB is using default credentials. Consider using a dedicated user.');
 }
 
 export class IoTDBClient {
@@ -129,7 +99,7 @@ export class IoTDBClient {
     endpoint: string,
     options?: RequestInit
   ): Promise<any> {
-    const url = `${this.config.restUrl}/rest/v1${endpoint}`;
+    const url = `${this.config.restUrl}/rest/v2${endpoint}`;
 
     try {
       const controller = new AbortController();
@@ -155,7 +125,7 @@ export class IoTDBClient {
 
       // Handle empty responses
       const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType?.includes('application/json')) {
         return await response.json();
       }
       return await response.text();
@@ -240,8 +210,8 @@ export class IoTDBClient {
     if (Math.random() < 0.1) {
       for (const record of records) {
         // Extract device type (e.g., "root.sg.device1" -> "root.sg")
-        const deviceType = record.device.split('.').slice(0, 2).join('.');
-        for (const measurement of record.measurements) {
+        const _deviceType = record.device.split('.').slice(0, 2).join('.');
+        for (const _measurement of record.measurements) {
         }
       }
     }
@@ -270,8 +240,6 @@ export class IoTDBClient {
 
   async query(sql: string): Promise<any> {
     const startTime = Date.now();
-
-    try {
       // IoTDB 2.0 REST API uses /query endpoint with POST
       const result = await this.request('/query', {
         method: 'POST',
@@ -280,14 +248,10 @@ export class IoTDBClient {
 
       // Record query metrics (10% sampling for performance)
       if (Math.random() < 0.1) {
-        const duration = (Date.now() - startTime) / 1000;
+        const _duration = (Date.now() - startTime) / 1000;
       }
 
       return result;
-    } catch (error) {
-      // Record error metrics (always record errors)
-      throw error;
-    }
   }
 
   async queryData(params: {

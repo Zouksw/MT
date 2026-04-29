@@ -8,7 +8,7 @@
  * Key prefix isolation: `bull:` vs `cache:`
  */
 
-import { Queue, Worker, Job } from 'bullmq';
+import { Queue, Worker, type Job } from 'bullmq';
 import { logger } from '@/lib';
 import { getRedisClient } from '@/lib/redis';
 import { runAndCachePrediction } from './predictionCache';
@@ -39,7 +39,7 @@ interface CorrelationJobData {
 async function getRedisConnection() {
   return {
     host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || undefined,
   };
 }

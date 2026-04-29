@@ -2,7 +2,6 @@
  * Tests for StatusBadge component
  */
 
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import {
   StatusBadge,
@@ -13,21 +12,7 @@ import {
   ErrorBadge,
 } from '../StatusBadge';
 
-// Mock Ant Design theme
-jest.mock('antd', () => ({
-  ...jest.requireActual('antd'),
-  theme: {
-    useToken: () => ({
-      token: {
-        colorSuccess: '#52c41a',
-        colorTextSecondary: '#666666',
-        colorWarning: '#faad14',
-        colorPrimary: '#1890ff',
-        colorError: '#ff4d4f',
-      },
-    }),
-  },
-}));
+// No antd mock needed — StatusBadge uses Tailwind
 
 describe('StatusBadge', () => {
   it('should render status text', () => {
@@ -44,27 +29,21 @@ describe('StatusBadge', () => {
   });
 
   it('should render active status', () => {
-    const { container } = render(<StatusBadge status="active" />);
+    render(<StatusBadge status="active" />);
 
-    const badge = container.querySelector('.ant-tag');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('active');
+    expect(screen.getByText('active')).toBeInTheDocument();
   });
 
   it('should render inactive status', () => {
-    const { container } = render(<StatusBadge status="inactive" />);
+    render(<StatusBadge status="inactive" />);
 
-    const badge = container.querySelector('.ant-tag');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('inactive');
+    expect(screen.getByText('inactive')).toBeInTheDocument();
   });
 
   it('should render pending status', () => {
-    const { container } = render(<StatusBadge status="pending" />);
+    render(<StatusBadge status="pending" />);
 
-    const badge = container.querySelector('.ant-tag');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('pending');
+    expect(screen.getByText('pending')).toBeInTheDocument();
   });
 
   it('should render processing status', () => {
@@ -97,12 +76,12 @@ describe('StatusBadge', () => {
     expect(screen.getByText('custom-status')).toBeInTheDocument();
   });
 
-  it('should pass additional props to Tag', () => {
+  it('should pass className to element', () => {
     const { container } = render(
-      <StatusBadge status="active" data-testid="status-badge" />
+      <StatusBadge status="active" className="custom-class" />
     );
 
-    const badge = container.querySelector('[data-testid="status-badge"]');
+    const badge = container.querySelector('.custom-class');
     expect(badge).toBeInTheDocument();
   });
 });

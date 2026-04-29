@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Button, Space } from 'antd';
-import { PlusOutlined, DownloadOutlined, SettingOutlined } from '@ant-design/icons';
 import { PageHeader } from './PageHeader';
+import { Button } from './Button';
 
 const meta: Meta<typeof PageHeader> = {
   title: 'UI/PageHeader',
@@ -17,27 +16,17 @@ const meta: Meta<typeof PageHeader> = {
 export default meta;
 type Story = StoryObj<typeof PageHeader>;
 
-export const Default: Story = {
-  args: {
-    title: 'Dashboard',
-  },
-};
-
-export const WithDescription: Story = {
-  args: {
-    title: 'Datasets',
-    description: 'Manage and explore your time series datasets.',
-  },
-};
+export const Default: Story = { args: { title: 'Dashboard' } };
+export const WithDescription: Story = { args: { title: 'Datasets', description: 'Manage and explore your time series datasets.' } };
 
 export const WithBreadcrumbs: Story = {
   args: {
     title: 'Dataset Details',
     description: 'Viewing dataset configuration and data points.',
     breadcrumbs: [
-      { title: 'Home', href: '/' },
-      { title: 'Datasets', href: '/datasets' },
-      { title: 'Details' },
+      { label: 'Home', href: '/' },
+      { label: 'Datasets', href: '/datasets' },
+      { label: 'Details' },
     ],
   },
 };
@@ -47,23 +36,11 @@ export const WithActions: Story = {
     title: 'Time Series',
     description: 'Monitor and analyze your time series data in real time.',
     actions: (
-      <Space>
-        <Button icon={<DownloadOutlined />}>Export</Button>
-        <Button type="primary" icon={<PlusOutlined />}>Add Series</Button>
-      </Space>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="ghost">Export</Button>
+        <Button variant="primary">Add Series</Button>
+      </div>
     ),
-  },
-};
-
-export const WithBackButton: Story = {
-  args: {
-    title: 'Settings',
-    description: 'Configure application preferences.',
-    showBackButton: true,
-    breadcrumbs: [
-      { title: 'Admin', href: '/admin' },
-      { title: 'Settings' },
-    ],
   },
 };
 
@@ -72,17 +49,15 @@ export const FullFeatured: Story = {
     title: 'Anomaly Detection',
     description: 'AI-powered anomaly detection across all your time series data sources.',
     breadcrumbs: [
-      { title: 'Home', href: '/' },
-      { title: 'Analytics', href: '/analytics' },
-      { title: 'Anomalies' },
+      { label: 'Home', href: '/' },
+      { label: 'Analytics', href: '/analytics' },
+      { label: 'Anomalies' },
     ],
     actions: (
-      <Space>
-        <Button icon={<SettingOutlined />}>Configure</Button>
-        <Button icon={<DownloadOutlined />}>Export</Button>
-        <Button type="primary" icon={<PlusOutlined />}>Run Detection</Button>
-      </Space>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="ghost">Configure</Button>
+        <Button variant="primary">Run Detection</Button>
+      </div>
     ),
-    showBackButton: false,
   },
 };

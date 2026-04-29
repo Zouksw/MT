@@ -1,13 +1,9 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Card, Button, Space, Typography, Spin, message } from "antd";
-import {
-  FileImageOutlined,
-  FileExcelOutlined,
-  ExpandOutlined,
-  CompressOutlined,
-} from "@ant-design/icons";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import dynamic from "next/dynamic";
 import {
   chartColors,
@@ -18,8 +14,14 @@ import {
   areaChartStyles,
   chartAnimations,
 } from "@/lib/chart-config";
+import { ImageIcon, FileEdit, Download, Upload } from "lucide-react";
 
-const { Text } = Typography;
+// Spinner for loading states
+const Spinner = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="w-8 h-8 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+  </div>
+);
 
 // Dynamic imports for Recharts components to reduce initial bundle size
 const Line = dynamic(
@@ -54,7 +56,7 @@ const Legend = dynamic(
 
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-  { ssr: false }
+  { ssr: false, loading: () => <Spinner /> }
 ) as React.ComponentType<any>;
 
 const ComposedChart = dynamic(
@@ -104,6 +106,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [exporting, setExporting] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   // Combine historical and prediction data
   const chartData = React.useMemo(() => {
@@ -170,10 +173,10 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
       link.href = canvas.toDataURL('image/png');
       link.click();
 
-      message.success('Chart exported as PNG');
+      toast.showSuccess('Chart exported as PNG');
       onExport?.('png');
     } catch {
-      message.error('Failed to export chart');
+      toast.showError('Failed to export chart');
     } finally {
       setExporting(false);
     }
@@ -198,19 +201,23 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
       const blob = new Blob([csv], { type: 'text/csv' });
       const link = document.createElement('a');
       link.download = `prediction-${timeseries.replace(/\./g, '-')}-${Date.now()}.csv`;
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-      message.success('Data exported as CSV');
+      toast.showSuccess('Data exported as CSV');
       onExport?.('csv');
     } catch {
-      message.error('Failed to export data');
+      toast.showError('Failed to export data');
     }
   };
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+    if (active && payload?.length) {
       const data = payload[0].payload;
       return (
         <div
@@ -242,11 +249,9 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
             </p>
           )}
           {data.lowerBound !== undefined && (
-            <>
-              <p style={{ margin: "4px 0 0 0", fontSize: 11, color: chartColors.gray600 }}>
+            <p style={{ margin: "4px 0 0 0", fontSize: 11, color: chartColors.gray600 }}>
                 95% CI: [{formatValue(data.lowerBound)}, {formatValue(data.upperBound)}]
               </p>
-            </>
           )}
         </div>
       );
@@ -275,12 +280,11 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 
   if (chartData.length === 0) {
     return (
-      <Card
-        variant="borderless"
-        style={{ borderRadius: 4 }}
-        styles={{ body: { padding: "40px", textAlign: "center" } }}
-      >
-        <Spin size="large" tip="Loading prediction data..." />
+      <Card>
+        <div className="p-10 text-center">
+          <Spinner />
+          <p className="mt-3 text-sm text-gray-500">Loading prediction data...</p>
+        </div>
       </Card>
     );
   }
@@ -289,203 +293,168 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 
   return (
     <div ref={chartRef}>
-      <Card
-        variant="borderless"
-        style={{ borderRadius: 4 }}
-        styles={{ body: { padding: expanded ? "24px" : "20px" } }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <Space direction="vertical" size={0}>
-            <Text strong style={{ fontSize: 16 }}>
-              Prediction Chart: {timeseries}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Algorithm: {algorithm.toUpperCase()} • {chartData.length} data points
-            </Text>
-          </Space>
+      <Card>
+        <div className={expanded ? "p-6" : "p-5"}>
+          {/* Header */}
+          <div className="flex justify-between items-center mb-5">
+            <div className="flex flex-col gap-0">
+              <span className="font-semibold text-base text-gray-900 dark:text-white">
+                Prediction Chart: {timeseries}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Algorithm: {algorithm.toUpperCase()} &bull; {chartData.length} data points
+              </span>
+            </div>
 
-          <Space>
-            <Tooltip title="Export as PNG">
+            <div className="flex gap-2">
               <Button
-                icon={<FileImageOutlined />}
+                variant="ghost"
+                size="sm"
                 onClick={exportAsPNG}
-                loading={exporting}
+                isLoading={exporting}
                 aria-label="Export chart as PNG image"
               >
+                <ImageIcon className="size-3.5 mr-1" />
                 PNG
               </Button>
-            </Tooltip>
-            <Tooltip title="Export as CSV">
               <Button
-                icon={<FileExcelOutlined />}
+                variant="ghost"
+                size="sm"
                 onClick={exportAsCSV}
                 aria-label="Export chart data as CSV spreadsheet"
               >
+                <FileEdit className="size-3.5 mr-1" />
                 CSV
               </Button>
-            </Tooltip>
-            <Button
-              icon={expanded ? <CompressOutlined /> : <ExpandOutlined />}
-              onClick={() => setExpanded(!expanded)}
-              aria-label={expanded ? "Collapse chart to normal size" : "Expand chart to full size"}
-            >
-              {expanded ? "Collapse" : "Expand"}
-            </Button>
-          </Space>
-        </div>
-
-        {/* Statistics */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
-          {historicalStats && (
-            <>
-              <div
-                style={{
-                  padding: "12px",
-                  background: chartColors.purple,
-                  borderRadius: 4,
-                  textAlign: "center",
-                  opacity: 0.15,
-                }}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setExpanded(!expanded)}
+                aria-label={expanded ? "Collapse chart to normal size" : "Expand chart to full size"}
               >
-                <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Historical Mean</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
-                  {formatValue(historicalStats.mean)}
-                </div>
-              </div>
-              <div
-                style={{
-                  padding: "12px",
-                  background: chartColors.success,
-                  borderRadius: 4,
-                  textAlign: "center",
-                  opacity: 0.15,
-                }}
-              >
-                <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Historical Range</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: chartColors.gray900 }}>
-                  {formatValue(historicalStats.min)} - {formatValue(historicalStats.max)}
-                </div>
-              </div>
-            </>
-          )}
-          {predictionStats && (
-            <>
-              <div
-                style={{
-                  padding: "12px",
-                  background: chartColors.warning,
-                  borderRadius: 4,
-                  textAlign: "center",
-                  opacity: 0.15,
-                }}
-              >
-                <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Prediction Mean</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: chartColors.gray900 }}>
-                  {formatValue(predictionStats.mean)}
-                </div>
-              </div>
-              <div
-                style={{
-                  padding: "12px",
-                  background: chartColors.pink,
-                  borderRadius: 4,
-                  textAlign: "center",
-                  opacity: 0.15,
-                }}
-              >
-                <div style={{ fontSize: 11, color: chartColors.gray600, marginBottom: 4, fontWeight: 500 }}>Prediction Range</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: chartColors.gray900 }}>
-                  {formatValue(predictionStats.min)} - {formatValue(predictionStats.max)}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Chart */}
-        <ResponsiveContainer width="100%" height={expanded ? height * 1.5 : height}>
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-            role="img"
-            aria-label={`Prediction chart for ${timeseries} using ${algorithm} algorithm. Showing historical data and ${predictionData.timestamps.length} forecasted data points with confidence intervals.`}
-          >
-            <CartesianGrid
-              strokeDasharray={chartGridStyles.strokeDasharray}
-              stroke={chartGridStyles.stroke}
-              strokeWidth={chartGridStyles.strokeWidth}
-            />
-            <XAxis
-              dataKey="timestamp"
-              tickFormatter={formatTimestamp}
-              stroke={chartAxisStyles.stroke}
-              tick={chartAxisStyles.tick}
-            />
-            <YAxis
-              tickFormatter={formatValue}
-              stroke={chartAxisStyles.stroke}
-              tick={chartAxisStyles.tick}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-
-            {/* Confidence interval area (for predictions only) */}
-            {hasConfidence && (
-              <Area
-                type="monotone"
-                dataKey="upperBound"
-                stroke="none"
-                fill={areaChartStyles.fill}
-                fillOpacity={areaChartStyles.fillOpacity}
-                isAnimationActive={false}
-              />
-            )}
-
-            {/* Historical data line */}
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke={lineChartStyles.stroke}
-              strokeWidth={lineChartStyles.strokeWidth}
-              dot={false}
-              activeDot={lineChartStyles.activeDot}
-              connectNulls={false}
-              isAnimationActive={true}
-              animationDuration={chartAnimations.duration}
-            />
-
-            {/* Reference line at prediction start */}
-            {historicalData.length > 0 && (
-              <ReferenceLine
-                x={historicalData[historicalData.length - 1].timestamp}
-                stroke={chartColors.gray400}
-                strokeDasharray="5 5"
-                label={{ value: "Prediction Start", fill: chartColors.gray500, fontSize: 11, position: "top" }}
-              />
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        {/* Legend info */}
-        <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 24, fontSize: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 20, height: 3, background: lineChartStyles.stroke }} />
-            <span style={{ color: chartColors.gray600 }}>Historical Data</span>
-          </div>
-          {hasConfidence && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 20, height: 3, background: areaChartStyles.fill, opacity: areaChartStyles.fillOpacity }} />
-              <span style={{ color: chartColors.gray600 }}>95% Confidence Interval</span>
+                {expanded ? (
+                  <Upload className="size-3.5 mr-1" />
+                ) : (
+                  <Download className="size-3.5 mr-1" />
+                )}
+                {expanded ? "Collapse" : "Expand"}
+              </Button>
             </div>
-          )}
+          </div>
+
+          {/* Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            {historicalStats && (
+              <>
+                <div className="p-3 rounded text-center" style={{ background: chartColors.purple, opacity: 0.15 }}>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Historical Mean</div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {formatValue(historicalStats.mean)}
+                  </div>
+                </div>
+                <div className="p-3 rounded text-center" style={{ background: chartColors.success, opacity: 0.15 }}>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Historical Range</div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {formatValue(historicalStats.min)} - {formatValue(historicalStats.max)}
+                  </div>
+                </div>
+              </>
+            )}
+            {predictionStats && (
+              <>
+                <div className="p-3 rounded text-center" style={{ background: chartColors.warning, opacity: 0.15 }}>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Prediction Mean</div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {formatValue(predictionStats.mean)}
+                  </div>
+                </div>
+                <div className="p-3 rounded text-center" style={{ background: chartColors.pink, opacity: 0.15 }}>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Prediction Range</div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {formatValue(predictionStats.min)} - {formatValue(predictionStats.max)}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Chart */}
+          <ResponsiveContainer width="100%" height={expanded ? height * 1.5 : height}>
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              role="img"
+              aria-label={`Prediction chart for ${timeseries} using ${algorithm} algorithm. Showing historical data and ${predictionData.timestamps.length} forecasted data points with confidence intervals.`}
+            >
+              <CartesianGrid
+                strokeDasharray={chartGridStyles.strokeDasharray}
+                stroke={chartGridStyles.stroke}
+                strokeWidth={chartGridStyles.strokeWidth}
+              />
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={formatTimestamp}
+                stroke={chartAxisStyles.stroke}
+                tick={chartAxisStyles.tick}
+              />
+              <YAxis
+                tickFormatter={formatValue}
+                stroke={chartAxisStyles.stroke}
+                tick={chartAxisStyles.tick}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+
+              {/* Confidence interval area (for predictions only) */}
+              {hasConfidence && (
+                <Area
+                  type="monotone"
+                  dataKey="upperBound"
+                  stroke="none"
+                  fill={areaChartStyles.fill}
+                  fillOpacity={areaChartStyles.fillOpacity}
+                  isAnimationActive={false}
+                />
+              )}
+
+              {/* Historical data line */}
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={lineChartStyles.stroke}
+                strokeWidth={lineChartStyles.strokeWidth}
+                dot={false}
+                activeDot={lineChartStyles.activeDot}
+                connectNulls={false}
+                isAnimationActive={true}
+                animationDuration={chartAnimations.duration}
+              />
+
+              {/* Reference line at prediction start */}
+              {historicalData.length > 0 && (
+                <ReferenceLine
+                  x={historicalData[historicalData.length - 1].timestamp}
+                  stroke={chartColors.gray400}
+                  strokeDasharray="5 5"
+                  label={{ value: "Prediction Start", fill: chartColors.gray500, fontSize: 11, position: "top" }}
+                />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
+
+          {/* Legend info */}
+          <div className="mt-4 flex justify-center gap-6 text-xs">
+            <div className="flex items-center gap-2">
+              <div style={{ width: 20, height: 3, background: lineChartStyles.stroke }} />
+              <span style={{ color: chartColors.gray600 }}>Historical Data</span>
+            </div>
+            {hasConfidence && (
+              <div className="flex items-center gap-2">
+                <div style={{ width: 20, height: 3, background: areaChartStyles.fill, opacity: areaChartStyles.fillOpacity }} />
+                <span style={{ color: chartColors.gray600 }}>95% Confidence Interval</span>
+              </div>
+            )}
+          </div>
         </div>
       </Card>
     </div>

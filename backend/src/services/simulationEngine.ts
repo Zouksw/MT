@@ -68,7 +68,7 @@ export async function executeMarketOrder(
         where: { id: order.accountId },
         select: { currentBalance: true },
       });
-      const newBalance = Number(account!.currentBalance) + balanceChange;
+      const newBalance = Number(account?.currentBalance) + balanceChange;
       if (newBalance < 0) {
         // Roll back order to rejected
         await tx.simulationOrder.update({

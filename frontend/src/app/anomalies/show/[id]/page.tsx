@@ -10,37 +10,21 @@
 
 "use client";
 
-import React, { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Statistic,
-  Tag,
-  Button,
-  Space,
-  Descriptions,
-  Alert,
-  Timeline,
-  Card,
-  message,
-} from "antd";
-import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
-  WarningOutlined,
-  LineChartOutlined,
-  ClockCircleOutlined,
-} from "@ant-design/icons";
-import type { Anomaly } from "@/types/api";
 import { authFetch } from "@/utils/auth";
-import { DetailPageLayout, DetailSection } from "@/components/layout/DetailPageLayout";
-import { useIsMobile } from "@/lib/responsive-utils";
+import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
+import { useToast } from "@/components/ui/Toast";
+import { Home, ChevronRight, Check, X, TrendingUp, TriangleAlert, Clock } from "lucide-react";
 
 interface AnomalyDetailParams {
   id: string;
 }
 
-interface AnomalyWithDetails extends Omit<Anomaly, 'timeseries'> {
+interface AnomalyWithDetails extends Record<string, any> {
+  id: string;
   timeseries?: {
     id: string;
     name: string;
@@ -57,15 +41,17 @@ interface AnomalyWithDetails extends Omit<Anomaly, 'timeseries'> {
     min: number;
     max: number;
   };
+  severity: string;
+  isResolved?: boolean;
 }
 
 export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyDetailParams> }) {
   const { id } = use(params);
   const router = useRouter();
+  const toast = useToast();
   const [anomaly, setAnomaly] = useState<AnomalyWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
 
   const fetchAnomaly = useCallback(async () => {
     if (!id) {
@@ -103,10 +89,10 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
       if (!response.ok) {
         throw new Error("Failed to resolve anomaly");
       }
-      message.success("Anomaly resolved successfully");
+      toast.showSuccess("Anomaly resolved successfully");
       fetchAnomaly();
     } catch {
-      message.error("Failed to resolve anomaly");
+      toast.showError("Failed to resolve anomaly");
     }
   };
 
@@ -120,221 +106,269 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
       if (!response.ok) {
         throw new Error("Failed to dismiss anomaly");
       }
-      message.success("Anomaly dismissed");
+      toast.showSuccess("Anomaly dismissed");
       fetchAnomaly();
     } catch {
-      message.error("Failed to dismiss anomaly");
+      toast.showError("Failed to dismiss anomaly");
     }
   };
 
   if (loading) {
     return (
-      <DetailPageLayout
-        title="Anomaly Details"
-        loading={loading}
-      />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </div>
     );
   }
 
   if (error || !anomaly) {
     return (
-      <DetailPageLayout
-        title="Anomaly"
-        error={error || "Anomaly not found"}
-      />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="max-w-md mx-auto mt-20">
+          <div className="bg-card rounded-lg shadow-sm border border p-6 text-center">
+            <h3 className="text-lg font-semibold text-red-500 mb-3">Error</h3>
+            <p className="text-muted-foreground mb-6">
+              {error || "Anomaly not found"}
+            </p>
+            <Button variant="primary" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  const breadcrumb = [
-    { label: "Anomalies", href: "/anomalies" },
-    { label: `Anomaly #${anomaly.id.substring(0, 8)}` }
-  ];
-
-  const severityColors: Record<string, string> = {
-    low: "green",
-    medium: "orange",
-    high: "red"
+  const severityTagColor = (severity: string): "success" | "warning" | "error" | "primary" | "default" => {
+    const map: Record<string, "success" | "warning" | "error" | "primary" | "default"> = {
+      low: "success",
+      medium: "warning",
+      high: "error",
+    };
+    return map[severity] || "default";
   };
-
-  const severityIcons: Record<string, React.ReactNode> = {
-    low: <ExclamationCircleOutlined />,
-    medium: <WarningOutlined />,
-    high: <WarningOutlined />
-  };
-
-  const actions = [
-    ...(anomaly.isResolved !== true ? [{
-      icon: <CheckCircleOutlined />,
-      label: "Resolve",
-      onClick: handleResolve
-    }] : []),
-    {
-      icon: <CloseCircleOutlined />,
-      label: "Dismiss",
-      onClick: handleDismiss
-    }
-  ];
 
   return (
-    <DetailPageLayout
-      title={`Anomaly #${anomaly.id.substring(0, 8)}`}
-      subtitle={`Detected ${anomaly.detectedAt ? new Date(anomaly.detectedAt).toLocaleString() : "Recently"}`}
-      breadcrumb={breadcrumb}
-      actions={actions}
-    >
-      {/* Severity and Status Card */}
-      <DetailSection title="Anomaly Status" colSpan={isMobile ? 24 : 8}>
-        <Descriptions column={1} size="small">
-          <Descriptions.Item label="Severity">
-            <Tag
-              color={severityColors[anomaly.severity]}
-              icon={severityIcons[anomaly.severity]}
-            >
-              {anomaly.severity.toUpperCase()}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="Status">
-            <Tag color={anomaly.isResolved === true ? "success" : "processing"}>
-              {anomaly.isResolved ? "RESOLVED" : "OPEN"}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="Detection Method">
-            {anomaly.detectionMethod || "statistical"}
-          </Descriptions.Item>
-        </Descriptions>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 md:p-6">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+        <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">
+          <Home className="size-4" />
+        </a>
+        <ChevronRight className="size-3" />
+        <a href="/anomalies" className="hover:text-gray-700 dark:hover:text-gray-200">
+          Anomalies
+        </a>
+        <ChevronRight className="size-3" />
+        <span className="text-gray-900 dark:text-gray-100 font-medium">
+          Anomaly #{anomaly.id.substring(0, 8)}
+        </span>
+      </nav>
 
-        {anomaly.isResolved === true && anomaly.resolvedAt && (
-          <Alert
-            message={`Resolved by ${anomaly.resolvedBy || "Admin"}`}
-            description={anomaly.resolutionNote || "No resolution note provided"}
-            type="success"
-            showIcon
-            style={{ marginTop: "16px" }}
-          />
-        )}
-      </DetailSection>
-
-      {/* Context Card */}
-      <DetailSection title="Anomaly Context" colSpan={isMobile ? 24 : 16}>
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          {anomaly.timeseries && (
-            <Card size="small" title="Time Series">
-              <Space>
-                <LineChartOutlined />
-                <span className="font-semibold text-gray-900 dark:text-gray-50">{anomaly.timeseries.name}</span>
-                <span className="text-body-sm text-gray-500 dark:text-gray-400">({anomaly.timeseries.path})</span>
-              </Space>
-            </Card>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            Anomaly #{anomaly.id.substring(0, 8)}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Detected {anomaly.detectedAt ? new Date(anomaly.detectedAt).toLocaleString() : "Recently"}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {anomaly.isResolved !== true && (
+            <Button variant="primary" onClick={handleResolve}>
+              <Check className="size-4 mr-1.5" />
+              Resolve
+            </Button>
           )}
+          <Button variant="ghost" onClick={handleDismiss}>
+            <X className="size-4 mr-1.5" />
+            Dismiss
+          </Button>
+        </div>
+      </div>
 
-          {anomaly.actualValue !== undefined && (
-            <Card size="small" title="Detected Value">
-              <Statistic
-                value={anomaly.actualValue}
-                precision={4}
-                valueStyle={{
-                  color: anomaly.severity === "high" ? "#ef4444" : "#f59e0b"
-                }}
-                suffix={
-                  anomaly.threshold ? `/ ${anomaly.threshold}` : ""
-                }
-              />
-            </Card>
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        {/* Anomaly Status Card */}
+        <div className="bg-card rounded-lg shadow-sm border border p-6">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Anomaly Status
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <span className="text-sm text-muted-foreground">Severity</span>
+              <div className="mt-1">
+                <Tag color={severityTagColor(anomaly.severity)}>
+                  {anomaly.severity?.toUpperCase()}
+                </Tag>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Status</span>
+              <div className="mt-1">
+                <Tag color={anomaly.isResolved === true ? "success" : "info"}>
+                  {anomaly.isResolved ? "RESOLVED" : "OPEN"}
+                </Tag>
+              </div>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Detection Method</span>
+              <div className="mt-1 text-sm font-medium text-foreground">
+                {anomaly.detectionMethod || "statistical"}
+              </div>
+            </div>
+          </div>
+
+          {anomaly.isResolved === true && anomaly.resolvedAt && (
+            <Alert variant="success" title={`Resolved by ${anomaly.resolvedBy || "Admin"}`} className="mt-4">
+              {anomaly.resolutionNote || "No resolution note provided"}
+            </Alert>
           )}
+        </div>
 
-          {anomaly.normalRange && (
-            <Card size="small" title="Normal Range">
-              <Space>
-                <span className="text-body data-text">Min: {anomaly.normalRange.min.toFixed(4)}</span>
-                <span className="text-body data-text">Max: {anomaly.normalRange.max.toFixed(4)}</span>
-              </Space>
-            </Card>
-          )}
-        </Space>
-      </DetailSection>
+        {/* Anomaly Context Card */}
+        <div className="bg-card rounded-lg shadow-sm border border p-6 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Anomaly Context
+          </h3>
+          <div className="space-y-4">
+            {anomaly.timeseries && (
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-4 text-gray-400" />
+                <span className="font-semibold text-foreground">
+                  {anomaly.timeseries.name}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  ({anomaly.timeseries.path})
+                </span>
+              </div>
+            )}
 
-      {/* Visualization */}
-      <DetailSection title="Data Visualization" colSpan={24}>
-        <Alert
-          message="Chart showing the anomaly in context"
-          description="The anomalous data point will be highlighted on the chart"
-          type="info"
-          showIcon
-          style={{ marginBottom: "16px" }}
-        />
-        <div className="h-[300px] flex items-center justify-center bg-error/5 rounded-lg border border-dashed border-error/30">
-          <WarningOutlined className="text-[48px] text-error mr-4" />
-          <div>
-            <span className="font-semibold text-gray-900 dark:text-gray-50">Anomaly Visualization</span>
-            <br />
-            <span className="text-body-sm text-gray-500 dark:text-gray-400">Chart will display the anomalous data point</span>
+            {anomaly.actualValue !== undefined && (
+              <div>
+                <span className="text-sm text-muted-foreground">Detected Value</span>
+                <div
+                  className="text-2xl font-semibold mt-1"
+                  style={{
+                    color: anomaly.severity === "high" ? "#ef4444" : "#f59e0b",
+                  }}
+                >
+                  {anomaly.actualValue.toFixed(4)}
+                  {anomaly.threshold ? ` / ${anomaly.threshold}` : ""}
+                </div>
+              </div>
+            )}
+
+            {anomaly.normalRange && (
+              <div>
+                <span className="text-sm text-muted-foreground">Normal Range</span>
+                <div className="mt-1 flex gap-4 text-sm">
+                  <span>Min: {anomaly.normalRange.min.toFixed(4)}</span>
+                  <span>Max: {anomaly.normalRange.max.toFixed(4)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </DetailSection>
+      </div>
+
+      {/* Visualization */}
+      <div className="bg-card rounded-lg shadow-sm border border p-6 mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Data Visualization
+        </h3>
+        <Alert variant="info" title="Chart showing the anomaly in context" className="mb-4">
+          The anomalous data point will be highlighted on the chart
+        </Alert>
+        <div className="h-[300px] flex items-center justify-center bg-red-50 dark:bg-red-900/10 rounded-lg border border-dashed border-red-200 dark:border-red-800/30">
+          <TriangleAlert className="size-12 text-red-500 mr-4" />
+          <div>
+            <span className="font-semibold text-foreground">Anomaly Visualization</span>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Chart will display the anomalous data point
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Timeline */}
-      <DetailSection title="Event Timeline" colSpan={24}>
-        <Timeline
-          items={[
-            {
-              color: "red",
-              dot: <ExclamationCircleOutlined />,
-              children: (
-                <div>
-                  <span className="font-semibold text-gray-900 dark:text-gray-50">Anomaly Detected</span>
-                  <br />
-                  <span className="text-body-sm text-gray-500 dark:text-gray-400">
-                    {anomaly.detectedAt
-                      ? new Date(anomaly.detectedAt).toLocaleString()
-                      : "Recently"}
-                  </span>
-                </div>
-              )
-            },
-            ...(anomaly.isResolved === true ? [{
-              color: "green",
-              dot: <CheckCircleOutlined />,
-              children: (
-                <div>
-                  <span className="font-semibold text-gray-900 dark:text-gray-50">Anomaly Resolved</span>
-                  <br />
-                  <span className="text-body-sm text-gray-500 dark:text-gray-400">
-                    {anomaly.resolvedAt
-                      ? new Date(anomaly.resolvedAt).toLocaleString()
-                      : "Recently"}
-                  </span>
-                  {anomaly.resolutionNote && (
-                    <>
-                      <br />
-                      <span className="text-body-sm text-gray-500 dark:text-gray-400">{anomaly.resolutionNote}</span>
-                    </>
-                  )}
-                </div>
-              )
-            }] : [])
-          ]}
-        />
-      </DetailSection>
+      <div className="bg-card rounded-lg shadow-sm border border p-6 mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Event Timeline
+        </h3>
+        <div className="relative pl-6">
+          {/* Timeline line */}
+          <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-muted" />
 
-      {/* Actions */}
-      <DetailSection title="Quick Actions" colSpan={24}>
-        <Space wrap>
+          {/* Detected event */}
+          <div className="relative mb-6">
+            <div className="absolute -left-4 top-1 w-4 h-4 rounded-full bg-red-500 border-2 border-white dark:border-gray-800" />
+            <div>
+              <span className="font-semibold text-foreground">Anomaly Detected</span>
+              <br />
+              <span className="text-sm text-muted-foreground">
+                {anomaly.detectedAt
+                  ? new Date(anomaly.detectedAt).toLocaleString()
+                  : "Recently"}
+              </span>
+            </div>
+          </div>
+
+          {/* Resolved event */}
+          {anomaly.isResolved === true && (
+            <div className="relative">
+              <div className="absolute -left-4 top-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white dark:border-gray-800" />
+              <div>
+                <span className="font-semibold text-foreground">Anomaly Resolved</span>
+                <br />
+                <span className="text-sm text-muted-foreground">
+                  {anomaly.resolvedAt
+                    ? new Date(anomaly.resolvedAt).toLocaleString()
+                    : "Recently"}
+                </span>
+                {anomaly.resolutionNote && (
+                  <>
+                    <br />
+                    <span className="text-sm text-muted-foreground">
+                      {anomaly.resolutionNote}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-card rounded-lg shadow-sm border border p-6">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Quick Actions
+        </h3>
+        <div className="flex flex-wrap gap-3">
           {anomaly.timeseries && (
             <Button
-              icon={<LineChartOutlined />}
-              onClick={() => anomaly.timeseries && router.push(`/timeseries?path=${anomaly.timeseries.path}`)}
+              variant="secondary"
+              onClick={() =>
+                anomaly.timeseries &&
+                router.push(`/timeseries?path=${anomaly.timeseries.path}`)
+              }
             >
+              <TrendingUp className="size-4 mr-1.5" />
               View Time Series
             </Button>
           )}
-          <Button
-            icon={<ClockCircleOutlined />}
-            onClick={() => router.push("/anomalies")}
-          >
+          <Button variant="ghost" onClick={() => router.push("/anomalies")}>
+            <Clock className="size-4 mr-1.5" />
             View Related Anomalies
           </Button>
-        </Space>
-      </DetailSection>
-    </DetailPageLayout>
+        </div>
+      </div>
+    </div>
   );
 }

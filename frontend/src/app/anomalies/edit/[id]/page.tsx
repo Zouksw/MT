@@ -1,20 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
-import { Form, Input, Select, InputNumber, Button, Row, Col, Alert, Space, Divider } from "antd";
-import { ArrowLeftOutlined, AlertOutlined } from "@ant-design/icons";
-import { useGo, useInvalidate, useNotification } from "@refinedev/core";
-import { useOne, useList } from "@refinedev/core";
-
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ContentCard } from "@/components/layout/ContentCard";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useOne, useList, updateRecord } from "@/lib/api";
+import { Button } from "@/components/ui/Button";
+import { Input, Textarea } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Alert } from "@/components/ui/Alert";
+import { useToast } from "@/components/ui/Toast";
+import { ArrowLeft } from "lucide-react";
 
 const SEVERITY_LEVELS = [
-  { value: "LOW", label: "Low", color: "green" },
-  { value: "MEDIUM", label: "Medium", color: "orange" },
-  { value: "HIGH", label: "High", color: "red" },
-  { value: "CRITICAL", label: "Critical", color: "purple" },
+  { value: "LOW", label: "Low" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "HIGH", label: "High" },
+  { value: "CRITICAL", label: "Critical" },
 ];
 
 const DETECTION_METHODS = [
@@ -25,90 +25,70 @@ const DETECTION_METHODS = [
   { value: "manual", label: "Manual Entry" },
 ];
 
-interface AnomalyShowPageProps {
+interface AnomalyEditPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function AnomalyEditPage({ params }: AnomalyShowPageProps) {
+export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
   const { id } = React.use(params);
-  const go = useGo();
-  const invalidate = useInvalidate();
-  const { open } = useNotification();
+  const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+
+  // Form state
+  const [severity, setSeverity] = useState("");
+  const [detectionMethod, setDetectionMethod] = useState("");
+  const [value, setValue] = useState("");
+  const [expectedRangeMin, setExpectedRangeMin] = useState("");
+  const [expectedRangeMax, setExpectedRangeMax] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Get anomaly data
-  const anomalyResult = useOne({
-    resource: "anomalies",
-    id,
+  const { data: anomaly, loading: isLoadingAnomaly } = useOne<any>("anomalies", id);
+
+  // Get timeseries list (for display)
+  const { data: timeseriesList } = useList<any>("timeseries", {
+    pageSize: 1000,
+    sort: "name",
+    order: "asc",
   });
 
-  const anomaly = anomalyResult?.result?.data;
-  const isLoadingAnomaly = anomalyResult?.query?.isLoading ?? false;
+  // Populate form when anomaly data loads
+  useEffect(() => {
+    if (anomaly) {
+      setSeverity(anomaly.severity || "");
+      setDetectionMethod(anomaly.detectionMethod || "");
+      setValue(anomaly.value != null ? String(anomaly.value) : "");
+      setExpectedRangeMin(anomaly.minExpected != null ? String(anomaly.minExpected) : "");
+      setExpectedRangeMax(anomaly.maxExpected != null ? String(anomaly.maxExpected) : "");
+      setNotes(anomaly.notes || "");
+    }
+  }, [anomaly]);
 
-  // Get timeseries list
-  const timeseriesResult = useList({
-    resource: "timeseries",
-    pagination: { pageSize: 1000 },
-    sorters: [{ field: "name", order: "asc" }],
-  });
+  // Find timeseries name for display
+  const timeseriesName = (timeseriesList || []).find(
+    (ts: any) => ts.id === anomaly?.timeseriesId
+  )?.name || anomaly?.timeseriesId || "-";
 
-  const timeseriesList = timeseriesResult?.result?.data ?? [];
-
-  // Set form values when data is loaded
-  if (anomaly && !form.isFieldsTouched()) {
-    form.setFieldsValue({
-      timeseriesId: anomaly.timeseriesId,
-      severity: anomaly.severity,
-      value: anomaly.value,
-      expectedRange: {
-        min: anomaly.minExpected,
-        max: anomaly.maxExpected,
-      },
-      detectionMethod: anomaly.detectionMethod,
-      notes: anomaly.notes,
-    });
-  }
-
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     try {
-      const { tokenManager } = await import('@/lib/tokenManager');
-      const token = tokenManager.getToken();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/anomalies/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(values),
+      await updateRecord("anomalies", id, {
+        severity,
+        notes,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update anomaly");
-      }
-
-      open?.({
-        type: "success",
-        message: "Anomaly Updated Successfully",
-        description: `The anomaly record has been updated.`,
-      });
-
-      invalidate({
-        resource: "anomalies",
-        invalidates: ["list"],
-      });
+      toast.showSuccess(
+        "Anomaly Updated Successfully",
+        "The anomaly record has been updated."
+      );
 
       setTimeout(() => {
-        go({ to: "/anomalies", type: "push" });
+        router.push("/anomalies");
       }, 1000);
     } catch (error: any) {
-      open?.({
-        type: "error",
-        message: "Failed to Update Anomaly",
-        description: error.message,
-      });
+      toast.showError("Failed to Update Anomaly", error.message);
     } finally {
       setLoading(false);
     }
@@ -116,157 +96,152 @@ export default function AnomalyEditPage({ params }: AnomalyShowPageProps) {
 
   if (isLoadingAnomaly) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Alert message="Loading anomaly data..." type="info" />
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="mx-auto max-w-225">
+          <Alert variant="info">Loading anomaly data...</Alert>
+        </div>
+      </div>
     );
   }
 
   if (!anomaly) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Alert message="Anomaly not found" type="error" />
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+        <div className="mx-auto max-w-225">
+          <Alert variant="error">Anomaly not found</Alert>
+        </div>
+      </div>
     );
   }
 
   return (
-    <PageContainer>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <PageHeader
-          title="Edit Anomaly Record"
-          description={`Editing anomaly ${id.slice(0, 8)}...`}
-          actions={
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => go({ to: "/anomalies", type: "push" })}
-            >
-              Back to Anomalies
-            </Button>
-          }
-        />
-
-        <Alert
-          message="Read-Only Fields"
-          description="Some fields like detection time and initial values cannot be modified."
-          type="info"
-          showIcon
-          icon={<AlertOutlined />}
-          style={{ marginBottom: 24 }}
-        />
-
-        <ContentCard title="Anomaly Details" subtitle="Update the anomaly information">
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+      <div className="mx-auto max-w-225">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Edit Anomaly Record
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Editing anomaly {id.slice(0, 8)}...
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/anomalies")}
           >
-            {/* Time Series Selection - Read Only */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Time Series</span>}
-                  name="timeseriesId"
-                >
-                  <Select disabled showSearch>
-                    {timeseriesList.map((ts: any) => (
-                      <Select.Option key={ts.id} value={ts.id}>
-                        {ts.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
+            <ArrowLeft className="size-4 mr-1.5" />
+            Back to Anomalies
+          </Button>
+        </div>
 
-            {/* Severity Level */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Severity Level</span>}
-                  name="severity"
-                  rules={[{ required: true, message: "Please select severity level" }]}
-                >
-                  <Select placeholder="Select severity">
-                    {SEVERITY_LEVELS.map((level) => (
-                      <Select.Option key={level.value} value={level.value}>
-                        <Space>
-                          <span style={{ color: level.color }}>{level.label}</span>
-                        </Space>
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
+        <Alert variant="info" title="Read-Only Fields" className="mb-6">
+          Some fields like detection time and initial values cannot be modified.
+        </Alert>
 
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Detection Method</span>}
-                  name="detectionMethod"
-                  rules={[{ required: true, message: "Please select detection method" }]}
-                >
-                  <Select disabled>
-                    {DETECTION_METHODS.map((method) => (
-                      <Select.Option key={method.value} value={method.value}>
-                        {method.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
+        {/* Form Card */}
+        <div className="bg-card rounded-lg shadow-sm border">
+          {/* Card header */}
+          <div className="px-6 py-4 border-b border">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gray-900 inline-block" />
+              <h2 className="text-lg font-semibold text-foreground">
+                Anomaly Details
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Update the anomaly information
+            </p>
+          </div>
 
-            <Divider />
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Time Series - Read Only */}
+            <Input
+              label="Time Series"
+              value={timeseriesName}
+              disabled
+              fullWidth
+            />
+
+            {/* Severity & Detection Method */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Select
+                label="Severity Level"
+                options={SEVERITY_LEVELS}
+                value={severity}
+                onChange={setSeverity}
+                fullWidth
+              />
+              <Select
+                label="Detection Method"
+                options={DETECTION_METHODS}
+                value={detectionMethod}
+                onChange={setDetectionMethod}
+                disabled
+                fullWidth
+              />
+            </div>
+
+            <hr className="border" />
 
             {/* Value Information - Read Only */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Anomalous Value</span>}
-                  name="value"
-                >
-                  <InputNumber disabled style={{ width: "100%" }} />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Expected Range</span>}
-                >
-                  <Input.Group compact>
-                    <Form.Item name={["expectedRange", "min"]} noStyle>
-                      <InputNumber disabled style={{ width: "50%" }} placeholder="Min" />
-                    </Form.Item>
-                    <Form.Item name={["expectedRange", "max"]} noStyle>
-                      <InputNumber disabled style={{ width: "50%" }} placeholder="Max" />
-                    </Form.Item>
-                  </Input.Group>
-                </Form.Item>
-              </Col>
-            </Row>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Anomalous Value"
+                type="text"
+                value={value}
+                disabled
+                fullWidth
+              />
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Expected Range
+                </label>
+                <div className="flex gap-3">
+                  <Input
+                    type="text"
+                    placeholder="Min"
+                    value={expectedRangeMin}
+                    disabled
+                    fullWidth
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Max"
+                    value={expectedRangeMax}
+                    disabled
+                    fullWidth
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Notes - Editable */}
-            <Form.Item
-              label={<span style={{ fontWeight: 500 }}>Notes</span>}
-              name="notes"
+            <Textarea
+              label="Notes"
+              rows={4}
+              placeholder="Add notes or investigation results..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              fullWidth
+            />
+
+            <hr className="border" />
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              isLoading={loading}
             >
-              <Input.TextArea rows={4} placeholder="Add notes or investigation results..." />
-            </Form.Item>
-
-            <Divider style={{ margin: "24px 0" }} />
-
-            <Form.Item>
-              <Button type="primary" size="large" htmlType="submit" loading={loading} block>
-                Update Anomaly Record
-              </Button>
-            </Form.Item>
-          </Form>
-        </ContentCard>
+              Update Anomaly Record
+            </Button>
+          </form>
+        </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

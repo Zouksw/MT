@@ -1,33 +1,29 @@
 "use client";
 
-import React from "react";
-import {
-  ConfigProvider,
-  Card,
-  Table,
-  Tag,
-  Empty,
-  Spin,
-} from "antd";
-import { TrophyOutlined } from "@ant-design/icons";
+import { Sparkles, Users } from "lucide-react";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Table } from "@/components/ui/Table";
+import { Tag } from "@/components/ui/Tag";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import useSWR from "swr";
 import { fetcher } from "@/lib/market-data";
 
+interface LeaderboardEntry {
+  rank: number;
+  user: { id: string; name: string; avatarUrl: string | null };
+  accountName: string;
+  balance: number;
+  pnl: number;
+  pnlPercent: number;
+  tradeCount: number;
+}
+
 export default function CommunityPage() {
-  const { data, error, isLoading } = useSWR<{
+  const { data, isLoading } = useSWR<{
     success: boolean;
     data: {
-      leaderboard: Array<{
-        rank: number;
-        user: { id: string; name: string; avatarUrl: string | null };
-        accountName: string;
-        balance: number;
-        pnl: number;
-        pnlPercent: number;
-        tradeCount: number;
-      }>;
+      leaderboard: LeaderboardEntry[];
     };
   }>("/community/leaderboard", fetcher, { refreshInterval: 300000 });
 
@@ -35,91 +31,89 @@ export default function CommunityPage() {
 
   const columns = [
     {
-      title: "Rank",
-      dataIndex: "rank",
       key: "rank",
+      title: "Rank",
+      dataIndex: "rank" as const,
       width: 60,
-      render: (rank: number) => {
-        if (rank === 1) return <span className="text-yellow-500 font-bold">#1</span>;
-        if (rank === 2) return <span className="text-gray-400 font-bold">#2</span>;
-        if (rank === 3) return <span className="text-amber-700 font-bold">#3</span>;
-        return `#${rank}`;
+      render: (_value: number, record: LeaderboardEntry) => {
+        if (record.rank === 1) return <span className="text-yellow-500 font-bold">#1</span>;
+        if (record.rank === 2) return <span className="text-gray-400 font-bold">#2</span>;
+        if (record.rank === 3) return <span className="text-amber-700 font-bold">#3</span>;
+        return `#${record.rank}`;
       },
     },
     {
-      title: "Analyst",
-      dataIndex: ["user", "name"],
       key: "name",
+      title: "Analyst",
+      render: (_value: unknown, record: LeaderboardEntry) => record.user.name,
     },
     {
-      title: "Account",
-      dataIndex: "accountName",
       key: "account",
+      title: "Account",
+      dataIndex: "accountName" as const,
     },
     {
-      title: "Predictions",
-      dataIndex: "tradeCount",
       key: "predictions",
+      title: "Predictions",
+      dataIndex: "tradeCount" as const,
     },
     {
-      title: "Signal Score",
-      dataIndex: "pnlPercent",
       key: "score",
-      render: (v: number) => (
-        <Tag color={v >= 0 ? "green" : "red"}>
-          {v >= 0 ? "+" : ""}{v.toFixed(1)}%
+      title: "Signal Score",
+      render: (_value: unknown, record: LeaderboardEntry) => (
+        <Tag color={record.pnlPercent >= 0 ? "success" : "error"}>
+          {record.pnlPercent >= 0 ? "+" : ""}{record.pnlPercent.toFixed(1)}%
         </Tag>
       ),
     },
     {
-      title: "Accuracy",
-      dataIndex: "pnl",
       key: "accuracy",
-      render: (v: number) => (
-        <span style={{ color: v >= 0 ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
-          {v >= 0 ? "+" : ""}{v.toFixed(2)}
+      title: "Accuracy",
+      render: (_value: unknown, record: LeaderboardEntry) => (
+        <span style={{ color: record.pnl >= 0 ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
+          {record.pnl >= 0 ? "+" : ""}{record.pnl.toFixed(2)}
         </span>
       ),
     },
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: "#F59E0B",
-          colorPrimaryBg: "#FEF3C7",
-          colorPrimaryBgHover: "#FDE68A",
-        },
-      }}
-    >
-      <PageContainer>
-        <PageHeader
-          title="Community"
-          description="Top analysts ranked by prediction accuracy and signal quality"
-          actions={
-            <Tag icon={<TrophyOutlined />} color="gold">
+    <PageContainer>
+      <PageHeader
+        title="Community"
+        description="Top analysts ranked by prediction accuracy and signal quality"
+        actions={
+          <Tag color="primary">
+            <span className="flex items-center gap-1">
+              <Sparkles className="size-3.5" />
               Leaderboard
-            </Tag>
-          }
-        />
+            </span>
+          </Tag>
+        }
+      />
 
-        <Card>
+      <Card>
+        <CardBody>
           {isLoading ? (
-            <Spin />
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
           ) : leaderboard.length === 0 ? (
-            <Empty description="No analysts on the leaderboard yet. Start making predictions to appear here!" />
+            <div className="text-center py-8">
+              <Users className="size-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500">No analysts on the leaderboard yet. Start making predictions to appear here!</p>
+            </div>
           ) : (
             <Table
               dataSource={leaderboard}
               columns={columns}
               rowKey="rank"
-              pagination={false}
-              size="small"
+              loading={isLoading}
+              emptyText="No leaderboard data"
             />
           )}
-        </Card>
-      </PageContainer>
-    </ConfigProvider>
+        </CardBody>
+      </Card>
+    </PageContainer>
   );
 }

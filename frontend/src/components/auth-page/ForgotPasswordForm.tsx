@@ -1,118 +1,98 @@
-/**
- * Modern Forgot Password Form Component
- */
-
 "use client";
 
-import React from "react";
-import { Form, Input, message, Button } from "antd";
-import { MailOutlined } from "@ant-design/icons";
-import axios from "axios";
+import type React from "react";
+import { useState } from "react";
 
 import { validationRules, required } from "@/lib/validation";
 import { sanitizer } from "@/lib/sanitizer";
 import { errorHandler } from "@/lib/errorHandler";
-import { csrfProtection } from "@/lib/csrf";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export function ForgotPasswordForm() {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const toast = useToast();
 
-  const handleSubmit = async (values: Record<string, unknown>) => {
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    const emailErr = validationRules.validateAll(email, [
+      required("Email"),
+      validationRules.email,
+    ]);
+    if (emailErr) errs.email = emailErr;
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     setLoading(true);
     try {
-      const axiosInstance = axios.create({
-        baseURL: API_URL,
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      });
-
-      // Add CSRF token
-      const csrfHeaders = csrfProtection.getHeaders();
-      axiosInstance.defaults.headers.common = {
-        ...axiosInstance.defaults.headers.common,
-        ...csrfHeaders,
-      };
-
-      // Sanitize email
-      const sanitizedEmail = sanitizer.sanitizeEmail(values.email as string);
+      const sanitizedEmail = sanitizer.sanitizeEmail(email);
       if (!sanitizedEmail) {
-        message.error("Invalid email format");
+        toast.showError("Invalid email format");
         return;
       }
 
-      await axiosInstance.post("/auth/forgot-password", {
-        email: sanitizedEmail,
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ email: sanitizedEmail }),
       });
 
-      message.success("Password reset email sent!");
-      form.resetFields();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `${res.status} ${res.statusText}`);
+      }
+
+      toast.showSuccess("Password reset email sent!");
+      setEmail("");
+      setErrors({});
     } catch (error: unknown) {
       const safeError = errorHandler.handleApiError(error);
-      message.error(safeError.message);
+      toast.showError(safeError.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    borderRadius: "8px",
-    padding: "12px 16px",
-    fontSize: "15px",
-    border: "1px solid #e5e7eb",
-    transition: "all 0.2s",
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    height: "48px",
-    borderRadius: "8px",
-    fontSize: "16px",
-    fontWeight: 600,
-    background: "#171717",
-    border: "none",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-  };
-
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleSubmit}
-      validateTrigger="onBlur"
-      requiredMark={false}
-    >
-      <Form.Item
-        label={<span style={{ fontWeight: 500, color: "#374151", fontSize: "15px" }}>Email</span>}
-        name="email"
-        rules={[
-          validationRules.getAntRule(required("Email")),
-          validationRules.getAntRule(validationRules.email),
-        ]}
-        extra="We'll send you a password reset link"
-      >
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <div>
         <Input
+          label="Email"
+          type="email"
           placeholder="your.email@example.com"
-          size="large"
-          style={inputStyle}
-          prefix={<MailOutlined style={{ fontSize: 16, color: "#9ca3af" }} />}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={errors.email}
+          fullWidth
           autoComplete="email"
         />
-      </Form.Item>
+        <p className="mt-1 text-xs text-muted-foreground">
+          We&apos;ll send you a password reset link
+        </p>
+      </div>
 
-      <Form.Item style={{ marginBottom: 0 }}>
-        <Button
-          type="primary"
-          htmlType="submit"
-          style={buttonStyle}
-          className="w-full"
-          disabled={loading}
-          loading={loading}
-        >
-          {loading ? "Sending..." : "Send Reset Link"}
-        </Button>
-      </Form.Item>
-    </Form>
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        isLoading={loading}
+        className="h-12 text-base"
+      >
+        {loading ? "Sending..." : "Send Reset Link"}
+      </Button>
+    </form>
   );
 }

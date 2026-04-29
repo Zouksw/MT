@@ -1,40 +1,90 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Typography, Col, Row, Divider } from "antd";
-import { ArrowUpOutlined, GithubOutlined, TwitterOutlined, MenuOutlined, CloseOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import dynamic from "next/dynamic";
+import { ArrowUp, List, X } from "@phosphor-icons/react";
+import { MotionReveal } from "@/components/ui/MotionReveal";
 
-// Lazy load sections for better performance
 const Hero = dynamic(() => import("@/components/landing/Hero"), {
-  loading: () => <div style={{ height: "400px", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>Loading...</div>,
+  loading: () => (
+    <div className="min-h-[100dvh] flex items-center justify-center bg-white dark:bg-gray-900">
+      <div className="w-full max-w-6xl mx-auto px-6 py-24">
+        <div className="skeleton h-8 w-48 mb-6" />
+        <div className="skeleton h-14 w-3/4 mb-4" />
+        <div className="skeleton h-14 w-1/2 mb-8" />
+        <div className="skeleton h-6 w-2/3 mb-12" />
+        <div className="skeleton h-12 w-40 rounded-md" />
+      </div>
+    </div>
+  ),
   ssr: true,
 });
 const Features = dynamic(() => import("@/components/landing/Features"), {
-  loading: () => <div style={{ height: "200px" }} />,
-  ssr: false,
+  loading: () => (
+    <div className="py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="skeleton h-8 w-32 mb-4" />
+        <div className="skeleton h-10 w-64 mb-8" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[0,1,2,3].map(i => <div key={i} className="skeleton h-32 rounded-lg" />)}
+        </div>
+      </div>
+    </div>
+  ),
 });
 const GettingStarted = dynamic(() => import("@/components/landing/GettingStarted"), {
-  loading: () => <div style={{ height: "200px" }} />,
-  ssr: false,
+  loading: () => (
+    <div className="py-24 px-6">
+      <div className="max-w-6xl mx-auto space-y-4">
+        {[0,1,2,3].map(i => <div key={i} className="skeleton h-20 rounded-lg" />)}
+      </div>
+    </div>
+  ),
 });
 const FAQ = dynamic(() => import("@/components/landing/FAQ"), {
-  loading: () => <div style={{ height: "200px" }} />,
-  ssr: false,
+  loading: () => (
+    <div className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="skeleton h-8 w-32 mb-4" />
+        <div className="skeleton h-10 w-64 mb-8" />
+        <div className="skeleton h-48 rounded-lg" />
+      </div>
+    </div>
+  ),
 });
 const SocialProof = dynamic(() => import("@/components/landing/SocialProof"), {
-  loading: () => <div style={{ height: "60px" }} />,
-  ssr: false,
+  loading: () => (
+    <div className="py-12 border-y border-black/5 dark:border-white/10">
+      <div className="max-w-6xl mx-auto px-6 grid grid-cols-4 gap-8">
+        {[0,1,2,3].map(i => <div key={i} className="skeleton h-12 rounded" />)}
+      </div>
+    </div>
+  ),
 });
 
-const { Title, Text, Paragraph } = Typography;
+const NAV_LINKS = [
+  { label: "Features", href: "#features" },
+  { label: "FAQ", href: "#faq" },
+];
 
-/**
- * Landing Page - Commercial SaaS Marketing Homepage
- *
- * A modern, professional landing page showcasing TradeMind AI
- * with hero section, features, pricing, FAQ, and getting started guide.
- */
+const FOOTER_SECTIONS = [
+  {
+    title: "Product",
+    links: [
+      { label: "Features", href: "#features" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "About", href: "/about" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { label: "FAQ", href: "#faq" },
+      { label: "Get Started", href: "/register" },
+    ],
+  },
+];
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const scrollToTop = () => {
@@ -42,125 +92,70 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ overflowX: "hidden" }}>
-      {/* Navigation */}
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          background: "#ffffff",
-          boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px",
-          padding: "16px 24px",
-        }}
-      >
-        <style>{`
-          @media (max-width: 768px) {
-            .landing-nav-links { display: none !important; }
-            .landing-nav-toggle { display: flex !important; }
-            .landing-nav-links.open {
-              display: flex !important;
-              position: absolute;
-              top: 100%;
-              left: 0;
-              right: 0;
-              background: #ffffff;
-              flex-direction: column;
-              padding: 16px 24px;
-              gap: 12px;
-              border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            }
-            .landing-nav-links.open a {
-              padding: 12px 0;
-              font-size: 16px;
-              display: block;
-            }
-          }
-          @media (min-width: 769px) {
-            .landing-nav-toggle { display: none !important; }
-          }
-        `}</style>
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                background: "#171717",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: "12px",
-                fontWeight: 600,
-                color: "#fff",
-                fontSize: "18px",
-              }}
-            >
-              I
+    <div className="overflow-x-hidden w-full max-w-full">
+      {/* Navigation — clean top border bar */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white dark:bg-gray-950">
+        <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-[1200px] mx-auto">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
+              <span className="text-white dark:text-gray-900 font-semibold text-base">T</span>
             </div>
-            <Text strong style={{ fontSize: "18px" }}>
-              TradeMind AI
-            </Text>
-          </div>
+            <span className="text-base font-display font-semibold text-gray-900 dark:text-white tracking-tight">
+              MT
+            </span>
+          </a>
 
-          <nav
-            className={`landing-nav-links${mobileMenuOpen ? " open" : ""}`}
-            style={{ display: "flex", gap: "32px", alignItems: "center" }}
-          >
+          {/* Desktop links */}
+          <div className="hidden md:flex items-center gap-6">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
             <a
-              href="#features"
-              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500, fontSize: "15px" }}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Features
-            </a>
-            <a
-              href="#faq"
-              style={{ color: "#64748b", textDecoration: "none", fontWeight: 500, fontSize: "15px" }}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              FAQ
-            </a>
-            <Button
-              type="primary"
-              style={{
-                background: "#171717",
-                border: "none",
-                borderRadius: "6px",
-                height: "40px",
-                padding: "0 20px",
-              }}
               href="/register"
+              className="rounded-full bg-black px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
             >
               Get Started
-            </Button>
-          </nav>
+            </a>
+          </div>
 
-          <Button
-            type="text"
-            className="landing-nav-toggle"
-            icon={mobileMenuOpen ? <CloseOutlined /> : <MenuOutlined />}
+          {/* Mobile hamburger */}
+          <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{
-              display: "none",
-              minWidth: "44px",
-              minHeight: "44px",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          />
+            className="flex md:hidden items-center justify-center min-w-[44px] min-h-[44px] text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <List size={24} />}
+          </button>
         </div>
+
+        {/* Mobile slide-down menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-gray-950 px-4 py-4 space-y-1">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 text-sm text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+            <a
+              href="/register"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block rounded-full bg-black px-4 py-2 text-center text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors mt-2"
+            >
+              Get Started
+            </a>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
@@ -172,173 +167,85 @@ export default function LandingPage() {
       {/* Features Section */}
       <Features />
 
-      {/* Pricing Section - Temporarily hidden */}
-      {/* <Pricing /> */}
-
       {/* Getting Started Section */}
       <GettingStarted />
 
       {/* FAQ Section */}
       <FAQ />
 
-      {/* CTA Section */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          padding: "clamp(60px, 8vw, 100px) 24px",
-          background: "#171717",
-          textAlign: "center",
-        }}
-      >
-        {/* Decorative blurred circles */}
-        <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute bottom-10 right-20 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-white/3 blur-2xl" />
-
-        <div className="relative z-10" style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <Title
-            level={2}
-            style={{
-              fontSize: "clamp(32px, 4vw, 48px)",
-              fontWeight: 600,
-              color: "#fff",
-              marginBottom: "20px",
-            }}
-          >
-            Ready to Get Started?
-          </Title>
-          <Paragraph
-            style={{
-              fontSize: "18px",
-              color: "rgba(255, 255, 255, 0.9)",
-              marginBottom: "32px",
-            }}
-          >
-            Join thousands of teams already using TradeMind AI to power their time
-            series data platform.
-          </Paragraph>
-          <Button
-            size="large"
-            style={{
-              height: "52px",
-              padding: "0 40px",
-              fontSize: "16px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              background: "#fff",
-              color: "#0a72ef",
-              border: "none",
-              boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 2px",
-            }}
-            href="/register"
-          >
-            Start Free Trial
-          </Button>
-          <p className="mt-4 text-sm text-white/60">
-            No credit card required. Free 14-day trial.
-          </p>
+      {/* CTA Section — clean white, no gradients */}
+      <section className="bg-white dark:bg-gray-950 border-t border-black/5 dark:border-white/10">
+        <div className="px-6 py-24 md:py-36 lg:py-48">
+          <MotionReveal className="text-center max-w-[700px] mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
+              Ready to get started?
+            </h2>
+            <div className="mt-8">
+              <a
+                href="/register"
+                className="rounded-full bg-black px-8 py-3 text-base font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
+              >
+                Start free trial
+              </a>
+            </div>
+            <p className="text-sm text-gray-400 mt-5">
+              No credit card required. Free 14-day trial.
+            </p>
+          </MotionReveal>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer
-        style={{
-          padding: "clamp(32px, 5vw, 60px) 24px",
-          background: "#171717",
-          color: "#fff",
-        }}
-      >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <Row gutter={[48, 48]}>
-            <Col xs={24} md={8}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "6px",
-                    background: "#171717",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "12px",
-                    fontWeight: 600,
-                    fontSize: "18px",
-                  }}
-                >
-                  I
+      {/* Footer — clean, minimal */}
+      <footer className="bg-white dark:bg-gray-950 border-t border-black/5 dark:border-white/10 px-6 py-16 md:py-24">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
+            {/* Brand */}
+            <div className="max-w-xs">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
+                  <span className="text-white dark:text-gray-900 font-semibold text-base">T</span>
                 </div>
-                <Text strong style={{ fontSize: "18px", color: "#fff" }}>
-                  TradeMind AI
-                </Text>
+                <span className="text-base font-display font-semibold text-gray-900 dark:text-white tracking-tight">
+                  MT
+                </span>
               </div>
-              <Paragraph style={{ color: "#94a3b8", marginBottom: "16px" }}>
-                Enterprise-grade time series database platform with real-time analytics
-                and AI-powered insights.
-              </Paragraph>
-              <div style={{ display: "flex", gap: "16px" }}>
-                <GithubOutlined style={{ fontSize: "20px", color: "#94a3b8", cursor: "pointer" }} />
-                <TwitterOutlined style={{ fontSize: "20px", color: "#94a3b8", cursor: "pointer" }} />
-              </div>
-            </Col>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                AI-powered commodity market intelligence for 55+ commodities.
+              </p>
+            </div>
 
-            <Col xs={24} sm={8} md={4}>
-              <Title level={5} style={{ fontSize: "16px", color: "#fff", marginBottom: "16px" }}>
-                Product
-              </Title>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: "8px" }}>
-                  <a href="#features" style={{ color: "#94a3b8", textDecoration: "none" }}>
-                    Features
-                  </a>
-                </li>
-                {/* Hidden temporarily
-                <li style={{ marginBottom: "8px" }}>
-                  <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>
-                    Pricing
-                  </a>
-                </li>
-                */}
-                <li style={{ marginBottom: "8px" }}>
-                  <a href="#faq" style={{ color: "#94a3b8", textDecoration: "none" }}>
-                    FAQ
-                  </a>
-                </li>
-              </ul>
-            </Col>
+            {/* Link columns */}
+            <div className="flex gap-12 md:gap-16">
+              {FOOTER_SECTIONS.map((section) => (
+                <div key={section.title}>
+                  <h4 className="font-mono uppercase text-xs font-medium text-gray-400 tracking-wide mb-3">
+                    {section.title}
+                  </h4>
+                  <ul className="space-y-2">
+                    {section.links.map((link) => (
+                      <li key={link.href + link.label}>
+                        <a href={link.href} className="text-sm text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors">
+                          {link.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
 
-
-          </Row>
-
-          <Divider style={{ borderColor: "#1e293b", margin: "40px 0 24px" }} />
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <Text style={{ color: "#64748b", fontSize: "14px" }}>
-              © 2025 TradeMind AI. All rights reserved.
-            </Text>
-            <Button
-              type="text"
-              icon={<ArrowUpOutlined />}
+          <div className="border-t border-black/5 dark:border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-xs text-gray-400">
+              &copy; 2026 MT. All rights reserved.
+            </p>
+            <button
               onClick={scrollToTop}
-              style={{
-                color: "#94a3b8",
-                minWidth: "44px",
-                minHeight: "44px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
+              className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
-              Back to Top
-            </Button>
+              <ArrowUp size={14} />
+              Back to top
+            </button>
           </div>
         </div>
       </footer>

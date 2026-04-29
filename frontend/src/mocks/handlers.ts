@@ -45,7 +45,7 @@ export const handlers = [
 
   // Dataset endpoints
   http.get(`${API_BASE}/datasets`, ({ request }) => {
-    const url = new URL(request.url);
+    const _url = new URL(request.url);
     return HttpResponse.json({
       datasets: [
         { id: 'ds-1', name: 'Temperature Data', slug: 'temperature-data', storageFormat: 'CSV', ownerId: 'test-user-1', createdAt: '2024-01-01T00:00:00Z', _count: { timeseries: 3 } },

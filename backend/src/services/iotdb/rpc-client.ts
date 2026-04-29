@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 import { iotdbConfig } from './client';
 
 /**
@@ -106,7 +106,7 @@ export class IoTDBRPCClient {
       return `INSERT INTO ${r.device}(time, ${measurements}) VALUES (${r.timestamp}, ${values})`;
     });
 
-    const sql = sqlStatements.join(';\n') + ';';
+    const sql = `${sqlStatements.join(';\n')};`;
     return this.executeSQL(sql);
   }
 

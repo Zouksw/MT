@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
-import { Form, Input, Select, Switch, Button, Row, Col, Typography, Space, Divider, InputNumber } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { useGo, useInvalidate, useNotification } from "@refinedev/core";
-import { useOne, useList } from "@refinedev/core";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ContentCard } from "@/components/layout/ContentCard";
+import { Button } from "@/components/ui/Button";
+import { Input, Textarea } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { useToast } from "@/components/ui/Toast";
+import { useOne, useList } from "@/lib/api";
+import { tokenManager } from "@/lib/tokenManager";
 
 const ALERT_TYPES = [
   { value: "ANOMALY", label: "Anomaly Detection" },
@@ -18,9 +21,16 @@ const ALERT_TYPES = [
 ];
 
 const SEVERITY_LEVELS = [
-  { value: "INFO", label: "Info", color: "blue" },
-  { value: "WARNING", label: "Warning", color: "orange" },
-  { value: "ERROR", label: "Error", color: "red" },
+  { value: "INFO", label: "Info" },
+  { value: "WARNING", label: "Warning" },
+  { value: "ERROR", label: "Error" },
+];
+
+const OPERATOR_OPTIONS = [
+  { value: ">", label: "Greater than" },
+  { value: "<", label: "Less than" },
+  { value: ">=", label: "Greater or equal" },
+  { value: "<=", label: "Less or equal" },
 ];
 
 interface AlertEditPageProps {
@@ -29,55 +39,104 @@ interface AlertEditPageProps {
 
 export default function AlertEditPage({ params }: AlertEditPageProps) {
   const { id } = React.use(params);
-  const go = useGo();
-  const invalidate = useInvalidate();
-  const { open } = useNotification();
+  const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [initialized, setInitialized] = useState(false);
+
+  // Form state
+  const [name, setName] = useState("");
+  const [type, setType] = useState("");
+  const [severity, setSeverity] = useState("");
+  const [timeseriesId, setTimeseriesId] = useState("");
+  const [description, setDescription] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [conditionOperator, setConditionOperator] = useState(">");
+  const [conditionValue, setConditionValue] = useState("");
+  const [cooldownMinutes, setCooldownMinutes] = useState("5");
 
   // Get alert data
-  const alertResult = useOne({
-    resource: "alerts",
-    id,
-  });
-
-  const alert = alertResult?.result?.data;
-  const isLoadingAlert = alertResult?.query?.isLoading ?? false;
+  const { data: alert, loading: isLoadingAlert } = useOne<any>("alerts", id);
 
   // Get timeseries list
-  const timeseriesResult = useList({
-    resource: "timeseries",
-    pagination: { pageSize: 1000 },
-    sorters: [{ field: "name", order: "asc" }],
+  const { data: timeseriesList } = useList<any>("timeseries", {
+    pageSize: 1000,
+    sort: "name",
+    order: "asc",
   });
 
-  const timeseriesList = timeseriesResult?.result?.data ?? [];
+  const timeseriesOptions = timeseriesList.map((ts: any) => ({
+    value: ts.id,
+    label: ts.name,
+  }));
 
   // Set form values when data is loaded
-  if (alert && !form.isFieldsTouched()) {
-    form.setFieldsValue({
-      name: alert.name,
-      type: alert.type,
-      severity: alert.severity,
-      timeseriesId: alert.timeseriesId,
-      description: alert.description,
-      enabled: alert.isRead !== false,
-      condition: alert.condition,
-      cooldownMinutes: alert.cooldownMinutes,
-    });
-  }
+  useEffect(() => {
+    if (alert && !initialized) {
+      setName(alert.name || "");
+      setType(alert.type || "");
+      setSeverity(alert.severity || "");
+      setTimeseriesId(alert.timeseriesId || "");
+      setDescription(alert.description || "");
+      setEnabled(alert.isRead !== false);
+      setConditionOperator(alert.condition?.operator || ">");
+      setConditionValue(alert.condition?.value != null ? String(alert.condition.value) : "");
+      setCooldownMinutes(alert.cooldownMinutes != null ? String(alert.cooldownMinutes) : "5");
+      setInitialized(true);
+    }
+  }, [alert, initialized]);
 
-  const handleSubmit = async (values: any) => {
+  const validate = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!name.trim()) {
+      errors.name = "Please enter an alert name";
+    }
+    if (!type) {
+      errors.type = "Please select alert type";
+    }
+    if (!severity) {
+      errors.severity = "Please select severity";
+    }
+    if (!timeseriesId) {
+      errors.timeseriesId = "Please select a time series";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     setLoading(true);
     try {
-      const { tokenManager } = await import('@/lib/tokenManager');
       const token = tokenManager.getToken();
+      const values = {
+        name,
+        type,
+        severity,
+        timeseriesId,
+        description,
+        enabled,
+        condition: type === "THRESHOLD"
+          ? {
+              operator: conditionOperator,
+              value: Number(conditionValue),
+            }
+          : undefined,
+        cooldownMinutes: type === "THRESHOLD" ? Number(cooldownMinutes) : undefined,
+      };
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        credentials: "include",
         body: JSON.stringify(values),
       });
 
@@ -86,26 +145,13 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
         throw new Error(error.error || "Failed to update alert");
       }
 
-      open?.({
-        type: "success",
-        message: "Alert Updated Successfully",
-        description: `The alert configuration has been updated.`,
-      });
-
-      invalidate({
-        resource: "alerts",
-        invalidates: ["list"],
-      });
+      toast.showSuccess("Alert Updated Successfully", "The alert configuration has been updated.");
 
       setTimeout(() => {
-        go({ to: "/alerts", type: "push" });
+        router.push("/alerts");
       }, 1000);
     } catch (error: any) {
-      open?.({
-        type: "error",
-        message: "Failed to Update Alert",
-        description: error.message,
-      });
+      toast.showError("Failed to Update Alert", error.message);
     } finally {
       setLoading(false);
     }
@@ -113,188 +159,169 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 
   if (isLoadingAlert) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Typography.Text>Loading alert data...</Typography.Text>
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-muted p-4 md:p-6">
+        <div className="mx-auto max-w-3xl">
+          <Alert variant="info">Loading alert data...</Alert>
+        </div>
+      </div>
     );
   }
 
-  if (!alert) {
+  if (!alert && !isLoadingAlert) {
     return (
-      <PageContainer>
-        <ContentCard>
-          <Typography.Text type="danger">Alert not found</Typography.Text>
-        </ContentCard>
-      </PageContainer>
+      <div className="min-h-screen bg-muted p-4 md:p-6">
+        <div className="mx-auto max-w-3xl">
+          <Alert variant="error">Alert not found</Alert>
+        </div>
+      </div>
     );
   }
 
   return (
-    <PageContainer>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <PageHeader
-          title="Edit Alert"
-          description={`Editing alert: ${alert.name || id.slice(0, 8)}...`}
-          actions={
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => go({ to: "/alerts", type: "push" })}
-            >
-              Back to Alerts
-            </Button>
-          }
-        />
+    <div className="min-h-screen bg-muted p-4 md:p-6">
+      <div className="mx-auto max-w-3xl">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+          <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
+          <ChevronRight className="size-3" />
+          <a href="/alerts" className="hover:text-gray-700 dark:hover:text-gray-200">Alerts & Notifications</a>
+          <ChevronRight className="size-3" />
+          <span className="text-foreground">Edit Alert</span>
+        </nav>
 
-        <ContentCard title="Alert Configuration" subtitle="Update alert settings">
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
-          >
-            {/* Alert Name */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Alert Name</span>}
-                  name="name"
-                  rules={[{ required: true, message: "Please enter an alert name" }]}
-                >
-                  <Input placeholder="e.g., High Temperature Alert" size="large" />
-                </Form.Item>
-              </Col>
-            </Row>
+        {/* Page Header */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">Edit Alert</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Editing alert: {alert?.name || id.slice(0, 8)}...
+            </p>
+          </div>
+          <Button variant="ghost" onClick={() => router.push("/alerts")}>
+            <ArrowLeft className="size-4 mr-1.5" />
+            Back to Alerts
+          </Button>
+        </div>
 
-            {/* Alert Type and Severity */}
-            <Row gutter={[24, 16]}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Alert Type</span>}
-                  name="type"
-                  rules={[{ required: true, message: "Please select alert type" }]}
-                >
-                  <Select placeholder="Select alert type" size="large">
-                    {ALERT_TYPES.map((type) => (
-                      <Select.Option key={type.value} value={type.value}>
-                        {type.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
+        {/* Form */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-foreground">Alert Configuration</h3>
+            <p className="text-sm text-muted-foreground">Update alert settings</p>
+          </CardHeader>
+          <CardBody>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Alert Name */}
+              <Input
+                label="Alert Name"
+                placeholder="e.g., High Temperature Alert"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                error={formErrors.name}
+                fullWidth
+              />
 
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span style={{ fontWeight: 500 }}>Severity Level</span>}
-                  name="severity"
-                  rules={[{ required: true, message: "Please select severity" }]}
-                >
-                  <Select placeholder="Select severity" size="large">
-                    {SEVERITY_LEVELS.map((level) => (
-                      <Select.Option key={level.value} value={level.value}>
-                        <Space>
-                          <span style={{ color: level.color }}>{level.label}</span>
-                        </Space>
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
+              {/* Alert Type and Severity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label="Alert Type"
+                  placeholder="Select alert type"
+                  value={type}
+                  onChange={setType}
+                  options={ALERT_TYPES}
+                  error={formErrors.type}
+                />
+                <Select
+                  label="Severity Level"
+                  placeholder="Select severity"
+                  value={severity}
+                  onChange={setSeverity}
+                  options={SEVERITY_LEVELS}
+                  error={formErrors.severity}
+                />
+              </div>
 
-            {/* Time Series Selection */}
-            <Form.Item
-              label={<span style={{ fontWeight: 500 }}>Time Series</span>}
-              name="timeseriesId"
-              rules={[{ required: true, message: "Please select a time series" }]}
-            >
+              {/* Time Series Selection */}
               <Select
+                label="Time Series"
                 placeholder="Select a time series"
-                showSearch
-                size="large"
-                filterOption={(input, option) =>
-                  String(option?.label ?? "")
-                    .toLowerCase()
-                    .includes(String(input).toLowerCase())
-                }
+                value={timeseriesId}
+                onChange={setTimeseriesId}
+                options={timeseriesOptions}
+                error={formErrors.timeseriesId}
+              />
+
+              <hr className="border" />
+
+              {/* Threshold Configuration */}
+              {type === "THRESHOLD" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Select
+                    label="Operator"
+                    value={conditionOperator}
+                    onChange={setConditionOperator}
+                    options={OPERATOR_OPTIONS}
+                  />
+                  <Input
+                    label="Threshold Value"
+                    type="number"
+                    value={conditionValue}
+                    onChange={(e) => setConditionValue(e.target.value)}
+                    fullWidth
+                  />
+                  <Input
+                    label="Cooldown (minutes)"
+                    type="number"
+                    value={cooldownMinutes}
+                    onChange={(e) => setCooldownMinutes(e.target.value)}
+                    fullWidth
+                  />
+                </div>
+              )}
+
+              {/* Description */}
+              <Textarea
+                label="Description"
+                placeholder="Alert description..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                fullWidth
+              />
+
+              {/* Enable/Disable */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={enabled}
+                  onClick={() => setEnabled(!enabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-primary" : "bg-gray-300 dark:bg-gray-600"}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`}
+                  />
+                </button>
+                <span className="text-sm font-medium text-foreground">
+                  {enabled ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+
+              <hr className="border" />
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                size="lg"
+                fullWidth
+                isLoading={loading}
               >
-                {timeseriesList.map((ts: any) => (
-                  <Select.Option key={ts.id} value={ts.id}>
-                    {ts.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Divider />
-
-            {/* Threshold Configuration */}
-            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.type !== curr.type}>
-              {({ getFieldValue }) =>
-                getFieldValue("type") === "THRESHOLD" ? (
-                  <Row gutter={[24, 16]}>
-                    <Col xs={24} md={8}>
-                      <Form.Item
-                        label={<span style={{ fontWeight: 500 }}>Operator</span>}
-                        name={["condition", "operator"]}
-                      >
-                        <Select>
-                          <Select.Option value=">">Greater than</Select.Option>
-                          <Select.Option value="<">Less than</Select.Option>
-                          <Select.Option value=">=">Greater or equal</Select.Option>
-                          <Select.Option value="<=">Less or equal</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={8}>
-                      <Form.Item
-                        label={<span style={{ fontWeight: 500 }}>Threshold Value</span>}
-                        name={["condition", "value"]}
-                      >
-                        <InputNumber style={{ width: "100%" }} />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={8}>
-                      <Form.Item
-                        label={<span style={{ fontWeight: 500 }}>Cooldown (minutes)</span>}
-                        name="cooldownMinutes"
-                      >
-                        <InputNumber min={0} style={{ width: "100%" }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                ) : null
-              }
-            </Form.Item>
-
-            {/* Description */}
-            <Form.Item
-              label={<span style={{ fontWeight: 500 }}>Description</span>}
-              name="description"
-            >
-              <Input.TextArea rows={3} placeholder="Alert description..." />
-            </Form.Item>
-
-            {/* Enable/Disable */}
-            <Form.Item
-              label={<span style={{ fontWeight: 500 }}>Status</span>}
-              name="enabled"
-              valuePropName="checked"
-            >
-              <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
-            </Form.Item>
-
-            <Divider style={{ margin: "24px 0" }} />
-
-            <Form.Item>
-              <Button type="primary" size="large" htmlType="submit" loading={loading} block>
                 Update Alert
               </Button>
-            </Form.Item>
-          </Form>
-        </ContentCard>
+            </form>
+          </CardBody>
+        </Card>
       </div>
-    </PageContainer>
+    </div>
   );
 }

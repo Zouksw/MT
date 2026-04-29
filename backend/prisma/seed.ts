@@ -1060,6 +1060,65 @@ async function main() {
 
     // US grain futures
     { slug: 'us_soybean', name: 'US Soybean Futures', nameCn: '美豆期货', category: 'futures', originCountry: 'USA', unit: 'US cents/bushel', currency: 'USD' },
+
+    // ── World Bank commodities (energy) ──
+    { slug: 'crude_oil_wti', name: 'Crude Oil (WTI)', nameCn: 'WTI原油', category: 'energy', unit: 'USD/bbl', currency: 'USD' },
+    { slug: 'crude_oil_brent', name: 'Crude Oil (Brent)', nameCn: '布伦特原油', category: 'energy', unit: 'USD/bbl', currency: 'USD' },
+    { slug: 'natural_gas_us', name: 'Natural Gas (US)', nameCn: '天然气（美国）', category: 'energy', unit: 'USD/MMBtu', currency: 'USD' },
+    { slug: 'coal_australia', name: 'Coal (Australia)', nameCn: '澳洲煤炭', category: 'energy', unit: 'USD/ton', currency: 'USD' },
+
+    // ── World Bank commodities (metals) ──
+    { slug: 'copper_lme', name: 'Copper (LME)', nameCn: 'LME铜', category: 'metals', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'aluminum_lme', name: 'Aluminum (LME)', nameCn: 'LME铝', category: 'metals', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'iron_ore_cfr', name: 'Iron Ore (CFR China)', nameCn: '铁矿石（中国CFR）', category: 'metals', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'gold_lbma', name: 'Gold (LBMA)', nameCn: '黄金（LBMA）', category: 'metals', unit: 'USD/troy oz', currency: 'USD' },
+    { slug: 'silver_lbma', name: 'Silver (LBMA)', nameCn: '白银（LBMA）', category: 'metals', unit: 'USD/troy oz', currency: 'USD' },
+
+    // ── World Bank commodities (grains & oilseeds) ──
+    { slug: 'soybeans_cbot', name: 'Soybeans (CBOT)', nameCn: '大豆（CBOT）', category: 'grain', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'soybean_meal_cbot', name: 'Soybean Meal (CBOT)', nameCn: '豆粕（CBOT）', category: 'feed', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'soybean_oil_cbot', name: 'Soybean Oil (CBOT)', nameCn: '豆油（CBOT）', category: 'feed', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'wheat_us_srw', name: 'Wheat (US SRW)', nameCn: '小麦（美国软红冬）', category: 'grain', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'wheat_us_hrw', name: 'Wheat (US HRW)', nameCn: '小麦（美国硬红冬）', category: 'grain', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'corn_cbot', name: 'Corn (CBOT)', nameCn: '玉米（CBOT）', category: 'grain', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'rice_thai', name: 'Rice (Thai 5%)', nameCn: '大米（泰国5%）', category: 'grain', unit: 'USD/ton', currency: 'USD' },
+
+    // ── World Bank commodities (soft commodities) ──
+    { slug: 'sugar_world', name: 'Sugar (World)', nameCn: '糖（国际）', category: 'soft_commodities', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'coffee_arabica', name: 'Coffee (Arabica)', nameCn: '咖啡（阿拉比卡）', category: 'soft_commodities', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'coffee_robusta', name: 'Coffee (Robusta)', nameCn: '咖啡（罗布斯塔）', category: 'soft_commodities', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'cocoa', name: 'Cocoa', nameCn: '可可', category: 'soft_commodities', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'cotton_cotlook', name: 'Cotton (Cotlook A)', nameCn: '棉花（Cotlook A）', category: 'soft_commodities', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'rubber_tsr20', name: 'Rubber (TSR20)', nameCn: '橡胶（TSR20）', category: 'soft_commodities', unit: 'USD/kg', currency: 'USD' },
+
+    // ── World Bank commodities (meat & dairy) ──
+    { slug: 'beef_australia', name: 'Beef (Australia)', nameCn: '牛肉（澳洲）', category: 'meat_dairy', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'beef_us_choice', name: 'Beef (US Choice)', nameCn: '牛肉（美国Choice）', category: 'meat_dairy', unit: 'USD/kg', currency: 'USD' },
+    { slug: 'chicken_whole', name: 'Chicken (Whole)', nameCn: '整鸡', category: 'meat_dairy', unit: 'USD/kg', currency: 'USD' },
+
+    // ── World Bank commodities (fertilizers) ──
+    { slug: 'urea', name: 'Urea', nameCn: '尿素', category: 'fertilizer', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'diammonium_phosphate', name: 'DAP Fertilizer', nameCn: '磷酸二铵', category: 'fertilizer', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'potassium_chloride', name: 'Potash (MOP)', nameCn: '氯化钾', category: 'fertilizer', unit: 'USD/ton', currency: 'USD' },
+
+    // ── CME Futures (additional) ──
+    { slug: 'live_cattle_cme', name: 'Live Cattle Futures (CME)', nameCn: '活牛期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'feeder_cattle_cme', name: 'Feeder Cattle Futures (CME)', nameCn: '育肥牛期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'lean_hogs_cme', name: 'Lean Hogs Futures (CME)', nameCn: '瘦肉猪期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/cwt', currency: 'USD' },
+    { slug: 'corn_cme', name: 'Corn Futures (CME)', nameCn: '玉米期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/bu', currency: 'USD' },
+    { slug: 'soybeans_cme', name: 'Soybean Futures (CME)', nameCn: '大豆期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/bu', currency: 'USD' },
+    { slug: 'wheat_cme', name: 'Wheat Futures (CME)', nameCn: '小麦期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/bu', currency: 'USD' },
+    { slug: 'soybean_meal_cme', name: 'Soybean Meal Futures (CME)', nameCn: '豆粕期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/ton', currency: 'USD' },
+    { slug: 'soybean_oil_cme', name: 'Soybean Oil Futures (CME)', nameCn: '豆油期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/lb', currency: 'USD' },
+    { slug: 'crude_oil_cme', name: 'Crude Oil Futures (CME)', nameCn: '原油期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/bbl', currency: 'USD' },
+    { slug: 'natural_gas_cme', name: 'Natural Gas Futures (CME)', nameCn: '天然气期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/MMBtu', currency: 'USD' },
+    { slug: 'gold_cme', name: 'Gold Futures (CME)', nameCn: '黄金期货（CME）', category: 'futures', originCountry: 'USA', unit: 'USD/troy oz', currency: 'USD' },
+    { slug: 'coffee_cme', name: 'Coffee Futures (CME)', nameCn: '咖啡期货（CME）', category: 'futures', unit: 'USD/lb', currency: 'USD' },
+    { slug: 'sugar11_cme', name: 'Sugar #11 Futures (CME)', nameCn: '糖11号期货（CME）', category: 'futures', unit: 'USD/lb', currency: 'USD' },
+    { slug: 'cotton2_cme', name: 'Cotton #2 Futures (CME)', nameCn: '棉花2号期货（CME）', category: 'futures', unit: 'USD/lb', currency: 'USD' },
+
+    // ── Indices ──
+    { slug: 'commodity_price_index', name: 'Commodity Price Index', nameCn: '大宗商品价格指数', category: 'indices', unit: 'index', currency: 'USD' },
   ];
 
   // Price baselines for generating realistic data
@@ -1118,6 +1177,65 @@ async function main() {
     fao_cereals_index: { base: 135, volatility: 6 },
     fao_oils_index: { base: 150, volatility: 7 },
     us_soybean: { base: 1400, volatility: 30 },
+
+    // World Bank energy
+    crude_oil_wti: { base: 72, volatility: 3 },
+    crude_oil_brent: { base: 76, volatility: 3 },
+    natural_gas_us: { base: 2.5, volatility: 0.2 },
+    coal_australia: { base: 130, volatility: 8 },
+
+    // World Bank metals
+    copper_lme: { base: 9200, volatility: 200 },
+    aluminum_lme: { base: 2350, volatility: 50 },
+    iron_ore_cfr: { base: 120, volatility: 5 },
+    gold_lbma: { base: 2350, volatility: 30 },
+    silver_lbma: { base: 28, volatility: 0.8 },
+
+    // World Bank grains
+    soybeans_cbot: { base: 420, volatility: 15 },
+    soybean_meal_cbot: { base: 380, volatility: 12 },
+    soybean_oil_cbot: { base: 950, volatility: 25 },
+    wheat_us_srw: { base: 240, volatility: 10 },
+    wheat_us_hrw: { base: 280, volatility: 12 },
+    corn_cbot: { base: 190, volatility: 8 },
+    rice_thai: { base: 560, volatility: 20 },
+
+    // World Bank soft commodities
+    sugar_world: { base: 0.28, volatility: 0.02 },
+    coffee_arabica: { base: 4.5, volatility: 0.3 },
+    coffee_robusta: { base: 3.2, volatility: 0.2 },
+    cocoa: { base: 8.5, volatility: 0.5 },
+    cotton_cotlook: { base: 1.9, volatility: 0.08 },
+    rubber_tsr20: { base: 1.6, volatility: 0.06 },
+
+    // World Bank meat & dairy
+    beef_australia: { base: 5.8, volatility: 0.2 },
+    beef_us_choice: { base: 6.2, volatility: 0.25 },
+    chicken_whole: { base: 2.5, volatility: 0.1 },
+
+    // World Bank fertilizers
+    urea: { base: 350, volatility: 15 },
+    diammonium_phosphate: { base: 580, volatility: 20 },
+    potassium_chloride: { base: 320, volatility: 12 },
+
+    // CME futures
+    live_cattle_cme: { base: 188, volatility: 5 },
+    feeder_cattle_cme: { base: 255, volatility: 8 },
+    lean_hogs_cme: { base: 82, volatility: 3 },
+    corn_cme: { base: 4.5, volatility: 0.15 },
+    soybeans_cme: { base: 12.5, volatility: 0.3 },
+    wheat_cme: { base: 5.8, volatility: 0.2 },
+    soybean_meal_cme: { base: 340, volatility: 10 },
+    soybean_oil_cme: { base: 0.52, volatility: 0.02 },
+    crude_oil_cme: { base: 72, volatility: 2 },
+    natural_gas_cme: { base: 2.4, volatility: 0.15 },
+    gold_cme: { base: 2350, volatility: 25 },
+    coffee_cme: { base: 1.85, volatility: 0.08 },
+    sugar11_cme: { base: 0.22, volatility: 0.01 },
+    cotton2_cme: { base: 0.72, volatility: 0.03 },
+
+    // Indices
+    commodity_price_index: { base: 180, volatility: 4 },
   };
 
   // Create commodities
@@ -1218,6 +1336,70 @@ async function main() {
   if (priceBatch.length > 0) {
     await prisma.commodityPrice.createMany({ data: priceBatch, skipDuplicates: true });
     priceCount += priceBatch.length;
+  }
+
+  // Multi-source overlay: add a second source for key commodities so the
+  // multi-source chart toggle can be demonstrated.
+  const MULTI_SOURCE_SLUGS = [
+    'aus_sirloin_m9',
+    'aus_cube_roll_m9',
+    'corn_cbot',
+    'soybeans_cbot',
+    'wheat_us_srw',
+    'sugar_world',
+    'coffee_arabica',
+    'cotton_cotlook',
+    'crude_oil_brent',
+    'live_cattle_cme',
+    'crude_oil_wti',
+    'gold_lbma',
+    'copper_lme',
+    'beef_australia',
+    'wheat_cn',
+    'corn_cme',
+  ];
+  const multiBatch: typeof priceBatch = [];
+  for (const commodity of commodities) {
+    if (!MULTI_SOURCE_SLUGS.includes(commodity.slug)) continue;
+    const baseline = PRICE_BASELINES[commodity.slug];
+    if (!baseline) continue;
+
+    let price = baseline.base;
+    for (let d = 0; d < DAYS; d++) {
+      const date = new Date(NOW.getTime() - (DAYS - d) * 24 * 60 * 60 * 1000);
+      if (commodity.category === 'futures' && (date.getDay() === 0 || date.getDay() === 6)) continue;
+
+      const change = (Math.random() - 0.48) * baseline.volatility;
+      price = Math.max(price * 0.8, Math.min(price * 1.2, price + change));
+
+      const close = parseFloat(price.toFixed(4));
+      const open = parseFloat((price + (Math.random() - 0.5) * baseline.volatility * 0.3).toFixed(4));
+      const high = parseFloat(Math.max(open, close) * (1 + Math.random() * 0.005).toFixed(4));
+      const low = parseFloat(Math.min(open, close) * (1 - Math.random() * 0.005).toFixed(4));
+
+      multiBatch.push({
+        commodityId: commodity.id,
+        date,
+        interval: 'daily',
+        open,
+        high,
+        low,
+        close,
+        volume: null,
+        source: 'usda_ams',
+        metadata: null,
+      });
+
+      if (multiBatch.length >= BATCH_SIZE) {
+        await prisma.commodityPrice.createMany({ data: multiBatch, skipDuplicates: true });
+        priceCount += multiBatch.length;
+        multiBatch.length = 0;
+      }
+    }
+  }
+  if (multiBatch.length > 0) {
+    await prisma.commodityPrice.createMany({ data: multiBatch, skipDuplicates: true });
+    priceCount += multiBatch.length;
   }
 
   // Generate exchange rate market factors

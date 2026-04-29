@@ -111,7 +111,7 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
 export async function blacklistUserTokens(
   userId: string,
   reason: string = 'security',
-  excludeToken?: string
+  _excludeToken?: string
 ): Promise<number> {
   try {
     // Note: This requires sessions to be tracked

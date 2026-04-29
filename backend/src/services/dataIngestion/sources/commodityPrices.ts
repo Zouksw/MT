@@ -35,7 +35,7 @@ async function fetchExchangeRates(): Promise<ScraperResult> {
     ];
 
     for (const pair of pairs) {
-      if (!pair.rate || isNaN(pair.rate)) continue;
+      if (!pair.rate || Number.isNaN(pair.rate)) continue;
 
       const region = `${pair.base}/${pair.quote}`;
       const existing = await prisma.marketFactor.findUnique({
@@ -59,7 +59,7 @@ async function fetchExchangeRates(): Promise<ScraperResult> {
       const commodity = await prisma.commodity.findUnique({ where: { slug: pair.slug } });
       if (commodity) {
         const existingPrice = await prisma.commodityPrice.findUnique({
-          where: { commodityId_interval_date: { commodityId: commodity.id, interval: 'daily', date: today } },
+          where: { commodityId_interval_date_source: { commodityId: commodity.id, interval: 'daily', date: today, source: 'exchange_rate_api' } },
         });
 
         if (existingPrice) {
@@ -205,7 +205,7 @@ async function updateCommodityPrices(): Promise<ScraperResult> {
     }
 
     const existing = await prisma.commodityPrice.findUnique({
-      where: { commodityId_interval_date: { commodityId: commodity.id, interval: 'daily', date: today } },
+      where: { commodityId_interval_date_source: { commodityId: commodity.id, interval: 'daily', date: today, source: 'daily_refresh' } },
     });
 
     const priceData = {

@@ -3,7 +3,7 @@
  * Provides real-time server performance data and Web Vitals for the monitoring dashboard
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { success, error, validationError } from '@/lib/response';
 import { redis } from '@/lib/redis';
 import { logger } from '@/lib';
@@ -139,7 +139,7 @@ function percentile(sorted: number[], p: number): number {
  * GET /api/metrics
  * Returns comprehensive server performance metrics
  */
-router.get('/', (req: Request, res: Response) => {
+router.get('/', (_req: Request, res: Response) => {
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
   const uptimeSeconds = process.uptime();
@@ -241,7 +241,7 @@ router.get('/', (req: Request, res: Response) => {
  * GET /api/metrics/endpoints
  * Returns per-endpoint breakdown
  */
-router.get('/endpoints', (req: Request, res: Response) => {
+router.get('/endpoints', (_req: Request, res: Response) => {
   const endpoints: Record<string, {
     count: number;
     avgResponseTime: number;
@@ -486,7 +486,7 @@ router.get('/web-vitals/history', async (req: Request, res: Response) => {
  *
  * Returns: { overall: { avg, p50, p95, p99 }, endpoints: { [path]: { avg, p50, p95, p99, count } } }
  */
-router.get('/api-latency', (req: Request, res: Response) => {
+router.get('/api-latency', (_req: Request, res: Response) => {
   const endpoints: Record<string, {
     avg: number;
     p50: number;
@@ -535,7 +535,7 @@ router.get('/api-latency', (req: Request, res: Response) => {
  *
  * Returns: { webVitals: { lcp, fid, cls }, apiLatency: { avg, p95 }, errorRate, uptime, activeUsers }
  */
-router.get('/summary', async (req: Request, res: Response) => {
+router.get('/summary', async (_req: Request, res: Response) => {
   try {
     const uptimeSeconds = process.uptime();
 

@@ -1,13 +1,13 @@
 ---
 layout: post
-title: "Introducing IoTDB Enhanced v1.3: AI-Powered Time Series Analytics"
+title: "Introducing TradeMind AI v1.3: AI-Powered Time Series Analytics"
 date: 2025-03-28 09:00:00 +0000
 tags: [Release, AI, Forecasting]
-excerpt: "We're excited to announce IoTDB Enhanced v1.3, featuring major improvements to our AI forecasting engine, real-time anomaly detection, and a completely redesigned user interface."
-author: "IoTDB Enhanced Team"
+excerpt: "We're excited to announce TradeMind AI v1.3, featuring major improvements to our AI forecasting engine, real-time anomaly detection, and a completely redesigned user interface."
+author: "TradeMind AI Team"
 ---
 
-We're thrilled to announce the release of **IoTDB Enhanced v1.3**, a major update that brings significant improvements to AI-powered forecasting, real-time analytics, and user experience.
+We're thrilled to announce the release of **TradeMind AI v1.3**, a major update that brings significant improvements to AI-powered forecasting, real-time analytics, and user experience.
 
 ## 🚀 Key Highlights
 
@@ -98,7 +98,7 @@ We've strengthened security with:
 
 ## 🎯 Use Cases
 
-IoTDB Enhanced v1.3 is perfect for:
+TradeMind AI v1.3 is perfect for:
 
 - **IoT Monitoring**: Track sensor data from thousands of devices
 - **Industrial IoT**: Monitor machinery and predict maintenance needs
@@ -111,8 +111,8 @@ IoTDB Enhanced v1.3 is perfect for:
 Installation is simpler than ever:
 
 ```bash
-git clone https://github.com/Zouksw/iotdb-enhanced.git
-cd iotdb-enhanced
+git clone https://github.com/Zouksw/trademind-ai.git
+cd trademind-ai
 ./start.sh
 ```
 
@@ -134,14 +134,14 @@ Upgrading from v1.2? Here's what you need to know:
 1. Database migrations run automatically
 2. New configuration options in `.env` (optional)
 3. AI features are disabled by default - enable with `IOTDB_AI_ENABLED=true`
-4. Review the [CHANGELOG](https://github.com/Zouksw/iotdb-enhanced/blob/main/docs/CHANGELOG.md) for full details
+4. Review the [CHANGELOG](https://github.com/Zouksw/trademind-ai/blob/main/docs/CHANGELOG.md) for full details
 
 ## 🙏 Thank You
 
 This release wouldn't be possible without our amazing community of contributors and users. Thank you for your feedback, bug reports, and feature requests!
 
-**Ready to get started?** Visit [GitHub](https://github.com/Zouksw/iotdb-enhanced) to download v1.3 today.
+**Ready to get started?** Visit [GitHub](https://github.com/Zouksw/trademind-ai) to download v1.3 today.
 
 ---
 
-*Have questions or feedback? Join our [Discussions](https://github.com/Zouksw/iotdb-enhanced/discussions) or open an [Issue](https://github.com/Zouksw/iotdb-enhanced/issues).*
+*Have questions or feedback? Join our [Discussions](https://github.com/Zouksw/trademind-ai/discussions) or open an [Issue](https://github.com/Zouksw/trademind-ai/issues).*

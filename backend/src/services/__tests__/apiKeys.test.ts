@@ -3,7 +3,7 @@
  * Security-critical service that handles API key generation, validation, and management
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   generateApiKey,
   createApiKey,
@@ -16,30 +16,36 @@ import {
 import { prisma } from '@/lib';
 
 // Mock Prisma
-jest.mock('../../lib', () => ({
+vi.mock('@/lib', () => ({
   prisma: {
     user: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
     apiKey: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     auditLog: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
   },
 }));
 
 // Mock bcryptjs for API key validation tests
-jest.mock('bcryptjs', () => ({
-  hash: jest.fn().mockResolvedValue('$2b$12$hashedpassword'),
-  compare: jest.fn().mockResolvedValue(true),
-  genSalt: jest.fn().mockResolvedValue('$2b$12$salt'),
-}));
+vi.mock('bcryptjs', () => {
+  const mockHash = vi.fn().mockResolvedValue('$2b$12$hashedpassword');
+  const mockCompare = vi.fn().mockResolvedValue(true);
+  const mockGenSalt = vi.fn().mockResolvedValue('$2b$12$salt');
+  return {
+    default: { hash: mockHash, compare: mockCompare, genSalt: mockGenSalt },
+    hash: mockHash,
+    compare: mockCompare,
+    genSalt: mockGenSalt,
+  };
+});
 
 const mockPrisma = prisma as any;
 
@@ -77,11 +83,11 @@ const createMockApiKey = (overrides: any = {}) => ({
 
 describe('API Keys Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('generateApiKey', () => {
@@ -217,6 +223,7 @@ describe('API Keys Service', () => {
       expect(mockPrisma.apiKey.findMany).toHaveBeenCalledWith({
         where: {
           isActive: true,
+          lastCharacters: expect.any(Number),
           OR: [
             { expiresAt: null },
             { expiresAt: { gte: expect.any(Date) } },
@@ -236,7 +243,7 @@ describe('API Keys Service', () => {
     });
 
     it('should return null when bcrypt comparison fails', async () => {
-      const bcrypt = require('bcryptjs');
+      const bcrypt = (await import('bcryptjs')).default;
       const mockUser = createMockUser();
 
       const mockApiKey = createMockApiKey({
@@ -246,7 +253,7 @@ describe('API Keys Service', () => {
       mockPrisma.apiKey.findMany.mockResolvedValue([mockApiKey]);
 
       // Mock bcrypt.compare to return false for this test
-      (bcrypt.compare as jest.Mock).mockImplementationOnce(() => Promise.resolve(false));
+      (bcrypt.compare as vi.Mock).mockImplementationOnce(() => Promise.resolve(false));
 
       const result = await validateApiKey('iotd_invalid_key');
       expect(result).toBeNull();
@@ -255,15 +262,15 @@ describe('API Keys Service', () => {
     it('should update usage count and last used when validation succeeds', async () => {
       const mockUser = createMockUser();
 
-      // Create a real bcrypt hash for a test API key
-      const bcrypt = require('bcryptjs');
+      const bcrypt = (await import('bcryptjs')).default;
       const testApiKey = 'iotd_test_key_valid';
       const keyHash = await bcrypt.hash(testApiKey, 12);
+      (bcrypt.compare as vi.Mock).mockResolvedValue(true);
 
       const mockApiKey = createMockApiKey({
         user: mockUser,
         lastCharacters: 12345678,
-        keyHash, // Use real hash
+        keyHash,
       });
 
       mockPrisma.apiKey.findMany.mockResolvedValue([mockApiKey]);

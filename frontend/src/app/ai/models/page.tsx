@@ -1,21 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Tag, Button, message, Card, Row, Col, Alert } from "antd";
-import type { Breakpoint } from "antd";
-import {
-  ThunderboltOutlined,
-  RocketOutlined,
-  ReloadOutlined,
-  ExperimentOutlined,
-  LineChartOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { ChevronRight, FlaskConical, TrendingUp, Zap } from "lucide-react";
+import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Table } from "@/components/ui/Table";
+import { Alert } from "@/components/ui/Alert";
+import { useToast } from "@/components/ui/Toast";
 
 import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { DataTable } from "@/components/tables/DataTable";
-import GlassCard from "@/components/ui/GlassCard";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 // Check if AI features are disabled
@@ -35,6 +29,7 @@ export default function AIModelsPage() {
   const [models, setModels] = useState<AIModel[]>([]);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const toast = useToast();
 
   const fetchModels = useCallback(async () => {
     setLoading(true);
@@ -55,43 +50,43 @@ export default function AIModelsPage() {
       }
       const data = await response.json();
       setModels(data.models || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (!permissionError) {
-        message.error(`Failed to load models: ${error.message}`);
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        toast.showError(`Failed to load models: ${msg}`);
       }
     } finally {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast.showError, permissionError]);
 
   useEffect(() => {
     fetchModels();
   }, [fetchModels]);
 
+  const totalModels = models.length;
+
   const columns = [
     {
-      title: "Model ID",
-      dataIndex: "id",
       key: "id",
-      width: 150,
-      responsive: ["lg"] as Breakpoint[],
+      title: "Model ID",
+      dataIndex: "id" as keyof AIModel,
       render: (id: string) => (
-        <code className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-300">
+        <code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
           {id}
         </code>
       ),
     },
     {
-      title: "Name",
-      dataIndex: "name",
       key: "name",
-      width: 180,
+      title: "Name",
+      dataIndex: "name" as keyof AIModel,
       render: (name: string, record: AIModel) => (
-        <span className="font-semibold text-gray-900 dark:text-gray-50">
+        <span className="font-semibold text-foreground">
           {name}
           {record.ainode && (
-            <Tag color="blue" icon={<ThunderboltOutlined />} className="ml-2">
+            <Tag color="info" className="ml-2">
               Built-in
             </Tag>
           )}
@@ -99,38 +94,27 @@ export default function AIModelsPage() {
       ),
     },
     {
-      title: "Type",
-      dataIndex: "type",
       key: "type",
-      width: 100,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
+      title: "Type",
+      dataIndex: "type" as keyof AIModel,
       render: (type: string) => {
-        const color = type === "prediction" ? "green" : "blue";
+        const color = type === "prediction" ? "success" : "info";
         return <Tag color={color}>{type}</Tag>;
       },
     },
     {
-      title: "Description",
-      dataIndex: "description",
       key: "description",
-      ellipsis: true,
+      title: "Description",
+      dataIndex: "description" as keyof AIModel,
     },
     {
-      title: "Action",
       key: "action",
-      width: isMobile ? 80 : 120,
-      fixed: "right" as const,
-      render: (_: any, _record: AIModel) => (
+      title: "Action",
+      render: (_: string, _record: AIModel) => (
         <Button
-          type="primary"
-          icon={<RocketOutlined />}
+          variant="primary"
+          size="sm"
           onClick={() => window.location.href = "/forecasts/create"}
-          style={{
-            background: "#171717",
-            border: "none",
-            borderRadius: "6px",
-            fontWeight: 600,
-          }}
         >
           {!isMobile && "Use Model"}
         </Button>
@@ -138,140 +122,120 @@ export default function AIModelsPage() {
     },
   ];
 
-  const totalModels = models.length;
-
-  const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "AI & Anomaly Detection", href: "/ai" },
-    { title: "AI Models" },
-  ];
-
   return (
     <PageContainer>
       {/* AI Feature Disabled Warning */}
       {AI_DISABLED && (
-        <Alert
-          message="AI Features Temporarily Disabled"
-          description="AI features including model training and prediction have been temporarily disabled for security reasons. Contact your administrator for more information."
-          type="warning"
-          showIcon
-          icon={<WarningOutlined />}
-          style={{ marginBottom: isMobile ? 16 : 24 }}
-          closable
-        />
+        <Alert variant="warning" title="AI Features Temporarily Disabled" className="mb-6">
+          AI features including model training and prediction have been temporarily disabled for security reasons. Contact your administrator for more information.
+        </Alert>
       )}
 
       {/* Permission Error Alert */}
       {permissionError && (
         <Alert
-          message="AI Feature Access Restricted"
-          description={
-            permissionError.includes("disabled")
-              ? "AI features are currently disabled. Please contact your administrator to enable them."
-              : "AI model management is only available to administrators. If you are an administrator, please ensure you are logged in with your admin account."
-          }
-          type="error"
-          showIcon
-          icon={<WarningOutlined />}
-          style={{ marginBottom: isMobile ? 16 : 24 }}
+          variant="error"
+          title="AI Feature Access Restricted"
           closable
           onClose={() => setPermissionError(null)}
-        />
+          className="mb-6"
+        >
+          {permissionError.includes("disabled")
+            ? "AI features are currently disabled. Please contact your administrator to enable them."
+            : "AI model management is only available to administrators. If you are an administrator, please ensure you are logged in with your admin account."}
+        </Alert>
       )}
 
-      <PageHeader
-        title="AI Models"
-        description="Built-in AI models for forecasting and prediction"
-        breadcrumbs={breadcrumbItems}
-        actions={
-          <Button
-            type="primary"
-            onClick={fetchModels}
-            loading={loading}
-            disabled={AI_DISABLED}
-            icon={<ReloadOutlined />}
-            style={{
-              background: "#171717",
-              border: "none",
-              borderRadius: "6px",
-              fontWeight: 600,
-            }}
-          >
-            {!isMobile && "Refresh"}
-          </Button>
-        }
-      />
+      {/* Page Header */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <a href="/" className="hover:text-primary">Home</a>
+            <ChevronRight className="size-3" />
+            <a href="/ai" className="hover:text-primary">AI & Anomaly Detection</a>
+            <ChevronRight className="size-3" />
+            <span>AI Models</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">AI Models</h2>
+          <p className="text-sm text-muted-foreground mt-1">Built-in AI models for forecasting and prediction</p>
+        </div>
+        <Button
+          variant="primary"
+          onClick={fetchModels}
+          isLoading={loading}
+          disabled={AI_DISABLED}
+        >
+          {!isMobile && "Refresh"}
+        </Button>
+      </div>
 
       {/* Statistics Card */}
-      <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]} style={{ marginBottom: isMobile ? 16 : 24 }}>
-        <Col xs={24} sm={12}>
-          <GlassCard intensity="medium" style={{ padding: isMobile ? "16px" : "20px" }}>
-            <div className="flex items-center mb-3">
-              <div
-                className="w-10 h-10 rounded-md bg-primary flex items-center justify-center mr-3"
-              >
-                <ExperimentOutlined className="text-[20px] text-white" />
-              </div>
-              <span className="text-body-sm font-medium text-gray-600 dark:text-gray-400">
-                Available Models
-              </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="bg-card rounded-lg border border-gray-200/60 dark:border-gray-700/60 shadow-card-hover-dark p-5">
+          <div className="flex items-center mb-3">
+            <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center mr-3">
+              <FlaskConical className="size-5 text-white" />
             </div>
-            <div className="text-[28px] font-semibold text-gray-900 dark:text-gray-50 data-text">
-              {totalModels}
-            </div>
-            <span className="text-body-sm text-gray-500 dark:text-gray-400">
-              Built-in AI models
+            <span className="text-sm font-medium text-muted-foreground">
+              Available Models
             </span>
-          </GlassCard>
-        </Col>
-      </Row>
+          </div>
+          <div className="text-[28px] font-semibold text-foreground data-text">
+            {totalModels}
+          </div>
+          <span className="text-sm text-muted-foreground">
+            Built-in AI models
+          </span>
+        </div>
+      </div>
 
       {/* Models Table */}
-      <DataTable
-        columns={columns}
-        dataSource={models}
-        rowKey="id"
-        loading={loading}
-        enableZebraStriping={true}
-        stickyHeader={true}
-        scroll={{ x: isMobile ? "max-content" : undefined }}
-        pagination={false}
-      />
+      <Card className="mb-6">
+        <CardBody className="p-0">
+          <Table
+            columns={columns}
+            dataSource={models}
+            rowKey="id"
+            loading={loading}
+            emptyText="No AI models found"
+          />
+        </CardBody>
+      </Card>
 
       {/* Info Card */}
-      <Card
-        title="About AI Models"
-        style={{ marginTop: isMobile ? 16 : 24 }}
-      >
-        <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}>
-          <Col xs={24} md={8}>
-            <LineChartOutlined className="text-2xl text-info mb-2" />
-            <h5 className="text-h5 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
-              Time Series Forecasting
-            </h5>
-            <p className="text-body text-gray-600 dark:text-gray-400">
-              Use built-in ARIMA, FFT, or Neural Network models to generate predictions for your time series data.
-            </p>
-          </Col>
-          <Col xs={24} md={8}>
-            <ExperimentOutlined className="text-2xl text-purple-600 mb-2" />
-            <h5 className="text-h5 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
-              Anomaly Detection
-            </h5>
-            <p className="text-body text-gray-600 dark:text-gray-400">
-              Detect anomalies in your data using statistical and machine learning methods.
-            </p>
-          </Col>
-          <Col xs={24} md={8}>
-            <ThunderboltOutlined className="text-2xl text-primary mb-2" />
-            <h5 className="text-h5 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
-              IoTDB AI Node
-            </h5>
-            <p className="text-body text-gray-600 dark:text-gray-400">
-              Models run directly on IoTDB server for optimal performance.
-            </p>
-          </Col>
-        </Row>
+      <Card>
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">About AI Models</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <TrendingUp className="size-6 text-blue-500 mb-2" />
+              <h5 className="text-base font-semibold text-foreground mb-2">
+                Time Series Forecasting
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                Use built-in ARIMA, FFT, or Neural Network models to generate predictions for your time series data.
+              </p>
+            </div>
+            <div>
+              <FlaskConical className="size-6 text-purple-600 mb-2" />
+              <h5 className="text-base font-semibold text-foreground mb-2">
+                Anomaly Detection
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                Detect anomalies in your data using statistical and machine learning methods.
+              </p>
+            </div>
+            <div>
+              <Zap className="size-6 text-primary mb-2" />
+              <h5 className="text-base font-semibold text-foreground mb-2">
+                IoTDB AI Node
+              </h5>
+              <p className="text-sm text-muted-foreground">
+                Models run directly on IoTDB server for optimal performance.
+              </p>
+            </div>
+          </div>
+        </div>
       </Card>
     </PageContainer>
   );

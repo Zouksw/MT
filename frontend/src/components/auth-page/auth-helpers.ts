@@ -20,7 +20,7 @@ export function getTitle(type: AuthType): string {
     case "updatePassword":
       return "Update Password";
     default:
-      return "TradeMind AI";
+      return "MT";
   }
 }
 
@@ -76,7 +76,7 @@ export function getFormConfig(type: AuthType): AuthFormConfig {
       };
     default:
       return {
-        title: "TradeMind AI",
+        title: "MT",
         description: "",
         submitText: "Submit",
       };
@@ -104,7 +104,7 @@ export const buttonStyle = {
   fontWeight: 600,
   background: "#171717",
   border: "none",
-  boxShadow: "0 1px 3px rgba(0, 102, 204, 0.2)",
+  boxShadow: "0 1px 3px rgba(184, 134, 11, 0.2)",
   transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
 };
 

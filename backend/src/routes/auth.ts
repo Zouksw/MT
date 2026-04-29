@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { registrationRateLimiter, authRateLimiter } from '@/middleware/rateLimiter';
@@ -797,9 +797,9 @@ router.get('/verify', asyncHandler(async (req: Request, res: Response) => {
  */
 // GET /api/auth/csrf-token - Get CSRF token for form submissions
 // Returns a token that should be included in the x-csrf-token header for state-changing requests
-router.get('/csrf-token', asyncHandler(async (req: Request, res: Response) => {
+router.get('/csrf-token', asyncHandler(async (_req: Request, res: Response) => {
   // Generate a random CSRF token
-  const crypto = require('crypto');
+  const crypto = require('node:crypto');
   const token = crypto.randomBytes(32).toString('hex');
 
   // Set the token as an httpOnly cookie for additional security

@@ -1,12 +1,8 @@
 "use client";
 
-import React from "react";
-import { Card, Space, Divider, Row, Col, Typography, Progress, Skeleton, Empty, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Info } from "lucide-react";
 import SignalBadge from "./SignalBadge";
 import { TRADING_COLORS } from "@/lib/trading-chart-config";
-
-const { Text } = Typography;
 
 interface ModelSignal {
   modelId: string;
@@ -20,23 +16,14 @@ interface ModelSignal {
 }
 
 interface TradingSignalPanelProps {
-  /** Consensus signal type */
   consensusType: "BUY" | "SELL" | "HOLD";
-  /** Overall confidence 0-1 */
   confidence: number;
-  /** Number of models agreeing on consensus */
   modelsAgree: number;
-  /** Total models evaluated */
   totalModels: number;
-  /** Per-model signals */
   individualSignals: ModelSignal[];
-  /** Predicted direction % */
   predictedDirection: number;
-  /** Support price level */
   supportLevel: number;
-  /** Resistance price level */
   resistanceLevel: number;
-  /** Distribution counts */
   distribution: { buy: number; sell: number; hold: number };
   loading?: boolean;
 }
@@ -57,10 +44,6 @@ const signalSymbols: Record<string, { symbol: string; color: string; border: str
   HOLD: { symbol: "◆", color: TRADING_COLORS.hold, border: `4px dashed ${TRADING_COLORS.hold}` },
 };
 
-/**
- * Trading Signal Panel with per-model breakdown and consensus bar.
- * Accessible: symbols + colors + left-border patterns for WCAG 2.1.
- */
 export default function TradingSignalPanel({
   consensusType,
   confidence,
@@ -75,230 +58,205 @@ export default function TradingSignalPanel({
 }: TradingSignalPanelProps) {
   if (loading) {
     return (
-      <Card title="Signal Analysis" style={{ marginBottom: 16 }}>
-        <Skeleton active paragraph={{ rows: 4 }} />
-      </Card>
+      <div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+        <div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">Signal Analysis</div>
+        <div className="p-5 animate-pulse space-y-3">
+          <div className="h-8 bg-muted rounded" />
+          <div className="h-6 bg-muted rounded w-3/4" />
+          <div className="h-6 bg-muted rounded w-1/2" />
+          <div className="h-6 bg-muted rounded w-2/3" />
+        </div>
+      </div>
     );
   }
 
-  if (!individualSignals.length) {
+  const safeSignals = individualSignals.filter(Boolean);
+  if (!safeSignals.length) {
     return (
-      <Card title="Signal Analysis" style={{ marginBottom: 16 }}>
-        <Empty description="No signals available" />
-      </Card>
+      <div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+        <div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">Signal Analysis</div>
+        <div className="p-5 text-center text-gray-400">No signals available</div>
+      </div>
     );
   }
 
-  const availableCount = individualSignals.filter((s) => s.status !== "unavailable").length;
+  const availableCount = safeSignals.filter((s) => s.status !== "unavailable").length;
 
-  // All models failed
   if (availableCount === 0) {
     return (
-      <Card
-        title="Signal Analysis"
-        style={{ marginBottom: 16, borderColor: TRADING_COLORS.primary }}
-      >
-        <div style={{ textAlign: "center", padding: "16px 0" }}>
-          <Text type="secondary">No signals available</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Last attempted: {new Date().toLocaleTimeString()}
-          </Text>
+      <div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+        <div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">Signal Analysis</div>
+        <div className="p-5 text-center">
+          <p className="text-gray-400">No signals available</p>
+          <p className="text-xs text-gray-400 mt-1">Last attempted: {new Date().toLocaleTimeString()}</p>
         </div>
-      </Card>
+      </div>
     );
   }
 
-  // Consensus bar percentages
   const buyPct = totalModels > 0 ? (distribution.buy / totalModels) * 100 : 0;
   const sellPct = totalModels > 0 ? (distribution.sell / totalModels) * 100 : 0;
   const holdPct = totalModels > 0 ? (distribution.hold / totalModels) * 100 : 0;
 
   return (
-    <Card title="Signal Analysis" style={{ marginBottom: 16 }}>
-      {/* Consensus badge */}
-      <div style={{ textAlign: "center", padding: "8px 0 16px" }}>
-        <SignalBadge type={consensusType} confidence={confidence} size="large" />
-      </div>
+    <div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+      <div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">Signal Analysis</div>
 
-      <Divider style={{ margin: "4px 0 12px" }} />
+      <div className="p-5">
+        {/* Consensus badge */}
+        <div className="text-center py-2 pb-4">
+          <SignalBadge type={consensusType} confidence={confidence} size="large" />
+        </div>
 
-      {/* Key stats */}
-      <Row gutter={8}>
-        <Col span={12}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Models Agree</Text>
-          <br />
-          <Text strong style={{ fontFamily: "monospace" }}>
-            {modelsAgree}/{totalModels}
-          </Text>
-        </Col>
-        <Col span={12}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Direction</Text>
-          <br />
-          <Text
-            strong
-            style={{
-              fontFamily: "monospace",
-              color: predictedDirection > 0 ? TRADING_COLORS.buy : predictedDirection < 0 ? TRADING_COLORS.sell : undefined,
-            }}
-          >
-            {predictedDirection > 0 ? "+" : ""}{predictedDirection}%
-          </Text>
-        </Col>
-      </Row>
+        <hr className="border my-3" />
 
-      <Divider style={{ margin: "12px 0" }} />
+        {/* Key stats */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-xs text-gray-500">Models Agree</span>
+            <br />
+            <span className="font-semibold font-mono text-gray-900 dark:text-white">{modelsAgree}/{totalModels}</span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500">Direction</span>
+            <br />
+            <span
+              className="font-semibold font-mono"
+              style={{ color: predictedDirection > 0 ? TRADING_COLORS.buy : predictedDirection < 0 ? TRADING_COLORS.sell : undefined }}
+            >
+              {predictedDirection > 0 ? "+" : ""}{predictedDirection}%
+            </span>
+          </div>
+        </div>
 
-      <Row gutter={8}>
-        <Col span={12}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Support</Text>
-          <br />
-          <Text strong style={{ fontFamily: "monospace", color: TRADING_COLORS.supportLine }}>
-            ${supportLevel?.toFixed(2)}
-          </Text>
-        </Col>
-        <Col span={12}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Resistance</Text>
-          <br />
-          <Text strong style={{ fontFamily: "monospace", color: TRADING_COLORS.resistanceLine }}>
-            ${resistanceLevel?.toFixed(2)}
-          </Text>
-        </Col>
-      </Row>
+        <hr className="border my-3" />
 
-      <Divider style={{ margin: "12px 0 8px" }} />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-xs text-gray-500">Support</span>
+            <br />
+            <span className="font-semibold font-mono" style={{ color: TRADING_COLORS.supportLine }}>
+              ${supportLevel?.toFixed(2)}
+            </span>
+          </div>
+          <div>
+            <span className="text-xs text-gray-500">Resistance</span>
+            <br />
+            <span className="font-semibold font-mono" style={{ color: TRADING_COLORS.resistanceLine }}>
+              ${resistanceLevel?.toFixed(2)}
+            </span>
+          </div>
+        </div>
 
-      {/* Per-model breakdown */}
-      <div style={{ fontSize: 12 }}>
-        <Text type="secondary" strong style={{ marginBottom: 4, display: "block" }}>
-          Per-Model Breakdown
-        </Text>
-        <Space direction="vertical" size={6} style={{ width: "100%" }}>
-          {individualSignals.map((signal) => {
-            const style = signalSymbols[signal.type] || signalSymbols.HOLD;
-            const isUnavailable = signal.status === "unavailable";
+        <hr className="border my-3" />
 
-            return (
-              <div
-                key={signal.modelId}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "4px 8px",
-                  borderLeft: isUnavailable ? "4px dashed #D1D5DB" : style.border,
-                  borderRadius: "0 4px 4px 0",
-                  background: isUnavailable ? "#F9FAFB" : undefined,
-                  opacity: isUnavailable ? 0.6 : 1,
-                }}
-                role="status"
-                aria-label={`${modelNameMap[signal.modelId] || signal.modelId}: ${isUnavailable ? "unavailable" : signal.type} signal, confidence ${Math.round(signal.confidence * 100)}%`}
-              >
-                <span>
-                  <Text
-                    strong
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 12,
-                      color: isUnavailable ? "#9CA3AF" : style.color,
-                    }}
-                  >
-                    {style.symbol} {modelNameMap[signal.modelId] || signal.modelId}
-                  </Text>
-                  {isUnavailable && (
-                    <Tooltip title={signal.error || "Model unavailable"}>
-                      <InfoCircleOutlined style={{ marginLeft: 4, color: "#9CA3AF", fontSize: 10 }} />
-                    </Tooltip>
-                  )}
-                </span>
-                {!isUnavailable && (
-                  <Progress
-                    percent={Math.round(signal.confidence * 100)}
-                    size="small"
-                    style={{ width: 80, fontSize: 10 }}
-                    strokeColor={signal.confidence > 0.7 ? TRADING_COLORS.buy : TRADING_COLORS.primaryDark}
-                    format={(_pct) => (
-                      <span style={{ fontSize: 10 }}>
-                        {signal.predictedChange > 0 ? "+" : ""}
-                        {signal.predictedChange.toFixed(1)}%
+        {/* Per-model breakdown */}
+        <div className="text-xs">
+          <span className="block text-gray-500 font-semibold mb-1">Per-Model Breakdown</span>
+          <div className="flex flex-col gap-1.5">
+            {safeSignals.map((signal) => {
+              const style = signalSymbols[signal.type] || signalSymbols.HOLD;
+              const isUnavailable = signal.status === "unavailable";
+
+              return (
+                <div
+                  key={signal.modelId}
+                  className="flex items-center justify-between py-1 px-2 rounded-r"
+                  style={{
+                    borderLeft: isUnavailable ? "4px dashed #D1D5DB" : style.border,
+                    background: isUnavailable ? "#F9FAFB" : undefined,
+                    opacity: isUnavailable ? 0.6 : 1,
+                  }}
+                  role="status"
+                  aria-label={`${modelNameMap[signal.modelId] || signal.modelId}: ${isUnavailable ? "unavailable" : signal.type} signal, confidence ${Math.round(signal.confidence * 100)}%`}
+                >
+                  <span className="flex items-center gap-1">
+                    <span
+                      className="font-semibold font-mono text-xs"
+                      style={{ color: isUnavailable ? "#9CA3AF" : style.color }}
+                    >
+                      {style.symbol} {modelNameMap[signal.modelId] || signal.modelId}
+                    </span>
+                    {isUnavailable && (
+                      <span title={signal.error || "Model unavailable"}>
+                        <Info className="size-2.5 text-gray-400 ml-1" />
                       </span>
                     )}
-                  />
-                )}
-                {isUnavailable && (
-                  <Text style={{ fontSize: 10, color: "#9CA3AF" }}>N/A</Text>
-                )}
+                  </span>
+                  {!isUnavailable && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.round(signal.confidence * 100)}%`,
+                            backgroundColor: signal.confidence > 0.7 ? TRADING_COLORS.buy : TRADING_COLORS.primaryDark,
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-mono text-gray-500 w-12 text-right">
+                        {signal.predictedChange > 0 ? "+" : ""}{signal.predictedChange.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                  {isUnavailable && (
+                    <span className="text-[10px] text-gray-400">N/A</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <hr className="border my-3" />
+
+        {/* Consensus distribution bar */}
+        <div
+          role="status"
+          aria-label={`Consensus: ${distribution.buy} buy, ${distribution.sell} sell, ${distribution.hold} hold`}
+          aria-live="polite"
+        >
+          <span className="block text-gray-500 font-semibold text-xs mb-1">Consensus Distribution</span>
+          <div className="flex h-5 rounded overflow-hidden">
+            {buyPct > 0 && (
+              <div
+                style={{
+                  width: `${buyPct}%`,
+                  background: TRADING_COLORS.buy,
+                }}
+                className="flex items-center justify-center text-white text-[10px] font-semibold"
+              >
+                {distribution.buy > 0 && `${distribution.buy} Buy`}
               </div>
-            );
-          })}
-        </Space>
-      </div>
-
-      <Divider style={{ margin: "12px 0 8px" }} />
-
-      {/* Consensus distribution bar */}
-      <div
-        role="status"
-        aria-label={`Consensus: ${distribution.buy} buy, ${distribution.sell} sell, ${distribution.hold} hold`}
-        aria-live="polite"
-      >
-        <Text type="secondary" strong style={{ fontSize: 12, marginBottom: 4, display: "block" }}>
-          Consensus Distribution
-        </Text>
-        <div style={{ display: "flex", height: 20, borderRadius: 4, overflow: "hidden" }}>
-          {buyPct > 0 && (
-            <div
-              style={{
-                width: `${buyPct}%`,
-                background: TRADING_COLORS.buy,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 10,
-                fontWeight: 600,
-              }}
-            >
-              {distribution.buy > 0 && `${distribution.buy} Buy`}
-            </div>
-          )}
-          {holdPct > 0 && (
-            <div
-              style={{
-                width: `${holdPct}%`,
-                background: TRADING_COLORS.hold,
-                backgroundImage: "radial-gradient(circle, #94A3B8 1px, transparent 1px)",
-                backgroundSize: "4px 4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 10,
-                fontWeight: 600,
-              }}
-            >
-              {distribution.hold > 0 && `${distribution.hold} Hold`}
-            </div>
-          )}
-          {sellPct > 0 && (
-            <div
-              style={{
-                width: `${sellPct}%`,
-                background: TRADING_COLORS.sell,
-                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 6px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 10,
-                fontWeight: 600,
-              }}
-            >
-              {distribution.sell > 0 && `${distribution.sell} Sell`}
-            </div>
-          )}
+            )}
+            {holdPct > 0 && (
+              <div
+                style={{
+                  width: `${holdPct}%`,
+                  background: TRADING_COLORS.hold,
+                  backgroundImage: "radial-gradient(circle, #94A3B8 1px, transparent 1px)",
+                  backgroundSize: "4px 4px",
+                }}
+                className="flex items-center justify-center text-white text-[10px] font-semibold"
+              >
+                {distribution.hold > 0 && `${distribution.hold} Hold`}
+              </div>
+            )}
+            {sellPct > 0 && (
+              <div
+                style={{
+                  width: `${sellPct}%`,
+                  background: TRADING_COLORS.sell,
+                  backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 6px)",
+                }}
+                className="flex items-center justify-center text-white text-[10px] font-semibold"
+              >
+                {distribution.sell > 0 && `${distribution.sell} Sell`}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

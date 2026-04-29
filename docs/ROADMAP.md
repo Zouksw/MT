@@ -1,10 +1,10 @@
 ---
-title: "IoTDB Enhanced Platform Roadmap"
-en_title: "IoTDB Enhanced Platform Roadmap"
+title: "MT Platform Roadmap"
+en_title: "MT Platform Roadmap"
 version: "2.0.0"
 last_updated: "2026-03-22"
 status: "active"
-maintainer: "IoTDB Enhanced Team"
+maintainer: "MT Team"
 reviewers:
   - "Project Maintainer"
   - "Tech Lead"
@@ -25,7 +25,7 @@ changes:
     changes: "Strategic pivot: Stability & Optimization over feature expansion"
   - version: "1.0.0"
     date: "2026-03-10"
-    author: "IoTDB Enhanced Team"
+    author: "MT Team"
     changes: "Initial roadmap with phase planning"
 next_review: "2026-06-22"
 approval:
@@ -34,11 +34,11 @@ approval:
   approved_date: "2026-03-22"
 ---
 
-# IoTDB Enhanced Platform - Roadmap
+# MT Platform - Roadmap
 
 **IMPORTANT UPDATE (2026-03-22)**: This roadmap has been revised to focus on **stability, performance, and usability** rather than feature expansion. See [Stability & Optimization Plan](/.claude/plans/stability-optimization-plan.md) for details.
 
-This document outlines the planned development roadmap for the IoTDB Enhanced Platform.
+This document outlines the planned development roadmap for the MT Platform.
 
 ---
 
@@ -75,7 +75,7 @@ These features will be reconsidered **after** we have real user feedback confirm
 
 ## Overview
 
-The IoTDB Enhanced Platform is currently at **v1.1.0** with Phase 1 (Infrastructure) and Phase 2 (Performance & Automation) completed. This roadmap covers Phase 3 (Advanced Features) and future long-term plans.
+The MT Platform is currently at **v1.1.0** with Phase 1 (Infrastructure) and Phase 2 (Performance & Automation) completed. This roadmap covers Phase 3 (Advanced Features) and future long-term plans.
 
 ---
 
@@ -434,8 +434,8 @@ We follow Semantic Versioning ([SemVer](https://semver.org/)):
 
 ## Stay Updated
 
-- **GitHub Releases**: https://github.com/Zouksw/iotdb-enhanced/releases
-- **GitHub Issues**: https://github.com/Zouksw/iotdb-enhanced/issues
+- **GitHub Releases**: https://github.com/Zouksw/trademind-ai/releases
+- **GitHub Issues**: https://github.com/Zouksw/trademind-ai/issues
 - **CHANGELOG.md**: [CHANGELOG.md](CHANGELOG.md)
 
 ---

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# TradeMind AI - Database Backup Script
+# MT - Database Backup Script
 #
 # Creates a timestamped PostgreSQL backup using pg_dump.
 # Supports optional gzip compression and automatic rotation.

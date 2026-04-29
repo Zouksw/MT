@@ -44,17 +44,10 @@ jest.mock('html2canvas', () => ({
   }),
 }));
 
-// Mock antd message
-jest.mock('antd', () => {
-  const actual = jest.requireActual('antd');
-  return {
-    ...actual,
-    message: {
-      success: jest.fn(),
-      error: jest.fn(),
-    },
-  };
-});
+// Mock Toast instead of antd message
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ showError: jest.fn(), showSuccess: jest.fn(), showInfo: jest.fn(), showWarning: jest.fn() }),
+}));
 
 import { PredictionChart } from '../PredictionChart';
 
@@ -81,8 +74,8 @@ describe('PredictionChart', () => {
       />
     );
 
-    // Antd Spin renders an aria-busy spinner
-    expect(document.querySelector('.ant-spin')).toBeInTheDocument();
+    // Loading spinner uses animate-spin
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 
   it('should render chart header with timeseries name and algorithm', () => {
@@ -159,8 +152,13 @@ describe('PredictionChart', () => {
 
   it('should call onExport callback when CSV export clicked', () => {
     const onExport = jest.fn();
-    // Mock URL.createObjectURL for JSDOM
-    global.URL.createObjectURL = jest.fn(() => 'blob:test');
+    // Mock Blob and URL APIs for JSDOM
+    const mockUrl = 'blob:test';
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = jest.fn(() => mockUrl);
+    URL.revokeObjectURL = jest.fn();
+
     render(
       <PredictionChart
         timeseries="root.test.temp"
@@ -173,6 +171,9 @@ describe('PredictionChart', () => {
 
     fireEvent.click(screen.getByLabelText('Export chart data as CSV spreadsheet'));
     expect(onExport).toHaveBeenCalledWith('csv');
+
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
   it('should render with prediction-only data (no historical)', () => {

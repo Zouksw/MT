@@ -1,24 +1,34 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import withBundleAnalyzer from '@next/bundle-analyzer';
 import createNextIntlPlugin from 'next-intl/plugin';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@refinedev/antd"],
+  outputFileTracingRoot: path.join(__dirname),
   eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
-  // Allow external access
+
   experimental: {
-    serverComponentsExternalPackages: [],
-    // Enable Ant Design tree-shaking
-    esmExternals: "loose",
-    // Optimize imports for Ant Design
-    optimizePackageImports: ["@ant-design/icons", "antd"],
+    // Optimize barrel imports — dramatically reduces module count
+    optimizePackageImports: [
+      "@ant-design/icons",
+      "antd",
+      "@phosphor-icons/react",
+      "framer-motion",
+      "recharts",
+      "lodash",
+      "@refinedev/antd",
+      "@refinedev/core",
+      "dayjs",
+    ],
   },
 
-  // Performance optimizations
-  swcMinify: true,
+  // Performance
   compress: true,
 
   // Image optimization
@@ -28,7 +38,7 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
-  // API Proxy - Rewrite API requests to backend server
+  // API Proxy
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
@@ -43,52 +53,30 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
 
-    // CSP connect-src: allow Next.js dev server WebSocket in development
     const connectSrc = [
       "'self'",
-      "https://api.iotdb-enhanced.com",
       "http://localhost:8000",
       "https://localhost:8000",
       "ws://localhost:8000",
       "wss://localhost:8000"
     ];
 
-    // Add Next.js dev server WebSocket for HMR in development
     if (isDev) {
       connectSrc.push("ws://localhost:5001", "wss://localhost:5001");
     }
 
-    // frame-src: allow development tools in development mode
     const frameSrc = isDev ? "'self' http://localhost:5001" : "'none'";
 
     return [
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload'
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
-          },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
           {
             key: 'Content-Security-Policy',
             value: [
@@ -106,18 +94,14 @@ const nextConfig = {
               "upgrade-insecure-requests"
             ].join('; ')
           },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
-          }
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' }
         ]
       }
     ];
   },
 
-  // Webpack configuration for bundle optimization
-  webpack: (config, { isServer }) => {
-    // Reduce bundle size by excluding unnecessary packages
+  // Webpack — production-only optimizations
+  webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -127,34 +111,34 @@ const nextConfig = {
       };
     }
 
-    // Optimize bundle size
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          default: false,
-          vendors: false,
-          commons: {
-            name: 'commons',
-            chunks: 'all',
-            minChunks: 2,
-          },
-          // Vendor chunk for react and related libraries
-          react: {
-            name: 'react',
-            chunks: 'all',
-            test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
-          },
-          // Vendor chunk for ant design
-          antd: {
-            name: 'antd',
-            chunks: 'all',
-            test: /[\\/]node_modules[\\/](@ant-design|antd)[\\/]/,
+    // Only apply splitChunks in production builds — it slows dev compilation
+    if (!dev) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            commons: {
+              name: 'commons',
+              chunks: 'all',
+              minChunks: 2,
+            },
+            react: {
+              name: 'react',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+            antd: {
+              name: 'antd',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](@ant-design|antd)[\\/]/,
+            },
           },
         },
-      },
-    };
+      };
+    }
 
     return config;
   },

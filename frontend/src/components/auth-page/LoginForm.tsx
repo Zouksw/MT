@@ -1,173 +1,147 @@
-/**
- * Modern Login Form Component
- */
-
 "use client";
 
-import React from "react";
-import { Form, Input, Checkbox, message, Button } from "antd";
+import type React from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MailOutlined, LockOutlined } from "@ant-design/icons";
-import axios from "axios";
 import Cookies from "js-cookie";
 
 import { validationRules, required } from "@/lib/validation";
 import { sanitizer } from "@/lib/sanitizer";
 import { errorHandler } from "@/lib/errorHandler";
-import { csrfProtection } from "@/lib/csrf";
 import { tokenManager } from "@/lib/tokenManager";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export function LoginForm() {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const router = useRouter();
+  const toast = useToast();
 
-  const handleSubmit = async (values: Record<string, unknown>) => {
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    const emailErr = validationRules.validateAll(email, [required("Email"), validationRules.email]);
+    if (emailErr) errs.email = emailErr;
+    const pwErr = validationRules.validateAll(password, [required("Password")]);
+    if (pwErr) errs.password = pwErr;
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     setLoading(true);
     try {
-      const axiosInstance = axios.create({
-        baseURL: API_URL,
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      });
-
-      // Add CSRF token
-      const csrfHeaders = csrfProtection.getHeaders();
-      axiosInstance.defaults.headers.common = {
-        ...axiosInstance.defaults.headers.common,
-        ...csrfHeaders,
-      };
-
-      // Sanitize email
-      const sanitizedEmail = sanitizer.sanitizeEmail(values.email as string);
+      const sanitizedEmail = sanitizer.sanitizeEmail(email);
       if (!sanitizedEmail) {
-        message.error("Invalid email format");
+        toast.showError("Invalid email format");
         return;
       }
 
-      const response = await axiosInstance.post("/auth/login", {
-        email: sanitizedEmail,
-        password: values.password,
-        remember: values.remember,
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ email: sanitizedEmail, password, remember }),
       });
 
-      const { user, token: authToken } = response.data.data || response.data;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `${res.status} ${res.statusText}`);
+      }
 
-      // Store token securely
-      tokenManager.setToken(authToken, Boolean(values.remember));
+      const data = await res.json();
+      const { user, token: authToken } = data.data || data;
 
-      // Store non-sensitive user data
-      const userData = {
-        id: user.id,
-        email: user.email,
-        name: sanitizer.sanitizeString(user.name || "", 100),
-        avatar: user.avatar,
-        roles: user.roles || [],
-      };
+      tokenManager.setToken(authToken, remember);
+      Cookies.set(
+        "auth",
+        JSON.stringify({
+          id: user.id,
+          email: user.email,
+          name: sanitizer.sanitizeString(user.name || "", 100),
+          avatar: user.avatar,
+          roles: user.roles || [],
+        }),
+        {
+          expires: remember ? 30 : 7,
+          path: "/",
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+        }
+      );
 
-      Cookies.set("auth", JSON.stringify(userData), {
-        expires: values.remember ? 30 : 7,
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-      });
-
-      message.success("Login successful!");
+      toast.showSuccess("Login successful!");
       setTimeout(() => router.push("/"), 500);
     } catch (error: unknown) {
       const safeError = errorHandler.handleApiError(error);
-      message.error(safeError.message);
+      toast.showError(safeError.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    borderRadius: "8px",
-    padding: "12px 16px",
-    fontSize: "15px",
-    border: "1px solid #e5e7eb",
-    transition: "all 0.2s",
-    minWidth: 0,
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    height: "48px",
-    borderRadius: "8px",
-    fontSize: "16px",
-    fontWeight: 600,
-    background: "#171717",
-    border: "none",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-  };
-
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleSubmit}
-      validateTrigger="onBlur"
-      requiredMark={false}
-    >
-      <Form.Item
-        label={<span style={{ fontWeight: 500, color: "#374151", fontSize: "15px" }}>Email</span>}
-        name="email"
-        rules={[
-          validationRules.getAntRule(required("Email")),
-          validationRules.getAntRule(validationRules.email),
-        ]}
-      >
-        <Input
-          placeholder="your.email@example.com"
-          size="large"
-          style={inputStyle}
-          prefix={<MailOutlined style={{ fontSize: 16, color: "#9ca3af" }} />}
-          autoComplete="email"
-        />
-      </Form.Item>
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <Input
+        label="Email"
+        type="email"
+        placeholder="your.email@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        error={errors.email}
+        fullWidth
+        autoComplete="email"
+      />
 
-      <Form.Item
-        label={<span style={{ fontWeight: 500, color: "#374151", fontSize: "15px" }}>Password</span>}
-        name="password"
-        rules={[validationRules.getAntRule(required("Password"))]}
-      >
-        <Input.Password
-          placeholder="Enter your password"
-          size="large"
-          style={inputStyle}
-          prefix={<LockOutlined style={{ fontSize: 16, color: "#9ca3af" }} />}
-          autoComplete="current-password"
-        />
-      </Form.Item>
+      <Input
+        label="Password"
+        type="password"
+        placeholder="Enter your password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        error={errors.password}
+        fullWidth
+        autoComplete="current-password"
+      />
 
-      <Form.Item>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Form.Item name="remember" valuePropName="checked" noStyle>
-            <Checkbox style={{ fontSize: "14px", color: "#374151" }}>Remember me</Checkbox>
-          </Form.Item>
-          <a
-            href="/forgot-password"
-            style={{ fontSize: "14px", color: "#0a72ef", textDecoration: "none" }}
-          >
-            Forgot password?
-          </a>
-        </div>
-      </Form.Item>
-
-      <Form.Item style={{ marginBottom: 0 }}>
-        <Button
-          type="primary"
-          htmlType="submit"
-          style={buttonStyle}
-          className="w-full"
-          disabled={loading}
-          loading={loading}
+      <div className="flex justify-between items-center">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+            className="rounded border-input text-primary focus:ring-primary"
+          />
+          Remember me
+        </label>
+        <a
+          href="/forgot-password"
+          className="text-sm text-primary hover:text-primary-hover"
         >
-          {loading ? "Signing in..." : "Sign In"}
-        </Button>
-      </Form.Item>
-    </Form>
+          Forgot password?
+        </a>
+      </div>
+
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        isLoading={loading}
+        className="h-12 text-base"
+      >
+        {loading ? "Signing in..." : "Sign In"}
+      </Button>
+    </form>
   );
 }

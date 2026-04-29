@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Alert, Button, Space, Spin } from "antd";
-import { ReloadOutlined, CloseOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { StatsCardSkeleton } from "./Skeleton";
 
 export interface LoadingStateProps {
   loading: boolean;
-  timeout?: number; // Default 10000ms (10 seconds)
+  timeout?: number;
   onTimeout?: () => void;
   onCancel?: () => void;
   skeletonType?: "stats" | "table" | "form" | "card" | "inline";
@@ -15,28 +15,6 @@ export interface LoadingStateProps {
   className?: string;
 }
 
-/**
- * Loading State Component with Timeout Handling
- *
- * Provides intelligent loading feedback:
- * - Shows skeleton screen while loading
- * - Automatically detects timeouts
- * - Shows warning with retry/cancel options after timeout
- * - Prevents infinite loading states
- *
- * @example
- * ```tsx
- * <LoadingState
- *   loading={isLoading}
- *   timeout={10000}
- *   onTimeout={() => console.log('Request timed out')}
- *   onCancel={() => cancelRequest()}
- *   skeletonType="stats"
- * >
- *   <YourContent />
- * </LoadingState>
- * ```
- */
 export const LoadingState: React.FC<LoadingStateProps> = ({
   loading,
   timeout = 10000,
@@ -47,150 +25,60 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   className,
 }) => {
   const [timedOut, setTimedOut] = useState(false);
-  const [loadingId, setLoadingId] = useState(0);
+  const [_loadingId, setLoadingId] = useState(0);
 
-  // When loading transitions to false, increment loadingId to reset timeout state
   const prevLoadingRef = useRef(loading);
   if (prevLoadingRef.current !== loading) {
     prevLoadingRef.current = loading;
-    if (!loading) {
-      setLoadingId(prev => prev + 1);
-    }
+    if (!loading) setLoadingId(prev => prev + 1);
   }
 
   const effectiveTimedOut = loading ? timedOut : false;
 
   useEffect(() => {
     if (!loading) return;
-
-    const timer = setTimeout(() => {
-      setTimedOut(true);
-      onTimeout?.();
-    }, timeout);
-
+    const timer = setTimeout(() => { setTimedOut(true); onTimeout?.(); }, timeout);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, loadingId, timeout]);
+  }, [loading, timeout, onTimeout]);
 
-  // Not loading - show children
-  if (!loading) {
-    return <>{children}</>;
-  }
+  if (!loading) return <>{children}</>;
 
-  // Loading but not timed out - show skeleton
-  if (loading && !effectiveTimedOut) {
+  if (!effectiveTimedOut) {
     return (
       <div className={className}>
         {skeletonType === "stats" && <StatsCardSkeleton />}
-        {skeletonType === "table" && (
-          <div style={{ padding: "20px" }}>
-            <Spin size="large" tip="Loading data..." />
-          </div>
-        )}
-        {skeletonType === "form" && (
-          <div style={{ padding: "20px" }}>
-            <Spin size="large" tip="Loading form..." />
-          </div>
-        )}
-        {skeletonType === "card" && (
-          <div style={{ padding: "20px" }}>
-            <Spin size="large" tip="Loading..." />
+        {(skeletonType === "table" || skeletonType === "form" || skeletonType === "card") && (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
         {skeletonType === "inline" && (
-          <Space>
-            <Spin size="small" />
-            <span>Loading...</span>
-          </Space>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-gray-500">Loading...</span>
+          </div>
         )}
       </div>
     );
   }
 
-  // Loading and timed out - show timeout warning
   return (
     <div className={className}>
-      <Alert
-        type="warning"
-        icon={<ExclamationCircleOutlined />}
-        message="Request Taking Longer Than Expected"
-        description={
-          <Space direction="vertical" size="small" style={{ width: "100%" }}>
-            <p>
-              The request is taking longer than usual ({timeout / 1000}s). This
-              might be due to:
-            </p>
-            <ul>
-              <li>Slow network connection</li>
-              <li>Server processing heavy load</li>
-              <li>Temporary network issues</li>
-            </ul>
-            <Space>
-              {onCancel && (
-                <Button size="small" icon={<CloseOutlined />} onClick={onCancel}>
-                  Cancel
-                </Button>
-              )}
-              {onTimeout && (
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<ReloadOutlined />}
-                  onClick={onTimeout}
-                >
-                  Retry
-                </Button>
-              )}
-            </Space>
-          </Space>
-        }
-        showIcon
-        closable={false}
-      />
+      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200" role="alert">
+        <span className="text-sm font-bold mt-0.5">⚠</span>
+        <div className="flex-1">
+          <p className="font-semibold text-sm">Request Taking Longer Than Expected</p>
+          <div className="mt-2 text-sm">
+            <p>The request is taking longer than usual ({timeout / 1000}s).</p>
+            <div className="flex gap-2 mt-3">
+              {onCancel && <Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>}
+              {onTimeout && <Button variant="primary" size="sm" onClick={onTimeout}>Retry</Button>}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  );
-};
-
-/**
- * Simple timeout warning component
- */
-export const TimeoutWarning: React.FC<{
-  onRetry?: () => void;
-  onCancel?: () => void;
-  timeout?: number;
-}> = ({ onRetry, onCancel, timeout = 10000 }) => {
-  return (
-    <Alert
-      type="warning"
-      icon={<ExclamationCircleOutlined />}
-      message="Request Timeout"
-      description={
-        <Space direction="vertical" size="small">
-          <p>
-            The request exceeded the time limit ({timeout / 1000} seconds). You
-            can retry or cancel.
-          </p>
-          <Space>
-            {onCancel && (
-              <Button size="small" icon={<CloseOutlined />} onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
-            {onRetry && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<ReloadOutlined />}
-                onClick={onRetry}
-              >
-                Retry
-              </Button>
-            )}
-          </Space>
-        </Space>
-      }
-      showIcon
-    />
   );
 };
 

@@ -1,45 +1,28 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Space,
-  Tag,
-  Button,
-  Badge,
-  Tabs,
-  Select,
-  Tooltip,
-  Popconfirm,
-  message,
-  Alert,
-} from "antd";
-import type { Breakpoint } from "antd";
-import {
-  DeleteOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
-  CloseCircleOutlined,
-  ReloadOutlined,
-  CheckOutlined,
-  ClearOutlined,
-} from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
 
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { DataTable } from "@/components/tables/DataTable";
-import { ContentCard } from "@/components/layout/ContentCard";
-import { DataPageStats } from "@/components/data/DataPageStats";
+import { Button } from "@/components/ui/Button";
+import { Tag } from "@/components/ui/Tag";
+import { Alert } from "@/components/ui/Alert";
+import { Tabs } from "@/components/ui/Tabs";
+import { Select } from "@/components/ui/Select";
+import { Table, type Column } from "@/components/ui/Table";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { Card, CardBody } from "@/components/ui/Card";
 import { authFetch } from "@/utils/auth";
 import { useIsMobile } from "@/lib/responsive-utils";
+import { ChevronRight, RefreshCw, Check, Trash2 } from "lucide-react";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
 
-interface Alert {
+interface AlertItem {
   id: string;
   type: "ANOMALY" | "FORECAST_READY" | "SYSTEM";
   severity: "INFO" | "WARNING" | "ERROR";
@@ -62,49 +45,46 @@ interface AlertStats {
   byType: Record<string, number>;
 }
 
-const API_BASE = ""; // Use relative paths for Next.js rewrites
-
-
 export default function AlertList() {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const _router = useRouter();
+  const toast = useToast();
+  const isMobile = useIsMobile();
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [stats, setStats] = useState<AlertStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState<AlertItem | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = isMobile ? 10 : 20;
   const [filters, setFilters] = useState({
     type: undefined as string | undefined,
     severity: undefined as string | undefined,
     unreadOnly: false,
   });
-  const isMobile = useIsMobile();
 
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-
       if (filters.unreadOnly) params.append("unreadOnly", "true");
       if (filters.type) params.append("type", filters.type);
       if (filters.severity) params.append("severity", filters.severity);
 
-      const response = await authFetch(`${API_BASE}/api/alerts?${params}`);
-
+      const response = await authFetch(`/api/alerts?${params}`);
       if (!response.ok) throw new Error("Failed to fetch alerts");
-
       const data = await response.json();
       setAlerts(data.alerts || []);
     } catch {
-      message.error("Failed to load alerts");
+      toast.showError("Failed to load alerts");
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, toast]);
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await authFetch(`${API_BASE}/api/alerts/stats`);
-
+      const response = await authFetch("/api/alerts/stats");
       if (!response.ok) throw new Error("Failed to fetch stats");
-
       const result = await response.json();
       setStats(result.data || result);
     } catch {
@@ -119,211 +99,62 @@ export default function AlertList() {
 
   const handleMarkAsRead = async (alertId: string) => {
     try {
-      await authFetch(`${API_BASE}/api/alerts/${alertId}/read`, {
-        method: "PATCH",
-      });
-
+      await authFetch(`/api/alerts/${alertId}/read`, { method: "PATCH" });
       fetchAlerts();
       fetchStats();
-      message.success("Marked as read");
+      toast.showSuccess("Marked as read");
     } catch {
-      message.error("Failed to mark as read");
+      toast.showError("Failed to mark as read");
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
-      await authFetch(`${API_BASE}/api/alerts/read-all`, {
-        method: "PATCH",
-      });
-
+      await authFetch("/api/alerts/read-all", { method: "PATCH" });
       fetchAlerts();
       fetchStats();
-      message.success("All alerts marked as read");
+      toast.showSuccess("All alerts marked as read");
     } catch {
-      message.error("Failed to mark all as read");
+      toast.showError("Failed to mark all as read");
     }
   };
 
   const handleDeleteAlert = async (alertId: string) => {
     try {
-      await fetch(`${API_BASE}/api/alerts/${alertId}`, {
-        method: "DELETE",
-      });
-
+      await authFetch(`/api/alerts/${alertId}`, { method: "DELETE" });
       fetchAlerts();
       fetchStats();
-      message.success("Alert deleted");
+      toast.showSuccess("Alert deleted");
     } catch {
-      message.error("Failed to delete alert");
+      toast.showError("Failed to delete alert");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
-  const getAlertIcon = (type: string, severity: string) => {
-    if (severity === "ERROR") return <CloseCircleOutlined style={{ color: "#EF4444" }} />;
-    if (severity === "WARNING") return <WarningOutlined style={{ color: "#F59E0B" }} />;
-    return <InfoCircleOutlined style={{ color: "#0a72ef" }} />;
-  };
-
-  const getAlertTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      ANOMALY: "red",
-      FORECAST_READY: "blue",
-      SYSTEM: "green",
+  const getAlertSeverityTagColor = (severity: string): "default" | "primary" | "success" | "warning" | "error" | "info" => {
+    const map: Record<string, "default" | "primary" | "success" | "warning" | "error" | "info"> = {
+      INFO: "info",
+      WARNING: "warning",
+      ERROR: "error",
     };
-    return colors[type] || "default";
+    return map[severity] || "default";
   };
 
-  const getAlertSeverityColor = (severity: string) => {
-    const colors: Record<string, string> = {
-      INFO: "blue",
-      WARNING: "orange",
-      ERROR: "red",
+  const getAlertTypeTagColor = (type: string): "default" | "primary" | "success" | "warning" | "error" | "info" => {
+    const map: Record<string, "default" | "primary" | "success" | "warning" | "error" | "info"> = {
+      ANOMALY: "error",
+      FORECAST_READY: "info",
+      SYSTEM: "success",
     };
-    return colors[severity] || "default";
+    return map[type] || "default";
   };
 
-  const columns = [
-    {
-      title: "Status",
-      dataIndex: "isRead",
-      key: "isRead",
-      width: 80,
-      align: "center" as const,
-      responsive: ["lg"] as Breakpoint[],
-      render: (isRead: boolean) => (
-        <Tooltip title={isRead ? "Read" : "New"}>
-          <Badge status={isRead ? "default" : "processing"} />
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-      width: 140,
-      responsive: ["md", "lg", "xl"] as Breakpoint[],
-      render: (type: string) => {
-        const icons: Record<string, string> = {
-          ANOMALY: "🚨",
-          FORECAST_READY: "📈",
-          SYSTEM: "⚙️",
-        };
-        return (
-          <Tag color={getAlertTypeColor(type)} style={{ margin: 0 }}>
-            {icons[type]} {type.replace(/_/g, " ")}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: "Severity",
-      dataIndex: "severity",
-      key: "severity",
-      width: 100,
-      align: "center" as const,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (severity: string) => {
-        const icons: Record<string, React.ReactNode> = {
-          INFO: <InfoCircleOutlined />,
-          WARNING: <WarningOutlined />,
-          ERROR: <CloseCircleOutlined />,
-        };
-        return (
-          <Tag
-            color={getAlertSeverityColor(severity)}
-            icon={icons[severity]}
-            style={{ margin: 0 }}
-          >
-            {severity}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: "Message",
-      dataIndex: "message",
-      key: "message",
-      ellipsis: true,
-      render: (message: string, record: Alert) => (
-        <Space>
-          {getAlertIcon(record.type, record.severity)}
-          <span className="text-body">{message}</span>
-        </Space>
-      ),
-    },
-    {
-      title: "Time Series",
-      dataIndex: "timeseries",
-      key: "timeseries",
-      width: 180,
-      ellipsis: true,
-      responsive: ["lg", "xl"] as Breakpoint[],
-      render: (timeseries?: { name: string; dataset: { name: string } }) =>
-        timeseries ? (
-          <Space direction="vertical" size={0}>
-            <span className="text-[13px] text-gray-900 dark:text-gray-50">{timeseries.name}</span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-              {timeseries.dataset.name}
-            </span>
-          </Space>
-        ) : (
-          "-"
-        ),
-    },
-    {
-      title: "Time",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 140,
-      responsive: ["sm", "md", "lg", "xl"] as Breakpoint[],
-      render: (date: string) => (
-        <Tooltip title={dayjs(date).format("YYYY-MM-DD HH:mm:ss")}>
-          <span className="text-body-sm text-gray-500 dark:text-gray-400">
-            {dayjs(date).fromNow()}
-          </span>
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: isMobile ? 80 : 160,
-      fixed: "right" as const,
-      render: (_: any, record: Alert) => (
-        <Space size="small">
-          {!record.isRead && !isMobile && (
-            <Button
-              size="small"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleMarkAsRead(record.id)}
-            >
-              Mark Read
-            </Button>
-          )}
-          {!record.isRead && isMobile && (
-            <Button
-              size="small"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleMarkAsRead(record.id)}
-            />
-          )}
-          <Popconfirm
-            title="Delete Alert"
-            description="Are you sure you want to delete this alert?"
-            onConfirm={() => handleDeleteAlert(record.id)}
-            okText="Delete"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-          >
-            <Button size="small" icon={<DeleteOutlined />} danger>
-              {!isMobile && "Delete"}
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  const getAlertIcon = (severity: string) => {
+    if (severity === "ERROR") return <span className="text-red-500">&#10060;</span>;
+    if (severity === "WARNING") return <span className="text-amber-500">&#9888;</span>;
+    return <span className="text-amber-600">&#8505;</span>;
+  };
 
   const filteredAlerts = alerts.filter((alert) => {
     if (activeTab === "unread") return !alert.isRead;
@@ -333,177 +164,322 @@ export default function AlertList() {
     return true;
   });
 
-  const tabItems = [
-    { key: "all", label: `All Alerts (${stats?.total || 0})` },
-    { key: "unread", label: `Unread (${stats?.unread || 0})` },
-    { key: "anomaly", label: "Anomalies" },
-    { key: "forecast", label: "Forecasts" },
-    { key: "system", label: "System" },
-  ];
+  const totalPages = Math.ceil(filteredAlerts.length / pageSize);
+  const paginatedAlerts = filteredAlerts.slice((page - 1) * pageSize, page * pageSize);
 
-  const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "Alerts & Notifications" },
+  // Reset page when filters or tab change
+  useEffect(() => {
+    setPage(1);
+  }, []);
+
+  const columns: Column<AlertItem>[] = [
+    {
+      key: "status",
+      title: "Status",
+      dataIndex: "isRead",
+      width: 80,
+      align: "center",
+      render: (_value: boolean, record: AlertItem) => (
+        <span title={record.isRead ? "Read" : "New"}>
+          {record.isRead ? (
+            <span className="inline-block w-2 h-2 rounded-full bg-gray-300" />
+          ) : (
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "type",
+      title: "Type",
+      dataIndex: "type",
+      width: 160,
+      render: (type: string) => {
+        const icons: Record<string, string> = {
+          ANOMALY: "\u{1F6A8}",
+          FORECAST_READY: "\u{1F4C8}",
+          SYSTEM: "⚙️",
+        };
+        return (
+          <Tag color={getAlertTypeTagColor(type)}>
+            {icons[type] || ""} {type.replace(/_/g, " ")}
+          </Tag>
+        );
+      },
+    },
+    {
+      key: "severity",
+      title: "Severity",
+      dataIndex: "severity",
+      width: 110,
+      align: "center",
+      render: (severity: string) => (
+        <Tag color={getAlertSeverityTagColor(severity)}>{severity}</Tag>
+      ),
+    },
+    {
+      key: "message",
+      title: "Message",
+      dataIndex: "message",
+      render: (message: string, record: AlertItem) => (
+        <div className="flex items-center gap-2">
+          {getAlertIcon(record.severity)}
+          <span className="text-body truncate">{message}</span>
+        </div>
+      ),
+    },
+    {
+      key: "timeseries",
+      title: "Time Series",
+      dataIndex: "timeseries",
+      width: 180,
+      render: (timeseries?: { name: string; dataset: { name: string } }) =>
+        timeseries ? (
+          <div>
+            <div className="text-[13px] text-foreground">{timeseries.name}</div>
+            <div className="text-[11px] text-muted-foreground">{timeseries.dataset.name}</div>
+          </div>
+        ) : (
+          "-"
+        ),
+    },
+    {
+      key: "createdAt",
+      title: "Time",
+      dataIndex: "createdAt",
+      width: 140,
+      render: (date: string) => (
+        <span title={dayjs(date).format("YYYY-MM-DD HH:mm:ss")} className="text-body-sm text-muted-foreground">
+          {dayjs(date).fromNow()}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      title: "Actions",
+      width: isMobile ? 80 : 180,
+      render: (_value: any, record: AlertItem) => (
+        <div className="flex items-center gap-2">
+          {!record.isRead && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleMarkAsRead(record.id)}
+              aria-label="Mark as read"
+            >
+              {!isMobile && "Mark Read"}
+              {isMobile && (
+                <Check className="size-4" />
+              )}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => setDeleteTarget(record)}
+            aria-label="Delete alert"
+          >
+            {!isMobile && "Delete"}
+            {isMobile && (
+              <Trash2 className="size-4" />
+            )}
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
-    <PageContainer>
-      <PageHeader
-        title="Alerts & Notifications"
-        description="View and manage system alerts, anomalies, and notifications"
-        breadcrumbs={breadcrumbItems}
-        actions={
-          <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => { fetchAlerts(); fetchStats(); }}
-            >
-              {!isMobile && "Refresh"}
-            </Button>
-            {stats && stats.unread > 0 && (
+    <div className="min-h-screen bg-muted p-4 md:p-6">
+      <div className="mx-auto max-w-360">
+        {/* Page Header */}
+        <div className="mb-6">
+          {/* Breadcrumbs */}
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
+            <ChevronRight className="size-3" />
+            <span className="text-foreground">Alerts & Notifications</span>
+          </nav>
+
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground tracking-tight">Alerts & Notifications</h1>
+              <p className="text-sm text-muted-foreground mt-1">View and manage system alerts, anomalies, and notifications</p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
               <Button
-                icon={<CheckOutlined />}
-                onClick={handleMarkAllAsRead}
-                type="primary"
-                style={{
-                  background: "#171717",
-                  border: "none",
-                  borderRadius: "6px",
-                  fontWeight: 600,
-                }}
+                variant="ghost"
+                onClick={() => { fetchAlerts(); fetchStats(); }}
               >
-                {!isMobile && "Mark All Read"}
+                <RefreshCw className="size-4 mr-1.5" />
+                {!isMobile && "Refresh"}
               </Button>
-            )}
-          </Space>
-        }
-      />
-
-      {/* Statistics */}
-      {stats && (
-        <DataPageStats
-          items={[
-            {
-              label: "Total Alerts",
-              value: stats.total,
-              variant: "primary",
-            },
-            {
-              label: "Unread",
-              value: stats.unread,
-              variant: stats.unread > 0 ? "error" : "default",
-            },
-            {
-              label: "Errors",
-              value: stats.bySeverity.ERROR || 0,
-              variant: "error",
-            },
-            {
-              label: "Warnings",
-              value: stats.bySeverity.WARNING || 0,
-              variant: "warning",
-            },
-          ]}
-          featuredIndex={0}
-        />
-      )}
-
-      {/* Filters */}
-      <ContentCard
-        title="Filters"
-        style={{ marginBottom: 16 }}
-      >
-        <Space wrap size="middle">
-          <span className="font-semibold text-gray-900 dark:text-gray-50">Filter by:</span>
-          <Select
-            placeholder="Type"
-            allowClear
-            style={{ width: 150 }}
-            value={filters.type}
-            onChange={(value) => setFilters({ ...filters, type: value })}
-          >
-            <Select.Option value="ANOMALY">Anomaly</Select.Option>
-            <Select.Option value="FORECAST_READY">Forecast Ready</Select.Option>
-            <Select.Option value="SYSTEM">System</Select.Option>
-          </Select>
-
-          <Select
-            placeholder="Severity"
-            allowClear
-            style={{ width: 150 }}
-            value={filters.severity}
-            onChange={(value) => setFilters({ ...filters, severity: value })}
-          >
-            <Select.Option value="INFO">Info</Select.Option>
-            <Select.Option value="WARNING">Warning</Select.Option>
-            <Select.Option value="ERROR">Error</Select.Option>
-          </Select>
-
-          <Select
-            placeholder="Status"
-            allowClear
-            style={{ width: 150 }}
-            value={filters.unreadOnly ? "unread" : undefined}
-            onChange={(value) => setFilters({ ...filters, unreadOnly: value === "unread" })}
-          >
-            <Select.Option value="unread">Unread Only</Select.Option>
-          </Select>
-
-          {(filters.type || filters.severity || filters.unreadOnly) && (
-            <Button
-              danger
-              icon={<ClearOutlined />}
-              onClick={() =>
-                setFilters({ type: undefined, severity: undefined, unreadOnly: false })
-              }
-            >
-              Clear Filters
-            </Button>
-          )}
-        </Space>
-      </ContentCard>
-
-      {/* Alerts Table */}
-      <ContentCard>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-          style={{ marginBottom: 0 }}
-        />
-
-        <div style={{ marginTop: 16 }}>
-          {filteredAlerts.length === 0 ? (
-            <Alert
-              message="No alerts found"
-              description={
-                activeTab === "unread"
-                  ? "You have no unread alerts."
-                  : "No alerts match your current filters."
-              }
-              type="info"
-              showIcon
-            />
-          ) : (
-            <DataTable
-              columns={columns}
-              dataSource={filteredAlerts}
-              loading={loading}
-              rowKey="id"
-              enableZebraStriping={true}
-              stickyHeader={true}
-              scroll={{ x: isMobile ? "max-content" : undefined }}
-              pagination={{
-                pageSize: isMobile ? 10 : 20,
-                showSizeChanger: !isMobile,
-                showTotal: (total) => `Total ${total} alert${total !== 1 ? "s" : ""}`,
-                position: ["bottomRight"] as ["bottomRight"],
-                simple: isMobile,
-              }}
-            />
-          )}
+              {stats && stats.unread > 0 && (
+                <Button onClick={handleMarkAllAsRead}>
+                  <Check className="size-4 mr-1.5" />
+                  {!isMobile && "Mark All Read"}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-      </ContentCard>
-    </PageContainer>
+
+        {/* Statistics */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card className="border-l-4 border-l-primary">
+              <CardBody>
+                <p className="text-sm text-muted-foreground">Total Alerts</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
+              </CardBody>
+            </Card>
+            <Card className={stats.unread > 0 ? "border-l-4 border-l-red-500" : "border-l-4 border-l-gray-300"}>
+              <CardBody>
+                <p className="text-sm text-muted-foreground">Unread</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.unread}</p>
+              </CardBody>
+            </Card>
+            <Card className="border-l-4 border-l-red-500">
+              <CardBody>
+                <p className="text-sm text-muted-foreground">Errors</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.bySeverity.ERROR || 0}</p>
+              </CardBody>
+            </Card>
+            <Card className="border-l-4 border-l-amber-500">
+              <CardBody>
+                <p className="text-sm text-muted-foreground">Warnings</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.bySeverity.WARNING || 0}</p>
+              </CardBody>
+            </Card>
+          </div>
+        )}
+
+        {/* Filters */}
+        <Card className="mb-4">
+          <CardBody>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-semibold text-foreground">Filter by:</span>
+              <Select
+                placeholder="Type"
+                value={filters.type}
+                onChange={(value) => setFilters({ ...filters, type: value || undefined })}
+                options={[
+                  { value: "ANOMALY", label: "Anomaly" },
+                  { value: "FORECAST_READY", label: "Forecast Ready" },
+                  { value: "SYSTEM", label: "System" },
+                ]}
+              />
+              <Select
+                placeholder="Severity"
+                value={filters.severity}
+                onChange={(value) => setFilters({ ...filters, severity: value || undefined })}
+                options={[
+                  { value: "INFO", label: "Info" },
+                  { value: "WARNING", label: "Warning" },
+                  { value: "ERROR", label: "Error" },
+                ]}
+              />
+              <Select
+                placeholder="Status"
+                value={filters.unreadOnly ? "unread" : undefined}
+                onChange={(value) => setFilters({ ...filters, unreadOnly: value === "unread" })}
+                options={[{ value: "unread", label: "Unread Only" }]}
+              />
+              {(filters.type || filters.severity || filters.unreadOnly) && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setFilters({ type: undefined, severity: undefined, unreadOnly: false })}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Alerts Table */}
+        <Card>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={[
+              { key: "all", label: `All Alerts (${stats?.total || 0})`, content: null },
+              { key: "unread", label: `Unread (${stats?.unread || 0})`, content: null },
+              { key: "anomaly", label: "Anomalies", content: null },
+              { key: "forecast", label: "Forecasts", content: null },
+              { key: "system", label: "System", content: null },
+            ]}
+          />
+
+          <div className="mt-4">
+            {filteredAlerts.length === 0 ? (
+              <Alert variant="info">
+                {activeTab === "unread"
+                  ? "You have no unread alerts."
+                  : "No alerts match your current filters."}
+              </Alert>
+            ) : (
+              <>
+                <Table
+                  columns={columns}
+                  dataSource={paginatedAlerts}
+                  rowKey="id"
+                  loading={loading}
+                  emptyText="No alerts found"
+                />
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-3 border-t border">
+                    <span className="text-sm text-muted-foreground">
+                      Total {filteredAlerts.length} alert{filteredAlerts.length !== 1 ? "s" : ""}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={page <= 1}
+                        onClick={() => setPage(page - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-foreground">
+                        {page} / {totalPages}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={page >= totalPages}
+                        onClick={() => setPage(page + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={deleteTarget !== null}
+          onClose={() => setDeleteTarget(null)}
+          title="Delete Alert"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button variant="danger" onClick={() => deleteTarget && handleDeleteAlert(deleteTarget.id)}>Delete</Button>
+            </>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete this alert? This action cannot be undone.
+          </p>
+        </Modal>
+      </div>
+    </div>
   );
 }

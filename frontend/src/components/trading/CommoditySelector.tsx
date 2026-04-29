@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { Tabs, Select, Skeleton } from "antd";
-import { COMPONENT_BREAKPOINTS } from "@/lib/responsive-constants";
+import { Select } from "@/components/ui/Select";
 
 interface Commodity {
   id: string;
@@ -15,74 +14,42 @@ interface CommoditySelectorProps {
   selected: string;
   onSelect: (id: string) => void;
   loading?: boolean;
-  /** Render label for each commodity tab/option */
   renderLabel?: (commodity: Commodity) => React.ReactNode;
 }
 
-/**
- * Responsive commodity selector:
- * - Desktop (>=768px): horizontal tab bar
- * - Mobile (<768px): Select dropdown with search
- */
-export default function CommoditySelector({
-  commodities,
-  selected,
-  onSelect,
-  loading = false,
-  renderLabel,
-}: CommoditySelectorProps) {
+export default function CommoditySelector({ commodities, selected, onSelect, loading = false, renderLabel }: CommoditySelectorProps) {
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < COMPONENT_BREAKPOINTS.GRID_TWO_COLUMN);
+    const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
   if (loading) {
-    return (
-      <div style={{ display: "flex", gap: 8 }}>
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton.Button key={i} active size="small" style={{ width: 120 }} />
-        ))}
-      </div>
-    );
+    return <div className="flex gap-2">{[1, 2, 3, 4].map((i) => <div key={i} className="h-8 w-30 bg-muted rounded animate-pulse" />)}</div>;
   }
 
-  if (commodities.length === 0) {
-    return null;
-  }
+  if (commodities.length === 0) return null;
 
   if (isMobile) {
     return (
-      <Select
-        value={selected}
-        onChange={onSelect}
-        style={{ width: "100%", marginBottom: 12 }}
-        showSearch
-        optionFilterProp="label"
-        options={commodities.map((c) => ({
-          value: c.id,
-          label: c.symbol ? `${c.name} (${c.symbol})` : c.name,
-        }))}
-        aria-label="Select commodity"
-      />
+      <div className="mb-3">
+        <Select value={selected} onChange={onSelect} options={commodities.map((c) => ({ value: c.id, label: c.symbol ? `${c.name} (${c.symbol})` : c.name }))} fullWidth />
+      </div>
     );
   }
 
   const defaultLabel = (c: Commodity) => c.symbol ? `${c.name} (${c.symbol})` : c.name;
 
   return (
-    <Tabs
-      activeKey={selected}
-      onChange={onSelect}
-      items={commodities.map((c) => ({
-        key: c.id,
-        label: renderLabel ? renderLabel(c) : defaultLabel(c),
-      }))}
-      size="small"
-      style={{ marginBottom: 16 }}
-    />
+    <div className="flex gap-1 mb-4 border-b overflow-x-auto">
+      {commodities.map((c) => (
+        <button key={c.id} onClick={() => onSelect(c.id)} className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selected === c.id ? "border-amber-500 text-amber-600" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+          {renderLabel ? renderLabel(c) : defaultLabel(c)}
+        </button>
+      ))}
+    </div>
   );
 }

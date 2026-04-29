@@ -3,8 +3,8 @@
  * Security-critical middleware that handles all errors in the application
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { Request, Response, NextFunction } from 'express';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import {
   errorHandler,
@@ -21,15 +21,15 @@ import {
 import { logger } from '@/utils/logger';
 
 // Mock logger
-jest.mock('@/utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
-    error: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
-const mockLogger = logger as jest.Mocked<typeof logger>;
+const mockLogger = logger as vi.Mocked<typeof logger>;
 
 describe('Error Handler Middleware', () => {
   let mockReq: Partial<Request>;
@@ -37,7 +37,7 @@ describe('Error Handler Middleware', () => {
   let mockNext: NextFunction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     mockReq = {
       path: '/test/path',
@@ -45,15 +45,15 @@ describe('Error Handler Middleware', () => {
     };
 
     mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
 
-    mockNext = jest.fn();
+    mockNext = vi.fn();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('errorHandler', () => {
@@ -236,7 +236,7 @@ describe('Error Handler Middleware', () => {
       ];
 
       testCases.forEach(([statusCode, expectedCode]) => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         const error = new ApiError(statusCode as number, 'Test error', true);
 
         errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
@@ -269,7 +269,7 @@ describe('Error Handler Middleware', () => {
 
   describe('asyncHandler', () => {
     it('should catch errors in async handlers', async () => {
-      const handler = jest.fn().mockRejectedValue(new Error('Async error'));
+      const handler = vi.fn().mockRejectedValue(new Error('Async error'));
 
       const wrappedHandler = asyncHandler(handler);
 
@@ -282,7 +282,7 @@ describe('Error Handler Middleware', () => {
     });
 
     it('should pass through successful async handlers', async () => {
-      const handler = jest.fn().mockResolvedValue('Success');
+      const handler = vi.fn().mockResolvedValue('Success');
 
       const wrappedHandler = asyncHandler(handler);
 

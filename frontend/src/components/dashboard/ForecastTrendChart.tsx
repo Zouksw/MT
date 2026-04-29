@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, Typography, Spin } from "antd";
+import type React from "react";
+import { useState } from "react";
+import { TrendingUp } from "lucide-react";
 import dynamic from "next/dynamic";
-
-const { Title } = Typography;
 
 // Dynamic imports for Recharts components
 const LineChart = dynamic(
@@ -12,7 +11,7 @@ const LineChart = dynamic(
   {
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <Spin size="large" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     ),
     ssr: false,
@@ -100,25 +99,24 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
   ];
 
   return (
-    <Card
-      loading={loading}
-      variant="borderless"
-      className="!h-full"
-      styles={{ body: { padding: "16px" } }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 14L6 8L9 11L14 2" stroke="#0a72ef" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <Title level={5} className="!text-base !mb-0">
-            Forecast Trend
-          </Title>
+    <div className="rounded-lg bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] h-full!">
+      {loading ? (
+        <div className="flex items-center justify-center p-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      ) : (
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                <TrendingUp className="size-4 text-primary" />
+              </div>
+              <h5 className="text-base font-semibold mb-0!">
+                Forecast Trend
+              </h5>
         </div>
         {/* Time Range Selector */}
-        <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5">
+        <div className="flex gap-1 rounded-lg bg-muted p-0.5">
           {ranges.map((r) => (
             <button
               key={r.key}
@@ -138,8 +136,8 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
         <LineChart data={displayData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#0a72ef" stopOpacity={0.15} />
-              <stop offset="95%" stopColor="#0a72ef" stopOpacity={0} />
+              <stop offset="5%" stopColor="#B8860B" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#B8860B" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -178,13 +176,13 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
             type="monotone"
             dataKey="count"
             name="Forecasts"
-            stroke="#0a72ef"
+            stroke="#B8860B"
             strokeWidth={2.5}
             dot={false}
             activeDot={{
               r: 5,
               strokeWidth: 2,
-              stroke: "#0a72ef",
+              stroke: "#B8860B",
               fill: "#FFFFFF",
             }}
             fill="url(#forecastGradient)"
@@ -194,7 +192,9 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
           />
         </LineChart>
       </ResponsiveContainer>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 };
 

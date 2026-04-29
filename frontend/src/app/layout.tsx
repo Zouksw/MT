@@ -1,58 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import React from "react";
-import { Outfit, DM_Sans, Roboto_Mono, JetBrains_Mono } from "next/font/google";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
+import type React from "react";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import AppProviders from "@/components/AppProviders";
 import { WebVitals } from "@/components/WebVitals";
-import "@ant-design/v5-patch-for-react-19";
-import "@refinedev/antd/dist/reset.css";
 import "@/styles/globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
 
-const outfit = Outfit({
-  weight: '700',
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-geist-sans',
-});
-
-const dmSans = DM_Sans({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-dm-sans',
-});
-
-const robotoMono = Roboto_Mono({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-roboto-mono',
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  weight: ['400', '500'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-jetbrains-mono',
-});
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: {
-    default: "TradeMind AI — AI-Powered Commodity Trading Intelligence",
-    template: "%s | TradeMind AI"
+    default: "MT — AI-Powered Commodity Market Intelligence",
+    template: "%s | MT"
   },
-  description: "AI-powered commodity price forecasting and trading signals for beef, grain, and forex markets",
-  keywords: ["commodity trading", "AI forecasting", "trading signals", "beef prices", "grain prices", "forex"],
-  authors: [{ name: "TradeMind AI Team" }],
+  description: "AI-powered commodity price analysis, multi-factor market intelligence, and predictive signals for 55+ commodities",
+  keywords: ["commodity analysis", "AI forecasting", "market signals", "commodity prices", "multi-factor analysis"],
+  authors: [{ name: "MT Team" }],
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
   },
   robots: {
     index: true,
@@ -61,16 +30,22 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://trademind.ai",
-    title: "TradeMind AI — AI-Powered Commodity Trading Intelligence",
-    description: "AI-powered commodity price forecasting and trading signals for beef, grain, and forex markets",
-    siteName: "TradeMind AI",
+    url: "https://mt.ai",
+    title: "MT — AI-Powered Commodity Market Intelligence",
+    description: "AI-powered commodity price analysis, multi-factor market intelligence, and predictive signals for 55+ commodities",
+    siteName: "MT",
   },
   twitter: {
     card: "summary_large_image",
-    title: "TradeMind AI — AI-Powered Commodity Trading Intelligence",
-    description: "AI-powered commodity price forecasting and trading signals",
+    title: "MT — AI-Powered Commodity Market Intelligence",
+    description: "AI-powered commodity price analysis and predictive signals",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default async function RootLayout({
@@ -82,7 +57,7 @@ export default async function RootLayout({
   const theme = cookieStore.get("theme");
 
   return (
-    <html lang="en" className={`${outfit.variable} ${dmSans.variable} ${robotoMono.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={cn(GeistSans.variable, GeistMono.variable, "font-sans", geist.variable)}>
       <head>
         <style>{`
           .skip-to-content {
@@ -100,15 +75,13 @@ export default async function RootLayout({
           }
         `}</style>
       </head>
-      <body className={dmSans.className}>
+      <body className={GeistSans.className}>
         <a href="#main-content" className="skip-to-content">
           Skip to main content
         </a>
-        <AntdRegistry>
-          <AppProviders defaultMode={theme?.value}>
-            {children}
-          </AppProviders>
-        </AntdRegistry>
+        <AppProviders defaultMode={theme?.value}>
+          {children}
+        </AppProviders>
 
         <WebVitals />
       </body>

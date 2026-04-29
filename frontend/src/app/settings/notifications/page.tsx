@@ -1,180 +1,108 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Button,
-  Form,
-  Switch,
-  Space,
-  Typography,
-  Divider,
-  message,
-  Alert,
-} from "antd";
-import {
-  MailOutlined,
-  CheckCircleOutlined,
-} from "@ant-design/icons";
-
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
-
-const { Text } = Typography;
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 
 interface NotificationPreferences {
-  email: {
-    enabled: boolean;
-    alerts: boolean;
-    anomalies: boolean;
-    forecasts: boolean;
-  };
+  email: { enabled: boolean; alerts: boolean; anomalies: boolean; forecasts: boolean };
 }
 
 const defaultPreferences: NotificationPreferences = {
-  email: {
-    enabled: true,
-    alerts: true,
-    anomalies: true,
-    forecasts: false,
-  },
+  email: { enabled: true, alerts: true, anomalies: true, forecasts: false },
 };
+
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-primary" : "bg-gray-300 dark:bg-gray-600"}`}>
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
+}
 
 export default function NotificationsSettingsPage() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
-  const [, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form] = Form.useForm();
+  const toast = useToast();
 
-  const loadPreferences = useCallback(async () => {
-    setLoading(true);
-    try {
-      // For now, use default preferences
-      // In the future, this would fetch from the backend
-      setPreferences(defaultPreferences);
-      form.setFieldsValue(defaultPreferences);
-    } catch {
-      message.error("Failed to load notification preferences");
-    } finally {
-      setLoading(false);
+  const loadPreferences = useCallback(() => {
+    const saved = localStorage.getItem("notificationPreferences");
+    if (saved) {
+      try { setPreferences(JSON.parse(saved)); } catch { /* ignore */ }
     }
-  }, [form]);
+  }, []);
 
-  useEffect(() => {
-    loadPreferences();
-  }, [loadPreferences]);
+  useEffect(() => { loadPreferences(); }, [loadPreferences]);
 
-  const handleSave = async (values: NotificationPreferences) => {
+  const handleSave = () => {
     setSaving(true);
     try {
-      // For now, save to localStorage
-      // In the future, this would send to the backend via /api/auth/me with preferences
-      localStorage.setItem("notificationPreferences", JSON.stringify(values));
-      setPreferences(values);
-      message.success("Notification preferences saved successfully");
+      localStorage.setItem("notificationPreferences", JSON.stringify(preferences));
+      toast.showSuccess("Notification preferences saved successfully");
     } catch {
-      message.error("Failed to save preferences");
+      toast.showError("Failed to save preferences");
     } finally {
       setSaving(false);
     }
   };
 
+  const updateEmail = (key: keyof NotificationPreferences["email"], value: boolean) => {
+    setPreferences((prev) => ({ ...prev, email: { ...prev.email, [key]: value } }));
+  };
+
   return (
     <PageContainer>
-      <PageHeader
-        title="Notification Settings"
-        description="Configure how you receive alerts and notifications"
-      />
+      <PageHeader title="Notification Settings" description="Configure how you receive alerts and notifications" />
 
-      <Alert
-        type="info"
-        message="Notification preferences are saved to your browser."
-        showIcon
-        style={{ marginBottom: 16 }}
-      />
+      <Alert variant="info" className="mb-4">Notification preferences are saved to your browser.</Alert>
+      <Alert variant="info" className="mb-6">Email Notifications — Configure which events you want to be notified about via email.</Alert>
 
-      <Alert
-        message="Email Notifications"
-        description="Configure which events you want to be notified about via email."
-        type="info"
-        showIcon
-        icon={<MailOutlined />}
-        style={{ marginBottom: 24 }}
-      />
+      <ContentCard title="Email Notifications">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">Enable Email Notifications</span>
+            <Toggle checked={preferences.email.enabled} onChange={(v) => updateEmail("enabled", v)} label="Enable email notifications" />
+          </div>
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSave}
-        initialValues={preferences}
-      >
-        <ContentCard
-          title="Email Notifications"
-          subtitle={<MailOutlined />}
-        >
-          <Form.Item
-            name={["email", "enabled"]}
-            label="Enable Email Notifications"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
+          <hr className="border" />
 
-          <Divider style={{ margin: "16px 0" }} />
+          <p className="text-sm font-semibold text-foreground">Notification Types:</p>
 
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Text strong>Notification Types:</Text>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Alert Notifications</p>
+              <p className="text-xs text-muted-foreground">Receive emails when alerts are triggered</p>
+            </div>
+            <Toggle checked={preferences.email.alerts} onChange={(v) => updateEmail("alerts", v)} label="Alert notifications" />
+          </div>
 
-            <Form.Item
-              name={["email", "alerts"]}
-              label="Alert Notifications"
-              valuePropName="checked"
-              style={{ marginBottom: 8 }}
-            >
-              <Switch />
-            </Form.Item>
-            <Text type="secondary" style={{ display: "block", marginTop: -8, marginBottom: 12 }}>
-              Receive emails when alerts are triggered
-            </Text>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Anomaly Detection</p>
+              <p className="text-xs text-muted-foreground">Get notified when anomalies are detected in your data</p>
+            </div>
+            <Toggle checked={preferences.email.anomalies} onChange={(v) => updateEmail("anomalies", v)} label="Anomaly detection notifications" />
+          </div>
 
-            <Form.Item
-              name={["email", "anomalies"]}
-              label="Anomaly Detection"
-              valuePropName="checked"
-              style={{ marginBottom: 8 }}
-            >
-              <Switch />
-            </Form.Item>
-            <Text type="secondary" style={{ display: "block", marginTop: -8, marginBottom: 12 }}>
-              Get notified when anomalies are detected in your data
-            </Text>
-
-            <Form.Item
-              name={["email", "forecasts"]}
-              label="Forecast Results"
-              valuePropName="checked"
-              style={{ marginBottom: 8 }}
-            >
-              <Switch />
-            </Form.Item>
-            <Text type="secondary" style={{ display: "block", marginTop: -8, marginBottom: 12 }}>
-              Receive forecast completion notifications
-            </Text>
-          </Space>
-        </ContentCard>
-
-        <div style={{ marginTop: 24, textAlign: "center" }}>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={saving}
-            icon={<CheckCircleOutlined />}
-            size="large"
-          >
-            Save Preferences
-          </Button>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Forecast Results</p>
+              <p className="text-xs text-muted-foreground">Receive forecast completion notifications</p>
+            </div>
+            <Toggle checked={preferences.email.forecasts} onChange={(v) => updateEmail("forecasts", v)} label="Forecast result notifications" />
+          </div>
         </div>
-      </Form>
+      </ContentCard>
+
+      <div className="mt-6 text-center">
+        <Button variant="primary" size="lg" onClick={handleSave} isLoading={saving}>Save Preferences</Button>
+      </div>
     </PageContainer>
   );
 }

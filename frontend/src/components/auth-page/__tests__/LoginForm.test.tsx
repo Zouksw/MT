@@ -1,13 +1,5 @@
-/**
- * LoginForm Component Tests
- *
- * Tests the login form's rendering, validation, submission,
- * and error handling behavior.
- */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, } from '@testing-library/react';
 import { LoginForm } from '../LoginForm';
 
 // Mock Next.js router
@@ -16,18 +8,10 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
 }));
 
-// Mock antd message
-jest.mock('antd', () => {
-  const antd = jest.requireActual('antd');
-  return {
-    ...antd,
-    message: {
-      success: jest.fn(),
-      error: jest.fn(),
-      warning: jest.fn(),
-    },
-  };
-});
+// Mock Toast instead of antd message
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ showError: jest.fn(), showSuccess: jest.fn(), showWarning: jest.fn(), showInfo: jest.fn() }),
+}));
 
 // Mock axios
 jest.mock('axios', () => {
@@ -47,12 +31,7 @@ jest.mock('js-cookie', () => ({
   remove: jest.fn(),
 }));
 
-// Mock csrfProtection
-jest.mock('@/lib/csrf', () => ({
-  csrfProtection: {
-    getHeaders: jest.fn(() => ({ 'X-CSRF-Token': 'test-csrf-token' })),
-  },
-}));
+// csrf module no longer exists in the project
 
 // Mock tokenManager
 jest.mock('@/lib/tokenManager', () => ({

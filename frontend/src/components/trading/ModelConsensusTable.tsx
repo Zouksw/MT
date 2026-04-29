@@ -1,10 +1,7 @@
 "use client";
 
-import React from "react";
-import { Table, Progress, Typography } from "antd";
 import SignalBadge from "./SignalBadge";
-
-const { Text } = Typography;
+import { Table } from "@/components/ui/Table";
 
 interface ModelSignal {
   modelId: string;
@@ -21,90 +18,36 @@ interface ModelConsensusTableProps {
 }
 
 const modelNameMap: Record<string, string> = {
-  arima: "ARIMA",
-  holtwinters: "Holt-Winters",
-  exponential_smoothing: "Exp. Smoothing",
-  naive_forecaster: "Naive",
-  stl_forecaster: "STL",
-  timer_xl: "Timer-XL",
-  sundial: "Sundial",
+  arima: "ARIMA", holtwinters: "Holt-Winters", exponential_smoothing: "Exp. Smoothing",
+  naive_forecaster: "Naive", stl_forecaster: "STL", timer_xl: "Timer-XL", sundial: "Sundial",
 };
 
-export default function ModelConsensusTable({
-  signals,
-  loading = false,
-}: ModelConsensusTableProps) {
+export default function ModelConsensusTable({ signals, loading = false }: ModelConsensusTableProps) {
+  const tableData = signals.filter(Boolean).map((s) => ({ ...s, id: s.modelId }));
+
+  type Row = ModelSignal & { id: string };
   const columns = [
-    {
-      title: "Model",
-      dataIndex: "modelId",
-      key: "modelId",
-      render: (id: string) => (
-        <Text strong style={{ fontFamily: "monospace", fontSize: 13 }}>
-          {modelNameMap[id] || id}
-        </Text>
-      ),
-    },
-    {
-      title: "Signal",
-      dataIndex: "type",
-      key: "type",
-      width: 100,
-      render: (type: "BUY" | "SELL" | "HOLD", record: ModelSignal) => (
-        <SignalBadge type={type} confidence={record.confidence} size="small" />
-      ),
-    },
-    {
-      title: "Predicted",
-      dataIndex: "predictedValue",
-      key: "predictedValue",
-      align: "right" as const,
-      render: (v: number) => (
-        <Text style={{ fontFamily: "monospace" }}>
-          {v?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </Text>
-      ),
-    },
-    {
-      title: "Change",
-      dataIndex: "predictedChange",
-      key: "predictedChange",
-      align: "right" as const,
-      render: (change: number) => (
-        <Text
-          style={{
-            fontFamily: "monospace",
-            color: change > 0 ? "#16a34a" : change < 0 ? "#dc2626" : undefined,
-          }}
-        >
-          {change > 0 ? "+" : ""}
-          {change.toFixed(2)}%
-        </Text>
-      ),
-    },
-    {
-      title: "Confidence",
-      dataIndex: "confidence",
-      key: "confidence",
-      width: 120,
-      render: (confidence: number) => (
-        <Progress
-          percent={Math.round(confidence * 100)}
-          size="small"
-          strokeColor={confidence > 0.7 ? "#16a34a" : confidence > 0.4 ? "#d97706" : "#dc2626"}
-        />
-      ),
-    },
+    { key: "modelId", title: "Model", dataIndex: "modelId" as const, render: (_v: string, row: Row) => <span className="font-semibold font-mono text-[13px]">{modelNameMap[row.modelId] || row.modelId}</span> },
+    { key: "type", title: "Signal", dataIndex: "type" as const, render: (_v: string, row: Row) => <SignalBadge type={row.type} confidence={row.confidence} size="small" /> },
+    { key: "predictedValue", title: "Predicted", dataIndex: "predictedValue" as const, render: (_v: number, row: Row) => <span className="font-mono">{row.predictedValue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> },
+    { key: "predictedChange", title: "Change", dataIndex: "predictedChange" as const, render: (_v: number, row: Row) => <span className="font-mono" style={{ color: row.predictedChange > 0 ? "#16a34a" : row.predictedChange < 0 ? "#dc2626" : undefined }}>{row.predictedChange > 0 ? "+" : ""}{row.predictedChange.toFixed(2)}%</span> },
+    { key: "confidence", title: "Confidence", dataIndex: "confidence" as const, render: (_v: number, row: Row) => {
+      const pct = Math.round(row.confidence * 100);
+      const color = row.confidence > 0.7 ? "#16a34a" : row.confidence > 0.4 ? "#d97706" : "#dc2626";
+      return (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden max-w-24">
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+          </div>
+          <span className="text-xs text-gray-500">{pct}%</span>
+        </div>
+      );
+    }},
   ];
 
-  return (
-    <Table
-      dataSource={signals.map((s) => ({ ...s, key: s.modelId }))}
-      columns={columns}
-      loading={loading}
-      pagination={false}
-      size="small"
-      style={{ fontSize: 13 }}
-    />
-  );
+  if (loading) {
+    return <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" /></div>;
+  }
+
+  return <Table columns={columns} dataSource={tableData} />;
 }

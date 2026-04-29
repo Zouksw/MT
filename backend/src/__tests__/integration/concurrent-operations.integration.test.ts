@@ -5,9 +5,9 @@
  * that are difficult to reproduce in normal unit tests.
  */
 
-import { describe, test, expect, beforeAll, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
-import express, { Express } from 'express';
+import express, { type Express } from 'express';
 import { authRouter } from '@/routes/auth';
 import { getRedisClient } from '@/lib/redis';
 import { recordFailedLogin, checkAccountLockout, clearFailedLoginAttempts } from '@/services/authLockout';
@@ -46,7 +46,7 @@ describe('Concurrent Operations Integration Tests', () => {
           cursor = result.cursor;
         } while (cursor !== 0);
       }
-    } catch (e) {
+    } catch (_e) {
       // Ignore cleanup errors
     }
   });

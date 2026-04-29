@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import dotenv from 'dotenv';
-import { createServer } from 'http';
+import { createServer } from 'node:http';
 import { Server as SocketIOServer } from 'socket.io';
 import { authRouter } from '@/routes/auth';
 import { datasetsRouter } from '@/routes/datasets';
@@ -52,7 +52,7 @@ const io = new SocketIOServer(httpServer, {
 // Security: In production, requires explicit ALLOWED_ORIGINS configuration
 const corsOptions: cors.CorsOptions = {
   credentials: true,
-  origin: function (origin, callback) {
+  origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -119,7 +119,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Development request logging
 if (config.server.nodeEnv !== 'production') {
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     logger.info(`${req.method} ${req.path}`);
     next();
   });

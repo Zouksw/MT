@@ -1,0 +1,44 @@
+/**
+ * Typography — Geist Sans + Geist Mono
+ */
+
+/* Display/Hero - Geist Sans with aggressive negative tracking */
+h1, h2, .text-display {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-weight: 600;
+  font-feature-settings: "liga" 1;
+}
+
+/* Data/Tables - Geist Mono with tabular nums */
+.data-text,
+.data-value,
+.table-data,
+.metric-value,
+.code-snippet {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "liga" 1, "tnum" 1;
+  letter-spacing: 0;
+}
+
+/* Code - Geist Mono */
+code, pre, .code-block {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  font-feature-settings: "liga" 1;
+}
+
+/* Data text helper class */
+.data-text {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Data label — Geist Mono uppercase for metadata/technical labels */
+.data-label {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-feature-settings: "liga" 1, "tnum" 1;
+}

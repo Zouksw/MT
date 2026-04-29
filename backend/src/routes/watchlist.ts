@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, NotFoundError, BadRequestError } from '@/middleware/errorHandler';
 import { success } from '@/lib/response';
 import { prisma } from '@/lib';
@@ -230,7 +230,7 @@ router.get(
     for (const p of recentPrices) {
       if (p.rn <= 2) {
         if (!pricePairs.has(p.commodity_id)) pricePairs.set(p.commodity_id, []);
-        pricePairs.get(p.commodity_id)!.push(p);
+        pricePairs.get(p.commodity_id)?.push(p);
       }
     }
 

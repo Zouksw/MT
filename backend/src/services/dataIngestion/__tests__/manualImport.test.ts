@@ -2,10 +2,10 @@
  * Tests for manual CSV import
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, vi } from 'vitest';
 
-jest.mock('@/lib', () => ({
-  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+vi.mock('@/lib', () => ({
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
 import { parseCSV } from '../sources/manualImport';

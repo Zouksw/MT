@@ -1,8 +1,8 @@
-# IoTDB Enhanced - Claude Code Instructions
+# TradeMind AI - Claude Code Instructions
 
 ## Project Overview
 
-IoTDB Enhanced is a time-series data analytics platform built on Apache IoTDB 2.0.5 + AI Node, providing:
+TradeMind AI is a time-series data analytics platform built on Apache IoTDB 2.0.5 + AI Node, providing:
 - Time-series data storage and querying (IoTDB)
 - **AI-powered prediction and anomaly detection** (AI Node - ✅ **RUNNING**)
 - RESTful API with Next.js 14 frontend
@@ -53,7 +53,7 @@ npm run lint       # Run ESLint
 ## Project Structure
 
 ```
-iotdb-enhanced/
+trademind-ai/
 ├── backend/
 │   ├── src/
 │   │   ├── routes/       # API endpoints (express routers)
@@ -259,7 +259,7 @@ cd .claude/skills/gstack && ./setup
 **IMPORTANT**: Always read `DESIGN.md` before making any visual or UI decisions.
 
 ### Design Philosophy
-IoTDB Enhanced uses an **Industrial Data +** aesthetic — warm, approachable, technical but not cold. The design system balances:
+TradeMind AI uses an **Industrial Data +** aesthetic — warm, approachable, technical but not cold. The design system balances:
 - **Data density** — power users see more at once
 - **Readability** — Geist Mono ensures perfect data alignment
 - **Warmth** — amber primary (`#F59E0B`) stands out from sea of blue tools

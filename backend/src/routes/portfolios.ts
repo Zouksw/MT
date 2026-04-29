@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, NotFoundError, BadRequestError } from '@/middleware/errorHandler';
 import { success } from '@/lib/response';
 import { prisma } from '@/lib';

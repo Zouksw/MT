@@ -30,7 +30,7 @@ export class ScraperManager {
   async runAll(): Promise<Record<string, ScraperResult | { error: string }>> {
     const entries = Array.from(this.sources.entries());
     const results = await Promise.allSettled(
-      entries.map(async ([name, scraper]) => {
+      entries.map(async ([name, _scraper]) => {
         const result = await this.runSource(name);
         return { name, result };
       }),

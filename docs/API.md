@@ -1,9 +1,9 @@
 ---
-title: "IoTDB Enhanced API Reference"
+title: "MT API Reference"
 version: "1.3.0"
 last_updated: "2026-03-28"
 status: "stable"
-maintainer: "IoTDB Enhanced Team"
+maintainer: "MT Team"
 tags:
   - "api"
   - "rest"
@@ -12,9 +12,9 @@ target_audience: "Developers, Integration Engineers"
 next_review: "2026-06-28"
 ---
 
-# IoTDB Enhanced API Reference
+# MT API Reference
 
-Complete RESTful API documentation for IoTDB Enhanced platform.
+Complete RESTful API documentation for MT platform.
 
 ---
 
@@ -299,8 +299,8 @@ GET /api/timeseries?page=1&pageSize=20&sortBy=name&order=asc
 ## SDKs & Libraries
 
 Official SDKs:
-- JavaScript/TypeScript: `@iotdb-enhanced/sdk` (Coming soon)
-- Python: `iotdb-enhanced-python` (Coming soon)
+- JavaScript/TypeScript: `@mt/sdk` (Coming soon)
+- Python: `mt-python` (Coming soon)
 
 ---
 
@@ -315,9 +315,9 @@ For full interactive API documentation with try-it-out functionality:
 
 ## Support
 
-- **Issues**: https://github.com/Zouksw/iotdb-enhanced/issues
-- **Discussions**: https://github.com/Zouksw/iotdb-enhanced/discussions
-- **Email**: support@iotdb-enhanced.com
+- **Issues**: https://github.com/Zouksw/trademind-ai/issues
+- **Discussions**: https://github.com/Zouksw/trademind-ai/discussions
+- **Email**: support@mt.com
 
 ---
 

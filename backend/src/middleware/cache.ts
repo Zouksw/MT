@@ -3,7 +3,7 @@
  * Provides HTTP-level caching for API responses
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { get, set, cacheKeys } from '@/services/cache';
 import { logger } from '@/lib/logger';
 
@@ -54,7 +54,7 @@ export const cacheResponse = (options: {
     const originalJson = res.json.bind(res);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    res.json = function (body: any): Response {
+    res.json = ((body: any): Response => {
       // Only cache successful responses
       if (res.statusCode >= 200 && res.statusCode < 300) {
         // Cache the response asynchronously (don't block the response)
@@ -64,7 +64,7 @@ export const cacheResponse = (options: {
       }
 
       return originalJson(body) as Response;
-    } as any;
+    }) as any;
 
     next();
   };
@@ -75,7 +75,7 @@ export const cacheResponse = (options: {
  * Invalidates cache when data is modified
  */
 export const invalidateCache = (patterns: string[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (_req: Request, res: Response, next: NextFunction) => {
     // Process the request first
     next();
 
@@ -123,7 +123,7 @@ export const cacheConfigs = {
       const timeseries = req.body.timeseries || req.query.timeseries;
       const algorithm = req.body.algorithm || req.query.algorithm;
       const horizon = req.body.horizon || req.query.horizon;
-      return cacheKeys.prediction(timeseries as string, algorithm as string, parseInt(horizon as string));
+      return cacheKeys.prediction(timeseries as string, algorithm as string, parseInt(horizon as string, 10));
     },
   }),
 
@@ -159,7 +159,7 @@ export const cacheControl = (options: {
   public?: boolean;
   immutable?: boolean;
 }) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (_req: Request, res: Response, next: NextFunction) => {
     const directives: string[] = [];
 
     if (options.maxAge !== undefined) {
@@ -212,9 +212,9 @@ export const etag = (options: {
     const originalJson = res.json.bind(res);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    res.json = function (body: any): Response {
+    res.json = ((body: any): Response => {
       // Generate ETag from response body
-      const crypto = require('crypto');
+      const crypto = require('node:crypto');
       const hash = crypto
         .createHash('sha256')
         .update(JSON.stringify(body))
@@ -232,7 +232,7 @@ export const etag = (options: {
       }
 
       return originalJson(body) as Response;
-    } as any;
+    }) as any;
 
     next();
   };

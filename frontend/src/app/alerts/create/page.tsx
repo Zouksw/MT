@@ -1,91 +1,136 @@
 "use client";
 
-import { useState } from "react";
-import { Form, Input, Select, Switch, Button, Row, Col, Alert, Space, Divider, InputNumber } from "antd";
-import { ArrowLeftOutlined, BellOutlined } from "@ant-design/icons";
-import { useGo, useInvalidate, useNotification } from "@refinedev/core";
-import { useList } from "@refinedev/core";
+import { useState, } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 
-import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ContentCard } from "@/components/layout/ContentCard";
+import { Button } from "@/components/ui/Button";
+import { Input, Textarea } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Alert } from "@/components/ui/Alert";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { useList } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import { useIsMobile } from "@/lib/responsive-utils";
 
-// Security imports
-import { validationRules, required } from "@/lib/validation";
 import { sanitizer } from "@/lib/sanitizer";
 import { errorHandler } from "@/lib/errorHandler";
 import { tokenManager } from "@/lib/tokenManager";
-import { csrfProtection } from "@/lib/csrf";
 
 const ALERT_TYPES = [
-  { value: "ANOMALY", label: "Anomaly Detection", description: "Alerts when anomalies are detected" },
-  { value: "FORECAST_READY", label: "Forecast Ready", description: "Alerts when forecast results are available" },
-  { value: "SYSTEM", label: "System Event", description: "System-level notifications" },
-  { value: "THRESHOLD", label: "Threshold Breach", description: "Alerts when values exceed thresholds" },
+  { value: "ANOMALY", label: "Anomaly Detection - Alerts when anomalies are detected" },
+  { value: "FORECAST_READY", label: "Forecast Ready - Alerts when forecast results are available" },
+  { value: "SYSTEM", label: "System Event - System-level notifications" },
+  { value: "THRESHOLD", label: "Threshold Breach - Alerts when values exceed thresholds" },
 ];
 
 const SEVERITY_LEVELS = [
-  { value: "INFO", label: "Info", color: "blue" },
-  { value: "WARNING", label: "Warning", color: "orange" },
-  { value: "ERROR", label: "Error", color: "red" },
+  { value: "INFO", label: "Info" },
+  { value: "WARNING", label: "Warning" },
+  { value: "ERROR", label: "Error" },
+];
+
+const OPERATOR_OPTIONS = [
+  { value: ">", label: "Greater than" },
+  { value: "<", label: "Less than" },
+  { value: ">=", label: "Greater or equal" },
+  { value: "<=", label: "Less or equal" },
 ];
 
 export default function AlertCreate() {
-  const go = useGo();
-  const invalidate = useInvalidate();
-  const { open } = useNotification();
-  const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  const router = useRouter();
+  const toast = useToast();
   const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Form state
+  const [name, setName] = useState("");
+  const [type, setType] = useState("");
+  const [severity, setSeverity] = useState("INFO");
+  const [timeseriesId, setTimeseriesId] = useState("");
+  const [description, setDescription] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [conditionOperator, setConditionOperator] = useState(">");
+  const [conditionValue, setConditionValue] = useState("");
+  const [cooldownMinutes, setCooldownMinutes] = useState("5");
 
   // Get timeseries list
-  const timeseriesResult = useList({
-    resource: "timeseries",
-    pagination: { pageSize: 1000 },
-    sorters: [{ field: "name", order: "asc" }],
+  const { data: timeseriesList } = useList<{ id: string; name: string; unit?: string }>("timeseries", {
+    pageSize: 1000,
+    sort: "name",
+    order: "asc",
   });
 
-  const timeseriesList = timeseriesResult?.result?.data ?? [];
+  const timeseriesOptions = timeseriesList.map((ts: { id: string; name: string; unit?: string }) => ({
+    value: ts.id,
+    label: ts.unit ? `${ts.name} (${ts.unit})` : ts.name,
+  }));
 
-  const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "Alerts & Notifications", href: "/alerts" },
-    { title: "Create Alert" },
-  ];
+  const validate = (): boolean => {
+    const errors: Record<string, string> = {};
 
-  const handleSubmit = async (values: Record<string, unknown>) => {
+    if (!name.trim()) {
+      errors.name = "Alert name is required";
+    } else if (name.trim().length < 3) {
+      errors.name = "Alert name must be at least 3 characters";
+    } else if (name.length > 100) {
+      errors.name = "Alert name must be at most 100 characters";
+    }
+
+    if (!type) {
+      errors.type = "Please select alert type";
+    }
+
+    if (!severity) {
+      errors.severity = "Please select severity";
+    }
+
+    if (!timeseriesId) {
+      errors.timeseriesId = "Please select a time series";
+    }
+
+    if (type === "THRESHOLD" && conditionValue && Number.isNaN(Number(conditionValue))) {
+      errors.conditionValue = "Threshold value must be a number";
+    }
+
+    if (description.length > 1000) {
+      errors.description = "Description must be at most 1000 characters";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     setLoading(true);
     try {
-      // Type condition object
-      const condition = values.condition as Record<string, unknown> | undefined;
-
-      // Sanitize inputs
       const sanitizedValues = {
-        name: sanitizer.sanitizeString(values.name as string || "", 100),
-        type: values.type,
-        severity: values.severity,
-        timeseriesId: values.timeseriesId,
-        condition: condition
+        name: sanitizer.sanitizeString(name, 100),
+        type,
+        severity,
+        timeseriesId,
+        condition: type === "THRESHOLD"
           ? {
-              operator: sanitizer.sanitizeString(condition.operator as string || "", 10),
-              value: sanitizer.sanitizeNumber(condition.value, -Infinity, Infinity),
+              operator: sanitizer.sanitizeString(conditionOperator, 10),
+              value: sanitizer.sanitizeNumber(Number(conditionValue), -Infinity, Infinity),
             }
           : undefined,
-        cooldownMinutes: sanitizer.sanitizeNumber(values.cooldownMinutes as number, 0, 10080),
-        description: sanitizer.sanitizeString(values.description as string || "", 1000),
-        enabled: values.enabled,
+        cooldownMinutes: sanitizer.sanitizeNumber(Number(cooldownMinutes), 0, 10080),
+        description: sanitizer.sanitizeString(description, 1000),
+        enabled,
       };
 
       const token = tokenManager.getToken();
-      const csrfHeaders = csrfProtection.getHeaders();
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/alerts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...csrfHeaders,
         },
         credentials: "include",
         body: JSON.stringify(sanitizedValues),
@@ -96,253 +141,175 @@ export default function AlertCreate() {
         throw new Error(error.error || "Failed to create alert");
       }
 
-      open?.({
-        type: "success",
-        message: "Alert Created Successfully",
-        description: `The alert has been configured.`,
-      });
-
-      invalidate({
-        resource: "alerts",
-        invalidates: ["list"],
-      });
+      toast.showSuccess("Alert Created Successfully", "The alert has been configured.");
 
       setTimeout(() => {
-        go({ to: "/alerts", type: "push" });
+        router.push("/alerts");
       }, 1000);
     } catch (error: unknown) {
       const safeError = errorHandler.handleApiError(error);
-      open?.({
-        type: "error",
-        message: "Failed to Create Alert",
-        description: safeError.message,
-      });
+      toast.showError("Failed to Create Alert", safeError.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <PageContainer>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <PageHeader
-          title="Create Alert"
-          description="Configure a new alert for monitoring your time series data"
-          breadcrumbs={breadcrumbItems}
-          actions={
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => go({ to: "/alerts", type: "push" })}
-            >
-              {!isMobile && "Back to Alerts"}
-            </Button>
-          }
-        />
+    <div className="min-h-screen bg-muted p-4 md:p-6">
+      <div className="mx-auto max-w-3xl">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+          <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
+          <ChevronRight className="size-3" />
+          <a href="/alerts" className="hover:text-gray-700 dark:hover:text-gray-200">Alerts & Notifications</a>
+          <ChevronRight className="size-3" />
+          <span className="text-foreground">Create Alert</span>
+        </nav>
 
-        <Alert
-          message="Alert Configuration"
-          description="Configure alerts to notify you when specific events occur in your time series data. Alerts can be sent via email, webhook, or viewed in the alerts dashboard."
-          type="info"
-          showIcon
-          icon={<BellOutlined />}
-          style={{ marginBottom: isMobile ? 16 : 24 }}
-        />
+        {/* Page Header */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">Create Alert</h1>
+            <p className="text-sm text-muted-foreground mt-1">Configure a new alert for monitoring your time series data</p>
+          </div>
+          <Button variant="ghost" onClick={() => router.push("/alerts")}>
+            <ArrowLeft className="size-4 mr-1.5" />
+            {!isMobile && "Back to Alerts"}
+          </Button>
+        </div>
 
-        <ContentCard title="Alert Details" subtitle="Configure alert settings" style={{ padding: isMobile ? 16 : 24 }}>
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
-            initialValues={{
-              severity: "INFO",
-              enabled: true,
-            }}
-          >
-            {/* Alert Name */}
-            <Row gutter={[isMobile ? 16 : 24, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                  label={<span className="font-semibold">Alert Name</span>}
-                  name="name"
-                  rules={[
-                    validationRules.getAntRule(required("Alert name")),
-                    validationRules.getAntRule(validationRules.createMinLengthValidator(3, "Alert name")),
-                    validationRules.getAntRule(validationRules.createMaxLengthValidator(100, "Alert name")),
-                  ]}
-                  normalize={(value) => sanitizer.sanitizeString(value, 100)}
-                >
-                  <Input
-                    placeholder="e.g., High Temperature Alert"
-                    size="large"
-                    maxLength={100}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+        {/* Info Banner */}
+        <div className="mb-6">
+          <Alert variant="info">
+            Configure alerts to notify you when specific events occur in your time series data. Alerts can be sent via email, webhook, or viewed in the alerts dashboard.
+          </Alert>
+        </div>
 
-            {/* Alert Type and Severity */}
-            <Row gutter={[isMobile ? 16 : 24, 16]}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span className="font-semibold">Alert Type</span>}
-                  name="type"
-                  rules={[{ required: true, message: "Please select alert type" }]}
-                >
-                  <Select placeholder="Select alert type" size="large">
-                    {ALERT_TYPES.map((type) => (
-                      <Select.Option key={type.value} value={type.value}>
-                        <div>
-                          <div>{type.label}</div>
-                          <span className="text-body-sm text-gray-500 dark:text-gray-400">
-                            {type.description}
-                          </span>
-                        </div>
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label={<span className="font-semibold">Severity Level</span>}
-                  name="severity"
-                  rules={[{ required: true, message: "Please select severity" }]}
-                >
-                  <Select placeholder="Select severity" size="large">
-                    {SEVERITY_LEVELS.map((level) => (
-                      <Select.Option key={level.value} value={level.value}>
-                        <Space>
-                          <span style={{ color: level.color }}>{level.label}</span>
-                        </Space>
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Time Series Selection */}
-            <Form.Item
-              label={<span className="font-semibold">Time Series</span>}
-              name="timeseriesId"
-              rules={[{ required: true, message: "Please select a time series" }]}
-              tooltip="Select the time series to monitor"
-            >
-              <Select
-                placeholder="Select a time series"
-                showSearch
-                size="large"
-                filterOption={(input, option) =>
-                  String(option?.label ?? "")
-                    .toLowerCase()
-                    .includes(String(input).toLowerCase())
-                }
-              >
-                {timeseriesList.map((ts: any) => (
-                  <Select.Option key={ts.id} value={ts.id}>
-                    <Space>
-                      <span>{ts.name}</span>
-                      {ts.unit && <span className="text-body-sm text-gray-500 dark:text-gray-400">({ts.unit})</span>}
-                    </Space>
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Divider />
-
-            {/* Threshold Configuration (for THRESHOLD type) */}
-            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.type !== curr.type}>
-              {({ getFieldValue }) =>
-                getFieldValue("type") === "THRESHOLD" ? (
-                  <Row gutter={[isMobile ? 16 : 24, 16]}>
-                    <Col xs={24} md={8}>
-                      <Form.Item
-                        label={<span className="font-semibold">Operator</span>}
-                        name={["condition", "operator"]}
-                        initialValue=">"
-                      >
-                        <Select>
-                          <Select.Option value=">">Greater than</Select.Option>
-                          <Select.Option value="<">Less than</Select.Option>
-                          <Select.Option value=">=">Greater or equal</Select.Option>
-                          <Select.Option value="<=">Less or equal</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={8}>
-                      <Form.Item
-                        label={<span className="font-semibold">Threshold Value</span>}
-                        name={["condition", "value"]}
-                        rules={[{ required: true, message: "Required" }]}
-                      >
-                        <InputNumber style={{ width: "100%" }} placeholder="e.g., 100" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={8}>
-                      <Form.Item
-                        label={<span className="font-semibold">Cooldown (minutes)</span>}
-                        name="cooldownMinutes"
-                        initialValue={5}
-                        tooltip="Minimum time between alert notifications"
-                      >
-                        <InputNumber min={0} style={{ width: "100%" }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                ) : null
-              }
-            </Form.Item>
-
-            {/* Description */}
-            <Form.Item
-              label={<span className="font-semibold">Description</span>}
-              name="description"
-              rules={[
-                validationRules.getAntRule(validationRules.createMaxLengthValidator(1000, "Description")),
-              ]}
-              normalize={(value) => sanitizer.sanitizeString(value, 1000)}
-            >
-              <Input.TextArea
-                rows={3}
-                placeholder="Describe what this alert monitors and when it should trigger..."
-                maxLength={1000}
-                showCount
+        {/* Form */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-foreground">Alert Details</h3>
+            <p className="text-sm text-muted-foreground">Configure alert settings</p>
+          </CardHeader>
+          <CardBody>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Alert Name */}
+              <Input
+                label="Alert Name"
+                placeholder="e.g., High Temperature Alert"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={100}
+                error={formErrors.name}
+                fullWidth
               />
-            </Form.Item>
 
-            {/* Enable/Disable */}
-            <Form.Item
-              label={<span className="font-semibold">Status</span>}
-              name="enabled"
-              valuePropName="checked"
-            >
-              <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
-            </Form.Item>
+              {/* Alert Type and Severity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label="Alert Type"
+                  placeholder="Select alert type"
+                  value={type}
+                  onChange={setType}
+                  options={ALERT_TYPES}
+                  error={formErrors.type}
+                />
+                <Select
+                  label="Severity Level"
+                  placeholder="Select severity"
+                  value={severity}
+                  onChange={setSeverity}
+                  options={SEVERITY_LEVELS}
+                  error={formErrors.severity}
+                />
+              </div>
 
-            <Divider style={{ margin: "24px 0" }} />
+              {/* Time Series Selection */}
+              <Select
+                label="Time Series"
+                placeholder="Select a time series"
+                value={timeseriesId}
+                onChange={setTimeseriesId}
+                options={timeseriesOptions}
+                error={formErrors.timeseriesId}
+              />
 
-            <Form.Item>
+              <hr className="border" />
+
+              {/* Threshold Configuration (for THRESHOLD type) */}
+              {type === "THRESHOLD" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Select
+                    label="Operator"
+                    value={conditionOperator}
+                    onChange={setConditionOperator}
+                    options={OPERATOR_OPTIONS}
+                  />
+                  <Input
+                    label="Threshold Value"
+                    placeholder="e.g., 100"
+                    type="number"
+                    value={conditionValue}
+                    onChange={(e) => setConditionValue(e.target.value)}
+                    error={formErrors.conditionValue}
+                    fullWidth
+                  />
+                  <Input
+                    label="Cooldown (minutes)"
+                    type="number"
+                    value={cooldownMinutes}
+                    onChange={(e) => setCooldownMinutes(e.target.value)}
+                    helperText="Minimum time between alert notifications"
+                    fullWidth
+                  />
+                </div>
+              )}
+
+              {/* Description */}
+              <Textarea
+                label="Description"
+                placeholder="Describe what this alert monitors and when it should trigger..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={1000}
+                error={formErrors.description}
+                fullWidth
+                rows={3}
+              />
+
+              {/* Enable/Disable */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={enabled}
+                  onClick={() => setEnabled(!enabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-primary" : "bg-gray-300 dark:bg-gray-600"}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`}
+                  />
+                </button>
+                <span className="text-sm font-medium text-foreground">
+                  {enabled ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+
+              <hr className="border" />
+
+              {/* Submit */}
               <Button
-                type="primary"
-                size="large"
-                htmlType="submit"
-                loading={loading}
-                block
-                style={{
-                  background: "#171717",
-                  border: "none",
-                  borderRadius: "6px",
-                  fontWeight: 600,
-                }}
+                type="submit"
+                size="lg"
+                fullWidth
+                isLoading={loading}
               >
                 Create Alert
               </Button>
-            </Form.Item>
-          </Form>
-        </ContentCard>
+            </form>
+          </CardBody>
+        </Card>
       </div>
-    </PageContainer>
+    </div>
   );
 }

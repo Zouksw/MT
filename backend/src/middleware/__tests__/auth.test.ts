@@ -1,9 +1,5 @@
-/**
- * Tests for auth middleware
- */
-
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { Request, Response, NextFunction } from 'express';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Response, NextFunction } from 'express';
 import {
   authenticate,
   optionalAuth,
@@ -11,12 +7,14 @@ import {
   type AuthRequest,
 } from '@/middleware/auth';
 
-// Mock dependencies
-const mockVerifyToken = jest.fn();
-const mockUserFindUnique = jest.fn();
-const mockIsTokenBlacklisted = jest.fn();
+// vi.hoisted() ensures these are available inside hoisted vi.mock() factories
+const { mockVerifyToken, mockUserFindUnique, mockIsTokenBlacklisted } = vi.hoisted(() => ({
+  mockVerifyToken: vi.fn(),
+  mockUserFindUnique: vi.fn(),
+  mockIsTokenBlacklisted: vi.fn(),
+}));
 
-jest.mock('../../lib', () => ({
+vi.mock('@/lib', () => ({
   prisma: {
     user: {
       findUnique: (...args: any[]) => mockUserFindUnique(...args),
@@ -26,12 +24,12 @@ jest.mock('../../lib', () => ({
     verifyToken: (...args: any[]) => mockVerifyToken(...args),
   },
   logger: {
-    warn: jest.fn(),
-    error: jest.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-jest.mock('../../services/tokenBlacklist', () => ({
+vi.mock('@/services/tokenBlacklist', () => ({
   isTokenBlacklisted: (...args: any[]) => mockIsTokenBlacklisted(...args),
 }));
 
@@ -41,19 +39,10 @@ describe('authenticate middleware', () => {
   let mockNext: NextFunction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-
-    mockReq = {
-      headers: {},
-      ip: '127.0.0.1',
-    };
-
-    mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-
-    mockNext = jest.fn();
+    vi.clearAllMocks();
+    mockReq = { headers: {}, ip: '127.0.0.1' };
+    mockRes = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+    mockNext = vi.fn();
   });
 
   it('should return 401 when no authorization header', async () => {
@@ -115,13 +104,7 @@ describe('authenticate middleware', () => {
   });
 
   it('should authenticate and set user when token is valid', async () => {
-    const mockUser = {
-      id: 'user-123',
-      email: 'test@example.com',
-      name: 'Test User',
-      role: 'user',
-    };
-
+    const mockUser = { id: 'user-123', email: 'test@example.com', name: 'Test User', role: 'user' };
     mockReq.headers = { authorization: 'Bearer valid-token' };
     mockIsTokenBlacklisted.mockResolvedValue(false);
     mockVerifyToken.mockReturnValue({ userId: 'user-123' });
@@ -151,19 +134,10 @@ describe('optionalAuth middleware', () => {
   let mockNext: NextFunction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-
-    mockReq = {
-      headers: {},
-      ip: '127.0.0.1',
-    };
-
-    mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-
-    mockNext = jest.fn();
+    vi.clearAllMocks();
+    mockReq = { headers: {}, ip: '127.0.0.1' };
+    mockRes = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+    mockNext = vi.fn();
   });
 
   it('should call next without auth when no authorization header', async () => {
@@ -184,13 +158,7 @@ describe('optionalAuth middleware', () => {
   });
 
   it('should set user when token is valid', async () => {
-    const mockUser = {
-      id: 'user-123',
-      email: 'test@example.com',
-      name: 'Test User',
-      role: 'user',
-    };
-
+    const mockUser = { id: 'user-123', email: 'test@example.com', name: 'Test User', role: 'user' };
     mockReq.headers = { authorization: 'Bearer valid-token' };
     mockIsTokenBlacklisted.mockResolvedValue(false);
     mockVerifyToken.mockReturnValue({ userId: 'user-123' });
@@ -245,29 +213,17 @@ describe('authorize middleware', () => {
   let mockNext: NextFunction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-
+    vi.clearAllMocks();
     mockReq = {
       userId: 'user-123',
-      user: {
-        id: 'user-123',
-        email: 'test@example.com',
-        name: 'Test User',
-        role: 'user',
-      },
+      user: { id: 'user-123', email: 'test@example.com', name: 'Test User', role: 'user' },
     };
-
-    mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-
-    mockNext = jest.fn();
+    mockRes = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+    mockNext = vi.fn();
   });
 
   it('should return 401 when no userId', async () => {
     delete mockReq.userId;
-
     const adminAuth = authorize('admin');
     await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
@@ -277,7 +233,6 @@ describe('authorize middleware', () => {
 
   it('should return 401 when no user object', async () => {
     delete mockReq.user;
-
     const adminAuth = authorize('admin');
     await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
@@ -287,7 +242,6 @@ describe('authorize middleware', () => {
 
   it('should return 403 when user role not in allowed roles', async () => {
     mockReq.user = { ...mockReq.user!, role: 'user' };
-
     const adminAuth = authorize('admin');
     await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
@@ -300,7 +254,6 @@ describe('authorize middleware', () => {
 
   it('should allow access when user role is in allowed roles', async () => {
     mockReq.user = { ...mockReq.user!, role: 'admin' };
-
     const adminAuth = authorize('admin');
     await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
@@ -309,26 +262,7 @@ describe('authorize middleware', () => {
 
   it('should allow access for any of multiple roles', async () => {
     mockReq.user = { ...mockReq.user!, role: 'moderator' };
-
     const multiAuth = authorize('admin', 'moderator', 'user');
-    await multiAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-    expect(mockNext).toHaveBeenCalledWith();
-  });
-
-  it('should handle user with admin role', async () => {
-    mockReq.user = { ...mockReq.user!, role: 'admin' };
-
-    const adminAuth = authorize('admin');
-    await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-    expect(mockNext).toHaveBeenCalledWith();
-  });
-
-  it('should allow multiple roles with user having one of them', async () => {
-    mockReq.user = { ...mockReq.user!, role: 'editor' };
-
-    const multiAuth = authorize('admin', 'editor', 'moderator');
     await multiAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith();

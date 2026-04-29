@@ -1,13 +1,16 @@
 "use client";
 
-import React from "react";
 import { useRouter } from "next/navigation";
 import {
-  ThunderboltOutlined,
-  LineChartOutlined,
-  SafetyOutlined,
-  GithubOutlined,
-} from "@ant-design/icons";
+  Lightning,
+  ChartLineUp,
+  ShieldCheck,
+  GithubLogo,
+} from "@phosphor-icons/react";
+import { motion } from "framer-motion";
+import { SPRING_DEFAULTS } from "@/lib/motion";
+import { FloatElement } from "@/components/ui/ShimmerCard";
+import { TopoLines } from "@/components/ui/GeometricArt";
 
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
@@ -93,68 +96,97 @@ export function AuthPage(props: AuthPageProps) {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left Side — Deep brand gradient with noise texture */}
-      <div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-gradient-to-br from-primary to-blue-700 text-white p-12">
-        {/* Subtle mesh gradient overlay */}
+      {/* Left Side — Clean editorial treatment */}
+      <div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-black dark:bg-gray-950 text-white p-12">
+        {/* Dot pattern */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-30"
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
-            backgroundImage:
-              "radial-gradient(at 30% 20%, rgba(255,255,255,0.15), transparent 50%), radial-gradient(at 70% 80%, rgba(14,165,233,0.2), transparent 50%)",
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
           }}
         />
+        {/* Ambient gradient blobs */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 50% 50% at 10% 90%, rgba(184, 134, 11, 0.08), transparent), radial-gradient(ellipse 40% 40% at 80% 20%, rgba(184, 134, 11, 0.06), transparent)",
+          }}
+        />
+
+        {/* Topographic lines decoration */}
+        <TopoLines className="absolute bottom-0 left-0 opacity-50" />
 
         {/* Content */}
         <div className="relative z-10">
           {/* Logo */}
-          <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15">
-            <ThunderboltOutlined className="text-3xl text-white" />
+          <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
+            <Lightning size={32} weight="duotone" className="text-gray-900" />
           </div>
 
-          <h1 className="font-display text-4xl font-semibold leading-tight">
-            TradeMind AI
+          <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight" style={{ letterSpacing: "-0.03em" }}>
+            MT
           </h1>
-          <p className="mt-4 max-w-sm text-lg leading-relaxed text-white/80">
-            Enterprise-grade time series database platform with AI-powered forecasting and real-time analytics
+          <p className="mt-4 max-w-sm text-lg leading-relaxed text-white/60">
+            Commodity market intelligence with real-time data and multi-factor analysis
           </p>
         </div>
 
         {/* Features */}
         <div className="relative z-10 space-y-6">
           {[
-            { icon: <ThunderboltOutlined />, title: "Lightning Fast", desc: "Millions of data points per second" },
-            { icon: <LineChartOutlined />, title: "AI-Powered Insights", desc: "Built-in forecasting and anomaly detection" },
-            { icon: <SafetyOutlined />, title: "Enterprise Security", desc: "End-to-end encryption and access control" },
+            { icon: <ChartLineUp size={24} weight="duotone" />, title: "55+ Commodities", desc: "Real-time prices across all major markets" },
+            { icon: <Lightning size={24} weight="duotone" />, title: "7 AI Models", desc: "Independent signal generation with confidence scores" },
+            { icon: <ShieldCheck size={24} weight="duotone" />, title: "Multi-Factor Analysis", desc: "Weather, forex, tariffs, and shipping factors" },
           ].map((f, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                <span className="text-xl">{f.icon}</span>
-              </div>
-              <div>
-                <p className="font-semibold">{f.title}</p>
-                <p className="text-sm text-white/70">{f.desc}</p>
-              </div>
-            </div>
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + i * 0.5, duration: 0.6, ease: "easeOut" }}
+            >
+              <FloatElement duration={4} amplitude={4}>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 outline outline-white/10 text-primary">
+                    {f.icon}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white/90">{f.title}</p>
+                    <p className="text-sm text-white/50">{f.desc}</p>
+                  </div>
+                </div>
+              </FloatElement>
+            </motion.div>
           ))}
         </div>
 
         {/* Social */}
-        <div className="relative z-10 flex items-center gap-4 text-white/60">
-          <span className="text-sm">Follow us</span>
-          <GithubOutlined className="cursor-pointer text-xl text-white/70 transition-colors hover:text-white" />
+        <div className="relative z-10 flex items-center gap-4 text-white/40">
+          <GithubLogo size={20} weight="duotone" className="cursor-pointer text-white/40 transition-colors hover:text-white" />
         </div>
       </div>
 
-      {/* Right Side — Clean form */}
+      {/* Right Side — Clean form with micro-interactions */}
       <div className="flex flex-1 items-center justify-center bg-white dark:bg-gray-900 px-6 py-12 md:px-12">
-        <div className="w-full max-w-md">
-          {/* Blue accent bar */}
-          <div className="mb-8 h-1 w-12 rounded-full bg-primary" />
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...SPRING_DEFAULTS, delay: 0.1 }}
+          className="w-full max-w-md"
+        >
+          {/* Gold accent bar — animated width */}
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 48 }}
+            transition={SPRING_DEFAULTS}
+            className="mb-8 h-1 rounded-full bg-primary"
+          />
 
           <h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white">
             {renderTitle()}
           </h2>
-          <p className="mt-3 text-base text-gray-500 dark:text-gray-400">
+          <p className="mt-3 text-base text-muted-foreground">
             {renderDescription()}
           </p>
 
@@ -175,7 +207,7 @@ export function AuthPage(props: AuthPageProps) {
               <a href="#" className="text-gray-500 hover:text-gray-700">Privacy Policy</a>
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

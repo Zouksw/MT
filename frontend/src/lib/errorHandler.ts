@@ -210,7 +210,7 @@ class SecurityErrorHandler {
 
     // Limit length
     if (sanitized.length > 200) {
-      sanitized = sanitized.substring(0, 200) + '...';
+      sanitized = `${sanitized.substring(0, 200)}...`;
     }
 
     return sanitized.trim();

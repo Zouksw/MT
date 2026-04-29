@@ -1,7 +1,7 @@
-# Design System — IoTDB Enhanced Platform
+# Design System — MT Platform
 
 ## Product Context
-- **What this is**: IoTDB Enhanced Platform — 基于 Apache IoTDB 2.0.5 + AI Node 的增强型时序数据库平台，提供完整的时序数据存储、查询和 AI 预测分析功能
+- **What this is**: MT Platform — 基于 Apache IoTDB 2.0.5 + AI Node 的增强型时序数据库平台，提供完整的时序数据存储、查询和 AI 预测分析功能
 - **Who it's for**: 工业物联网工程师、运维工程师、数据科学家、开发者
 - **Space/industry**: IoT / Industrial Monitoring / Time-Series Database Infrastructure
 - **Project type**: 完整的 SaaS 平台（营销网站 + Web 应用 + 仪表板）
@@ -39,7 +39,7 @@
 **Body**: **DM Sans** (Regular 400, Medium 500, SemiBold 600)
 - **用途**: 正文、标签、导航、按钮文字、表单说明
 - **Rationale**: 清晰易读、数据友好、开发者熟悉
-- **示例**: "IoTDB Enhanced provides AI-powered time-series analytics"
+- **示例**: "MT provides AI-powered time-series analytics"
 
 **UI/Labels**: **DM Sans** (same as body)
 - **用途**: 组件标签、按钮、导航项
@@ -738,7 +738,7 @@ border: 1px solid #F59E0B;
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-25 | Initial design system created | Created by /design-consultation based on IoTDB Enhanced product context and competitive research (Grafana, InfluxDB) |
+| 2026-03-25 | Initial design system created | Created by /design-consultation based on MT product context and competitive research (Grafana, InfluxDB) |
 | 2026-03-25 | Amber primary color `#F59E0B` | Warm, industrial feel — distinctive in sea of blue/purple IoT tools. Evokes control panels and warning lights familiar to industrial users. |
 | 2026-03-25 | Geist Mono for data | Tabular nums ensure column alignment in tables. Critical for time-series values and metrics. |
 | 2026-03-25 | Comfortable-dense spacing | Balances efficiency (power users see more) with readability (not overwhelming) |
@@ -1143,5 +1143,5 @@ export const Button: React.FC<ButtonProps> = ({
 ---
 
 *Last Updated: 2026-03-26*
-*Maintained by: IoTDB Enhanced Team*
+*Maintained by: MT Team*
 *Created by: /design-consultation skill*
