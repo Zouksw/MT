@@ -5,8 +5,10 @@
  * used across datasets.route.test.ts and datasets-import.test.ts
  */
 
-import express, { Express } from 'express';
-import { jest } from '@jest/globals';
+import express, { type Express } from 'express';
+import { vi } from 'vitest';
+
+const jest = vi;
 
 /** Creates the standard mock setup for datasets route tests */
 export function setupDatasetsMocks() {
@@ -51,7 +53,7 @@ export function setupDatasetsMocks() {
   }));
 
   jest.mock('@/middleware/cacheDecorator', () => ({
-    cacheRoute: () => (req: any, res: any, next: any) => next(),
+    cacheRoute: () => (_req: any, _res: any, next: any) => next(),
     invalidateCache: jest.fn((): Promise<number> => Promise.resolve(0)),
   }));
 

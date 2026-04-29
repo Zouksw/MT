@@ -117,11 +117,12 @@ export class RedisPool {
 
     try {
       return await command(client);
-    } catch (error: any) {
-      logger.error(`Redis command failed on "${clientName}": ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Redis command failed on "${clientName}": ${message}`);
 
       // Retry on connection errors
-      if (error.message.includes('Connection is closed')) {
+      if (message.includes('Connection is closed')) {
         this.clients.delete(clientName);
         logger.info(`Retrying command on new Redis client "${clientName}"...`);
         const newClient = await this.getClient(clientName);
@@ -209,9 +210,9 @@ export function initRedisPool(): RedisPool {
   if (!redisPoolInstance) {
     const config: RedisPoolConfig = {
       host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
       password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0'),
+      db: parseInt(process.env.REDIS_DB || '0', 10),
     };
 
     redisPoolInstance = new RedisPool(config);
