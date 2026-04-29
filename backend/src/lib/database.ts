@@ -7,12 +7,12 @@ import { PrismaClient } from '@prisma/client';
 
 // Declare global type for Prisma singleton
 declare global {
-  var prisma: PrismaClient | undefined;
+  var _prismaSingleton: PrismaClient | undefined;
 }
 
 // Create or reuse Prisma client instance
 export const prisma =
-  global.prisma ??
+  global._prismaSingleton ??
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
@@ -24,7 +24,7 @@ prisma.$use(async (params, next) => {
 
 // In development, attach to global to prevent hot-reload creating multiple instances
 if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma;
+  global._prismaSingleton = prisma;
 }
 
 // Graceful shutdown

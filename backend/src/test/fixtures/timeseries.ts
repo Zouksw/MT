@@ -203,9 +203,9 @@ export const validTimeSeriesPatterns = {
  */
 export const dataTypeFixtures = {
   int32: { value: 42, dataType: 'INT32' },
-  int64: { value: 9223372036854775807, dataType: 'INT64' },
+  int64: { value: 9223372036854775807n as unknown as number, dataType: 'INT64' },
   float: { value: 3.14, dataType: 'FLOAT' },
-  double: { value: 3.14159265359, dataType: 'DOUBLE' },
+  double: { value: Math.PI, dataType: 'DOUBLE' },
   boolean: { value: true, dataType: 'BOOLEAN' },
   text: { value: 'sensor reading', dataType: 'TEXT' },
 };

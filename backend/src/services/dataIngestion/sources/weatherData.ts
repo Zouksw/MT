@@ -77,7 +77,7 @@ export async function ingestWeatherData(): Promise<ScraperResult> {
   const apiKey = process.env.OPENWEATHER_API_KEY || '';
 
   for (const station of WEATHER_STATIONS) {
-    let weather;
+    let weather: Awaited<ReturnType<typeof generateRealisticWeather>> | null = null;
 
     if (apiKey) {
       try {

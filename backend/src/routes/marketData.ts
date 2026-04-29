@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest, authorize } from '@/middleware/auth';
+import { authenticate, type AuthRequest, authorize } from '@/middleware/auth';
 import { asyncHandler, BadRequestError, NotFoundError } from '@/middleware/errorHandler';
 import { cacheRoute } from '@/middleware/cacheDecorator';
 import { success } from '@/lib/response';
 import { prisma } from '@/lib';
-import { detectFieldMapping } from '@/services/dataIngestion/normalizer';
+import { detectFieldMapping, type FieldMapping } from '@/services/dataIngestion/normalizer';
 import { parseCSV, importRows } from '@/services/dataIngestion/sources/manualImport';
-import type { Request, Response } from 'express';
+import { scraperManager } from '@/services/dataIngestion';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ const priceHistorySchema = z.object({
   limit: z.coerce.number().min(1).max(10000).default(365),
 });
 
-const importSchema = z.object({
+const _importSchema = z.object({
   commodityId: z.string().uuid(),
   interval: z.enum(['daily', 'weekly', 'monthly']).default('daily'),
   delimiter: z.string().max(1).optional(),
@@ -142,6 +142,46 @@ router.get(
 );
 
 router.get(
+  '/commodities/:slug/price-multi',
+  authenticate,
+  cacheRoute('market:prices-multi', 120),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { slug } = req.params;
+    const interval = (req.query.interval as string) || 'daily';
+    const limit = Math.min(Number(req.query.limit) || 365, 10000);
+
+    const commodity = await prisma.commodity.findUnique({ where: { slug } });
+    if (!commodity) {
+      throw new NotFoundError(`Commodity '${slug}'`);
+    }
+
+    const prices = await prisma.commodityPrice.findMany({
+      where: { commodityId: commodity.id, interval },
+      orderBy: { date: 'asc' },
+      take: limit,
+      select: { date: true, close: true, source: true, interval: true },
+    });
+
+    const bySource = new Map<string, Array<{ date: string; close: number }>>();
+    for (const p of prices) {
+      const src = p.source;
+      if (!bySource.has(src)) bySource.set(src, []);
+      bySource.get(src)!.push({
+        date: p.date.toISOString().slice(0, 10),
+        close: Number(p.close),
+      });
+    }
+
+    success(res, {
+      commodity: { id: commodity.id, slug: commodity.slug, name: commodity.name, unit: commodity.unit },
+      interval,
+      sources: Object.fromEntries(bySource),
+      sourceCount: bySource.size,
+    });
+  }),
+);
+
+router.get(
   '/commodities/:slug/fundamentals',
   authenticate,
   cacheRoute('market:fundamentals', 600),
@@ -200,6 +240,106 @@ router.get(
     success(res, {
       rates: Array.from(latest.values()),
       count: latest.size,
+    });
+  }),
+);
+
+router.get(
+  '/sources',
+  authenticate,
+  cacheRoute('market:sources', 300),
+  asyncHandler(async (_req, res) => {
+    const health = scraperManager.getHealth();
+
+    const sourceLabels: Record<string, { label: string; description: string; tier: string }> = {
+      commodity_prices: { label: 'Multi-Source Aggregator', description: 'Aggregated commodity prices from multiple public sources', tier: '1' },
+      weather: { label: 'Weather Data', description: 'Global weather data affecting commodity production', tier: '1' },
+      usda_ams: { label: 'USDA AMS', description: 'US Department of Agriculture Agricultural Marketing Service — livestock, grain, dairy prices', tier: '1' },
+      fao_prices: { label: 'FAO', description: 'UN Food and Agriculture Organization — global food price indices and commodity data', tier: '1' },
+      world_bank: { label: 'World Bank Pink Sheet', description: 'World Bank monthly commodity prices — 70+ commodities, energy, metals, agriculture', tier: '1' },
+      usda_psd: { label: 'USDA FAS PSD', description: 'USDA Foreign Agricultural Service — global production, supply, and distribution data', tier: '1' },
+      fred: { label: 'FRED', description: 'Federal Reserve Economic Data — CPI, PPI, interest rates, commodity indices, exchange rates', tier: '1' },
+      cme_futures: { label: 'CME Group', description: 'CME Group futures settlement prices — live cattle, grain, oil, metals', tier: '2' },
+      abares: { label: 'ABARES', description: 'Australian Bureau of Agricultural and Resource Economics — beef/lamb/grain production & exports', tier: '2' },
+      china_wholesale: { label: 'China MARA', description: '中国农业农村部批发市场价格 — daily wholesale prices for meat, vegetables, fruits', tier: '2' },
+      china_customs: { label: 'China Customs', description: '中国海关总署 — monthly import/export statistics by commodity and country', tier: '3' },
+      dce_futures: { label: 'DCE/CZCE', description: '大商所/郑商所期货 — domestic Chinese futures prices for soybean meal, corn, cotton, etc.', tier: '3' },
+      baltic_dry: { label: 'Baltic Dry Index', description: 'Baltic Exchange dry bulk shipping cost index — global freight benchmark', tier: '3' },
+    };
+
+    const sources = Object.entries(sourceLabels).map(([key, info]) => ({
+      id: key,
+      ...info,
+      status: health[key]?.success ? 'healthy' : (health[key]?.lastRun ? 'error' : 'pending'),
+      lastRun: health[key]?.lastRun ?? null,
+      error: health[key]?.error ?? null,
+      lastResult: health[key]?.lastResult ?? null,
+    }));
+
+    success(res, { sources, count: sources.length });
+  }),
+);
+
+router.get(
+  '/commodities/:slug/sources',
+  authenticate,
+  cacheRoute('market:commodity-sources', 300),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { slug } = req.params;
+
+    const commodity = await prisma.commodity.findUnique({ where: { slug } });
+    if (!commodity) {
+      throw new NotFoundError(`Commodity '${slug}'`);
+    }
+
+    // Get distinct sources and their data coverage
+    const sourceStats = await prisma.commodityPrice.groupBy({
+      by: ['source'],
+      where: { commodityId: commodity.id },
+      _count: { id: true },
+      _min: { date: true },
+      _max: { date: true },
+    });
+
+    const factorStats = await prisma.marketFactor.groupBy({
+      by: ['source', 'type'],
+      where: {
+        date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
+      },
+      _count: { id: true },
+    });
+
+    const sourceLabels: Record<string, string> = {
+      usda_ams: 'USDA AMS',
+      fao: 'FAO',
+      world_bank: 'World Bank',
+      cme: 'CME Group',
+      fred: 'FRED',
+      usda_psd: 'USDA PSD',
+      commodity_prices: 'Aggregated',
+      china_mara: 'China MARA',
+      china_customs: 'China Customs',
+      manual: 'Manual Import',
+    };
+
+    const priceSources = sourceStats.map((s) => ({
+      id: s.source,
+      label: sourceLabels[s.source] || s.source,
+      priceCount: s._count.id,
+      dateRange: { from: s._min.date, to: s._max.date },
+    }));
+
+    const factorSources = factorStats.map((f) => ({
+      source: f.source,
+      type: f.type,
+      label: sourceLabels[f.source] || f.source,
+      count: f._count.id,
+    }));
+
+    success(res, {
+      commodity: { id: commodity.id, slug: commodity.slug, name: commodity.name, unit: commodity.unit },
+      priceSources,
+      factorSources,
     });
   }),
 );
@@ -287,7 +427,7 @@ router.post(
       throw new BadRequestError('CSV file is empty');
     }
 
-    let mapping;
+    let mapping: FieldMapping | undefined;
     if (params.mapping) {
       const m = params.mapping;
       mapping = {
@@ -303,7 +443,7 @@ router.post(
       mapping = detectFieldMapping(headers);
     }
 
-    const result = await importRows(params.commodityId, rows, mapping, params.interval);
+    const result = await importRows(params.commodityId, rows, mapping!, params.interval);
 
     success(res, {
       imported: result.inserted + result.updated,

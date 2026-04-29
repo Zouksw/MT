@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { prisma, logger } from '@/lib';
 import type { Prisma } from '@prisma/client';
-import { authenticate, AuthRequest } from '@/middleware/auth';
+import { authenticate, type AuthRequest } from '@/middleware/auth';
 import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '@/middleware/errorHandler';
 import { getPagination, paginationSchema } from '@/schemas/common';
 import { createDatasetSchema as newCreateDatasetSchema, updateDatasetSchema as newUpdateDatasetSchema } from '@/schemas/datasets';
@@ -24,7 +23,6 @@ const serializeDataset = (dataset: DatasetRow) => {
 
   // Convert all BigInt fields to string
   if (serialized.sizeBytes) serialized.sizeBytes = serialized.sizeBytes.toString() as unknown as bigint;
-  if (serialized.rowsCount) serialized.rowsCount = serialized.rowsCount;
 
   // Handle nested objects
   if (serialized.owner) serialized.owner = { ...serialized.owner };
@@ -32,7 +30,7 @@ const serializeDataset = (dataset: DatasetRow) => {
   return serialized;
 };
 
-const serializeDatasets = (datasets: DatasetRow[]) =>
+const _serializeDatasets = (datasets: DatasetRow[]) =>
   datasets.map((ds: DatasetRow) => serializeDataset(ds));
 
 /**
@@ -161,7 +159,7 @@ router.get('/', authenticate, cacheRoute('datasets:list', 300), asyncHandler(asy
  *         description: Dataset not found
  */
 // GET /api/datasets/:id - Get single dataset
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', authenticate, asyncHandler(async (req: AuthRequest, res) => {
   const dataset = await prisma.dataset.findUnique({
     where: { id: req.params.id },
     include: {
@@ -552,7 +550,7 @@ router.post('/:id/import', authenticate, asyncHandler(async (req: AuthRequest, r
 
     for (const row of batch) {
       const timestamp = new Date(row[timestampColumn] as string | number | Date);
-      if (isNaN(timestamp.getTime())) {
+      if (Number.isNaN(timestamp.getTime())) {
         continue;
       }
 

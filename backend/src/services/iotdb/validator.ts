@@ -33,10 +33,10 @@ export function escapeString(value: string): string {
   escaped = escaped.replace(/\r/g, '\\r');
 
   // Escape null character
-  escaped = escaped.replace(/\x00/g, '\\0');
+  escaped = escaped.replace(new RegExp(String.fromCharCode(0), 'g'), '\\0');
 
   // Escape substitute character (used by some databases)
-  escaped = escaped.replace(/\x1a/g, '\\Z');
+  escaped = escaped.replace(new RegExp(String.fromCharCode(0x1a), 'g'), '\\Z');
 
   // Return with single quotes wrapped around
   return `'${escaped}'`;
