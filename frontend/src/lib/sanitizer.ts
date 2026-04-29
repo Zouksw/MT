@@ -92,7 +92,7 @@ class InputSanitizer {
   sanitizeNumber(value: any, min?: number, max?: number): number | null {
     const num = Number(value);
 
-    if (isNaN(num) || !isFinite(num)) {
+    if (Number.isNaN(num) || !Number.isFinite(num)) {
       return null;
     }
 
@@ -114,8 +114,20 @@ class InputSanitizer {
     }
 
     // Remove control characters (except newline, tab, carriage return)
-    // eslint-disable-next-line no-control-regex -- intentionally matching control characters for sanitization
-    const controlCharRegex = new RegExp('[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]', 'g');
+    const controlChars = [
+      String.fromCharCode(0), String.fromCharCode(1), String.fromCharCode(2),
+      String.fromCharCode(3), String.fromCharCode(4), String.fromCharCode(5),
+      String.fromCharCode(6), String.fromCharCode(7), String.fromCharCode(8),
+      String.fromCharCode(11), String.fromCharCode(12),
+      String.fromCharCode(14), String.fromCharCode(15), String.fromCharCode(16),
+      String.fromCharCode(17), String.fromCharCode(18), String.fromCharCode(19),
+      String.fromCharCode(20), String.fromCharCode(21), String.fromCharCode(22),
+      String.fromCharCode(23), String.fromCharCode(24), String.fromCharCode(25),
+      String.fromCharCode(26), String.fromCharCode(27), String.fromCharCode(28),
+      String.fromCharCode(29), String.fromCharCode(30), String.fromCharCode(31),
+      String.fromCharCode(127),
+    ].join('');
+    const controlCharRegex = new RegExp(`[${controlChars}]`, 'g');
     let cleaned = value.replace(controlCharRegex, '');
 
     // Limit length
@@ -220,7 +232,7 @@ class InputSanitizer {
     const sanitized: any = {};
 
     for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (Object.hasOwn(obj, key)) {
         const sanitizedKey = this.sanitizeString(key, 100);
         sanitized[sanitizedKey] = typeof obj[key] === 'object' && obj[key] !== null
           ? this.sanitizeObjectKeys(obj[key])

@@ -1,88 +1,108 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
+import { CheckCircle2 } from "lucide-react";
+import {
+  MotionReveal,
+  StaggerContainer,
+  StaggerChild,
+} from "@/components/ui/MotionReveal";
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
+    "monthly"
+  );
 
   const plans = [
     {
-      name: "免费版",
-      description: "适合个人开发者和小团队",
+      name: "Free",
+      description: "For individual analysts tracking commodity markets",
       price: { monthly: 0, yearly: 0 },
       features: [
-        "10,000 数据点/天",
-        "1 个数据集",
-        "基础查询",
-        "社区支持",
-        "7 天数据保留",
+        "55+ commodity prices",
+        "5 watchlist items",
+        "3 AI prediction models",
+        "Basic charts & OHLCV data",
+        "7-day price history",
       ],
-      cta: "开始使用",
+      cta: "Get Started Free",
       highlighted: false,
     },
     {
-      name: "专业版",
-      description: "适合成长中的团队和企业",
+      name: "Professional",
+      description: "For teams needing AI-driven commodity signals",
       price: { monthly: 49, yearly: 39 },
       features: [
-        "1M 数据点/天",
-        "无限数据集",
-        "AI 预测分析",
-        "异常检测",
-        "邮件支持",
-        "30 天数据保留",
-        "API 访问",
-        "自定义仪表板",
+        "All 55+ commodities",
+        "7 AI signal models (ARIMA, HoltWinters, etc.)",
+        "Multi-factor analysis (weather, forex, shipping)",
+        "Price alerts & anomaly detection",
+        "Email notifications",
+        "30-day price history",
+        "API access",
+        "Custom dashboard",
       ],
-      cta: "开始试用",
+      cta: "Start Free Trial",
       highlighted: true,
     },
     {
-      name: "企业版",
-      description: "适合大规模部署和定制需求",
+      name: "Enterprise",
+      description: "For institutions requiring custom deployments",
       price: { monthly: 199, yearly: 159 },
       features: [
-        "无限数据点",
-        "无限数据集",
-        "所有 AI 功能",
-        "高级异常检测",
-        "优先支持",
-        "永久数据保留",
-        "私有部署",
-        "SLA 保证",
-        "定制开发",
+        "Unlimited commodity data",
+        "All AI models with priority inference",
+        "Advanced correlation & seasonality",
+        "Dedicated API endpoints",
+        "Priority support & SLA",
+        "Full price history",
+        "Private deployment",
+        "Custom model training",
+        "Dedicated account manager",
       ],
-      cta: "联系销售",
+      cta: "Contact Sales",
       highlighted: false,
     },
   ];
 
+  const freePlan = plans[0];
+  const proPlan = plans[1];
+  const enterprisePlan = plans[2];
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-card">
       {/* Navigation */}
-      <nav className="border-b border-gray-200 dark:border-gray-800">
+      <nav className="border-b border-black/5 dark:border-white/10 bg-card sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <span className="text-white font-semibold text-lg">I</span>
+              <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
+                <span className="text-white dark:text-gray-900 font-semibold text-lg">
+                  T
+                </span>
               </div>
-              <span className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50">
-                TradeMind AI
+              <span className="text-h4 font-display font-semibold text-foreground">
+                MT
               </span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/" className="text-body text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">
-                首页
+              <Link
+                href="/"
+                className="text-body text-muted-foreground hover:text-primary transition-colors"
+              >
+                Home
               </Link>
-              <Link href="/about" className="text-body text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">
-                关于
-              </Link>
+              <a
+                href="/about"
+                className="text-body text-muted-foreground hover:text-primary transition-colors"
+              >
+                About
+              </a>
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">
-                  登录
+                  Sign In
                 </Button>
               </Link>
             </div>
@@ -91,199 +111,301 @@ export default function PricingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+      <section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-display text-gray-900 dark:text-gray-50 mb-6">
-            简单透明的定价
-          </h1>
-          <p className="text-body-lg text-gray-600 dark:text-gray-400 mb-10">
-            选择最适合您的方案，随时升级或取消
-          </p>
+          <MotionReveal>
+            <h1
+              className="text-display text-foreground mb-6"
+              style={{ letterSpacing: "-0.04em" }}
+            >
+              Simple, Transparent Pricing
+            </h1>
+          </MotionReveal>
+          <MotionReveal delay={0.1}>
+            <p className="text-body-lg text-muted-foreground mb-10">
+              Choose the plan that fits your analysis needs. Upgrade or cancel
+              anytime.
+            </p>
+          </MotionReveal>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-3 bg-gray-100 dark:bg-gray-900 rounded-full p-1">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-6 py-2 rounded-full text-body font-medium transition-all ${
-                billingCycle === "monthly"
-                  ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-50 shadow-sm"
-                  : "text-gray-600 dark:text-gray-400"
-              }`}
-            >
-              按月付费
-            </button>
-            <button
-              onClick={() => setBillingCycle("yearly")}
-              className={`px-6 py-2 rounded-full text-body font-medium transition-all relative ${
-                billingCycle === "yearly"
-                  ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-50 shadow-sm"
-                  : "text-gray-600 dark:text-gray-400"
-              }`}
-            >
-              按年付费
-              <span className="absolute -top-1 -right-1 bg-success text-white text-xs px-2 py-0.5 rounded-full">
-                省 20%
-              </span>
-            </button>
-          </div>
+          <MotionReveal delay={0.15}>
+            <div className="inline-flex items-center gap-3 bg-muted rounded-full p-1">
+              <button
+                onClick={() => setBillingCycle("monthly")}
+                className={`px-6 py-2 rounded-full text-body font-medium transition-all ${
+                  billingCycle === "monthly"
+                    ? "bg-black text-white"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle("yearly")}
+                className={`px-6 py-2 rounded-full text-body font-medium transition-all relative ${
+                  billingCycle === "yearly"
+                    ? "bg-black text-white"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Yearly
+                <span className="absolute -top-1 -right-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+          </MotionReveal>
         </div>
       </section>
 
-      {/* Pricing Cards */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+      {/* Pricing Cards — Asymmetric Bento */}
+      <section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-muted">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan, idx) => (
-              <div
-                key={idx}
-                className={`relative rounded-lg p-8 border-2 transition-all ${
-                  plan.highlighted
-                    ? "border-primary bg-white dark:bg-gray-800 shadow-lg scale-105"
-                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-                }`}
-              >
-                {plan.highlighted && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-primary text-white text-body-sm font-medium px-4 py-1 rounded-full">
-                      最受欢迎
-                    </span>
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Professional — Full-width top row */}
+            <StaggerChild className="md:col-span-2">
+              <div className="relative rounded-2xl outline-2 outline-primary bg-card p-8 md:p-10">
+                <div className="absolute -top-3 left-8">
+                  <span className="bg-black text-white rounded-full px-3 py-0.5 text-xs font-medium">
+                    Most Popular
+                  </span>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-start md:gap-12">
+                  <div className="flex-1 text-center md:text-left mb-8 md:mb-0">
+                    <h3 className="text-h3 font-display font-semibold text-foreground mb-2">
+                      {proPlan.name}
+                    </h3>
+                    <p className="text-body text-muted-foreground mb-6">
+                      {proPlan.description}
+                    </p>
+                    <div className="flex items-baseline justify-center md:justify-start gap-1">
+                      <span className="text-4xl font-display font-semibold text-foreground tabular-nums">
+                        ${proPlan.price[billingCycle]}
+                      </span>
+                      <span className="text-body text-muted-foreground">
+                        /mo
+                      </span>
+                    </div>
+                    {billingCycle === "yearly" && proPlan.price.yearly > 0 && (
+                      <p className="text-body-sm text-muted-foreground mt-2">
+                        Billed ${proPlan.price.yearly * 12}/year
+                      </p>
+                    )}
+                    <Link href="/dashboard" className="inline-block mt-6">
+                      <Button size="lg" className="min-w-[200px] rounded-full bg-black text-white hover:bg-gray-800 border-0">
+                        {proPlan.cta}
+                      </Button>
+                    </Link>
                   </div>
-                )}
+                  <ul className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {proPlan.features.map((feature, featureIdx) => (
+                      <li key={featureIdx} className="flex items-start gap-3">
+                        <CheckCircle2
+                          size={20}
+                          className="text-primary flex-shrink-0 mt-0.5"
+                        />
+                        <span className="text-body text-muted-foreground">
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </StaggerChild>
 
+            {/* Free — Bottom left */}
+            <StaggerChild>
+              <div className="rounded-2xl outline outline-black/5 dark:outline-white/10 bg-card p-8">
                 <div className="text-center mb-6">
-                  <h3 className="text-h3 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
-                    {plan.name}
+                  <h3 className="text-h3 font-display font-semibold text-foreground mb-2">
+                    {freePlan.name}
                   </h3>
-                  <p className="text-body text-gray-600 dark:text-gray-400 mb-4">
-                    {plan.description}
+                  <p className="text-body text-muted-foreground mb-4">
+                    {freePlan.description}
                   </p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-display font-semibold text-gray-900 dark:text-gray-50 data-text">
-                      ${plan.price[billingCycle]}
+                    <span className="text-4xl font-display font-semibold text-foreground tabular-nums">
+                      ${freePlan.price[billingCycle]}
                     </span>
-                    <span className="text-body text-gray-600 dark:text-gray-400">
-                      /月
+                    <span className="text-body text-muted-foreground">
+                      /mo
                     </span>
                   </div>
-                  {billingCycle === "yearly" && plan.price.yearly > 0 && (
-                    <p className="text-body-sm text-gray-500 dark:text-gray-400 mt-2">
-                      年付 ${plan.price.yearly * 12}/年
-                    </p>
-                  )}
+                  {billingCycle === "yearly" &&
+                    freePlan.price.yearly > 0 && (
+                      <p className="text-body-sm text-muted-foreground mt-2">
+                        Billed ${freePlan.price.yearly * 12}/year
+                      </p>
+                    )}
                 </div>
-
                 <Link href="/dashboard" className="block">
                   <Button
-                    variant={plan.highlighted ? "primary" : "secondary"}
+                    variant="secondary"
                     size="lg"
                     fullWidth
-                    className="mb-6"
+                    className="mb-6 rounded-full"
                   >
-                    {plan.cta}
+                    {freePlan.cta}
                   </Button>
                 </Link>
-
                 <ul className="space-y-3">
-                  {plan.features.map((feature, featureIdx) => (
+                  {freePlan.features.map((feature, featureIdx) => (
                     <li key={featureIdx} className="flex items-start gap-3">
-                      <svg
-                        className="w-5 h-5 text-success flex-shrink-0 mt-0.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-body text-gray-600 dark:text-gray-400">
+                      <CheckCircle2
+                        size={20}
+                        className="text-primary flex-shrink-0 mt-0.5"
+                      />
+                      <span className="text-body text-muted-foreground">
                         {feature}
                       </span>
                     </li>
                   ))}
                 </ul>
               </div>
-            ))}
-          </div>
+            </StaggerChild>
+
+            {/* Enterprise — Bottom right */}
+            <StaggerChild>
+              <div className="rounded-2xl outline outline-black/5 dark:outline-white/10 bg-card p-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-h3 font-display font-semibold text-foreground mb-2">
+                    {enterprisePlan.name}
+                  </h3>
+                  <p className="text-body text-muted-foreground mb-4">
+                    {enterprisePlan.description}
+                  </p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-display font-semibold text-foreground tabular-nums">
+                      ${enterprisePlan.price[billingCycle]}
+                    </span>
+                    <span className="text-body text-muted-foreground">
+                      /mo
+                    </span>
+                  </div>
+                  {billingCycle === "yearly" &&
+                    enterprisePlan.price.yearly > 0 && (
+                      <p className="text-body-sm text-muted-foreground mt-2">
+                        Billed ${enterprisePlan.price.yearly * 12}/year
+                      </p>
+                    )}
+                </div>
+                <Link href="/dashboard" className="block">
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    fullWidth
+                    className="mb-6 rounded-full"
+                  >
+                    {enterprisePlan.cta}
+                  </Button>
+                </Link>
+                <ul className="space-y-3">
+                  {enterprisePlan.features.map((feature, featureIdx) => (
+                    <li key={featureIdx} className="flex items-start gap-3">
+                      <CheckCircle2
+                        size={20}
+                        className="text-primary flex-shrink-0 mt-0.5"
+                      />
+                      <span className="text-body text-muted-foreground">
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </StaggerChild>
+          </StaggerContainer>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
+      <section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-h1 text-gray-900 dark:text-gray-50 mb-4">
-              常见问题
-            </h2>
+            <MotionReveal>
+              <h2
+                className="text-h1 font-display text-foreground mb-4"
+                style={{ letterSpacing: "-0.04em" }}
+              >
+                Frequently Asked Questions
+              </h2>
+            </MotionReveal>
           </div>
 
-          <div className="space-y-4">
+          <StaggerContainer className="space-y-4">
             {[
               {
-                q: "可以随时取消订阅吗？",
-                a: "是的，您可以随时取消订阅，无需任何理由。取消后，您可以在当前计费周期结束前继续使用服务。",
+                q: "Can I cancel my subscription anytime?",
+                a: "Yes, you can cancel anytime with no questions asked. You'll retain access until the end of your current billing period.",
               },
               {
-                q: "免费版有使用期限吗？",
-                a: "免费版没有使用期限，您可以永久免费使用。如果需要更多功能或数据点，可以随时升级到付费版。",
+                q: "Is the free plan really free?",
+                a: "Yes, the free plan has no time limit. You get access to 55+ commodity prices and basic charts forever. Upgrade only when you need AI signals or advanced features.",
               },
               {
-                q: "如何支付？",
-                a: "我们支持信用卡、借记卡和 PayPal。对于企业版，我们还支持银行转账和发票支付。",
+                q: "What payment methods do you accept?",
+                a: "We accept all major credit cards and PayPal. Enterprise plans can also pay via bank transfer or invoice.",
               },
               {
-                q: "升级后可以降级吗？",
-                a: "可以，您可以随时在账户设置中更改订阅计划。降级将在当前计费周期结束后生效。",
+                q: "Can I switch plans after signing up?",
+                a: "Absolutely. You can upgrade or downgrade anytime from your account settings. Downgrades take effect at the end of your current billing cycle.",
               },
               {
-                q: "企业版包含哪些定制服务？",
-                a: "企业版包括私有部署、定制开发、专属客户经理、SLA 保证和优先技术支持。联系我们了解详情。",
+                q: "What does the Enterprise plan include?",
+                a: "Enterprise includes private deployment, custom AI model training, dedicated API endpoints, SLA guarantees, priority support, and a dedicated account manager.",
               },
             ].map((faq, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-800"
-              >
-                <h3 className="text-h4 font-display font-semibold text-gray-900 dark:text-gray-50 mb-2">
-                  {faq.q}
-                </h3>
-                <p className="text-body text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {faq.a}
-                </p>
-              </div>
+              <StaggerChild key={idx}>
+                <div className="bg-card rounded-lg p-6 outline outline-black/5 dark:outline-white/10 border-l-4 border-l-primary">
+                  <h3 className="text-h4 font-display font-semibold text-foreground mb-2">
+                    {faq.q}
+                  </h3>
+                  <p className="text-body text-muted-foreground leading-relaxed">
+                    {faq.a}
+                  </p>
+                </div>
+              </StaggerChild>
             ))}
-          </div>
+          </StaggerContainer>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+      <section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-muted">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-h1 text-gray-900 dark:text-gray-50 mb-6">
-            还有疑问？
-          </h2>
-          <p className="text-body-lg text-gray-600 dark:text-gray-400 mb-10">
-            我们的销售团队随时为您提供帮助
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="primary" size="lg" className="min-w-[160px]">
-              联系销售
-            </Button>
-            <Button variant="ghost" size="lg" className="min-w-[160px]">
-              查看文档
-            </Button>
-          </div>
+          <MotionReveal>
+            <h2
+              className="text-h1 font-display text-foreground mb-6"
+              style={{ letterSpacing: "-0.04em" }}
+            >
+              Still Have Questions?
+            </h2>
+          </MotionReveal>
+          <MotionReveal delay={0.1}>
+            <p className="text-body-lg text-muted-foreground mb-10">
+              Our team is here to help you find the right plan
+            </p>
+          </MotionReveal>
+          <MotionReveal delay={0.15}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="min-w-[160px] rounded-full bg-black text-white hover:bg-gray-800 border-0">
+                Contact Sales
+              </Button>
+              <Button variant="ghost" size="lg" className="min-w-[160px] rounded-full">
+                View Documentation
+              </Button>
+            </div>
+          </MotionReveal>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-200 dark:border-gray-800">
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-black/5 dark:border-white/10">
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-body-sm text-gray-500 dark:text-gray-400">
-            © 2026 TradeMind AI. All rights reserved.
+          <p className="text-body-sm text-muted-foreground">
+            &copy; 2026 MT. All rights reserved.
           </p>
         </div>
       </footer>

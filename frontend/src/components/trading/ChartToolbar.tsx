@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { Maximize } from "lucide-react";
 
 export type ChartType = "candlestick" | "line";
 
@@ -42,7 +42,7 @@ export default function ChartToolbar({
       style={{ boxShadow: "rgba(0,0,0,0.08) 0px 0px 0px 1px" }}
     >
       {/* Chart type toggle */}
-      <div className="flex items-center gap-1" role="group" aria-label="Chart type">
+      <fieldset className="flex items-center gap-1" aria-label="Chart type">
         {chartTypeOptions.map((opt) => {
           const isActive = chartType === opt.key;
           return (
@@ -65,7 +65,7 @@ export default function ChartToolbar({
             </button>
           );
         })}
-      </div>
+      </fieldset>
 
       {/* Indicator toggles */}
       <div className="flex items-center gap-3">
@@ -77,13 +77,14 @@ export default function ChartToolbar({
             <input
               type="checkbox"
               checked={indicators[opt.key]}
+              suppressHydrationWarning
               onChange={(e) =>
                 onIndicatorsChange({
                   ...indicators,
                   [opt.key]: e.target.checked,
                 })
               }
-              className="w-3.5 h-3.5 rounded accent-[#0a72ef] cursor-pointer"
+              className="w-3.5 h-3.5 rounded accent-[#B8860B] cursor-pointer"
             />
             {opt.label}
           </label>
@@ -102,18 +103,7 @@ export default function ChartToolbar({
           aria-label="Toggle fullscreen"
           title="Fullscreen"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" />
-          </svg>
+          <Maximize className="size-4" />
         </button>
       )}
     </div>

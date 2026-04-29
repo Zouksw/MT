@@ -1,38 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Button,
-  message,
-  Row,
-  Col,
-  Descriptions,
-  Alert,
-  Spin,
-  Tag,
-  Divider,
-} from "antd";
-
-import { LoadingState } from "@/components/ui/LoadingState";
-import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
-import {
-  ThunderboltOutlined,
-  RocketOutlined,
-  CheckCircleOutlined,
-  LineChartOutlined,
-  ExperimentOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Tag } from "@/components/ui/Tag";
+import { Alert } from "@/components/ui/Alert";
+import { useToast } from "@/components/ui/Toast";
+import { ChevronRight, Zap } from "lucide-react";
 
 import { PageContainer } from "@/components/layout/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { ContentCard } from "@/components/layout/ContentCard";
-import GlassCard from "@/components/ui/GlassCard";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { useIsMobile } from "@/lib/responsive-utils";
 import dynamic from "next/dynamic";
 
@@ -41,8 +21,8 @@ const PredictionChart = dynamic(
   () => import("@/components/charts/PredictionChart").then(mod => ({ default: mod.PredictionChart })),
   {
     loading: () => (
-      <div style={{ padding: "40px", textAlign: "center" }}>
-        <Spin size="large" />
+      <div className="py-10 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     ),
     ssr: false,
@@ -51,14 +31,6 @@ const PredictionChart = dynamic(
 
 // Check if AI features are disabled
 const AI_DISABLED = process.env.NEXT_PUBLIC_AI_DISABLED === 'true';
-
-interface PredictionRequest {
-  timeseries: string;
-  model: string;
-  horizon?: number;
-  startTime?: number;
-  historyPoints?: number;
-}
 
 interface VisualizationResult {
   timeseries: string;
@@ -72,12 +44,22 @@ interface VisualizationResult {
 }
 
 export default function AIPredictPage() {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VisualizationResult | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<Error | null>(null);
   const isMobile = useIsMobile();
+  const toast = useToast();
+
+  // Form state
+  const [formTimeseries, setFormTimeseries] = useState("root.test2");
+  const [formModel, setFormModel] = useState("arima");
+  const [formHorizon, setFormHorizon] = useState("10");
+  const [formStartTime, setFormStartTime] = useState("");
+  const [formHistoryPoints, setFormHistoryPoints] = useState("50");
+
+  // Validation state
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // AI Node built-in algorithms
   const models = [
@@ -90,7 +72,24 @@ export default function AIPredictPage() {
     { id: "stl_forecaster", name: "STL Forecaster", type: "Decomposition", description: "STL Decomposition Forecast" },
   ];
 
-  const handlePredict = async (values: PredictionRequest) => {
+  const modelOptions = models.map((model) => ({
+    value: model.id,
+    label: `${model.name} — ${model.type} - ${model.description}`,
+  }));
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formTimeseries.trim()) newErrors.timeseries = "Please enter time series path";
+    if (!formModel) newErrors.model = "Please select a model";
+    const horizon = parseInt(formHorizon, 10);
+    if (!formHorizon || Number.isNaN(horizon) || horizon < 1) newErrors.horizon = "Please enter a valid horizon (min 1)";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePredict = async () => {
+    if (!validate()) return;
+
     setLoading(true);
     setResult(null);
     setPermissionError(null);
@@ -105,10 +104,11 @@ export default function AIPredictPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          timeseries: values.timeseries,
-          algorithm: values.model,
-          horizon: values.horizon || 10,
-          historyPoints: values.historyPoints || 50,
+          timeseries: formTimeseries,
+          algorithm: formModel,
+          horizon: parseInt(formHorizon, 10) || 10,
+          ...(formStartTime ? { startTime: parseInt(formStartTime, 10) } : {}),
+          historyPoints: parseInt(formHistoryPoints, 10) || 50,
         }),
       });
 
@@ -124,225 +124,165 @@ export default function AIPredictPage() {
       const data = await response.json();
       setResult(data);
       setApiError(null);
-      message.success(`Prediction completed! Generated ${data.prediction?.values?.length || 0} data points.`);
+      toast.showSuccess(`Prediction completed! Generated ${data.prediction?.values?.length || 0} data points.`);
     } catch (error: any) {
       setApiError(error instanceof Error ? error : new Error(error.message || "Prediction failed"));
       if (!permissionError) {
-        message.error(`Prediction failed: ${error.message}`);
+        toast.showError(`Prediction failed: ${error.message}`);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "AI & Anomaly Detection", href: "/ai" },
-    { title: "AI Prediction" },
-  ];
-
   return (
     <PageContainer>
       {/* AI Feature Disabled Warning */}
       {AI_DISABLED && (
-        <Alert
-          message="AI Features Temporarily Disabled"
-          description="AI prediction features have been temporarily disabled for security reasons. Contact your administrator for more information."
-          type="warning"
-          showIcon
-          icon={<WarningOutlined />}
-          style={{ marginBottom: isMobile ? 16 : 24 }}
-          closable
-        />
+        <Alert variant="warning" title="AI Features Temporarily Disabled" closable className="mb-6">
+          AI prediction features have been temporarily disabled for security reasons. Contact your administrator for more information.
+        </Alert>
       )}
 
       {/* Permission Error Alert */}
       {permissionError && (
         <Alert
-          message="AI Feature Access Restricted"
-          description={
-            permissionError.includes("disabled")
-              ? "AI features are currently disabled. Please contact your administrator to enable them."
-              : "AI prediction features are only available to administrators. If you are an administrator, please ensure you are logged in with your admin account."
-          }
-          type="error"
-          showIcon
-          icon={<WarningOutlined />}
-          style={{ marginBottom: isMobile ? 16 : 24 }}
+          variant="error"
+          title="AI Feature Access Restricted"
           closable
           onClose={() => setPermissionError(null)}
-        />
+          className="mb-6"
+        >
+          {permissionError.includes("disabled")
+            ? "AI features are currently disabled. Please contact your administrator to enable them."
+            : "AI prediction features are only available to administrators. If you are an administrator, please ensure you are logged in with your admin account."}
+        </Alert>
       )}
 
-      <PageHeader
-        title="AI Prediction"
-        description="Generate single-time predictions using AI models"
-        breadcrumbs={breadcrumbItems}
-        actions={
-          <Button
-            icon={<ExperimentOutlined />}
-            onClick={() => {
-              window.location.href = "/ai/models";
-            }}
-            disabled={AI_DISABLED}
-          >
-            {!isMobile && "View Models"}
-          </Button>
-        }
-      />
+      {/* Page Header */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <a href="/" className="hover:text-primary">Home</a>
+            <ChevronRight className="size-3" />
+            <a href="/ai" className="hover:text-primary">AI & Anomaly Detection</a>
+            <ChevronRight className="size-3" />
+            <span>AI Prediction</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">AI Prediction</h2>
+          <p className="text-sm text-muted-foreground mt-1">Generate single-time predictions using AI models</p>
+        </div>
+        <Button
+          variant="ghost"
+          onClick={() => { window.location.href = "/ai/models"; }}
+          disabled={AI_DISABLED}
+        >
+          {!isMobile && "View Models"}
+        </Button>
+      </div>
 
-      <Row gutter={[isMobile ? 16 : 24, isMobile ? 16 : 24]}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column - Prediction Form */}
-        <Col xs={24} lg={10}>
-          <ContentCard
-            title="Configuration"
-            subtitle={<span style={{ fontSize: 13 }}>Set prediction parameters</span>}
-            style={{ padding: isMobile ? 16 : 24 }}
-          >
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handlePredict}
-              initialValues={{
-                timeseries: "root.test2",
-                model: "arima",
-                horizon: 10,
-              }}
-            >
-              <Form.Item
-                label="Time Series Path"
-                name="timeseries"
-                rules={[{ required: true, message: "Please enter time series path" }]}
-                tooltip="The path of the time series to predict"
-              >
+        <div className="lg:col-span-5">
+          <div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mb-6">
+            <div className="p-6">
+              <div className="text-lg font-semibold text-foreground flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 flex-shrink-0" />
+                Configuration
+              </div>
+              <div className="text-sm text-muted-foreground mb-4">Set prediction parameters</div>
+
+              <div className="space-y-4">
                 <Input
+                  label="Time Series Path"
                   placeholder="e.g., root.test2"
-                  prefix={<LineChartOutlined style={{ color: "#bfbfbf" }} />}
+                  value={formTimeseries}
+                  onChange={(e) => setFormTimeseries(e.target.value)}
+                  error={errors.timeseries}
+                  fullWidth
                 />
-              </Form.Item>
 
-              <Form.Item
-                label="AI Model"
-                name="model"
-                rules={[{ required: true, message: "Please select a model" }]}
-                tooltip="Choose the AI model for prediction"
-              >
-                <Select>
-                  {models.map((model) => (
-                    <Select.Option key={model.id} value={model.id}>
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{model.name}</div>
-                        <div style={{ fontSize: 12, color: "#999" }}>
-                          {model.type} - {model.description}
-                        </div>
-                      </div>
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
+                <Select
+                  label="AI Model"
+                  options={modelOptions}
+                  value={formModel}
+                  onChange={(val) => setFormModel(val)}
+                  error={errors.model}
+                  fullWidth
+                />
 
-              <Form.Item
-                label="Prediction Horizon"
-                name="horizon"
-                rules={[{ required: true, message: "Please enter horizon" }]}
-                tooltip="Number of data points to predict ahead"
-              >
-                <InputNumber
-                  min={1}
-                  max={1000}
-                  step={1}
-                  style={{ width: "100%" }}
+                <Input
+                  label="Prediction Horizon"
+                  type="number"
                   placeholder="e.g., 10"
+                  value={formHorizon}
+                  onChange={(e) => setFormHorizon(e.target.value)}
+                  error={errors.horizon}
+                  fullWidth
                 />
-              </Form.Item>
 
-              <Form.Item
-                label="Start Time (Optional)"
-                name="startTime"
-                tooltip="Timestamp to start prediction from (defaults to last data point)"
-              >
-                <InputNumber
-                  min={0}
-                  style={{ width: "100%" }}
+                <Input
+                  label="Start Time (Optional)"
+                  type="number"
                   placeholder="Unix timestamp in milliseconds"
+                  value={formStartTime}
+                  onChange={(e) => setFormStartTime(e.target.value)}
+                  helperText="Timestamp to start prediction from (defaults to last data point)"
+                  fullWidth
                 />
-              </Form.Item>
 
-              <Form.Item
-                label="Historical Data Points"
-                name="historyPoints"
-                tooltip="Number of historical data points to display on chart"
-              >
-                <InputNumber
-                  min={10}
-                  max={500}
-                  step={10}
-                  style={{ width: "100%" }}
+                <Input
+                  label="Historical Data Points"
+                  type="number"
                   placeholder="e.g., 50"
+                  value={formHistoryPoints}
+                  onChange={(e) => setFormHistoryPoints(e.target.value)}
+                  helperText="Number of historical data points to display on chart"
+                  fullWidth
                 />
-              </Form.Item>
 
-              <Divider style={{ margin: "16px 0" }} />
+                <hr className="border my-4" />
 
-              <Form.Item>
                 <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  size="large"
-                  block
-                  icon={<RocketOutlined />}
-                  style={{
-                    background: "#171717",
-                    border: "none",
-                    borderRadius: 3,
-                    fontWeight: 600,
-                    height: "48px",
-                  }}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  isLoading={loading}
+                  onClick={handlePredict}
                 >
                   Generate Prediction
                 </Button>
-              </Form.Item>
-            </Form>
-          </ContentCard>
-
-          {/* Model Info Card */}
-          <GlassCard
-            intensity="light"
-            style={{ marginTop: isMobile ? 16 : 24, padding: isMobile ? "16px" : "20px" }}
-          >
-            <div style={{ marginBottom: 16 }}>
-              <ThunderboltOutlined style={{ marginRight: 8, color: "#0a72ef" }} />
-              <span style={{ fontWeight: 600, fontSize: 14 }}>About AI Prediction</span>
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: "#64748b", lineHeight: "1.6" }}>
-              <p style={{ margin: "0 0 8px 0" }}>
+          </div>
+
+          {/* About AI Prediction Card */}
+          <div className="bg-card rounded-lg border border-white/10 dark:border-white/5 shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] p-5">
+            <div className="mb-4 flex items-center gap-2">
+              {/* Thunderbolt icon */}
+              <Zap className="size-4 text-primary" />
+              <span className="font-semibold text-sm text-foreground">About AI Prediction</span>
+            </div>
+            <div className="text-[13px] text-muted-foreground leading-relaxed">
+              <p className="mb-2">
                 AI prediction uses machine learning models to forecast future values based on
                 historical time series data from IoTDB.
               </p>
-              <p style={{ margin: "0 0 8px 0" }}>
-                <strong>AI Node Built-in Algorithms:</strong>
+              <p className="mb-2">
+                <strong className="text-foreground">AI Node Built-in Algorithms:</strong>
               </p>
-              <ul style={{ margin: 0, paddingLeft: 16 }}>
-                <li>
-                  <strong>ARIMA:</strong> Classic statistical method for time series forecasting
-                </li>
-                <li>
-                  <strong>Timer_XL (LSTM):</strong> Long Short-Term Memory for complex patterns
-                </li>
-                <li>
-                  <strong>Sundial (Transformer):</strong> Transformer-based for complex time patterns
-                </li>
-                <li>
-                  <strong>Holt-Winters:</strong> Triple exponential smoothing for trend and seasonality
-                </li>
+              <ul className="list-disc pl-4 space-y-1">
+                <li><strong className="text-foreground">ARIMA:</strong> Classic statistical method for time series forecasting</li>
+                <li><strong className="text-foreground">Timer_XL (LSTM):</strong> Long Short-Term Memory for complex patterns</li>
+                <li><strong className="text-foreground">Sundial (Transformer):</strong> Transformer-based for complex time patterns</li>
+                <li><strong className="text-foreground">Holt-Winters:</strong> Triple exponential smoothing for trend and seasonality</li>
               </ul>
             </div>
-          </GlassCard>
-        </Col>
+          </div>
+        </div>
 
         {/* Right Column - Results */}
-        <Col xs={24} lg={14}>
+        <div className="lg:col-span-7">
           <LoadingState
             loading={loading}
             skeletonType="card"
@@ -355,7 +295,7 @@ export default function AIPredictPage() {
             {apiError && (
               <ErrorDisplay
                 error={apiError}
-                retry={() => form.submit()}
+                retry={handlePredict}
                 context="AI Prediction"
               />
             )}
@@ -363,14 +303,9 @@ export default function AIPredictPage() {
             {result && (
               <>
                 {/* Success Alert */}
-                <Alert
-                  message="Prediction Completed Successfully"
-                  description={`Generated ${result.prediction.values.length} predictions using ${result.algorithm} model`}
-                  type="success"
-                  showIcon
-                  icon={<CheckCircleOutlined />}
-                  style={{ marginBottom: isMobile ? 16 : 24 }}
-                />
+                <Alert variant="success" title="Prediction Completed Successfully" className="mb-6">
+                  Generated {result.prediction.values.length} predictions using {result.algorithm} model
+                </Alert>
 
                 {/* Prediction Chart */}
                 <PredictionChart
@@ -384,76 +319,69 @@ export default function AIPredictPage() {
                 />
 
                 {/* Model Information */}
-                <ContentCard
-                  title="Model Information"
-                  style={{ marginTop: 24 }}
-                >
-                  <Descriptions bordered column={2} size="small">
-                    <Descriptions.Item label="Algorithm" span={2}>
-                      <Tag color="purple" icon={<ExperimentOutlined />}>
-                        {result.algorithm.toUpperCase()}
-                      </Tag>
-                      <Tag color="blue" style={{ marginLeft: 8 }}>
-                        AI Node
-                      </Tag>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Time Series" span={2}>
-                      {result.timeseries}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Historical Points" span={1}>
-                      {result.historical.length}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Prediction Points" span={1}>
-                      {result.prediction.values.length}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </ContentCard>
+                <div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mt-6 mb-6">
+                  <div className="p-6">
+                    <div className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                      <span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 flex-shrink-0" />
+                      Model Information
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Algorithm</span>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Tag color="info">{result.algorithm.toUpperCase()}</Tag>
+                          <Tag color="info">AI Node</Tag>
+                        </div>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Time Series</span>
+                        <div className="mt-1 text-sm text-foreground">{result.timeseries}</div>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Historical Points</span>
+                        <div className="mt-1 text-sm text-foreground">{result.historical.length}</div>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prediction Points</span>
+                        <div className="mt-1 text-sm text-foreground">{result.prediction.values.length}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Action Buttons */}
-                <Card style={{ marginTop: 24, borderRadius: 4 }}>
-                  <Button
-                    type="primary"
-                    size="large"
-                    block
-                    icon={<LineChartOutlined />}
-                    onClick={() => {
-                      // Navigate to create forecast with these predictions
-                      window.location.href = "/forecasts/create";
-                    }}
-                  >
-                    Save as Forecast
-                  </Button>
+                <Card className="mt-6">
+                  <CardBody>
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onClick={() => {
+                        window.location.href = "/forecasts/create";
+                      }}
+                    >
+                      Save as Forecast
+                    </Button>
+                  </CardBody>
                 </Card>
               </>
             )}
 
             {!loading && !result && !apiError && (
-              <ContentCard style={{ textAlign: "center", padding: "60px 20px" }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "#F3F4F6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 20px",
-                  }}
-                >
-                  <RocketOutlined style={{ fontSize: 32, color: "#9ca3af" }} />
+              <div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] text-center py-16 px-5">
+                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-5">
+                  {/* Rocket icon */}
+                  <Zap className="size-8 text-gray-400" />
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                  Ready to Predict
-                </div>
-                <div style={{ color: "#6b7280", fontSize: 13 }}>
+                <div className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-2">Ready to Predict</div>
+                <div className="text-[13px] text-muted-foreground">
                   Configure your prediction parameters and click &quot;Generate Prediction&quot; to start.
                 </div>
-              </ContentCard>
+              </div>
             )}
           </LoadingState>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </PageContainer>
   );
 }

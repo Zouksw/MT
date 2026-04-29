@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 
 export type Timeframe = "daily" | "weekly" | "monthly";
 
@@ -20,10 +19,9 @@ export default function TimeframeSelector({
   onChange,
 }: TimeframeSelectorProps) {
   return (
-    <div
+    <fieldset
       className="inline-flex rounded-md overflow-hidden"
       style={{ boxShadow: "rgba(0,0,0,0.08) 0px 0px 0px 1px" }}
-      role="group"
       aria-label="Timeframe selector"
     >
       {options.map((opt) => {
@@ -55,6 +53,6 @@ export default function TimeframeSelector({
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
