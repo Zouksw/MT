@@ -1,13 +1,10 @@
 {
 	"devDependencies": {
 		"@types/bcrypt": "^6.0.0",
-		"@types/jest": "^30.0.0",
 		"@types/supertest": "^7.2.0",
 		"husky": "^9.1.7",
-		"jest": "^30.2.0",
 		"lint-staged": "^16.4.0",
 		"supertest": "^7.2.2",
-		"ts-jest": "^29.4.6",
 		"tsx": "^4.21.0"
 	},
 	"pnpm": {
@@ -16,7 +13,12 @@
 		}
 	},
 	"scripts": {
-		"prepare": "husky"
+		"prepare": "husky",
+		"restart": "./scripts/restart.sh",
+		"restart:backend": "./scripts/restart.sh --backend",
+		"restart:frontend": "./scripts/restart.sh --frontend",
+		"restart:iotdb": "./scripts/restart.sh --iotdb",
+		"stop": "lsof -ti:3000,8000,5001 2>/dev/null | xargs kill -9 2>/dev/null; pkill -f 'iotdb.*ConfigNode' 2>/dev/null; pkill -f 'iotdb.*DataNode' 2>/dev/null; pkill -f 'ainode.*MainProcess' 2>/dev/null; echo 'All dev servers and IoTDB stopped'"
 	},
 	"lint-staged": {
 		"backend/src/**/*.{ts}": [
@@ -27,5 +29,8 @@
 			"eslint --fix",
 			"prettier --write"
 		]
+	},
+	"dependencies": {
+		"pm2-logrotate": "^3.0.0"
 	}
 }
