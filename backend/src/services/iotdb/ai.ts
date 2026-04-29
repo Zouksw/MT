@@ -1,6 +1,6 @@
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 import { iotdbConfig } from './client';
-import { Socket } from 'net';
+import { Socket } from 'node:net';
 
 export interface PredictionRequest {
   timeseries: string;
@@ -66,7 +66,7 @@ export class IoTDBAIService {
 
   constructor() {
     // Use environment variables with fallbacks
-    this.ainodeHome = process.env.AI_NODE_HOME || '/opt/iotdb-ainode/apache-iotdb-2.0.5-all-bin';
+    this.ainodeHome = process.env.AI_NODE_HOME || '/opt/iotdb/apache-iotdb-2.0.8-all-bin';
     this.pythonPath = process.env.PYTHON_PATH || `${this.ainodeHome}/venv/bin/python3`;
   }
 
@@ -75,7 +75,7 @@ export class IoTDBAIService {
    */
   private async isAINodeAvailable(): Promise<boolean> {
     const aiNodeHost = process.env.AI_NODE_HOST || '127.0.0.1';
-    const aiNodePort = parseInt(process.env.AI_NODE_PORT || '10810');
+    const aiNodePort = parseInt(process.env.AI_NODE_PORT || '10810', 10);
 
     return new Promise((resolve) => {
       const socket = new Socket();
@@ -135,7 +135,7 @@ export class IoTDBAIService {
               if (jsonMatch.timestamps || jsonMatch.anomalies || jsonMatch.models || jsonMatch.values) {
                 break;
               }
-            } catch (e) {
+            } catch (_e) {
               // 不是有效的 JSON，继续
             }
           }
@@ -320,9 +320,10 @@ except Exception as e:
         values: result.values || [],
         confidence: result.confidence,
       };
-    } catch (error: any) {
-      console.error(`AI Node prediction failed: ${error.message}`);
-      throw new Error(`Prediction failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`AI Node prediction failed: ${message}`);
+      throw new Error(`Prediction failed: ${message}`);
     }
   }
 
@@ -446,9 +447,10 @@ print(json.dumps({
 
       const result = await this.executeAIScript(pythonScript);
       return result;
-    } catch (error: any) {
-      console.error(`AI Node anomaly detection failed: ${error.message}`);
-      throw new Error(`Anomaly detection failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`AI Node anomaly detection failed: ${message}`);
+      throw new Error(`Anomaly detection failed: ${message}`);
     }
   }
 
@@ -614,8 +616,9 @@ except Exception as e:
 
       const result = await this.executeAIScript(pythonScript);
       return result;
-    } catch (error: any) {
-      throw new Error(`Model training failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Model training failed: ${message}`);
     }
   }
 }

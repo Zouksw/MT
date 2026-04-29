@@ -1,84 +1,54 @@
 #!/bin/bash
 #
 # IoTDB AI Node Start Script
-# Starts the Apache IoTDB AI Node service with verification
+# Verifies the AINode Python environment is ready
 #
 
 set -e
 
-# Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# AI Node installation directory
-AINODE_HOME="/opt/iotdb-ainode/apache-iotdb-2.0.5-ainode-bin"
-AINODE_PORT=10810
-AINODE_STARTUP_TIMEOUT=30
+AINODE_HOME="/opt/iotdb/apache-iotdb-2.0.8-all-bin"
 
 echo -e "${GREEN}================================================${NC}"
-echo -e "${GREEN}   IoTDB AI Node - Start Script${NC}"
+echo -e "${GREEN}   IoTDB AI Node - Environment Check${NC}"
 echo -e "${GREEN}================================================${NC}"
 echo ""
 
-# Check if AI Node is already running
-if nc -z localhost $AINODE_PORT 2>/dev/null; then
-    echo -e "${YELLOW}AI Node is already running on port $AINODE_PORT${NC}"
-    echo "Checking process status..."
-    ps aux | grep -E "ainode.*start" | grep -v grep || true
+if [ ! -d "$AINODE_HOME/venv" ]; then
+    echo -e "${RED}ERROR: AINode venv not found at $AINODE_HOME/venv${NC}"
+    exit 1
+fi
+
+PYTHON="$AINODE_HOME/venv/bin/python3"
+if [ ! -f "$PYTHON" ]; then
+    echo -e "${RED}ERROR: Python not found at $PYTHON${NC}"
+    exit 1
+fi
+
+# Verify key imports
+echo "Checking AINode Python environment..."
+$PYTHON -c "
+from ainode.core.manager.model_manager import ModelManager
+from iotdb.Session import Session
+import numpy, pandas, scipy, sklearn, statsmodels
+print('All ML libraries OK')
+" 2>&1 | tail -1
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}AINode Python environment is ready${NC}"
+    echo "  venv: $AINODE_HOME/venv"
     echo ""
-    echo -e "${GREEN}AI Node is operational!${NC}"
-    exit 0
-fi
-
-# Check if AI Node directory exists
-if [ ! -d "$AINODE_HOME" ]; then
-    echo -e "${RED}ERROR: AI Node directory not found: $AINODE_HOME${NC}"
+    echo "AINode runs on-demand via backend ai.ts (no separate daemon needed)"
+else
+    echo -e "${RED}ERROR: AINode Python environment has issues${NC}"
     exit 1
 fi
 
-# Check if start script exists
-if [ ! -f "$AINODE_HOME/sbin/start-ainode.sh" ]; then
-    echo -e "${RED}ERROR: AI Node start script not found${NC}"
-    exit 1
-fi
-
-# Start AI Node
-echo "Starting IoTDB AI Node..."
-cd "$AINODE_HOME"
-./sbin/start-ainode.sh
-
-# Wait for AI Node to start
-echo "Waiting for AI Node to start (timeout: ${AINODE_STARTUP_TIMEOUT}s)..."
-elapsed=0
-while [ $elapsed -lt $AINODE_STARTUP_TIMEOUT ]; do
-    if nc -z localhost $AINODE_PORT 2>/dev/null; then
-        echo -e "${GREEN}✓ AI Node started successfully on port $AINODE_PORT${NC}"
-        echo ""
-        echo "Service Details:"
-        echo "  Port: $AINODE_PORT"
-        echo "  Home: $AINODE_HOME"
-        echo "  Logs: $AINODE_HOME/logs/"
-        echo ""
-        echo "Recent logs:"
-        tail -5 "$AINODE_HOME/logs/log_ainode_info.log" 2>/dev/null || true
-        echo ""
-        echo -e "${GREEN}================================================${NC}"
-        echo -e "${GREEN}   AI Node Started Successfully!${NC}"
-        echo -e "${GREEN}================================================${NC}"
-        exit 0
-    fi
-    sleep 1
-    elapsed=$((elapsed + 1))
-    echo -n "."
-done
-
 echo ""
-echo -e "${RED}ERROR: AI Node failed to start within ${AINODE_STARTUP_TIMEOUT}s${NC}"
-echo ""
-echo "Troubleshooting:"
-echo "  1. Check logs: tail -50 $AINODE_HOME/logs/log_ainode_error.log"
-echo "  2. Check process: ps aux | grep ainode"
-echo "  3. Check IoTDB: nc -z localhost 6667"
-exit 1
+echo -e "${GREEN}================================================${NC}"
+echo -e "${GREEN}   AI Node Ready${NC}"
+echo -e "${GREEN}================================================${NC}"
