@@ -44,6 +44,7 @@ export default function BeefCutSelector({ selected, onSelect }: BeefCutSelectorP
             {primalCuts.map((cut) => (
               <button
                 key={cut.cutCode}
+                type="button"
                 onClick={() => onSelect(cut.cutCode)}
                 className={`px-2 py-0.5 rounded text-xs transition-colors ${
                   selected === cut.cutCode

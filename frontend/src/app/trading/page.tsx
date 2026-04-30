@@ -485,8 +485,8 @@ export default function TradingPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {beefPrices.slice(0, 15).map((p: { source: string; price: number; date: string; factory?: { code: string; name: string; country: string } }, i: number) => (
-                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+                      {beefPrices.slice(0, 15).map((p: { source: string; price: number; date: string; factory?: { code: string; name: string; country: string } }) => (
+                        <tr key={`${p.source}-${p.factory?.code}-${p.date}`} className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-1 text-gray-500">{p.source}</td>
                           <td className="py-1">{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}</td>
                           <td className="text-right py-1 font-mono">${p.price.toFixed(2)}</td>

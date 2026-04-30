@@ -97,8 +97,8 @@ export default function BeefOverview() {
                     </tr>
                   </thead>
                   <tbody>
-                    {latestPrices.slice(0, 20).map((p: { cutCode: string; price: number; source: string; grade?: string; factory?: { code: string; name: string; country: string } }, i: number) => (
-                      <tr key={`${p.cutCode}-${i}`} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900">
+                    {latestPrices.slice(0, 20).map((p: { cutCode: string; price: number; source: string; grade?: string; factory?: { code: string; name: string; country: string } }) => (
+                      <tr key={`${p.cutCode}-${p.source}-${p.factory?.code}`} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900">
                         <td className="py-2">
                           <a href={`/beef/cuts/${p.cutCode}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                             {p.cutCode.replace(/_/g, " ")}
@@ -163,8 +163,8 @@ export default function BeefOverview() {
                       </tr>
                     </thead>
                     <tbody>
-                      {weeklyKills.map((k: { weekEnding: string; country: string; headCount: number; avgWeight?: number }, i: number) => (
-                        <tr key={`${k.country}-${i}`} className="border-b border-gray-100 dark:border-gray-800">
+                      {weeklyKills.map((k: { weekEnding: string; country: string; headCount: number; avgWeight?: number }) => (
+                        <tr key={`${k.country}-${k.weekEnding}`} className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-1.5 text-xs text-gray-500">{new Date(k.weekEnding).toLocaleDateString()}</td>
                           <td className="py-1.5">{k.country}</td>
                           <td className="text-right py-1.5 font-mono">{k.headCount.toLocaleString()}</td>
@@ -197,8 +197,8 @@ export default function BeefOverview() {
                       </tr>
                     </thead>
                     <tbody>
-                      {coldStorage.map((s: { date: string; country: string; totalLbs: number }, i: number) => (
-                        <tr key={`${s.country}-${i}`} className="border-b border-gray-100 dark:border-gray-800">
+                      {coldStorage.map((s: { date: string; country: string; totalLbs: number }) => (
+                        <tr key={`${s.country}-${s.date}`} className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-1.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
                           <td className="py-1.5">{s.country}</td>
                           <td className="text-right py-1.5 font-mono">{s.totalLbs.toFixed(1)}</td>
