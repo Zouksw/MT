@@ -212,7 +212,7 @@ export function normalizeBeefCut(name: string): string | null {
 
   // Exact match
   if (nameToCode.has(key)) {
-    return nameToCode.get(key)!;
+    return nameToCode.get(key) ?? null;
   }
 
   // Try with common suffixes/prefixes stripped
@@ -222,7 +222,7 @@ export function normalizeBeefCut(name: string): string | null {
     .trim();
 
   if (nameToCode.has(stripped)) {
-    return nameToCode.get(stripped)!;
+    return nameToCode.get(stripped) ?? null;
   }
 
   // Fuzzy: check if any key contains the input or vice versa
