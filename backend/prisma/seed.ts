@@ -1431,6 +1431,208 @@ async function main() {
   console.log(`       Created ${fxRates.length * 30} market factor records`);
 
   // ------------------------------------------------------------------
+  // Beef Data: Factories, Cut Taxonomy, Sample Prices
+  // ------------------------------------------------------------------
+  console.log('');
+  console.log('  Seeding Beef Data...');
+
+  // Factories
+  const FACTORIES = [
+    // Australia
+    { code: 'AU-847', name: 'Teys Wagga Wagga', nameLocal: 'Teys Wagga Wagga', country: 'AU', region: 'NSW', capacity: 1200, accredited: ['CN', 'US', 'JP', 'EU', 'KR'] },
+    { code: 'AU-239', name: 'JBS Beef City', nameLocal: 'JBS Beef City', country: 'AU', region: 'QLD', capacity: 1400, accredited: ['CN', 'US', 'JP', 'EU', 'KR'] },
+    { code: 'AU-1260', name: 'Teys Naracoorte', nameLocal: 'Teys Naracoorte', country: 'AU', region: 'SA', capacity: 900, accredited: ['CN', 'US', 'JP', 'EU'] },
+    { code: 'AU-514', name: 'Australian Meat Holdings', nameLocal: 'AMH Dinmore', country: 'AU', region: 'QLD', capacity: 1500, accredited: ['CN', 'US', 'JP', 'EU'] },
+    { code: 'AU-235', name: 'JBS Riverina', nameLocal: 'JBS Riverina', country: 'AU', region: 'NSW', capacity: 1000, accredited: ['CN', 'US', 'JP', 'EU'] },
+    { code: 'AU-93', name: 'Thomas Foods International', nameLocal: 'Thomas Foods', country: 'AU', region: 'SA', capacity: 800, accredited: ['CN', 'US', 'EU'] },
+    // Brazil
+    { code: 'BR-SIF2057', name: 'JBS Lins', nameLocal: 'JBS Lins', country: 'BR', region: 'SP', capacity: 2000, accredited: ['CN', 'US', 'EU', 'KR', 'JP'] },
+    { code: 'BR-SIF431', name: 'Marfrig Bataguassu', nameLocal: 'Marfrig Bataguassu', country: 'BR', region: 'MS', capacity: 1800, accredited: ['CN', 'US', 'EU', 'KR'] },
+    { code: 'BR-SIF2583', name: 'Minerva Uberaba', nameLocal: 'Minerva Uberaba', country: 'BR', region: 'MG', capacity: 1200, accredited: ['CN', 'EU', 'KR'] },
+    { code: 'BR-SIF2011', name: 'JBS Barretos', nameLocal: 'JBS Barretos', country: 'BR', region: 'SP', capacity: 2500, accredited: ['CN', 'US', 'EU', 'KR', 'JP'] },
+    { code: 'BR-SIF379', name: 'Marfrig Várzea Grande', nameLocal: 'Marfrig Várzea Grande', country: 'BR', region: 'MT', capacity: 1500, accredited: ['CN', 'EU'] },
+    // Argentina
+    { code: 'AR-1920', name: 'Swift Rosario', nameLocal: 'Swift Rosario', country: 'AR', region: 'Santa Fe', capacity: 1100, accredited: ['CN', 'EU', 'IL', 'CL'] },
+    { code: 'AR-2077', name: 'Quickfood', nameLocal: 'Quickfood', country: 'AR', region: 'Buenos Aires', capacity: 800, accredited: ['CN', 'EU', 'US'] },
+    { code: 'AR-2008', name: 'Friar San Jorge', nameLocal: 'Friar San Jorge', country: 'AR', region: 'Córdoba', capacity: 600, accredited: ['CN', 'EU'] },
+    // Uruguay
+    { code: 'UY-379', name: 'Frigorífico Rosario', nameLocal: 'Frigorífico Rosario', country: 'UY', region: 'Colonia', capacity: 500, accredited: ['CN', 'US', 'EU', 'KR'] },
+    { code: 'UY-310', name: 'Frigorífico pul', nameLocal: 'Frigorífico pul', country: 'UY', region: 'Canelones', capacity: 450, accredited: ['CN', 'US', 'EU'] },
+    // USA
+    { code: 'US-JBS-GREELEY', name: 'JBS USA Greeley', nameLocal: 'JBS Greeley', country: 'US', region: 'CO', capacity: 5500, accredited: ['JP', 'KR', 'MX'] },
+    { code: 'US-CARGILL-DODGE', name: 'Cargill Dodge City', nameLocal: 'Cargill Dodge City', country: 'US', region: 'KS', capacity: 5000, accredited: ['JP', 'KR', 'MX'] },
+    { code: 'US-TYSON-DAKOTA', name: 'Tyson Dakota City', nameLocal: 'Tyson Dakota City', country: 'US', region: 'NE', capacity: 6000, accredited: ['JP', 'KR', 'MX'] },
+    { code: 'US-NATIONAL-DENVER', name: 'National Beef Denver', nameLocal: 'National Denver', country: 'US', region: 'CO', capacity: 3000, accredited: ['JP', 'KR'] },
+  ];
+
+  for (const f of FACTORIES) {
+    await prisma.factory.upsert({
+      where: { code: f.code },
+      update: { name: f.name, nameLocal: f.nameLocal, region: f.region, capacity: f.capacity, accredited: f.accredited },
+      create: f,
+    });
+  }
+  console.log(`       Created ${FACTORIES.length} factories`);
+
+  // Beef Cut Taxonomy — use the normalizer data
+  const { getAllCutMappings } = await import('../src/services/dataIngestion/beefCutNormalizer');
+  const cutMappings = getAllCutMappings();
+  let cutCount = 0;
+  for (const cut of cutMappings) {
+    await prisma.beefCutTaxonomy.upsert({
+      where: { cutCode: cut.cutCode },
+      update: {},
+      create: {
+        cutCode: cut.cutCode,
+        nameEn: cut.nameEn,
+        nameZh: cut.nameZh ?? null,
+        nameEs: cut.nameEs ?? null,
+        namePt: cut.namePt ?? null,
+        primal: cut.primal ?? null,
+        subprimal: cut.subprimal ?? null,
+        impsCode: cut.impsCode ?? null,
+        hsCode: cut.hsCode ?? null,
+      },
+    });
+    cutCount++;
+  }
+  console.log(`       Created ${cutCount} beef cut taxonomy entries`);
+
+  // Sample beef cut prices (last 30 days for major cuts from AU/BR factories)
+  const majorCuts = ['RIB_EYE_ROLL', 'STRIPLOIN', 'TENDERLOIN', 'BRISKET_NAVEL', 'CHUCK_ROLL', 'TOPSIDE', 'SILVERSIDE', 'OUTSIDE_SKIRT', 'INSIDE_SKIRT', 'SHORT_RIBS', 'TONGUE', 'KNUCKLE', 'EYE_ROUND', 'BLADE', 'FLAP', 'TRI_TIP'];
+  const auFactories = FACTORIES.filter(f => f.country === 'AU');
+  const brFactories = FACTORIES.filter(f => f.country === 'BR');
+  const samplePrices: Array<{ factoryId: string; cutCode: string; price: number; currency: string; unit: string; source: string; date: Date; grade: string }> = [];
+
+  const basePricesUSD: Record<string, number> = {
+    RIB_EYE_ROLL: 16.5, STRIPLOIN: 14.2, TENDERLOIN: 28.0, BRISKET_NAVEL: 7.8,
+    CHUCK_ROLL: 8.5, TOPSIDE: 6.2, SILVERSIDE: 5.8, OUTSIDE_SKIRT: 12.0,
+    INSIDE_SKIRT: 11.5, SHORT_RIBS: 13.0, TONGUE: 8.0, KNUCKLE: 6.8,
+    EYE_ROUND: 5.5, BLADE: 9.0, FLAP: 7.5, TRI_TIP: 10.0,
+  };
+
+  const auPremium: Record<string, number> = {
+    RIB_EYE_ROLL: 3.0, STRIPLOIN: 2.5, TENDERLOIN: 5.0, BRISKET_NAVEL: 1.5,
+    CHUCK_ROLL: 1.0, TOPSIDE: 0.5, SILVERSIDE: 0.5, OUTSIDE_SKIRT: 2.0,
+    INSIDE_SKIRT: 1.8, SHORT_RIBS: 2.5, TONGUE: 1.0, KNUCKLE: 0.3,
+    EYE_ROUND: 0.3, BLADE: 1.0, FLAP: 0.8, TRI_TIP: 1.5,
+  };
+
+  for (let d = 0; d < 30; d++) {
+    const date = new Date(NOW.getTime() - (29 - d) * 24 * 60 * 60 * 1000);
+
+    for (const cut of majorCuts) {
+      const base = basePricesUSD[cut] ?? 8.0;
+      const jitter = (Math.random() - 0.5) * base * 0.04;
+
+      // AU factory prices
+      for (const f of auFactories.slice(0, 3)) {
+        const factoryPremium = auPremium[cut] ?? 0.5;
+        samplePrices.push({
+          factoryId: f.code,
+          cutCode: cut,
+          price: parseFloat((base + factoryPremium + jitter).toFixed(2)),
+          currency: 'USD',
+          unit: 'USD/kg',
+          source: 'mla_nlrs',
+          date,
+          grade: 'Grain-fed',
+        });
+      }
+
+      // BR factory prices (slightly lower)
+      const brJitter = (Math.random() - 0.5) * base * 0.04;
+      for (const f of brFactories.slice(0, 2)) {
+        samplePrices.push({
+          factoryId: f.code,
+          cutCode: cut,
+          price: parseFloat((base - 0.5 + brJitter).toFixed(2)),
+          currency: 'USD',
+          unit: 'USD/kg',
+          source: 'cepea_export',
+          date,
+          grade: 'Grass-fed',
+        });
+      }
+    }
+  }
+
+  // Resolve factoryIds to actual IDs
+  const factoryMap = new Map<string, string>();
+  for (const f of FACTORIES) {
+    const record = await prisma.factory.findUnique({ where: { code: f.code } });
+    if (record) factoryMap.set(f.code, record.id);
+  }
+
+  const priceRecords = samplePrices
+    .filter(p => factoryMap.has(p.factoryId))
+    .map(p => ({
+      factoryId: factoryMap.get(p.factoryId)!,
+      cutCode: p.cutCode,
+      price: p.price,
+      currency: p.currency,
+      unit: p.unit,
+      source: p.source,
+      date: p.date,
+      grade: p.grade,
+    }));
+
+  if (priceRecords.length > 0) {
+    await prisma.beefCutPrice.createMany({ data: priceRecords, skipDuplicates: true });
+  }
+  console.log(`       Created ${priceRecords.length} sample beef cut prices`);
+
+  // Sample weekly kill data (12 weeks)
+  const killData = [
+    { country: 'AU', headCount: 120000, source: 'mla_nlrs' },
+    { country: 'BR', headCount: 380000, source: 'abiec' },
+    { country: 'AR', headCount: 48000, source: 'ciccra' },
+    { country: 'US', headCount: 620000, source: 'usda_ams' },
+    { country: 'UY', headCount: 18000, source: 'inac' },
+  ];
+
+  for (let w = 0; w < 12; w++) {
+    const weekEnding = new Date(NOW.getTime() - (11 - w) * 7 * 24 * 60 * 60 * 1000);
+    for (const kd of killData) {
+      const jitter = Math.round((Math.random() - 0.5) * kd.headCount * 0.05);
+      await prisma.weeklyKill.create({
+        data: {
+          country: kd.country,
+          headCount: kd.headCount + jitter,
+          avgWeight: kd.country === 'AU' ? 280 + Math.random() * 20 : kd.country === 'BR' ? 260 + Math.random() * 20 : 320 + Math.random() * 30,
+          weekEnding,
+          source: kd.source,
+        },
+      }).catch(() => {});
+    }
+  }
+  console.log(`       Created ${killData.length * 12} weekly kill records`);
+
+  // Sample cold storage (6 months)
+  const storageData = [
+    { country: 'US', totalLbs: 520, source: 'usda_nass' },
+    { country: 'AU', totalLbs: 85, source: 'abs' },
+    { country: 'BR', totalLbs: 180, source: 'abiec' },
+  ];
+
+  for (let m = 0; m < 6; m++) {
+    const date = new Date(NOW.getTime() - (5 - m) * 30 * 24 * 60 * 60 * 1000);
+    for (const sd of storageData) {
+      const jitter = (Math.random() - 0.5) * sd.totalLbs * 0.03;
+      await prisma.coldStorage.create({
+        data: {
+          country: sd.country,
+          totalLbs: parseFloat((sd.totalLbs + jitter).toFixed(1)),
+          category: 'beef',
+          date,
+          source: sd.source,
+        },
+      }).catch(() => {});
+    }
+  }
+  console.log(`       Created ${storageData.length * 6} cold storage records`);
+
+  // ------------------------------------------------------------------
   // Summary
   // ------------------------------------------------------------------
   console.log('');

@@ -54,6 +54,7 @@ async function getPriceSeries(
     },
     orderBy: { date: 'asc' },
     select: { date: true, close: true },
+    take: 1000,
   });
 
   return prices

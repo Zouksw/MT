@@ -141,6 +141,7 @@ export async function listAlertRules(userId: string, options?: {
   const rules = await prisma.alertRule.findMany({
     where,
     orderBy: { createdAt: 'desc' },
+    take: 100,
   });
 
   return rules.map(rule => mapRule(rule));

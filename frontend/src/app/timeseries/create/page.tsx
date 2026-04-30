@@ -29,8 +29,8 @@ export default function TimeseriesCreate() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Fetch datasets for select
-  const { data: datasets } = useList<any>("datasets", { pageSize: 1000 });
-  const datasetOptions = datasets.map((ds: any) => ({
+  const { data: datasets } = useList<{ id: string; name: string }>("datasets", { pageSize: 1000 });
+  const datasetOptions = datasets.map((ds) => ({
     value: ds.id,
     label: ds.name,
   }));
@@ -65,9 +65,9 @@ export default function TimeseriesCreate() {
 
     setSaving(true);
     try {
-      const result = await createRecord("timeseries", form);
+      const result = await createRecord<typeof form & { id: string }>("timeseries", form);
       toast.showSuccess("Time series created");
-      router.push(`/timeseries/show/${(result as any).id}`);
+      router.push(`/timeseries/show/${result.id}`);
     } catch (err) {
       toast.showError(err instanceof Error ? err.message : "Failed to create time series");
     } finally {

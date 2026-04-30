@@ -38,28 +38,10 @@ class SecureTokenManager implements TokenStorage {
    * For authentication verification, always use verifyAuthentication() from @/utils/auth
    */
   getToken(): string | null {
-    // First check memory
+    // Check memory only — the HttpOnly cookie is sent automatically by the browser
+    // Do NOT read from sessionStorage/localStorage (XSS risk)
     if (this.memoryToken) {
       return this.memoryToken;
-    }
-
-    // Fallback to sessionStorage (survives page reload within same tab)
-    if (typeof window !== 'undefined') {
-      try {
-        const sessionToken = sessionStorage.getItem(this.TOKEN_KEY);
-        if (sessionToken) {
-          // Restore to memory for faster subsequent access
-          this.memoryToken = sessionToken;
-          return sessionToken;
-        }
-      } catch (e) {
-        // SessionStorage might be disabled (e.g., private browsing)
-        // Token is still in HttpOnly cookie, so this is non-fatal
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.warn('[TokenManager] SessionStorage unavailable:', e);
-        }
-      }
     }
 
     return null;
@@ -74,22 +56,8 @@ class SecureTokenManager implements TokenStorage {
    * for immediate use during SPA navigation without additional API calls.
    */
   setToken(token: string, _rememberMe: boolean = false): void {
-    // Store in memory for immediate use
+    // Store in memory only — the backend sets the HttpOnly cookie
     this.memoryToken = token;
-
-    // Store in sessionStorage for tab persistence (survives page reload within same tab)
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(this.TOKEN_KEY, token);
-      } catch (e) {
-        // SessionStorage might be disabled or unavailable
-        // Token is still in HttpOnly cookie, so this is non-fatal
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.warn('[TokenManager] SessionStorage unavailable:', e);
-        }
-      }
-    }
   }
 
   /**
@@ -97,22 +65,8 @@ class SecureTokenManager implements TokenStorage {
    * @note Call the backend logout endpoint to clear the HttpOnly cookie
    */
   removeToken(): void {
-    // Clear memory
+    // Clear memory only — call backend logout to clear HttpOnly cookie
     this.memoryToken = null;
-
-    // Clear session storage
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.removeItem(this.TOKEN_KEY);
-      } catch (e) {
-        // SessionStorage might be disabled
-        // This is non-fatal as token will expire naturally
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.warn('[TokenManager] SessionStorage unavailable:', e);
-        }
-      }
-    }
   }
 
   /**

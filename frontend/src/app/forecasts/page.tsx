@@ -10,6 +10,23 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useIsMobile } from "@/lib/responsive-utils";
 
+// Forecast record shape returned from the API
+interface ForecastRecord {
+  id: string;
+  modelId: string;
+  timeseriesId: string;
+  timestamp: string;
+  predictedValue: number | { toNumber(): number };
+  lowerBound?: number | { toNumber(): number } | null;
+  upperBound?: number | { toNumber(): number } | null;
+  confidence: number | { toNumber(): number };
+  anomalyProbability?: number | { toNumber(): number } | null;
+  isAnomaly: boolean;
+  createdAt: string;
+  model?: { algorithm: string };
+  timeseries?: { name: string; unit?: string };
+}
+
 // Stat card component
 function StatCard({
   label,
@@ -60,7 +77,7 @@ export default function ForecastList() {
   const pageSize = isMobile ? 10 : 20;
 
   // Fetch forecasts for the table
-  const { data: forecasts, loading, mutate } = useList<any>("forecasts", {
+  const { data: forecasts, loading, mutate } = useList<ForecastRecord>("forecasts", {
     pageSize: 1000,
     sort: "timestamp",
     order: "desc",
@@ -68,9 +85,9 @@ export default function ForecastList() {
 
   // Stats
   const totalForecasts = forecasts?.length ?? 0;
-  const uniqueModels = new Set((forecasts || []).map((f: any) => f.modelId)).size;
-  const uniqueTimeseries = new Set((forecasts || []).map((f: any) => f.timeseriesId)).size;
-  const anomalyCount = (forecasts || []).filter((f: any) => f.isAnomaly).length ?? 0;
+  const uniqueModels = new Set((forecasts || []).map((f) => f.modelId)).size;
+  const uniqueTimeseries = new Set((forecasts || []).map((f) => f.timeseriesId)).size;
+  const anomalyCount = (forecasts || []).filter((f) => f.isAnomaly).length ?? 0;
 
   // Pagination
   const paginatedData = useMemo(() => {
@@ -81,7 +98,7 @@ export default function ForecastList() {
   const totalPages = Math.ceil((forecasts?.length || 0) / pageSize);
 
   // Helper to get numeric value from possibly-decimal object
-  const toNum = (value: any): number => {
+  const toNum = (value: number | { toNumber(): number } | null | undefined): number => {
     if (typeof value === "object" && value !== null && typeof value.toNumber === "function") {
       return value.toNumber();
     }
@@ -132,7 +149,7 @@ export default function ForecastList() {
 
     const csvRows = [
       headers.join(","),
-      ...dataSource.map((record: any) => {
+      ...dataSource.map((record: ForecastRecord) => {
         const timeseriesName = record.timeseries?.name || "-";
         const algorithm = record.model?.algorithm || "-";
         const predictedValue = toNum(record.predictedValue);
@@ -176,7 +193,7 @@ export default function ForecastList() {
   };
 
   // Table columns
-  const columns: Column<any>[] = [
+  const columns: Column<ForecastRecord>[] = [
     {
       key: "id",
       title: "ID",
@@ -209,8 +226,7 @@ export default function ForecastList() {
       title: "Time Series",
       dataIndex: "timeseries",
       width: 180,
-      render: (ts: any) => (
-        <span className="font-semibold text-foreground">
+      render: (ts: ForecastRecord["timeseries"]) => (        <span className="font-semibold text-foreground">
           {ts?.name || "-"}
         </span>
       ),
@@ -220,7 +236,7 @@ export default function ForecastList() {
       title: "Model",
       dataIndex: "model",
       width: 140,
-      render: (model: any) => {
+      render: (model: ForecastRecord["model"]) => {
         const algo = model?.algorithm;
         return algo ? <Tag color={algoTagColor(algo)}>{algo}</Tag> : "-";
       },
@@ -231,7 +247,7 @@ export default function ForecastList() {
       dataIndex: "predictedValue",
       width: 140,
       align: "right",
-      render: (value: any, record: any) => {
+      render: (value: ForecastRecord["predictedValue"], record: ForecastRecord) => {
         const numValue = toNum(value);
         const unit = record.timeseries?.unit || "";
         return (
@@ -247,7 +263,7 @@ export default function ForecastList() {
       dataIndex: "confidence",
       width: 110,
       align: "center",
-      render: (value: any) => {
+      render: (value: ForecastRecord["confidence"]) => {
         const numValue = toNum(value);
         const percentage = (numValue * 100).toFixed(0);
         const color: "success" | "info" | "warning" =
@@ -260,7 +276,7 @@ export default function ForecastList() {
       title: "Range",
       width: 160,
       align: "right",
-      render: (_: any, record: any) => {
+      render: (_value: unknown, record: ForecastRecord) => {
         const lower = toNum(record.lowerBound);
         const upper = toNum(record.upperBound);
         const unit = record.timeseries?.unit || "";
@@ -282,7 +298,7 @@ export default function ForecastList() {
       dataIndex: "isAnomaly",
       width: 100,
       align: "center",
-      render: (isAnomaly: boolean, record: any) => {
+      render: (isAnomaly: boolean, record: ForecastRecord) => {
         const probability = toNum(record.anomalyProbability);
 
         if (isAnomaly) {
@@ -318,7 +334,7 @@ export default function ForecastList() {
       key: "actions",
       title: "Actions",
       width: isMobile ? 100 : 140,
-      render: (_: any, record: any) => (
+      render: (_value: unknown, record: ForecastRecord) => (
         <div className="flex gap-2">
           <Button
             variant="ghost"

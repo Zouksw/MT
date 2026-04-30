@@ -71,6 +71,7 @@ model Dataset {
   @@unique([organization_id, slug])
   @@index([ownerId])
   @@index([createdAt(sort: Desc)])
+  @@index([lastAccessedAt(sort: Desc)])
   @@map("datasets")
 }
 
@@ -246,6 +247,7 @@ model ApiKey {
 
   @@index([userId])
   @@index([isActive])
+  @@index([lastUsedAt])
   @@map("api_keys")
 }
 
@@ -500,6 +502,7 @@ model MarketFactor {
 
   @@unique([type, region, date])
   @@index([type, date(sort: Desc)])
+  @@index([type, region, date(sort: Desc)])
   @@map("market_factors")
 }
 
@@ -568,6 +571,7 @@ model Position {
 
   @@index([portfolioId])
   @@index([commodityId])
+  @@index([closedAt])
   @@map("positions")
 }
 
@@ -719,4 +723,102 @@ model UsageRecord {
   @@unique([subscriptionId, feature, periodStart])
   @@index([subscriptionId])
   @@map("usage_records")
+}
+
+// ─── Beef Data: Factory-Level, Cut-Level Trading Data ───
+
+model Factory {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  nameLocal   String?
+  country     String
+  region      String?
+  capacity    Int?
+  accredited  String[]
+  active      Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  prices      BeefCutPrice[]
+
+  @@index([country])
+  @@index([active])
+  @@map("factories")
+}
+
+model BeefCutTaxonomy {
+  id            String   @id @default(cuid())
+  cutCode       String   @unique
+  nameEn        String
+  nameZh        String?
+  nameEs        String?
+  namePt        String?
+  primal        String?
+  subprimal     String?
+  impsCode      String?
+  hsCode        String?
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([primal])
+  @@map("beef_cut_taxonomy")
+}
+
+model BeefCutPrice {
+  id            String   @id @default(cuid())
+  factoryId     String
+  cutCode       String
+  price         Float
+  currency      String   @default("USD")
+  unit          String   @default("USD/kg")
+  source        String
+  sourceRef     String?
+  date          DateTime
+  volume        Float?
+  grade         String?
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  factory       Factory  @relation(fields: [factoryId], references: [id], onDelete: Cascade)
+
+  @@unique([factoryId, cutCode, date, source])
+  @@index([cutCode, date])
+  @@index([factoryId, date])
+  @@index([date])
+  @@map("beef_cut_prices")
+}
+
+model WeeklyKill {
+  id          String   @id @default(cuid())
+  factoryId   String?
+  country     String
+  region      String?
+  headCount   Int
+  avgWeight   Float?
+  weekEnding  DateTime
+  source      String
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([country, region, weekEnding, source])
+  @@index([weekEnding])
+  @@map("weekly_kills")
+}
+
+model ColdStorage {
+  id          String   @id @default(cuid())
+  country     String
+  totalLbs    Float
+  category    String
+  date        DateTime
+  source      String
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([country, category, date, source])
+  @@map("cold_storage")
 }

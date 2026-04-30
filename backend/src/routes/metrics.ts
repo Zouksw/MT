@@ -139,7 +139,7 @@ function percentile(sorted: number[], p: number): number {
  * GET /api/metrics
  * Returns comprehensive server performance metrics
  */
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', authenticate, (_req: Request, res: Response) => {
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
   const uptimeSeconds = process.uptime();

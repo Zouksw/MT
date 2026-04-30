@@ -109,13 +109,13 @@ export default function ForecastCreate() {
   const [hyperparameters, setHyperparameters] = useState<Record<string, string>>({});
 
   // Get timeseries list
-  const { data: timeseriesList } = useList<any>("timeseries", {
+  const { data: timeseriesList } = useList<{ id: string; name: string; unit?: string; slug?: string }>("timeseries", {
     pageSize: 1000,
     sort: "name",
     order: "asc",
   });
 
-  const timeseriesOptions = (timeseriesList || []).map((ts: any) => ({
+  const timeseriesOptions = (timeseriesList || []).map((ts) => ({
     value: ts.id,
     label: `${ts.name}${ts.unit ? ` (${ts.unit})` : ""}${ts.slug ? ` - ${ts.slug}` : ""}`,
   }));
@@ -136,7 +136,7 @@ export default function ForecastCreate() {
     e.preventDefault();
     setLoading(true);
     try {
-      const timeseries = (timeseriesList || []).find((ts: any) => ts.id === timeseriesId);
+      const timeseries = (timeseriesList || []).find((ts) => ts.id === timeseriesId);
       if (!timeseries) {
         throw new Error("Time series not found");
       }
@@ -192,8 +192,8 @@ export default function ForecastCreate() {
       setTimeout(() => {
         router.push("/forecasts");
       }, 1500);
-    } catch (error: any) {
-      toast.showError("Failed to Generate Forecast", error.message);
+    } catch (error: unknown) {
+      toast.showError("Failed to Generate Forecast", error instanceof Error ? error.message : "Unknown error");
     } finally {
       setLoading(false);
     }

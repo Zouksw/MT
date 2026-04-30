@@ -19,6 +19,10 @@ import { chinaWholesaleScraper } from './sources/chinaWholesale';
 import { chinaCustomsScraper } from './sources/chinaCustoms';
 import { dceFuturesScraper } from './sources/dceFutures';
 import { balticDryScraper } from './sources/balticDry';
+import { mlaNlrsScraper } from './sources/mlaNlrs';
+import { cepeaScraper } from './sources/cepeaData';
+import { inacScraper } from './sources/inacData';
+import { usdaFasScraper } from './sources/usdaFasData';
 
 export function registerAllScrapers(): void {
   // Tier 1 — Original sources
@@ -41,6 +45,12 @@ export function registerAllScrapers(): void {
   scraperManager.registerSource('china_customs', chinaCustomsScraper);
   scraperManager.registerSource('dce_futures', dceFuturesScraper);
   scraperManager.registerSource('baltic_dry', balticDryScraper);
+
+  // Tier 4 — Beef-specific data sources (factory-level, cut-level)
+  scraperManager.registerSource('mla_nlrs', mlaNlrsScraper);
+  scraperManager.registerSource('cepea', cepeaScraper);
+  scraperManager.registerSource('inac', inacScraper);
+  scraperManager.registerSource('usda_fas', usdaFasScraper);
 }
 
 export { scraperManager };

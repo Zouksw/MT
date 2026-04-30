@@ -103,36 +103,32 @@ export class PerformanceMonitor {
    * Setup default alert configurations
    */
   private setupDefaultAlerts(): void {
-    // High response time alert
     this.addAlert({
       metricName: 'response_time',
-      threshold: 5000, // 5 seconds
-      comparison: 'gt',
-      windowMs: 60000, // Check over 1 minute
-      notificationFn: (alert) => this.sendAlert(alert),
-    });
-
-    // High error rate alert
-    this.addAlert({
-      metricName: 'error_rate',
-      threshold: 5, // 5%
+      threshold: Number(process.env.ALERT_RESPONSE_TIME_MS) || 5000,
       comparison: 'gt',
       windowMs: 60000,
       notificationFn: (alert) => this.sendAlert(alert),
     });
 
-    // High memory usage alert
+    this.addAlert({
+      metricName: 'error_rate',
+      threshold: Number(process.env.ALERT_ERROR_RATE_PCT) || 5,
+      comparison: 'gt',
+      windowMs: 60000,
+      notificationFn: (alert) => this.sendAlert(alert),
+    });
+
     this.addAlert({
       metricName: 'memory_usage',
-      threshold: 90, // 90%
+      threshold: Number(process.env.ALERT_MEMORY_PCT) || 90,
       comparison: 'gt',
       notificationFn: (alert) => this.sendAlert(alert),
     });
 
-    // High CPU usage alert
     this.addAlert({
       metricName: 'cpu_usage',
-      threshold: 90, // 90%
+      threshold: Number(process.env.ALERT_CPU_PCT) || 90,
       comparison: 'gt',
       notificationFn: (alert) => this.sendAlert(alert),
     });

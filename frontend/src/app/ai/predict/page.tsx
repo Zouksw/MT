@@ -125,10 +125,11 @@ export default function AIPredictPage() {
       setResult(data);
       setApiError(null);
       toast.showSuccess(`Prediction completed! Generated ${data.prediction?.values?.length || 0} data points.`);
-    } catch (error: any) {
-      setApiError(error instanceof Error ? error : new Error(error.message || "Prediction failed"));
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Prediction failed";
+      setApiError(error instanceof Error ? error : new Error(msg));
       if (!permissionError) {
-        toast.showError(`Prediction failed: ${error.message}`);
+        toast.showError(`Prediction failed: ${msg}`);
       }
     } finally {
       setLoading(false);

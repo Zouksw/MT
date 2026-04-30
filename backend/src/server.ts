@@ -25,6 +25,7 @@ import securityRouter from '@/routes/security';
 import healthRouter from '@/routes/health';
 import docsRouter from '@/routes/docs';
 import { metricsRouter } from '@/routes/metrics';
+import { beefRouter } from '@/routes/beef';
 import { checkLimitOrders } from '@/services/simulationEngine';
 import { registerAllScrapers, scraperManager } from '@/services/dataIngestion';
 import { syncCommoditiesToIoTDB, scheduleAllCommodityPredictions } from '@/services/dataIngestion/iotdbSync';
@@ -153,6 +154,9 @@ app.use('/api/docs', docsRouter);
 
 // Performance metrics
 app.use('/api/metrics', metricsRouter);
+
+// Beef data (factory-level, cut-level)
+app.use('/api/beef', beefRouter);
 
 // Error handling
 app.use(errorHandler);

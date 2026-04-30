@@ -25,13 +25,6 @@ export interface NotificationEvent {
   timestamp: string;
 }
 
-interface SignalChange {
-  commodityId: string;
-  previousSignal: SignalType;
-  newSignal: SignalType;
-  confidence: number;
-}
-
 // Track last signals per commodity for change detection
 const lastSignals = new Map<string, SignalType>();
 

@@ -43,7 +43,7 @@ const router = Router();
  */
 // GET /api/models - Get all forecasting models
 router.get('/', asyncHandler(async (req, res) => {
-  const { timeseriesId, isActive, algorithm } = req.query;
+  const { timeseriesId, algorithm } = req.query;
   const { skip, take } = getPagination(req.query);
   const params = modelsQuerySchema.parse(req.query);
 
