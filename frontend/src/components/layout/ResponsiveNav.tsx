@@ -25,6 +25,7 @@ import {
   Terminal,
   TrendingUp,
   Target,
+  Beef,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,6 +82,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Alerts",
     icon: <Bell className="w-[18px] h-[18px]" />,
     path: "/alerts",
+  },
+  {
+    key: "beef",
+    label: "Beef Data",
+    icon: <Beef className="w-[18px] h-[18px]" />,
+    path: "/beef",
   },
 ];
 
