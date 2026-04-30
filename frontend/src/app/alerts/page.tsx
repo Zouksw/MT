@@ -15,9 +15,11 @@ import { Table, type Column } from "@/components/ui/Table";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { Card, CardBody } from "@/components/ui/Card";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { authFetch } from "@/utils/auth";
 import { useIsMobile } from "@/lib/responsive-utils";
-import { ChevronRight, RefreshCw, Check, Trash2 } from "lucide-react";
+import { RefreshCw, Check, Trash2 } from "lucide-react";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
@@ -290,39 +292,32 @@ export default function AlertList() {
   ];
 
   return (
-    <div className="min-h-screen bg-muted p-4 md:p-6">
-      <div className="mx-auto max-w-360">
-        {/* Page Header */}
-        <div className="mb-6">
-          {/* Breadcrumbs */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
-            <ChevronRight className="size-3" />
-            <span className="text-foreground">Alerts & Notifications</span>
-          </nav>
-
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground tracking-tight">Alerts & Notifications</h1>
-              <p className="text-sm text-muted-foreground mt-1">View and manage system alerts, anomalies, and notifications</p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <Button
-                variant="ghost"
-                onClick={() => { fetchAlerts(); fetchStats(); }}
-              >
-                <RefreshCw className="size-4 mr-1.5" />
-                {!isMobile && "Refresh"}
+    <PageContainer>
+      <PageHeader
+        title="Alerts & Notifications"
+        description="View and manage system alerts, anomalies, and notifications"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Alerts & Notifications" },
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => { fetchAlerts(); fetchStats(); }}
+            >
+              <RefreshCw className="size-4 mr-1.5" />
+              {!isMobile && "Refresh"}
+            </Button>
+            {stats && stats.unread > 0 && (
+              <Button onClick={handleMarkAllAsRead}>
+                <Check className="size-4 mr-1.5" />
+                {!isMobile && "Mark All Read"}
               </Button>
-              {stats && stats.unread > 0 && (
-                <Button onClick={handleMarkAllAsRead}>
-                  <Check className="size-4 mr-1.5" />
-                  {!isMobile && "Mark All Read"}
-                </Button>
-              )}
-            </div>
+            )}
           </div>
-        </div>
+        }
+      />
 
         {/* Statistics */}
         {stats && (
@@ -479,7 +474,6 @@ export default function AlertList() {
             Are you sure you want to delete this alert? This action cannot be undone.
           </p>
         </Modal>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

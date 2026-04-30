@@ -57,7 +57,7 @@ export default function MultiSourceChart({ sources, height = 400 }: MultiSourceC
 
     const chartOptions: DeepPartial<ChartOptions> = {
       layout: {
-        background: { type: ColorType.Solid, color: isDark ? "#0f172a" : "#ffffff" },
+        background: { type: ColorType.Solid, color: isDark ? "var(--bg-surface, #171717)" : "#ffffff" },
         textColor: isDark ? "#94a3b8" : "#64748b",
       },
       grid: {

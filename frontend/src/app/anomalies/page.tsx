@@ -8,7 +8,9 @@ import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useIsMobile } from "@/lib/responsive-utils";
-import { TriangleAlert, AlertCircle, CircleX, ChevronRight } from "lucide-react";
+import { TriangleAlert, AlertCircle, CircleX } from "lucide-react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 // Stat card component for this page
 function StatCard({
@@ -205,46 +207,19 @@ export default function AnomalyList() {
     },
   ];
 
-  const breadcrumbItems = [
-    { label: "Home", href: "/" },
-    { label: "AI & Anomaly Detection", href: "/ai/anomalies" },
-    { label: "Detected Anomalies" },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
-      <div className="mx-auto max-w-[1440px]">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          {breadcrumbItems.map((item, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && (
-                <ChevronRight className="size-3" />
-              )}
-              {item.href ? (
-                <a href={item.href} className="hover:text-gray-700 dark:hover:text-gray-200">
-                  {item.label}
-                </a>
-              ) : (
-                <span className="text-gray-900 dark:text-gray-100 font-medium">{item.label}</span>
-              )}
-            </React.Fragment>
-          ))}
-        </nav>
+    <PageContainer>
+      <PageHeader
+        title="Detected Anomalies"
+        description="AI-powered anomaly detection for your time series data"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "AI & Anomaly Detection", href: "/ai/anomalies" },
+          { label: "Detected Anomalies" },
+        ]}
+      />
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Detected Anomalies
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              AI-powered anomaly detection for your time series data
-            </p>
-          </div>
-        </div>
-
-        {/* Statistics */}
+      {/* Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total Anomalies" value={totalAnomalies} />
           <StatCard label="Critical" value={criticalCount} color="#B8860B" />
@@ -289,7 +264,6 @@ export default function AnomalyList() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

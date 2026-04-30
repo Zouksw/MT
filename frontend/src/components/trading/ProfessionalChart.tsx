@@ -176,7 +176,7 @@ export default function ProfessionalChart({
     date: string;
   } | null>(null);
 
-  const isDark = darkMode;
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
   // ── Create chart instance ──────────────────────────────────────────────
 

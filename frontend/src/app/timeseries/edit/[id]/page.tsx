@@ -8,6 +8,8 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card, CardBody } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function TimeseriesEdit({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -96,30 +98,26 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 
   if (recordLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-      </div>
+      <PageContainer>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
+        </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
-      <div className="mx-auto max-w-[1440px]">
-        {/* Header */}
-        <div className="mb-6">
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
-            <span>/</span>
-            <a href="/timeseries" className="hover:text-gray-700 dark:hover:text-gray-200">Time Series</a>
-            <span>/</span>
-            <span className="text-foreground font-medium">Edit</span>
-          </nav>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Edit Time Series
-          </h1>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Edit Time Series"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Time Series", href: "/timeseries" },
+          { label: "Edit" },
+        ]}
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
           <Card>
             <CardBody>
               <div className="space-y-4">
@@ -220,7 +218,6 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

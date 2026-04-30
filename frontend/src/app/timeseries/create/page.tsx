@@ -8,6 +8,8 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function TimeseriesCreate() {
   const router = useRouter();
@@ -76,23 +78,17 @@ export default function TimeseriesCreate() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
-      <div className="mx-auto max-w-[1440px]">
-        {/* Header */}
-        <div className="mb-6">
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
-            <span>/</span>
-            <a href="/timeseries" className="hover:text-gray-700 dark:hover:text-gray-200">Time Series</a>
-            <span>/</span>
-            <span className="text-foreground font-medium">Create</span>
-          </nav>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Create Time Series
-          </h1>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Create Time Series"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Time Series", href: "/timeseries" },
+          { label: "Create" },
+        ]}
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -236,7 +232,6 @@ export default function TimeseriesCreate() {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

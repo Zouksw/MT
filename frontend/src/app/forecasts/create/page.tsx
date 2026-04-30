@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { ArrowLeft, TrendingUp, ChevronDown, Monitor } from "lucide-react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 // AI Node supported algorithms
 const AI_NODE_ALGORITHMS = [
@@ -211,25 +213,24 @@ export default function ForecastCreate() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
-      <div className="mx-auto max-w-[1000px]">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Generate New Forecast
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Use AI Node models to predict future time series values
-            </p>
-          </div>
+    <PageContainer>
+      <PageHeader
+        title="Generate New Forecast"
+        description="Use AI Node models to predict future time series values"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Forecasts", href: "/forecasts" },
+          { label: "Generate New Forecast" },
+        ]}
+        actions={
           <Button variant="ghost" onClick={() => router.push("/forecasts")}>
             <ArrowLeft className="size-4 mr-1.5" />
             Back to Forecasts
           </Button>
-        </div>
+        }
+      />
 
-        {/* Info card */}
+      {/* Info card */}
         <div className="bg-card rounded-lg shadow-sm border border p-6 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-gray-900 inline-block" />
@@ -482,7 +483,6 @@ export default function ForecastCreate() {
             </table>
           </div>
         </div>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

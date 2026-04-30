@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -36,8 +37,7 @@ export default function FactoryDirectory() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
-      <div className="mx-auto max-w-[1440px]">
+    <PageContainer>
         <PageHeader
           title="Factory Directory"
           description="Accredited beef processing plants by country"
@@ -90,7 +90,6 @@ export default function FactoryDirectory() {
         {factories.length === 0 && !error && (
           <p className="text-sm text-gray-400">No factory data available. Run seed to populate.</p>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -11,6 +11,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Table } from "@/components/ui/Table";
 import { authFetch } from "@/utils/auth";
 import { useIsMobile } from "@/lib/responsive-utils";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -236,67 +238,46 @@ export default function ApiKeyList() {
     },
   ];
 
-  const breadcrumbItems = [
-    { title: "Home", href: "/" },
-    { title: "API Keys" },
-  ];
-
   return (
-    <div className="min-h-screen bg-muted p-4 md:p-6">
-      <div className="mx-auto max-w-[1440px]">
-        <div className="rounded-lg overflow-hidden bg-white dark:bg-gray-900 border border-white/10 dark:border-white/5 shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] p-6">
-          <div className="flex flex-col gap-6">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                {/* Breadcrumbs */}
-                <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  {breadcrumbItems.map((item, i) => (
-                    <span key={i} className="flex items-center gap-2">
-                      {i > 0 && <span className="text-muted-foreground">/</span>}
-                      {item.href ? (
-                        <a href={item.href} className="hover:text-primary">{item.title}</a>
-                      ) : (
-                        <span>{item.title}</span>
-                      )}
-                    </span>
-                  ))}
-                </nav>
-                <h1 className="text-2xl font-semibold text-foreground">API Keys</h1>
-                <p className="text-sm text-muted-foreground mt-1">Manage your API keys for programmatic access</p>
-              </div>
-              <Button
-                variant="primary"
-                icon={<Plus className="size-3.5" />}
-                onClick={() => setCreateModalVisible(true)}
-              >
-                {!isMobile && "Create API Key"}
-              </Button>
-            </div>
+    <PageContainer>
+      <PageHeader
+        title="API Keys"
+        description="Manage your API keys for programmatic access"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "API Keys" },
+        ]}
+        actions={
+          <Button
+            variant="primary"
+            icon={<Plus className="size-3.5" />}
+            onClick={() => setCreateModalVisible(true)}
+          >
+            {!isMobile && "Create API Key"}
+          </Button>
+        }
+      />
 
-            {/* Info alert */}
-            <Alert variant="info" title="API Keys">
-              API keys allow you to authenticate with the MT API programmatically. Keep them secure and never share them publicly.
-            </Alert>
+      {/* Info alert */}
+      <Alert variant="info" title="API Keys" className="mb-6">
+        API keys allow you to authenticate with the MT API programmatically. Keep them secure and never share them publicly.
+      </Alert>
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <StatBlock title="Total Keys" value={totalKeys} icon={<Key className="size-4" />} colorClass="text-primary" />
-              <StatBlock title="Active Keys" value={activeKeys} icon={<CircleCheck className="size-3" />} colorClass="text-green-600 dark:text-green-400" />
-              <StatBlock title="Total Usage" value={totalUsage.toLocaleString()} icon={<Clock className="size-3.5" />} colorClass="text-foreground" />
-            </div>
-
-            {/* Data Table */}
-            <Table<ApiKey>
-              columns={columns}
-              dataSource={apiKeys}
-              loading={loading}
-              rowKey="id"
-              emptyText="No API keys found"
-            />
-          </div>
-        </div>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+        <StatBlock title="Total Keys" value={totalKeys} icon={<Key className="size-4" />} colorClass="text-primary" />
+        <StatBlock title="Active Keys" value={activeKeys} icon={<CircleCheck className="size-3" />} colorClass="text-green-600 dark:text-green-400" />
+        <StatBlock title="Total Usage" value={totalUsage.toLocaleString()} icon={<Clock className="size-3.5" />} colorClass="text-foreground" />
       </div>
+
+      {/* Data Table */}
+      <Table<ApiKey>
+        columns={columns}
+        dataSource={apiKeys}
+        loading={loading}
+        rowKey="id"
+        emptyText="No API keys found"
+      />
 
       {/* Create API Key Modal */}
       <Modal
@@ -403,6 +384,6 @@ export default function ApiKeyList() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

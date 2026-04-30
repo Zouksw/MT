@@ -2,13 +2,15 @@
 
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Download, Plus, TrendingUp, Zap, Clock, TriangleAlert } from "lucide-react";
+import { Download, Plus, TrendingUp, Zap, Clock, TriangleAlert } from "lucide-react";
 import { useList, deleteRecord } from "@/lib/api";
 import { Table, type Column } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useIsMobile } from "@/lib/responsive-utils";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 // Forecast record shape returned from the API
 interface ForecastRecord {
@@ -355,44 +357,18 @@ export default function ForecastList() {
     },
   ];
 
-  const breadcrumbItems = [
-    { label: "Home", href: "/" },
-    { label: "AI & Anomaly Detection", href: "/ai" },
-    { label: "Forecasts" },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
-      <div className="mx-auto max-w-[1440px]">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          {breadcrumbItems.map((item, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && (
-                <ChevronRight className="size-3" />
-              )}
-              {item.href ? (
-                <a href={item.href} className="hover:text-gray-700 dark:hover:text-gray-200">
-                  {item.label}
-                </a>
-              ) : (
-                <span className="text-foreground font-medium">{item.label}</span>
-              )}
-            </React.Fragment>
-          ))}
-        </nav>
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Forecasts
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              AI-powered time series forecasting and predictions
-            </p>
-          </div>
-          <div className="flex gap-2">
+    <PageContainer>
+      <PageHeader
+        title="Forecasts"
+        description="AI-powered time series forecasting and predictions"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "AI & Anomaly Detection", href: "/ai" },
+          { label: "Forecasts" },
+        ]}
+        actions={
+          <>
             <Button variant="secondary" size="sm" onClick={handleExport}>
               <Download className="size-4 mr-1.5" />
               {!isMobile && "Export"}
@@ -405,10 +381,11 @@ export default function ForecastList() {
               <Plus className="size-4 mr-1.5" />
               {!isMobile && "Generate Forecast"}
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* Statistics Cards */}
+      {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard
             label="Total Forecasts"
@@ -484,7 +461,6 @@ export default function ForecastList() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -46,8 +47,7 @@ export default function CutDetail() {
   const latestPrice = allPrices.length > 0 ? allPrices[allPrices.length - 1] : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
-      <div className="mx-auto max-w-[1440px]">
+    <PageContainer>
         <PageHeader
           title={displayName}
           description={cut?.primal ? `Primal: ${cut.primal}` : cutCode}
@@ -113,26 +113,26 @@ export default function CutDetail() {
               </CardHeader>
               <CardBody>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-1.5 font-medium text-gray-500">Date</th>
-                        <th className="text-left py-1.5 font-medium text-gray-500">Factory</th>
-                        <th className="text-right py-1.5 font-medium text-gray-500">Price</th>
-                        <th className="text-left py-1.5 font-medium text-gray-500">Grade</th>
-                        <th className="py-1.5 w-32">Range</th>
+                      <tr>
+                        <th className="text-left">Date</th>
+                        <th className="text-left">Factory</th>
+                        <th className="text-right">Price</th>
+                        <th className="text-left">Grade</th>
+                        <th className="w-32">Range</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sourcePrices.slice(-30).map((p: { date: string; price: number; grade?: string; factory?: { code: string; name: string; country: string } }, i: number) => {
                         const pct = ((p.price - spMin) / range) * 100;
                         return (
-                          <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-1.5 text-xs text-gray-500">{new Date(p.date).toLocaleDateString()}</td>
-                            <td className="py-1.5 text-xs">{p.factory ? `${p.factory.name}` : "--"}</td>
-                            <td className="text-right py-1.5 font-mono">{p.price.toFixed(2)}</td>
-                            <td className="py-1.5 text-xs text-gray-500">{p.grade || "--"}</td>
-                            <td className="py-1.5">
+                          <tr key={`${p.date}-${p.factory?.code}-${i}`}>
+                            <td className="text-xs text-gray-500">{new Date(p.date).toLocaleDateString()}</td>
+                            <td className="text-xs">{p.factory ? `${p.factory.name}` : "--"}</td>
+                            <td className="text-right font-mono">{p.price.toFixed(2)}</td>
+                            <td className="text-xs text-gray-500">{p.grade || "--"}</td>
+                            <td>
                               <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
                                 <div
                                   className="bg-blue-500 h-1.5 rounded-full"
@@ -154,7 +154,6 @@ export default function CutDetail() {
         {prices.length === 0 && !priceErr && (
           <p className="text-sm text-gray-400">No price history available for this cut.</p>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

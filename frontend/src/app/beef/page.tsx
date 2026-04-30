@@ -3,6 +3,10 @@
 import useSWR from "swr";
 import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatCard } from "@/components/ui/StatCard";
+import { DollarSign, Beef, Target, Warehouse } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -13,23 +17,6 @@ async function beefFetcher(url: string) {
   });
   if (!res.ok) throw new Error(`${res.status}`);
   return res.json();
-}
-
-function StatCard({ label, value, unit, trend }: { label: string; value: string; unit?: string; trend?: "up" | "down" | "flat" }) {
-  const trendColor = trend === "up" ? "text-red-500" : trend === "down" ? "text-green-500" : "text-gray-400";
-  const trendArrow = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
-  return (
-    <Card>
-      <CardBody>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-2xl font-semibold mt-1">
-          {value}
-          {unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
-        </p>
-        {trend && <p className={`text-xs mt-1 ${trendColor}`}>{trendArrow}</p>}
-      </CardBody>
-    </Card>
-  );
 }
 
 export default function BeefOverview() {
@@ -59,8 +46,7 @@ export default function BeefOverview() {
   const usStorage = coldStorage.find((s: { country: string }) => s.country === "US");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
-      <div className="mx-auto max-w-[1440px]">
+    <PageContainer>
         <PageHeader
           title="Beef Market Intelligence"
           description="Factory-level and cut-level beef trading data across global markets"
@@ -68,10 +54,10 @@ export default function BeefOverview() {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard label="Avg Cut Price" value={avgPrice} unit="USD/kg" />
-          <StatCard label="Tracked Cuts" value={String(cuts.length)} />
-          <StatCard label="Weekly Slaughter" value={totalKills > 0 ? totalKills.toLocaleString() : "--"} unit="head" />
-          <StatCard label="US Cold Storage" value={usStorage ? String(usStorage.totalLbs) : "--"} unit="M lbs" />
+          <StatCard title="Avg Cut Price" value={avgPrice} icon={<DollarSign />} variant="primary" />
+          <StatCard title="Tracked Cuts" value={cuts.length} icon={<Beef />} />
+          <StatCard title="Weekly Slaughter" value={totalKills > 0 ? totalKills.toLocaleString() : "--"} icon={<Target />} variant="success" />
+          <StatCard title="US Cold Storage" value={usStorage ? `${usStorage.totalLbs} M lbs` : "--"} icon={<Warehouse />} variant="warning" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
@@ -83,31 +69,31 @@ export default function BeefOverview() {
             <CardBody>
               {pricesErr && <p className="text-sm text-gray-400">Unable to load prices</p>}
               {latestPrices.length === 0 && !pricesErr && (
-                <p className="text-sm text-gray-400">No price data available. Run scrapers to populate.</p>
+                <EmptyState type="data" title="No Price Data" description="Run scrapers to populate beef cut prices." />
               )}
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="data-table">
                   <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-2 font-medium text-gray-500">Cut</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Price (USD/kg)</th>
-                      <th className="text-left py-2 font-medium text-gray-500">Source</th>
-                      <th className="text-left py-2 font-medium text-gray-500">Factory</th>
-                      <th className="text-left py-2 font-medium text-gray-500">Grade</th>
+                    <tr>
+                      <th className="text-left">Cut</th>
+                      <th className="text-right">Price (USD/kg)</th>
+                      <th className="text-left">Source</th>
+                      <th className="text-left">Factory</th>
+                      <th className="text-left">Grade</th>
                     </tr>
                   </thead>
                   <tbody>
                     {latestPrices.slice(0, 20).map((p: { cutCode: string; price: number; source: string; grade?: string; factory?: { code: string; name: string; country: string } }) => (
-                      <tr key={`${p.cutCode}-${p.source}-${p.factory?.code}`} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900">
-                        <td className="py-2">
+                      <tr key={`${p.cutCode}-${p.source}-${p.factory?.code}`}>
+                        <td>
                           <a href={`/beef/cuts/${p.cutCode}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                             {p.cutCode.replace(/_/g, " ")}
                           </a>
                         </td>
-                        <td className="text-right py-2 font-mono">{p.price.toFixed(2)}</td>
-                        <td className="py-2 text-gray-500 text-xs">{p.source}</td>
-                        <td className="py-2 text-xs">{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}</td>
-                        <td className="py-2 text-xs text-gray-500">{p.grade || "--"}</td>
+                        <td className="text-right font-mono">{p.price.toFixed(2)}</td>
+                        <td className="text-gray-500 text-xs">{p.source}</td>
+                        <td className="text-xs">{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}</td>
+                        <td className="text-xs text-gray-500">{p.grade || "--"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -150,25 +136,25 @@ export default function BeefOverview() {
             </CardHeader>
             <CardBody>
               {weeklyKills.length === 0 ? (
-                <p className="text-sm text-gray-400">No kill data available</p>
+                <EmptyState type="data" title="No Kill Data" description="Weekly slaughter data will appear here when available." />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-2 font-medium text-gray-500">Week</th>
-                        <th className="text-left py-2 font-medium text-gray-500">Country</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Head Count</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Avg Weight (kg)</th>
+                      <tr>
+                        <th className="text-left">Week</th>
+                        <th className="text-left">Country</th>
+                        <th className="text-right">Head Count</th>
+                        <th className="text-right">Avg Weight (kg)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {weeklyKills.map((k: { weekEnding: string; country: string; headCount: number; avgWeight?: number }) => (
-                        <tr key={`${k.country}-${k.weekEnding}`} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-1.5 text-xs text-gray-500">{new Date(k.weekEnding).toLocaleDateString()}</td>
-                          <td className="py-1.5">{k.country}</td>
-                          <td className="text-right py-1.5 font-mono">{k.headCount.toLocaleString()}</td>
-                          <td className="text-right py-1.5 font-mono text-gray-500">{k.avgWeight?.toFixed(0) || "--"}</td>
+                        <tr key={`${k.country}-${k.weekEnding}`}>
+                          <td className="text-xs text-gray-500">{new Date(k.weekEnding).toLocaleDateString()}</td>
+                          <td>{k.country}</td>
+                          <td className="text-right font-mono">{k.headCount.toLocaleString()}</td>
+                          <td className="text-right font-mono text-gray-500">{k.avgWeight?.toFixed(0) || "--"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -185,23 +171,23 @@ export default function BeefOverview() {
             </CardHeader>
             <CardBody>
               {coldStorage.length === 0 ? (
-                <p className="text-sm text-gray-400">No cold storage data available</p>
+                <EmptyState type="data" title="No Cold Storage Data" description="Cold storage stock data will appear here when available." />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-2 font-medium text-gray-500">Date</th>
-                        <th className="text-left py-2 font-medium text-gray-500">Country</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Total (M lbs)</th>
+                      <tr>
+                        <th className="text-left">Date</th>
+                        <th className="text-left">Country</th>
+                        <th className="text-right">Total (M lbs)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {coldStorage.map((s: { date: string; country: string; totalLbs: number }) => (
-                        <tr key={`${s.country}-${s.date}`} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-1.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
-                          <td className="py-1.5">{s.country}</td>
-                          <td className="text-right py-1.5 font-mono">{s.totalLbs.toFixed(1)}</td>
+                        <tr key={`${s.country}-${s.date}`}>
+                          <td className="text-xs text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
+                          <td>{s.country}</td>
+                          <td className="text-right font-mono">{s.totalLbs.toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -284,7 +270,6 @@ export default function BeefOverview() {
             </CardBody>
           </Card>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

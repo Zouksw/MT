@@ -9,6 +9,8 @@ import { Tag } from "@/components/ui/Tag";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { useIsMobile } from "@/lib/responsive-utils";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
 
 /* ── stat card ──────────────────────────────────────────────────────────── */
@@ -177,31 +179,25 @@ export default function DatasetsList() {
   /* ── render ─────────────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
-      <div className="mx-auto max-w-[1440px]">
-        {/* Header */}
-        <div className="mb-6">
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Home</a>
-            <span>/</span>
-            <span className="text-foreground font-medium">Datasets</span>
-          </nav>
+    <PageContainer>
+      <PageHeader
+        title="Datasets"
+        description="Manage your time series datasets"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Datasets" },
+        ]}
+        actions={
+          <Button
+            icon={<Plus className="size-3.5" />}
+            onClick={() => router.push("/datasets/create")}
+          >
+            {!isMobile && "Create Dataset"}
+          </Button>
+        }
+      />
 
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground tracking-tight">Datasets</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Manage your time series datasets</p>
-            </div>
-            <Button
-              icon={<Plus className="size-3.5" />}
-              onClick={() => router.push("/datasets/create")}
-            >
-              {!isMobile && "Create Dataset"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Statistics */}
+      {/* Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <StatCard label="Total Datasets" value={totalDatasets} />
           <StatCard label="Public" value={publicDatasets} />
@@ -265,7 +261,6 @@ export default function DatasetsList() {
             Are you sure you want to delete this dataset? This action cannot be undone.
           </p>
         </Modal>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

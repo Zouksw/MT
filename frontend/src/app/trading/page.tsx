@@ -475,22 +475,22 @@ export default function TradingPage() {
               </CardHeader>
               <CardBody>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="data-table text-xs">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-1 font-medium text-gray-500">Source</th>
-                        <th className="text-left py-1 font-medium text-gray-500">Factory</th>
-                        <th className="text-right py-1 font-medium text-gray-500">Price</th>
-                        <th className="text-left py-1 font-medium text-gray-500">Date</th>
+                      <tr>
+                        <th className="text-left">Source</th>
+                        <th className="text-left">Factory</th>
+                        <th className="text-right">Price</th>
+                        <th className="text-left">Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       {beefPrices.slice(0, 15).map((p: { source: string; price: number; date: string; factory?: { code: string; name: string; country: string } }) => (
-                        <tr key={`${p.source}-${p.factory?.code}-${p.date}`} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-1 text-gray-500">{p.source}</td>
-                          <td className="py-1">{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}</td>
-                          <td className="text-right py-1 font-mono">${p.price.toFixed(2)}</td>
-                          <td className="py-1 text-gray-400">{new Date(p.date).toLocaleDateString()}</td>
+                        <tr key={`${p.source}-${p.factory?.code}-${p.date}`}>
+                          <td className="text-gray-500">{p.source}</td>
+                          <td>{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}</td>
+                          <td className="text-right font-mono">${p.price.toFixed(2)}</td>
+                          <td className="text-gray-400">{new Date(p.date).toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>
