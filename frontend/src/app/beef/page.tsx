@@ -211,6 +211,79 @@ export default function BeefOverview() {
             </CardBody>
           </Card>
         </div>
+
+        {/* Price Spread by Source */}
+        {latestPrices.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Price Distribution by Source</CardTitle>
+            </CardHeader>
+            <CardBody>
+              {(() => {
+                // Group prices by source+country
+                const sourceGroups: Record<string, { prices: number[]; count: number }> = {};
+                for (const p of latestPrices) {
+                  const key = `${p.source} (${p.factory?.country || "?"})`;
+                  if (!sourceGroups[key]) sourceGroups[key] = { prices: [], count: 0 };
+                  sourceGroups[key].prices.push(p.price);
+                  sourceGroups[key].count++;
+                }
+
+                const allPrices = latestPrices.map((p: { price: number }) => p.price);
+                const globalMin = Math.min(...allPrices);
+                const globalMax = Math.max(...allPrices);
+                const range = globalMax - globalMin || 1;
+
+                return (
+                  <div className="space-y-3">
+                    {Object.entries(sourceGroups)
+                      .sort((a, b) => {
+                        const avgA = a[1].prices.reduce((s, v) => s + v, 0) / a[1].prices.length;
+                        const avgB = b[1].prices.reduce((s, v) => s + v, 0) / b[1].prices.length;
+                        return avgB - avgA;
+                      })
+                      .map(([source, data]) => {
+                        const avg = data.prices.reduce((s, v) => s + v, 0) / data.prices.length;
+                        const min = Math.min(...data.prices);
+                        const max = Math.max(...data.prices);
+                        const leftPct = ((min - globalMin) / range) * 100;
+                        const widthPct = Math.max(((max - min) / range) * 100, 2);
+                        const avgPct = ((avg - globalMin) / range) * 100;
+
+                        return (
+                          <div key={source} className="flex items-center gap-3">
+                            <div className="w-48 text-xs text-gray-600 dark:text-gray-400 truncate shrink-0">
+                              {source}
+                              <span className="ml-1 text-gray-400">({data.count})</span>
+                            </div>
+                            <div className="flex-1 relative h-6">
+                              <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded" />
+                              <div
+                                className="absolute h-full bg-blue-200 dark:bg-blue-900/40 rounded"
+                                style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                              />
+                              <div
+                                className="absolute w-1 h-full bg-blue-600 dark:bg-blue-400 rounded"
+                                style={{ left: `${avgPct}%` }}
+                              />
+                            </div>
+                            <div className="w-32 text-xs text-right shrink-0">
+                              <span className="font-mono">${avg.toFixed(2)}</span>
+                              <span className="text-gray-400 ml-1">avg</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>${globalMin.toFixed(2)}</span>
+                      <span>${globalMax.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardBody>
+          </Card>
+        )}
       </div>
     </div>
   );
