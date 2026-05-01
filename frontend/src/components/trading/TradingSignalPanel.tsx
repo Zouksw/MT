@@ -25,6 +25,7 @@ interface TradingSignalPanelProps {
   supportLevel: number;
   resistanceLevel: number;
   distribution: { buy: number; sell: number; hold: number };
+  currentPrice?: number;
   loading?: boolean;
 }
 
@@ -54,6 +55,7 @@ export default function TradingSignalPanel({
   supportLevel,
   resistanceLevel,
   distribution,
+  currentPrice = 0,
   loading = false,
 }: TradingSignalPanelProps) {
   if (loading) {
@@ -209,6 +211,59 @@ export default function TradingSignalPanel({
         </div>
 
         <hr className="border my-3" />
+
+        {/* Prediction price range */}
+        {currentPrice > 0 && safeSignals.some((s) => s.status !== "unavailable") && (
+          <>
+            <span className="block text-gray-500 font-semibold text-xs mb-2">Predicted Price Range</span>
+            <div className="flex flex-col gap-1.5 mb-1">
+              {safeSignals
+                .filter((s) => s.status !== "unavailable")
+                .map((signal) => {
+                  const spread = signal.predictedValue * (1 - signal.confidence) * 0.5;
+                  const lower = signal.predictedValue - spread;
+                  const upper = signal.predictedValue + spread;
+                  const min = Math.min(signal.currentValue, lower);
+                  const max = Math.max(signal.currentValue, upper);
+                  const range = max - min || 1;
+                  const currentPct = ((signal.currentValue - min) / range) * 100;
+                  const lowerPct = ((lower - min) / range) * 100;
+                  const upperPct = ((upper - min) / range) * 100;
+
+                  return (
+                    <div key={signal.modelId} className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-muted-foreground w-24 shrink-0">
+                        {modelNameMap[signal.modelId] || signal.modelId}
+                      </span>
+                      <div className="flex-1 h-4 relative bg-muted rounded-sm">
+                        {/* Range bar */}
+                        <div
+                          className="absolute top-0.5 bottom-0.5 rounded-sm opacity-60"
+                          style={{
+                            left: `${lowerPct}%`,
+                            width: `${upperPct - lowerPct}%`,
+                            backgroundColor:
+                              signal.type === "BUY" ? TRADING_COLORS.buy :
+                              signal.type === "SELL" ? TRADING_COLORS.sell :
+                              TRADING_COLORS.hold,
+                          }}
+                        />
+                        {/* Current price marker */}
+                        <div
+                          className="absolute top-0 bottom-0 w-0.5 bg-foreground"
+                          style={{ left: `${currentPct}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground w-32 text-right shrink-0">
+                        ${lower.toFixed(2)} — ${upper.toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+            <hr className="border my-3" />
+          </>
+        )}
 
         {/* Consensus distribution bar */}
         <div

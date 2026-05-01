@@ -1,242 +1,363 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, FlaskConical, TrendingUp, Zap } from "lucide-react";
-import { Tag } from "@/components/ui/Tag";
-import { Button } from "@/components/ui/Button";
-import { Card, CardBody } from "@/components/ui/Card";
-import { Table } from "@/components/ui/Table";
-import { Alert } from "@/components/ui/Alert";
-import { useToast } from "@/components/ui/Toast";
-
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  BarChart3, TrendingUp, TrendingDown, Minus, Target, Zap, Activity,
+} from "lucide-react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { useIsMobile } from "@/lib/responsive-utils";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
+import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
+import { Table } from "@/components/ui/Table";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 
-// Check if AI features are disabled
-const AI_DISABLED = process.env.NEXT_PUBLIC_AI_DISABLED === 'true';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-interface AIModel {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  ainode: boolean;
-  useCase?: string;
+interface ModelAccuracy {
+  modelId: string;
+  avgMape: number | null;
+  predictionCount: number;
+  verifiedCount: number;
+}
+
+interface BacktestWindow {
+  days: number;
+  mape: number | null;
+  predictionCount: number;
+  verifiedCount: number;
+}
+
+interface BacktestData {
+  modelId: string;
+  windows: BacktestWindow[];
+  trend: string;
+}
+
+interface EnrichedModel extends ModelAccuracy {
+  displayName: string;
+  backtest: BacktestData | null;
+  verificationRate: number;
+}
+
+const MODEL_NAMES: Record<string, string> = {
+  arima: "ARIMA",
+  holtwinters: "Holt-Winters",
+  exponential_smoothing: "Exp. Smoothing",
+  naive_forecaster: "Naive",
+  stl_forecaster: "STL",
+  timer_xl: "Timer-XL",
+  sundial: "Sundial",
+};
+
+const MODEL_COLORS: Record<string, string> = {
+  arima: "#B8860B",
+  holtwinters: "#8B5CF6",
+  exponential_smoothing: "#EC4899",
+  naive_forecaster: "#F97316",
+  stl_forecaster: "#14B8A6",
+  timer_xl: "#06B6D4",
+  sundial: "#6366F1",
+};
+
+function mapeBadge(mape: number | null) {
+  if (mape === null) return <span className="text-muted-foreground">--</span>;
+  const cls =
+    mape < 5 ? "text-green-600 dark:text-green-400" :
+    mape < 10 ? "text-primary" :
+    "text-red-600 dark:text-red-400";
+  return <span className={`font-mono font-medium ${cls}`}>{mape.toFixed(2)}%</span>;
+}
+
+function trendBadge(trend: string) {
+  switch (trend) {
+    case "improving":
+      return <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400"><TrendingUp className="size-3" /> Improving</span>;
+    case "degrading":
+      return <span className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400"><TrendingDown className="size-3" /> Degrading</span>;
+    case "stable":
+      return <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Minus className="size-3" /> Stable</span>;
+    default:
+      return <span className="text-xs text-muted-foreground">N/A</span>;
+  }
 }
 
 export default function AIModelsPage() {
+  const [models, setModels] = useState<EnrichedModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [models, setModels] = useState<AIModel[]>([]);
-  const [permissionError, setPermissionError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
-  const toast = useToast();
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchModels = useCallback(async () => {
-    setLoading(true);
-    setPermissionError(null);
-    try {
-      const token = (await import('@/lib/tokenManager')).tokenManager.getToken();
-      const response = await fetch("/api/iotdb/ai/models", {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        if (response.status === 403 || response.status === 503) {
-          setPermissionError(error.error || "AI features are restricted to administrators");
-        }
-        throw new Error(error.error || "Failed to fetch models");
-      }
-      const data = await response.json();
-      setModels(data.models || []);
-    } catch (error: unknown) {
-      if (!permissionError) {
-        const msg = error instanceof Error ? error.message : "Unknown error";
-        toast.showError(`Failed to load models: ${msg}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast.showError, permissionError]);
+  const getToken = useCallback(async () => {
+    const { tokenManager } = await import("@/lib/tokenManager");
+    return tokenManager.getToken();
+  }, []);
 
   useEffect(() => {
-    fetchModels();
-  }, [fetchModels]);
+    (async () => {
+      try {
+        const token = await getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
 
-  const totalModels = models.length;
+        const accRes = await fetch(`${API_BASE}/api/signals/models/accuracy`, { headers });
+        const accData = await accRes.json();
+        const accuracyList: ModelAccuracy[] = accData.success
+          ? (accData.data?.accuracy ?? accData.data ?? [])
+          : [];
+
+        const backtestMap = new Map<string, BacktestData>();
+        await Promise.allSettled(
+          accuracyList.map(async (m) => {
+            try {
+              const btRes = await fetch(`${API_BASE}/api/signals/models/${m.modelId}/backtest`, { headers });
+              const btData = await btRes.json();
+              if (btData.success && btData.data) {
+                backtestMap.set(m.modelId, btData.data);
+              }
+            } catch {}
+          })
+        );
+
+        const enriched: EnrichedModel[] = accuracyList.map((m) => ({
+          ...m,
+          displayName: MODEL_NAMES[m.modelId] || m.modelId,
+          backtest: backtestMap.get(m.modelId) ?? null,
+          verificationRate: m.predictionCount > 0
+            ? Math.round((m.verifiedCount / m.predictionCount) * 100)
+            : 0,
+        }));
+
+        setModels(enriched);
+      } catch {
+        setError("Failed to load model data");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [getToken]);
+
+  const stats = useMemo(() => {
+    const valid = models.filter((m) => m.avgMape !== null);
+    const best = valid.length > 0
+      ? valid.reduce((a, b) => (a.avgMape ?? Infinity) < (b.avgMape ?? Infinity) ? a : b)
+      : null;
+    const avgMape = valid.length > 0
+      ? valid.reduce((s, m) => s + (m.avgMape ?? 0), 0) / valid.length
+      : null;
+    return { best, avgMape };
+  }, [models]);
 
   const columns = [
     {
-      key: "id",
-      title: "Model ID",
-      dataIndex: "id" as keyof AIModel,
-      render: (id: string) => (
-        <code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
-          {id}
-        </code>
+      key: "model",
+      title: "Model",
+      render: (_: unknown, record: EnrichedModel) => (
+        <Link href={`/ai/accuracy`} className="font-medium text-foreground hover:text-primary transition-colors">
+          {record.displayName}
+        </Link>
       ),
     },
     {
-      key: "name",
-      title: "Name",
-      dataIndex: "name" as keyof AIModel,
-      render: (name: string, record: AIModel) => (
-        <span className="font-semibold text-foreground">
-          {name}
-          {record.ainode && (
-            <Tag color="info" className="ml-2">
-              Built-in
-            </Tag>
-          )}
-        </span>
+      key: "mape",
+      title: "Avg MAPE",
+      align: "right" as const,
+      render: (_: unknown, record: EnrichedModel) => mapeBadge(record.avgMape),
+    },
+    {
+      key: "predictions",
+      title: "Predictions",
+      align: "right" as const,
+      render: (_: unknown, record: EnrichedModel) => (
+        <span className="text-sm text-muted-foreground">{record.predictionCount.toLocaleString()}</span>
       ),
     },
     {
-      key: "type",
-      title: "Type",
-      dataIndex: "type" as keyof AIModel,
-      render: (type: string) => {
-        const color = type === "prediction" ? "success" : "info";
-        return <Tag color={color}>{type}</Tag>;
-      },
-    },
-    {
-      key: "description",
-      title: "Description",
-      dataIndex: "description" as keyof AIModel,
-    },
-    {
-      key: "action",
-      title: "Action",
-      render: (_: string, _record: AIModel) => (
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => window.location.href = "/forecasts/create"}
-        >
-          {!isMobile && "Use Model"}
-        </Button>
+      key: "verified",
+      title: "Verified",
+      align: "right" as const,
+      render: (_: unknown, record: EnrichedModel) => (
+        <span className="text-sm text-muted-foreground">{record.verifiedCount.toLocaleString()}</span>
       ),
+    },
+    {
+      key: "verificationRate",
+      title: "Verification Rate",
+      render: (_: unknown, record: EnrichedModel) => (
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${record.verificationRate}%` }}
+            />
+          </div>
+          <span className="text-xs font-mono text-muted-foreground">{record.verificationRate}%</span>
+        </div>
+      ),
+    },
+    {
+      key: "trend",
+      title: "Trend",
+      render: (_: unknown, record: EnrichedModel) => trendBadge(record.backtest?.trend || ""),
     },
   ];
 
   return (
     <PageContainer>
-      {/* AI Feature Disabled Warning */}
-      {AI_DISABLED && (
-        <Alert variant="warning" title="AI Features Temporarily Disabled" className="mb-6">
-          AI features including model training and prediction have been temporarily disabled for security reasons. Contact your administrator for more information.
-        </Alert>
+      <PageHeader
+        title="AI Models"
+        description="Compare all 7 prediction models — accuracy, coverage, and trend analysis"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "AI", href: "/ai" },
+          { label: "Models" },
+        ]}
+      />
+
+      {error && (
+        <ErrorDisplay error={error} retry={() => window.location.reload()} context="model data" />
       )}
 
-      {/* Permission Error Alert */}
-      {permissionError && (
-        <Alert
-          variant="error"
-          title="AI Feature Access Restricted"
-          closable
-          onClose={() => setPermissionError(null)}
-          className="mb-6"
-        >
-          {permissionError.includes("disabled")
-            ? "AI features are currently disabled. Please contact your administrator to enable them."
-            : "AI model management is only available to administrators. If you are an administrator, please ensure you are logged in with your admin account."}
-        </Alert>
-      )}
-
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <a href="/" className="hover:text-primary">Home</a>
-            <ChevronRight className="size-3" />
-            <a href="/ai" className="hover:text-primary">AI & Anomaly Detection</a>
-            <ChevronRight className="size-3" />
-            <span>AI Models</span>
-          </div>
-          <h2 className="text-2xl font-semibold text-foreground">AI Models</h2>
-          <p className="text-sm text-muted-foreground mt-1">Built-in AI models for forecasting and prediction</p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={fetchModels}
-          isLoading={loading}
-          disabled={AI_DISABLED}
-        >
-          {!isMobile && "Refresh"}
-        </Button>
-      </div>
-
-      {/* Statistics Card */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="bg-card rounded-lg border border-gray-200/60 dark:border-gray-700/60 shadow-card-hover-dark p-5">
-          <div className="flex items-center mb-3">
-            <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center mr-3">
-              <FlaskConical className="size-5 text-white" />
-            </div>
-            <span className="text-sm font-medium text-muted-foreground">
-              Available Models
-            </span>
-          </div>
-          <div className="text-[28px] font-semibold text-foreground data-text">
-            {totalModels}
-          </div>
-          <span className="text-sm text-muted-foreground">
-            Built-in AI models
-          </span>
-        </div>
-      </div>
-
-      {/* Models Table */}
-      <Card className="mb-6">
-        <CardBody className="p-0">
-          <Table
-            columns={columns}
-            dataSource={models}
-            rowKey="id"
-            loading={loading}
-            emptyText="No AI models found"
+      <LoadingState loading={loading} skeletonType="stats">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            title="Models Active"
+            value={models.length}
+            icon={<Zap className="size-5" />}
+            variant="primary"
           />
-        </CardBody>
-      </Card>
-
-      {/* Info Card */}
-      <Card>
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">About AI Models</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <TrendingUp className="size-6 text-blue-500 mb-2" />
-              <h5 className="text-base font-semibold text-foreground mb-2">
-                Time Series Forecasting
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                Use built-in ARIMA, FFT, or Neural Network models to generate predictions for your time series data.
-              </p>
-            </div>
-            <div>
-              <FlaskConical className="size-6 text-purple-600 mb-2" />
-              <h5 className="text-base font-semibold text-foreground mb-2">
-                Anomaly Detection
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                Detect anomalies in your data using statistical and machine learning methods.
-              </p>
-            </div>
-            <div>
-              <Zap className="size-6 text-primary mb-2" />
-              <h5 className="text-base font-semibold text-foreground mb-2">
-                IoTDB AI Node
-              </h5>
-              <p className="text-sm text-muted-foreground">
-                Models run directly on IoTDB server for optimal performance.
-              </p>
-            </div>
-          </div>
+          <StatCard
+            title="Best MAPE"
+            value={stats.best?.avgMape !== null && stats.best?.avgMape !== undefined
+              ? Number(stats.best.avgMape.toFixed(2))
+              : "--"}
+            icon={<Target className="size-5" />}
+            variant="success"
+          />
+          <StatCard
+            title="Avg MAPE"
+            value={stats.avgMape !== null ? Number(stats.avgMape.toFixed(2)) : "--"}
+            icon={<Activity className="size-5" />}
+            variant="default"
+          />
+          <StatCard
+            title="Total Predictions"
+            value={models.reduce((s, m) => s + m.predictionCount, 0)}
+            icon={<BarChart3 className="size-5" />}
+            variant="default"
+          />
         </div>
-      </Card>
+      </LoadingState>
+
+      <LoadingState loading={loading} skeletonType="table">
+        {models.length > 0 ? (
+          <>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Model Comparison</CardTitle>
+              </CardHeader>
+              <CardBody className="p-0">
+                <Table
+                  columns={columns}
+                  dataSource={models}
+                  rowKey="modelId"
+                  emptyText="No models with accuracy data"
+                />
+              </CardBody>
+            </Card>
+
+            {/* MAPE comparison bar chart */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">MAPE Comparison</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  {models
+                    .filter((m) => m.avgMape !== null)
+                    .sort((a, b) => (a.avgMape ?? Infinity) - (b.avgMape ?? Infinity))
+                    .map((m) => (
+                      <div key={m.modelId} className="flex items-center gap-4">
+                        <span className="text-sm font-medium w-28 shrink-0">{m.displayName}</span>
+                        <div className="flex-1 h-8 bg-muted rounded-md overflow-hidden relative">
+                          <div
+                            className="h-full rounded-md transition-all duration-500"
+                            style={{
+                              width: `${Math.min(100, ((m.avgMape ?? 0) / 20) * 100)}%`,
+                              backgroundColor: MODEL_COLORS[m.modelId] || "#6B7280",
+                              opacity: 0.85,
+                            }}
+                          />
+                        </div>
+                        <span className={`text-sm font-mono font-medium w-20 text-right ${
+                          (m.avgMape ?? 0) < 5 ? "text-green-600 dark:text-green-400" :
+                          (m.avgMape ?? 0) < 10 ? "text-primary" :
+                          "text-red-600 dark:text-red-400"
+                        }`}>
+                          {m.avgMape !== null ? `${m.avgMape.toFixed(2)}%` : "--"}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Per-model backtest windows */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Backtest Windows</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Model</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">7-day</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">30-day</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">90-day</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-muted-foreground">Trend</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {models.map((m) => (
+                        <tr key={m.modelId} className="border-b border-border last:border-0 hover:bg-accent/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-foreground">{m.displayName}</span>
+                          </td>
+                          {[7, 30, 90].map((days) => {
+                            const w = m.backtest?.windows?.find((bw) => bw.days === days);
+                            return (
+                              <td key={days} className="px-4 py-3 text-right">
+                                {w?.mape !== null && w?.mape !== undefined
+                                  ? mapeBadge(w.mape)
+                                  : <span className="text-muted-foreground">--</span>}
+                              </td>
+                            );
+                          })}
+                          <td className="px-4 py-3 text-center">
+                            {trendBadge(m.backtest?.trend || "")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardBody>
+            </Card>
+          </>
+        ) : (
+          <div className="py-12">
+            <EmptyState
+              type="data"
+              title="No model data yet"
+              description="AI model accuracy data will appear once predictions are generated and verified."
+            />
+          </div>
+        )}
+      </LoadingState>
     </PageContainer>
   );
 }

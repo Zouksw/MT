@@ -96,41 +96,29 @@ export const StatCard = React.memo<StatCardProps>(
     }
 
     return (
-      <>
         <div
-          className={`bg-card rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] p-5 transition-all duration-200 ${onClick ? "cursor-pointer hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.12),_0_2px_8px_rgba(0,0,0,0.3)]" : ""}`}
+          className={`bg-card rounded-lg shadow-card dark:shadow-card-dark p-5 transition-all duration-200 ${onClick ? "cursor-pointer hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-card-hover-dark" : ""}`}
           onClick={onClick}
         >
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              {icon && <span className="text-lg transition-transform duration-200" style={{ color: colors.text }}>{icon}</span>}
-              <span className="text-xs font-medium tracking-wide text-gray-500">{title}</span>
-            </div>
-            <div className="flex items-end gap-2">
-              <div>
-                <span className="text-[28px] font-semibold tracking-tight leading-tight block data-text" style={{ color: colors.text }}>
-                  {displayValue}
-                </span>
-                {sparklineData && sparklineData.length >= 2 && <Sparkline data={sparklineData} color={colors.text} />}
-              </div>
-              {trend && (
-                <div className="flex items-center gap-1 mb-1">
-                  <span style={{ color: trend.isPositive ? "#10B981" : "#EF4444", fontSize: 12 }}>
-                    {trend.value > 0 ? "↑" : trend.value < 0 ? "↓" : "−"}
-                  </span>
-                  <span className="text-xs font-medium whitespace-nowrap" style={{ color: trend.isPositive ? "#10B981" : "#EF4444" }}>
-                    {trend.isPositive ? "+" : ""}{trend.value}%
-                  </span>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2 mb-3">
+            {icon && <span style={{ color: colors.text }}>{icon}</span>}
+            <span className="text-xs font-medium text-muted-foreground">{title}</span>
           </div>
+          <div className="flex items-end justify-between gap-2">
+            <span className="text-[28px] font-semibold tracking-tight leading-none" style={{ color: colors.text }}>
+              {displayValue}
+            </span>
+            {trend && (
+              <span
+                className="text-xs font-medium"
+                style={{ color: trend.isPositive ? "#10B981" : "#EF4444" }}
+              >
+                {trend.isPositive ? "+" : ""}{trend.value}%
+              </span>
+            )}
+          </div>
+          {sparklineData && sparklineData.length >= 2 && <Sparkline data={sparklineData} color={colors.text} />}
         </div>
-        <style>{`
-          @keyframes sparkline-draw { to { stroke-dashoffset: 0; } }
-          @keyframes sparkline-dot { to { opacity: 1; } }
-        `}</style>
-      </>
     );
   },
   (prevProps, nextProps) =>

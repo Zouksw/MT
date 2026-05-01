@@ -463,6 +463,7 @@ export default function TradingPage() {
               supportLevel={signal?.supportLevel || currentPrice * 0.97}
               resistanceLevel={signal?.resistanceLevel || currentPrice * 1.04}
               distribution={signal?.distribution || { buy: 0, sell: 0, hold: 0 }}
+              currentPrice={currentPrice}
               loading={signalLoading}
             />
           )}

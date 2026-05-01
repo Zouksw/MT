@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Target,
   Beef,
+  BrainCircuit,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -88,6 +89,17 @@ const NAV_ITEMS: NavItem[] = [
     label: "Beef Data",
     icon: <Beef className="w-[18px] h-[18px]" />,
     path: "/beef",
+  },
+  {
+    key: "ai",
+    label: "AI Signals",
+    icon: <BrainCircuit className="w-[18px] h-[18px]" />,
+    path: "/ai",
+    children: [
+      { key: "ai-models", label: "Models", icon: <Zap className="w-[18px] h-[18px]" />, path: "/ai/models" },
+      { key: "ai-accuracy", label: "Accuracy", icon: <Target className="w-[18px] h-[18px]" />, path: "/ai/accuracy" },
+      { key: "ai-backtest", label: "Backtest", icon: <FlaskConical className="w-[18px] h-[18px]" />, path: "/ai/backtest" },
+    ],
   },
 ];
 

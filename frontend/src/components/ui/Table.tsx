@@ -42,41 +42,31 @@ export function Table<T extends Record<string, any>>({
 
   const getAlignClass = (align?: "left" | "center" | "right") => {
     switch (align) {
-      case "left":
-        return "text-left";
-      case "center":
-        return "text-center";
-      case "right":
-        return "text-right";
-      default:
-        return "text-left";
+      case "center": return "text-center";
+      case "right": return "text-right";
+      default: return "text-left";
     }
   };
 
   if (loading) {
     return (
       <div className="overflow-x-auto">
-        <table className={`min-w-full divide-y divide-gray-200 dark:divide-gray-700 ${className}`.trim()}>
-          <thead className="bg-muted">
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  scope="col"
-                  className={`px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${column.className || ""}`.trim()}
-                  style={{ width: column.width }}
-                >
-                  {column.title}
+        <table className={`min-w-full ${className}`.trim()}>
+          <thead>
+            <tr className="border-b border-border">
+              {columns.map((col) => (
+                <th key={col.key} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                  {col.title}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody>
             {[1, 2, 3, 4, 5].map((i) => (
-              <tr key={i}>
-                {columns.map((column) => (
-                  <td key={`${i}-${column.key}`} className="px-6 py-4 whitespace-nowrap">
-                    <div className="h-4 bg-muted rounded animate-pulse"></div>
+              <tr key={i} className="border-b border-border">
+                {columns.map((col) => (
+                  <td key={`${i}-${col.key}`} className="px-4 py-3">
+                    <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
                   </td>
                 ))}
               </tr>
@@ -90,51 +80,47 @@ export function Table<T extends Record<string, any>>({
   if (!dataSource || dataSource.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-body text-muted-foreground">{emptyText}</p>
+        <p className="text-sm text-muted-foreground">{emptyText}</p>
       </div>
     );
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className={`min-w-full divide-y divide-gray-200 dark:divide-gray-700 ${className}`.trim()}>
-        <thead className="bg-muted">
-          <tr>
-            {columns.map((column) => (
+      <table className={`min-w-full ${className}`.trim()}>
+        <thead>
+          <tr className="border-b border-border">
+            {columns.map((col) => (
               <th
-                key={column.key}
+                key={col.key}
                 scope="col"
-                className={`px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${column.className || ""}`.trim()}
-                style={{ width: column.width }}
+                className={`px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
+                style={{ width: col.width }}
               >
-                {column.title}
+                {col.title}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody>
           {dataSource.map((record, rowIndex) => {
             const rowProps = onRow?.(record, rowIndex);
             return (
               <tr
                 key={getRowKey(record, rowIndex)}
-                className={`hover:bg-accent/50 transition-colors duration-150 ${rowProps?.className || ""}`.trim()}
+                className={`border-b border-border last:border-0 hover:bg-accent/50 transition-colors ${rowProps?.className || ""}`.trim()}
                 onClick={rowProps?.onClick}
                 onDoubleClick={rowProps?.onDoubleClick}
-                style={{ height: "48px" }}
               >
-                {columns.map((column) => {
-                  const value = column.dataIndex !== undefined ? record[column.dataIndex] : undefined;
-                  const content = column.render ? column.render(value, record, rowIndex) : value;
-
+                {columns.map((col) => {
+                  const value = col.dataIndex !== undefined ? record[col.dataIndex] : undefined;
+                  const content = col.render ? col.render(value, record, rowIndex) : value;
                   return (
                     <td
-                      key={column.key}
-                      className={`px-6 py-4 whitespace-nowrap ${getAlignClass(column.align)} ${column.className || ""}`.trim()}
+                      key={col.key}
+                      className={`px-4 py-3 text-sm whitespace-nowrap ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
                     >
-                      <div className="text-body data-text">
-                        {content}
-                      </div>
+                      {content}
                     </td>
                   );
                 })}
