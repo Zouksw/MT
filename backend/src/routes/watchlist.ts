@@ -40,7 +40,7 @@ router.get(
       ? await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
           SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
           FROM commodity_prices
-          WHERE commodity_id = ANY(${commodityIds}::uuid[]) AND interval = 'daily'
+          WHERE commodity_id = ANY(${commodityIds}::text[]) AND interval = 'daily'
           ORDER BY commodity_id, date DESC
         `
       : [];

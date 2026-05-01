@@ -6,6 +6,7 @@ import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '@/
 import { getPagination, paginationSchema } from '@/schemas/common';
 import { createDatasetSchema as newCreateDatasetSchema, updateDatasetSchema as newUpdateDatasetSchema } from '@/schemas/datasets';
 import { cacheRoute, invalidateCache } from '@/middleware/cacheDecorator';
+import { success, paginated } from '@/lib/response';
 import Papa from 'papaparse';
 
 const router = Router();
@@ -129,13 +130,15 @@ router.get('/', authenticate, cacheRoute('datasets:list', 300), asyncHandler(asy
   }));
 
   res.json({
-    datasets: serializedDatasets,
+    success: true,
+    data: serializedDatasets,
     pagination: {
       page: params.page,
       limit: params.limit,
       total,
       totalPages: Math.ceil(total / params.limit),
     },
+    total,
   });
 }));
 
@@ -177,7 +180,7 @@ router.get('/:id', authenticate, asyncHandler(async (req: AuthRequest, res) => {
     throw new NotFoundError('Dataset');
   }
 
-  res.json({ dataset: serializeDataset(dataset) });
+  success(res, serializeDataset(dataset));
 }));
 
 /**
@@ -268,7 +271,7 @@ router.post('/', authenticate, asyncHandler(async (req: AuthRequest, res) => {
   // Invalidate cache after creating a dataset
   invalidateCache('datasets:*').catch((err) => logger.error('Failed to invalidate cache:', err));
 
-  res.status(201).json({ dataset: serializeDataset(dataset) });
+  success(res, serializeDataset(dataset), 201);
 }));
 
 /**
@@ -338,7 +341,7 @@ router.patch('/:id', authenticate, asyncHandler(async (req: AuthRequest, res) =>
   // Invalidate cache after updating a dataset
   invalidateCache('datasets:*').catch((err) => console.error('Failed to invalidate cache:', err));
 
-  res.json({ dataset: serializeDataset(updatedDataset) });
+  success(res, serializeDataset(updatedDataset));
 }));
 
 /**
@@ -390,7 +393,7 @@ router.delete('/:id', authenticate, asyncHandler(async (req: AuthRequest, res) =
   // Invalidate cache after deleting a dataset
   invalidateCache('datasets:*').catch((err) => console.error('Failed to invalidate cache:', err));
 
-  res.json({ success: true, message: 'Dataset deleted successfully' });
+  success(res, null);
 }));
 
 /**
@@ -585,7 +588,7 @@ router.post('/:id/import', authenticate, asyncHandler(async (req: AuthRequest, r
     },
   });
 
-  res.json({
+  success(res, {
     dataset: serializeDataset(updatedDataset),
     importStats: {
       timeseriesCreated: timeseries.length,

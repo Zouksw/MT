@@ -45,7 +45,8 @@ describe('Dataset Routes', () => {
     it('should return empty list with pagination', async () => {
       const res = await request(createApp()).get('/api/datasets');
       expect(res.status).toBe(200);
-      expect(res.body.datasets).toEqual([]);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toEqual([]);
       expect(res.body.pagination).toMatchObject({ page: 1, limit: 20, total: 0 });
     });
 
@@ -57,7 +58,8 @@ describe('Dataset Routes', () => {
 
       const res = await request(createApp()).get('/api/datasets?page=1&limit=10');
       expect(res.status).toBe(200);
-      expect(res.body.datasets).toHaveLength(1);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveLength(1);
       expect(res.body.pagination.total).toBe(1);
     });
   });
@@ -77,7 +79,8 @@ describe('Dataset Routes', () => {
 
       const res = await request(createApp()).get('/api/datasets/ds1');
       expect(res.status).toBe(200);
-      expect(res.body.dataset.id).toBe('ds1');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBe('ds1');
     });
   });
 
@@ -94,7 +97,8 @@ describe('Dataset Routes', () => {
         .send({ name: 'New Dataset', slug: 'new-dataset', storageFormat: 'CSV' });
 
       expect(res.status).toBe(201);
-      expect(res.body.dataset.name).toBe('New Dataset');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.name).toBe('New Dataset');
     });
 
     it('should reject missing required fields', async () => {

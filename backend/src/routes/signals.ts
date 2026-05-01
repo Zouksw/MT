@@ -24,7 +24,7 @@ const router = Router();
 
 const signalQuerySchema = z.object({
   horizon: z.coerce.number().min(1).max(100).default(10),
-  currentPrice: z.coerce.number().positive(),
+  currentPrice: z.coerce.number().positive().optional(),
   timeseriesPath: z.string().min(1),
   models: z.string().optional(), // comma-separated model IDs
 });
@@ -251,6 +251,16 @@ router.get(
     const { commodityId } = req.params;
     const params = signalQuerySchema.parse(req.query);
 
+    let currentPrice = params.currentPrice;
+    if (!currentPrice || !Number.isFinite(currentPrice)) {
+      const latest = await prisma.commodityPrice.findFirst({
+        where: { commodity: { slug: commodityId } },
+        orderBy: { date: 'desc' },
+        select: { close: true },
+      });
+      currentPrice = latest?.close ? Number(latest.close) : 0;
+    }
+
     const models = params.models
       ? params.models.split(',').filter(m => m)
       : undefined;
@@ -259,7 +269,7 @@ router.get(
       commodityId,
       timeseriesPath: params.timeseriesPath,
       horizon: params.horizon,
-      currentPrice: params.currentPrice,
+      currentPrice,
       models,
     });
 
