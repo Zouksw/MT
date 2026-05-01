@@ -48,7 +48,7 @@ export const handlers = [
 
   http.get(`${API_BASE}/auth/verify`, () => {
     return HttpResponse.json({ success: true, data: { valid: true } });
-  }),;
+  }),
 
   http.get(`${API_BASE}/auth/me`, () => {
     return HttpResponse.json({
