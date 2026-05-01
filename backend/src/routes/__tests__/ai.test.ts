@@ -1,98 +1,141 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * Signals/AI Route Integration Tests
+ *
+ * Tests real /api/signals endpoints against a running backend.
+ * Verifies model listing, signal generation, accuracy, and correlation.
+ */
+
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import express from 'express';
-import { createPrismaProxy, createLoggerMock, mockAuthenticate, } from '@/test-helpers';
+import { PrismaClient } from '@prisma/client';
 
-vi.mock('@/lib', () => ({
-  prisma: createPrismaProxy(),
-  logger: createLoggerMock(),
-}));
+const ADMIN_EMAIL = 'admin@trademind.com';
+const ADMIN_PASSWORD = 'Admin123!';
+const REAL_DB_URL = 'postgresql://iotdb_user:iotdb_password@localhost:5432/iotdb_enhanced';
+const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
-vi.mock('@/services/tradingSignals', () => ({
-  getSignals: vi.fn().mockResolvedValue({ signals: [] }),
-  generateSignal: vi.fn().mockResolvedValue({ signal: 'BUY', confidence: 0.8 }),
-  getAllModels: vi.fn().mockReturnValue([
-    { id: 'arima', name: 'ARIMA' },
-    { id: 'holtwinters', name: 'HoltWinters' },
-  ]),
-}));
+let dbAvailable = false;
+let token: string;
 
-vi.mock('@/services/predictionCache', () => ({
-  getCachedPredictions: vi.fn().mockResolvedValue(null),
-  setCachedPredictions: vi.fn(),
-  getAllCachedPredictions: vi.fn().mockResolvedValue(new Map()),
-}));
-
-vi.mock('@/services/mapeTracking', () => ({
-  getAllModelAccuracy: vi.fn().mockResolvedValue({ accuracy: [{ modelId: 'arima', mape: 5.2 }] }),
-  getModelAccuracy: vi.fn().mockResolvedValue({ accuracy: [] }),
-  getBacktestWindows: vi.fn().mockResolvedValue({ windows: [], trend: 'insufficient_data' }),
-}));
-
-vi.mock('@/services/correlationAnalysis', () => ({
-  getCorrelation: vi.fn().mockResolvedValue({ correlation: [] }),
-  getCorrelationMatrix: vi.fn().mockResolvedValue({ matrix: [] }),
-  getAvailableCommodities: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock('@/services/alertNotifications', () => ({ checkAndNotify: vi.fn() }));
-vi.mock('@/services/backtesting', () => ({ runBacktest: vi.fn().mockResolvedValue({ results: [] }) }));
-
-vi.mock('@/middleware/auth', () => ({
-  authenticate: mockAuthenticate,
-}));
-
-vi.mock('@/middleware/cacheDecorator', () => ({
-  cacheRoute: () => (_req: any, _res: any, next: any) => next(),
-  invalidateCache: vi.fn(),
-}));
-
-vi.mock('@/middleware/errorHandler', () => ({
-  errorHandler: (err: any, _req: any, res: any, _next: any) => {
-    res.status(err.statusCode || 500).json({ success: false, error: { message: err.message } });
-  },
-  NotFoundError: class extends Error { statusCode = 404; },
-  BadRequestError: class extends Error { statusCode = 400; },
-  asyncHandler: (fn: any) => (req: any, res: any, next: any) =>
-    Promise.resolve(fn(req, res, next)).catch(next),
-}));
-
-import { signalsRouter } from '@/routes/signals';
-
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use('/api/signals', signalsRouter);
-  return app;
+async function checkDatabase(): Promise<boolean> {
+  try {
+    const p = new PrismaClient({ log: [], datasources: { db: { url: REAL_DB_URL } } });
+    await p.$connect();
+    await p.$executeRaw`SELECT 1`;
+    await p.$disconnect();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-describe('Signals/AI Routes', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+async function getAdminToken(): Promise<string> {
+  const res = await request(BASE)
+    .post('/api/auth/login')
+    .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  return res.body.data.token;
+}
 
-  it('should return model list with count', async () => {
-    const res = await request(createApp()).get('/api/signals/models');
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.models).toHaveLength(2);
-    expect(res.body.data.count).toBe(2);
+describe('Signals/AI Routes (Integration)', () => {
+  beforeAll(async () => {
+    dbAvailable = await checkDatabase();
+    if (!dbAvailable) return;
+    token = await getAdminToken();
   });
 
-  it('should return accuracy data', async () => {
-    const res = await request(createApp()).get('/api/signals/models/accuracy');
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.accuracy).toBeDefined();
-    expect(res.body.data.days).toBeDefined();
+  beforeEach(() => {
+    if (!dbAvailable) vi.skip();
   });
 
-  it('should return backtest windows', async () => {
-    const res = await request(createApp()).get('/api/signals/models/arima/backtest');
+  it('should return real model list (7 models)', async () => {
+    const res = await request(BASE)
+      .get('/api/signals/models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.models.length).toBe(7);
+    expect(res.body.data.count).toBe(7);
+
+    // Models are string IDs (e.g. "arima", "holtwinters")
+    expect(typeof res.body.data.models[0]).toBe('string');
+  });
+
+  it('should return accuracy data from real MAPE tracking', async () => {
+    const res = await request(BASE)
+      .get('/api/signals/models/accuracy')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('accuracy');
+    expect(res.body.data).toHaveProperty('days');
+  });
+
+  it('should generate real signal for a commodity', async () => {
+    const res = await request(BASE)
+      .get('/api/signals/wheat_cme?timeseriesPath=root.trading.wheat_cme.price&horizon=10')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('type');
+    expect(['BUY', 'SELL', 'HOLD']).toContain(res.body.data.type);
+    expect(res.body.data).toHaveProperty('confidence');
+    expect(res.body.data).toHaveProperty('individualSignals');
+    expect(res.body.data.individualSignals).toHaveLength(7);
+  });
+
+  it('should return model accuracy for specific model', async () => {
+    const modelsRes = await request(BASE)
+      .get('/api/signals/models')
+      .set('Authorization', `Bearer ${token}`);
+
+    const modelId = modelsRes.body.data.models[0];
+
+    const res = await request(BASE)
+      .get(`/api/signals/models/${modelId}/accuracy`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('should return correlation matrix', async () => {
+    const res = await request(BASE)
+      .get('/api/signals/correlation/matrix?commodities=wheat_cme,corn_cme,gold_cme&window=30')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('should return backtest results', async () => {
+    const modelsRes = await request(BASE)
+      .get('/api/signals/models')
+      .set('Authorization', `Bearer ${token}`);
+
+    const modelId = modelsRes.body.data.models[0];
+
+    const res = await request(BASE)
+      .get(`/api/signals/models/${modelId}/backtest`)
+      .set('Authorization', `Bearer ${token}`);
+
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
 
   it('should return predictions with pagination', async () => {
-    const res = await request(createApp()).get('/api/signals/models/arima/predictions?limit=10');
+    const modelsRes = await request(BASE)
+      .get('/api/signals/models')
+      .set('Authorization', `Bearer ${token}`);
+
+    const modelId = modelsRes.body.data.models[0];
+
+    const res = await request(BASE)
+      .get(`/api/signals/models/${modelId}/predictions?limit=10`)
+      .set('Authorization', `Bearer ${token}`);
+
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty('predictions');

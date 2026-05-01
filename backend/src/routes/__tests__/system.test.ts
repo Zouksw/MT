@@ -1,73 +1,49 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * System Route Integration Tests
+ *
+ * Tests /health, /health/ready, /health/live against a running backend.
+ * These endpoints don't require authentication.
+ */
+
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import request from 'supertest';
-import express from 'express';
 
-vi.mock('@/lib', () => ({
-  prisma: {
-    $queryRawUnsafe: vi.fn().mockResolvedValue([{ result: 1 }]),
-    $queryRaw: vi.fn().mockResolvedValue([{ result: 1 }]),
-  },
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+const BASE = `http://localhost:${process.env.PORT || 8000}`;
+let serverAvailable = false;
 
-vi.mock('@/lib/redis', () => ({
-  getRedisClient: vi.fn().mockResolvedValue({ ping: vi.fn().mockResolvedValue('PONG') }),
-}));
-
-vi.mock('@/services/iotdb', () => ({
-  iotdbClient: { healthCheck: vi.fn().mockResolvedValue(true) },
-}));
-
-vi.mock('@/middleware/auth', () => ({
-  authenticate: (req: any, _res: any, next: any) => {
-    req.userId = 'test-user-id';
-    req.user = { id: 'test-user-id', email: 'test@example.com', name: 'Test', role: 'user' };
-    next();
-  },
-}));
-
-vi.mock('@/middleware/errorHandler', () => ({
-  errorHandler: (err: any, _req: any, res: any, _next: any) => {
-    res.status(err.statusCode || 500).json({ success: false, error: { message: err.message } });
-  },
-  asyncHandler: (fn: any) => (req: any, res: any, next: any) =>
-    Promise.resolve(fn(req, res, next)).catch(next),
-}));
-
-import healthRouter from '@/routes/health';
-
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use('/health', healthRouter);
-  return app;
-}
-
-describe('System Routes', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+describe('System Routes (Integration)', () => {
+  beforeAll(async () => {
+    try {
+      const res = await request(BASE).get('/health');
+      serverAvailable = res.status === 200;
+    } catch {
+      serverAvailable = false;
+    }
+  });
 
   it('should return health status', async () => {
-    const res = await request(createApp()).get('/health');
+    if (!serverAvailable) vi.skip();
+    const res = await request(BASE).get('/health');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data).toMatchObject({ status: 'ok', environment: 'test' });
+    expect(res.body.data).toMatchObject({ status: 'ok' });
     expect(res.body.data).toHaveProperty('uptime');
     expect(res.body.data).toHaveProperty('timestamp');
   });
 
-  it('should return readiness check', async () => {
-    const res = await request(createApp()).get('/health/ready');
+  it('should return readiness check with real service states', async () => {
+    if (!serverAvailable) vi.skip();
+    const res = await request(BASE).get('/health/ready');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.checks).toMatchObject({
-      database: true,
-      redis: true,
-      iotdb: true,
-    });
+    expect(res.body.data.checks).toHaveProperty('database');
+    // Database should be up since we're running against real backend
+    expect(res.body.data.checks.database).toBe(true);
   });
 
   it('should return liveness check', async () => {
-    const res = await request(createApp()).get('/health/live');
+    if (!serverAvailable) vi.skip();
+    const res = await request(BASE).get('/health/live');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty('memory');

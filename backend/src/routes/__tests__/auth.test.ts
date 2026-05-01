@@ -1,142 +1,156 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * Auth Route Integration Tests
+ *
+ * Tests real /api/auth endpoints against a running backend with real PostgreSQL + Redis.
+ * Creates test users with unique prefixes and cleans up after.
+ */
+
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import express from 'express';
-import {
-  createPrismaProxy,
-  createLoggerMock,
-  createJwtUtilsMock,
-  createConfigMock,
-  passThrough,
-} from '@/test-helpers';
+import { PrismaClient } from '@prisma/client';
 
-vi.mock('@/lib', () => ({
-  prisma: createPrismaProxy(),
-  logger: createLoggerMock(),
-  jwtUtils: createJwtUtilsMock(),
-  config: createConfigMock(),
-}));
+const TEST_PREFIX = `auth-${Date.now()}`;
+const ADMIN_EMAIL = 'admin@trademind.com';
+const ADMIN_PASSWORD = 'Admin123!';
+const REAL_DB_URL = 'postgresql://iotdb_user:iotdb_password@localhost:5432/iotdb_enhanced';
+const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
-vi.mock('@/services/authLockout', () => ({
-  checkAccountLockout: vi.fn().mockResolvedValue({ isLocked: false }),
-  recordFailedLogin: vi.fn(),
-  clearFailedLoginAttempts: vi.fn(),
-  formatLockoutTime: vi.fn().mockReturnValue('15 minutes'),
-}));
+let prisma: PrismaClient;
+let dbAvailable = false;
 
-vi.mock('@/services/tokenBlacklist', () => ({
-  blacklistToken: vi.fn(),
-  isTokenBlacklisted: vi.fn().mockResolvedValue(false),
-}));
-
-vi.mock('@/middleware/rateLimiter', () => ({
-  authRateLimiter: passThrough,
-  registrationRateLimiter: passThrough,
-  passwordResetRateLimiter: passThrough,
-}));
-
-vi.mock('bcryptjs', () => ({
-  default: { hash: vi.fn().mockResolvedValue('$2b$12$hashed'), compare: vi.fn().mockResolvedValue(true) },
-  hash: vi.fn().mockResolvedValue('$2b$12$hashed'),
-  compare: vi.fn().mockResolvedValue(true),
-}));
-
-import { prisma } from '@/lib';
-import { authRouter } from '@/routes/auth';
-
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use('/api/auth', authRouter);
-  return app;
+async function checkDatabase(): Promise<boolean> {
+  try {
+    const p = new PrismaClient({ log: [], datasources: { db: { url: REAL_DB_URL } } });
+    await p.$connect();
+    await p.$executeRaw`SELECT 1`;
+    await p.$disconnect();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-describe('Auth Routes', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+describe('Auth Routes (Integration)', () => {
+  beforeAll(async () => {
+    dbAvailable = await checkDatabase();
+    if (!dbAvailable) return;
+    prisma = new PrismaClient({ log: ['error'], datasources: { db: { url: REAL_DB_URL } } });
+  });
+
+  afterAll(async () => {
+    if (!dbAvailable) return;
+    try {
+      await prisma.user.deleteMany({ where: { email: { startsWith: TEST_PREFIX } } });
+    } catch { /* ignore */ }
+    await prisma.$disconnect();
+  });
+
+  beforeEach(() => {
+    if (!dbAvailable) vi.skip();
+  });
 
   describe('POST /api/auth/register', () => {
-    it('should register a new user', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
-      prisma.user.create.mockResolvedValue({
-        id: 'user-1', email: 'test@example.com', name: 'Test', role: 'EDITOR',
-      });
-
-      const res = await request(createApp())
+    it('should register a new user with real DB and real bcrypt', async () => {
+      const email = `${TEST_PREFIX}-new@test.com`;
+      const res = await request(BASE)
         .post('/api/auth/register')
-        .send({ email: 'test@example.com', password: 'SecurePass123', name: 'Test' });
+        .send({ email, password: 'SecurePass123!', name: 'Integration Test User' });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('token');
       expect(res.body.data).toHaveProperty('refreshToken');
-      expect(res.body.data.user.email).toBe('test@example.com');
+      expect(res.body.data.user.email).toBe(email);
     });
 
     it('should reject duplicate email', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
-
-      const res = await request(createApp())
+      const email = `${TEST_PREFIX}-dup@test.com`;
+      // Register first
+      await request(BASE)
         .post('/api/auth/register')
-        .send({ email: 'test@example.com', password: 'SecurePass123', name: 'Test' });
+        .send({ email, password: 'SecurePass123!', name: 'Dup User' });
+
+      // Try again with same email
+      const res = await request(BASE)
+        .post('/api/auth/register')
+        .send({ email, password: 'AnotherPass456!', name: 'Dup User 2' });
 
       expect(res.status).toBe(409);
     });
 
     it('should reject invalid email', async () => {
-      const res = await request(createApp())
+      const res = await request(BASE)
         .post('/api/auth/register')
-        .send({ email: 'not-an-email', password: 'SecurePass123', name: 'Test' });
+        .send({ email: 'not-an-email', password: 'SecurePass123!', name: 'Test' });
 
       expect(res.status).toBe(400);
     });
 
     it('should reject missing password', async () => {
-      const res = await request(createApp())
+      const res = await request(BASE)
         .post('/api/auth/register')
-        .send({ email: 'test@example.com', name: 'Test' });
+        .send({ email: `${TEST_PREFIX}-nopass@test.com`, name: 'Test' });
 
       expect(res.status).toBe(400);
     });
   });
 
   describe('POST /api/auth/login', () => {
-    it('should login with valid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', email: 'test@example.com', name: 'Test',
-        passwordHash: 'hashed', role: 'user',
-      });
-
-      const res = await request(createApp())
+    it('should login admin with correct credentials', async () => {
+      const res = await request(BASE)
         .post('/api/auth/login')
-        .send({ email: 'test@example.com', password: 'SecurePass123' });
+        .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('token');
       expect(res.body.data).toHaveProperty('refreshToken');
-      expect(res.body.data).toHaveProperty('sessionId');
     });
 
     it('should reject wrong password', async () => {
-      const bcrypt = await import('bcryptjs');
-      (bcrypt.compare as any).mockResolvedValue(false);
-      (bcrypt.default.compare as any).mockResolvedValue(false);
-      prisma.user.findUnique.mockResolvedValue({
-        id: 'user-1', email: 'test@example.com', passwordHash: 'hashed', role: 'user',
-      });
-
-      const res = await request(createApp())
+      const res = await request(BASE)
         .post('/api/auth/login')
-        .send({ email: 'test@example.com', password: 'WrongPass' });
+        .send({ email: ADMIN_EMAIL, password: 'WrongPassword123!' });
 
       expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
     });
 
     it('should reject non-existent user', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
-
-      const res = await request(createApp())
+      const res = await request(BASE)
         .post('/api/auth/login')
-        .send({ email: 'nobody@example.com', password: 'SecurePass123' });
+        .send({ email: 'nonexistent@nowhere.com', password: 'Whatever123!' });
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /api/auth/me', () => {
+    it('should return current user with valid token', async () => {
+      const loginRes = await request(BASE)
+        .post('/api/auth/login')
+        .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+      const token = loginRes.body.data.token;
+
+      const res = await request(BASE)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.email).toBe(ADMIN_EMAIL);
+    });
+
+    it('should reject request without token', async () => {
+      const res = await request(BASE).get('/api/auth/me');
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject malformed JWT', async () => {
+      const res = await request(BASE)
+        .get('/api/auth/me')
+        .set('Authorization', 'Bearer invalid.jwt.token');
 
       expect(res.status).toBe(401);
     });

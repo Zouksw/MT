@@ -1,112 +1,194 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * Dataset Route Integration Tests
+ *
+ * Tests real /api/datasets endpoints against a running backend with real PostgreSQL.
+ * Automatically skipped if database is unavailable.
+ */
+
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import express from 'express';
-import { createPrismaProxy, createLoggerMock, mockAuthenticate } from '@/test-helpers';
+import { PrismaClient } from '@prisma/client';
 
-vi.mock('@/lib', () => ({
-  prisma: createPrismaProxy(),
-  logger: createLoggerMock(),
-}));
+const TEST_PREFIX = `ds-${Date.now()}`;
+const ADMIN_EMAIL = 'admin@trademind.com';
+const ADMIN_PASSWORD = 'Admin123!';
+const REAL_DB_URL = 'postgresql://iotdb_user:iotdb_password@localhost:5432/iotdb_enhanced';
+const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
-vi.mock('@/middleware/auth', () => ({
-  authenticate: mockAuthenticate,
-}));
+let prisma: PrismaClient;
+let dbAvailable = false;
+let token: string;
 
-vi.mock('@/middleware/errorHandler', () => ({
-  errorHandler: (err: any, _req: any, res: any, _next: any) => {
-    res.status(err.statusCode || 500).json({ success: false, error: { message: err.message } });
-  },
-  NotFoundError: class extends Error { statusCode = 404; },
-  BadRequestError: class extends Error { statusCode = 400; },
-  ForbiddenError: class extends Error { statusCode = 403; },
-  asyncHandler: (fn: any) => (req: any, res: any, next: any) =>
-    Promise.resolve(fn(req, res, next)).catch(next),
-}));
-
-vi.mock('@/middleware/cacheDecorator', () => ({
-  cacheRoute: () => (_req: any, _res: any, next: any) => next(),
-  invalidateCache: vi.fn().mockResolvedValue(undefined),
-}));
-
-import { prisma } from '@/lib';
-import { datasetsRouter } from '@/routes/datasets';
-
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use('/api/datasets', datasetsRouter);
-  return app;
+async function checkDatabase(): Promise<boolean> {
+  try {
+    const p = new PrismaClient({ log: [], datasources: { db: { url: REAL_DB_URL } } });
+    await p.$connect();
+    await p.$executeRaw`SELECT 1`;
+    await p.$disconnect();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-describe('Dataset Routes', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+async function getAdminToken(): Promise<string> {
+  const res = await request(BASE)
+    .post('/api/auth/login')
+    .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  return res.body.data.token;
+}
+
+describe('Dataset Routes (Integration)', () => {
+  beforeAll(async () => {
+    dbAvailable = await checkDatabase();
+    if (!dbAvailable) return;
+    prisma = new PrismaClient({ log: ['error'], datasources: { db: { url: REAL_DB_URL } } });
+    token = await getAdminToken();
+  });
+
+  afterAll(async () => {
+    if (!dbAvailable) return;
+    try {
+      await prisma.dataset.deleteMany({ where: { slug: { startsWith: TEST_PREFIX } } });
+    } catch { /* ignore cleanup errors */ }
+    await prisma.$disconnect();
+  });
+
+  beforeEach(() => {
+    if (!dbAvailable) vi.skip();
+  });
 
   describe('GET /api/datasets', () => {
-    it('should return empty list with pagination', async () => {
-      const res = await request(createApp()).get('/api/datasets');
+    it('should return datasets list with pagination', async () => {
+      const res = await request(BASE)
+        .get('/api/datasets')
+        .set('Authorization', `Bearer ${token}`);
+
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toEqual([]);
-      expect(res.body.pagination).toMatchObject({ page: 1, limit: 20, total: 0 });
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.pagination).toHaveProperty('total');
+      expect(typeof res.body.pagination.total).toBe('number');
     });
 
-    it('should return datasets with pagination', async () => {
-      prisma.dataset.findMany.mockResolvedValue([
-        { id: 'ds1', name: 'Oil Prices', description: 'desc', ownerId: 'u1' },
-      ]);
-      prisma.dataset.count.mockResolvedValue(1);
+    it('should paginate correctly', async () => {
+      const res = await request(BASE)
+        .get('/api/datasets?page=1&limit=2')
+        .set('Authorization', `Bearer ${token}`);
 
-      const res = await request(createApp()).get('/api/datasets?page=1&limit=10');
       expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeLessThanOrEqual(2);
+      expect(res.body.pagination.limit).toBe(2);
+    });
+  });
+
+  describe('POST /api/datasets', () => {
+    it('should create a dataset', async () => {
+      const res = await request(BASE)
+        .post('/api/datasets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          name: 'Integration Test Dataset',
+          slug: `${TEST_PREFIX}-dataset`,
+          description: 'Created by integration test',
+          storageFormat: 'CSV',
+        });
+
+      expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.pagination.total).toBe(1);
+      expect(res.body.data.name).toBe('Integration Test Dataset');
+      expect(res.body.data.slug).toBe(`${TEST_PREFIX}-dataset`);
+    });
+
+    it('should reject duplicate slug', async () => {
+      const res = await request(BASE)
+        .post('/api/datasets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Duplicate', slug: `${TEST_PREFIX}-dataset`, storageFormat: 'CSV' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject missing required fields', async () => {
+      const res = await request(BASE)
+        .post('/api/datasets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ description: 'Missing name and slug' });
+
+      expect(res.status).toBeGreaterThanOrEqual(400);
     });
   });
 
   describe('GET /api/datasets/:id', () => {
     it('should return 404 for missing dataset', async () => {
-      prisma.dataset.findUnique.mockResolvedValue(null);
+      const res = await request(BASE)
+        .get('/api/datasets/nonexistent-id')
+        .set('Authorization', `Bearer ${token}`);
 
-      const res = await request(createApp()).get('/api/datasets/nonexistent');
       expect(res.status).toBe(404);
     });
 
-    it('should return dataset with owner and timeseries', async () => {
-      prisma.dataset.findUnique.mockResolvedValue({
-        id: 'ds1', name: 'Test', ownerId: 'u1', timeseries: [],
-      });
+    it('should return dataset by ID', async () => {
+      // First create one
+      const createRes = await request(BASE)
+        .post('/api/datasets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Get By ID Test', slug: `${TEST_PREFIX}-getbyid`, storageFormat: 'CSV' });
 
-      const res = await request(createApp()).get('/api/datasets/ds1');
+      const datasetId = createRes.body.data.id;
+
+      const res = await request(BASE)
+        .get(`/api/datasets/${datasetId}`)
+        .set('Authorization', `Bearer ${token}`);
+
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.id).toBe('ds1');
+      expect(res.body.data.id).toBe(datasetId);
+      expect(res.body.data.name).toBe('Get By ID Test');
     });
   });
 
-  describe('POST /api/datasets', () => {
-    it('should create dataset', async () => {
-      prisma.dataset.findFirst.mockResolvedValue(null);
-      prisma.organizations.findFirst.mockResolvedValue({ id: 'org-1', name: 'Default' });
-      prisma.dataset.create.mockResolvedValue({
-        id: 'ds1', name: 'New Dataset', ownerId: 'test-user-id', slug: 'new-dataset',
-      });
-
-      const res = await request(createApp())
+  describe('PATCH /api/datasets/:id', () => {
+    it('should update dataset', async () => {
+      const createRes = await request(BASE)
         .post('/api/datasets')
-        .send({ name: 'New Dataset', slug: 'new-dataset', storageFormat: 'CSV' });
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Update Test', slug: `${TEST_PREFIX}-update`, storageFormat: 'CSV' });
 
-      expect(res.status).toBe(201);
+      const datasetId = createRes.body.data.id;
+
+      const res = await request(BASE)
+        .patch(`/api/datasets/${datasetId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ description: 'Updated by integration test' });
+
+      expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.name).toBe('New Dataset');
+      expect(res.body.data.description).toBe('Updated by integration test');
     });
+  });
 
-    it('should reject missing required fields', async () => {
-      const res = await request(createApp())
+  describe('DELETE /api/datasets/:id', () => {
+    it('should delete dataset and return 404 on re-fetch', async () => {
+      const createRes = await request(BASE)
         .post('/api/datasets')
-        .send({ description: 'Missing name and slug' });
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Delete Test', slug: `${TEST_PREFIX}-delete`, storageFormat: 'CSV' });
 
-      expect(res.status).toBe(500);
+      const datasetId = createRes.body.data.id;
+
+      const delRes = await request(BASE)
+        .delete(`/api/datasets/${datasetId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(delRes.status).toBe(200);
+      expect(delRes.body.success).toBe(true);
+
+      const getRes = await request(BASE)
+        .get(`/api/datasets/${datasetId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(getRes.status).toBe(404);
     });
   });
 });
