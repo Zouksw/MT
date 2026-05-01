@@ -8,8 +8,9 @@
 import { vi } from 'vitest';
 
 /**
- * Creates a Proxy-based Prisma mock that auto-generates vi.fn() for any
- * model access. Use inside vi.mock('@/lib', () => { ... }) factories.
+ * @deprecated Use `createTestContext()` from `@/test/helpers/testContext` instead.
+ * Proxy-based mocks provide false confidence — tests pass regardless of schema changes.
+ * For real integration tests, connect to actual PostgreSQL via TestContext.
  */
 export function createPrismaProxy() {
   const fns = () => ({

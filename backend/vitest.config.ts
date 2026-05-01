@@ -20,6 +20,6 @@ export default defineConfig({
     },
     alias: { '@': resolve(__dirname, './src') },
     setupFiles: ['./src/test-setup.ts'],
-    testTimeout: 10000,
+    testTimeout: 30000,
   },
 });
