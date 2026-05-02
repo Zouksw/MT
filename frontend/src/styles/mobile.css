@@ -17,7 +17,7 @@
     left: 0;
     right: 0;
     height: calc(56px + env(safe-area-inset-bottom));
-    background: #FFFFFF;
+    background: var(--background, #FFFFFF);
     box-shadow: rgba(0,0,0,0.08) 0px 0px 0px 1px, 0 -2px 8px rgba(0, 0, 0, 0.05);
     display: flex;
     justify-content: space-around;
@@ -77,7 +77,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: #FFFFFF;
+    background: var(--background, #FFFFFF);
     box-shadow: rgba(0,0,0,0.08) 0px 0px 0px 1px;
     padding: 12px 16px;
     display: flex;
@@ -90,7 +90,7 @@
   .mobile-header-title {
     font-size: 18px;
     font-weight: 600;
-    color: #111827;
+    color: var(--foreground, #111827);
   }
 
   /* Header action button */
@@ -105,7 +105,7 @@
   }
 
   .mobile-header-action:active {
-    background: #F3F4F6;
+    background: var(--muted, #F3F4F6);
   }
 }
 

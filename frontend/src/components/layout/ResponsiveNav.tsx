@@ -249,7 +249,12 @@ export const MobileTabBar: React.FC = () => {
     router.push(item.path);
   };
 
-  const mobileNavItems = NAV_ITEMS.slice(0, 4);
+  const mobileNavItems = [
+    NAV_ITEMS[0], // Dashboard
+    NAV_ITEMS[1], // Market
+    NAV_ITEMS[5], // Beef Data
+    NAV_ITEMS[6], // AI Signals
+  ];
 
   return (
     <nav className="mobile-tab-bar">
@@ -284,6 +289,18 @@ export const MobileTabBar: React.FC = () => {
           <span>More</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end" className="w-48">
+          <DropdownMenuItem onClick={() => router.push("/datasets")}>
+            <Database className="size-4" />
+            Datasets
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/timeseries")}>
+            <Activity className="size-4" />
+            Time Series
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/alerts")}>
+            <Bell className="size-4" />
+            Alerts
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push("/anomalies")}>
             <FlaskConical className="size-4" />
             Anomalies
@@ -291,18 +308,6 @@ export const MobileTabBar: React.FC = () => {
           <DropdownMenuItem onClick={() => router.push("/forecasts")}>
             <Activity className="size-4" />
             Forecasts
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/ai/models")}>
-            <Zap className="size-4" />
-            AI Models
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/ai/accuracy")}>
-            <Target className="size-4" />
-            Accuracy
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/trading")}>
-            <LayoutGrid className="size-4" />
-            Market
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => router.push("/apikeys")}>
