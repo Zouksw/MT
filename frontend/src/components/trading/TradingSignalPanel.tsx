@@ -26,6 +26,7 @@ interface TradingSignalPanelProps {
   resistanceLevel: number;
   distribution: { buy: number; sell: number; hold: number };
   currentPrice?: number;
+  bestModelId?: string;
   loading?: boolean;
 }
 
@@ -56,6 +57,7 @@ export default function TradingSignalPanel({
   resistanceLevel,
   distribution,
   currentPrice = 0,
+  bestModelId,
   loading = false,
 }: TradingSignalPanelProps) {
   if (loading) {
@@ -179,6 +181,11 @@ export default function TradingSignalPanel({
                     >
                       {style.symbol} {modelNameMap[signal.modelId] || signal.modelId}
                     </span>
+                    {bestModelId === signal.modelId && !isUnavailable && (
+                      <span className="ml-1 px-1 py-px text-[9px] font-semibold rounded bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 leading-none">
+                        BEST
+                      </span>
+                    )}
                     {isUnavailable && (
                       <span title={signal.error || "Model unavailable"}>
                         <Info className="size-2.5 text-gray-400 ml-1" />

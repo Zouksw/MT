@@ -21,6 +21,7 @@ import DataSourcePanel from "@/components/trading/DataSourcePanel";
 import MarketFactorsPanel from "@/components/trading/MarketFactorsPanel";
 import CommodityInfoCard from "@/components/trading/CommodityInfoCard";
 import { useCommodities, usePriceHistory, useCommoditySources, useMultiSourcePrices, useCommodityFundamentals } from "@/lib/market-data";
+import { MODEL_NAME_MAP } from "@/types/accuracy";
 
 const BEEF_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -35,7 +36,15 @@ export default function TradingPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [signal, setSignal] = useState<any>(null);
   const [signalLoading, setSignalLoading] = useState(false);
+  const [bestModelId, setBestModelId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [predictionHistory, setPredictionHistory] = useState<Array<{
+    id: string; modelId: string; commodityId: string;
+    predictedValues: number[]; actualValues: number[] | null;
+    mape: number | null; confidence: number | null;
+    predictedAt: string;
+  }>>([]);
+  const [previousSignalType, setPreviousSignalType] = useState<string | null>(null);
   const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([]);
 
   // Beef mode state
@@ -160,15 +169,39 @@ export default function TradingPage() {
       if (token) headers.Authorization = `Bearer ${token}`;
 
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(
-        `${apiBase}/api/signals/${selected.slug}?timeseriesPath=root.trading.${selected.slug}.price&currentPrice=${currentPrice}&horizon=10`,
-        { headers },
-      );
+      const [signalRes, accRes] = await Promise.allSettled([
+        fetch(
+          `${apiBase}/api/signals/${selected.slug}?timeseriesPath=root.trading.${selected.slug}.price&currentPrice=${currentPrice}&horizon=10`,
+          { headers },
+        ),
+        fetch(
+          `${apiBase}/api/signals/models/accuracy?commodityId=${selected.slug}&days=30`,
+          { headers },
+        ),
+      ]);
 
-      if (res.ok) {
-        const data = await res.json();
+      if (signalRes.status === "fulfilled" && signalRes.value.ok) {
+        const data = await signalRes.value.json();
         if (data.success && data.data) {
-          setSignal(data.data);
+          setSignal((prev: any) => {
+            if (prev?.type && prev.type !== data.data.type) {
+              setPreviousSignalType(prev.type);
+            }
+            return data.data;
+          });
+        }
+      }
+
+      if (accRes.status === "fulfilled" && accRes.value.ok) {
+        const accData = await accRes.value.json();
+        if (accData.success && accData.data?.accuracy) {
+          const valid = accData.data.accuracy.filter((m: { avgMape: number | null }) => m.avgMape !== null);
+          if (valid.length > 0) {
+            valid.sort((a: { avgMape: number }, b: { avgMape: number }) => a.avgMape - b.avgMape);
+            setBestModelId(valid[0].modelId);
+          } else {
+            setBestModelId(undefined);
+          }
         }
       }
     } catch {
@@ -181,6 +214,54 @@ export default function TradingPage() {
   useEffect(() => {
     loadSignal();
   }, [loadSignal]);
+
+  // Fetch prediction history for selected commodity
+  useEffect(() => {
+    if (!selected) {
+      setPredictionHistory([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+        const modelRes = await fetch(`${apiBase}/api/signals/models`, { headers });
+        const modelData = await modelRes.json();
+        if (!modelData.success || cancelled) return;
+
+        const allPredictions: typeof predictionHistory = [];
+        await Promise.allSettled(
+          modelData.data.models.map(async (modelId: string) => {
+            const res = await fetch(
+              `${apiBase}/api/signals/models/${modelId}/predictions?commodityId=${selected.slug}&limit=5`,
+              { headers },
+            );
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.data?.predictions) {
+              for (const p of data.data.predictions) {
+                if (p.actualValues) allPredictions.push(p);
+              }
+            }
+          }),
+        );
+
+        if (!cancelled) {
+          allPredictions.sort((a, b) => new Date(b.predictedAt).getTime() - new Date(a.predictedAt).getTime());
+          setPredictionHistory(allPredictions.slice(0, 10));
+        }
+      } catch {
+        // Prediction history fetch failed
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selected]);
 
   // Fetch anomalies when commodity changes
   useEffect(() => {
@@ -286,6 +367,19 @@ export default function TradingPage() {
 
       {/* Anomaly alerts */}
       <AnomalyAlertBanner anomalies={anomalies} />
+
+      {/* Signal change alert */}
+      {!beefMode && previousSignalType && signal?.type && previousSignalType !== signal.type && (
+        <Alert
+          variant="info"
+          title={`Signal changed: ${previousSignalType} → ${signal.type}`}
+          closable
+          onClose={() => setPreviousSignalType(null)}
+          className="mb-4"
+        >
+          The consensus signal for {selected?.nameCn || selected?.name} shifted from {previousSignalType} to {signal.type}.
+        </Alert>
+      )}
 
       {error && (
         <Alert
@@ -464,6 +558,7 @@ export default function TradingPage() {
               resistanceLevel={signal?.resistanceLevel || currentPrice * 1.04}
               distribution={signal?.distribution || { buy: 0, sell: 0, hold: 0 }}
               currentPrice={currentPrice}
+              bestModelId={bestModelId}
               loading={signalLoading}
             />
           )}
@@ -526,6 +621,74 @@ export default function TradingPage() {
                 loading={signalLoading}
               />
             )}
+          </CardBody>
+        </Card>
+      </div>
+      )}
+
+      {/* Prediction History — only in normal mode */}
+      {!beefMode && predictionHistory.length > 0 && (
+      <div className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="size-4" />
+                <span>Recent Verified Predictions</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardBody className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Model</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Predicted</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Actual</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">MAPE</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {predictionHistory.map((p) => {
+                    const predicted = p.predictedValues?.[0];
+                    const actual = p.actualValues?.[0];
+                    return (
+                      <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/50 transition-colors">
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                          {new Date(p.predictedAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2.5 text-sm font-medium">
+                          {MODEL_NAME_MAP[p.modelId] || p.modelId}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-mono text-right">
+                          {predicted !== undefined ? `$${predicted.toFixed(2)}` : "--"}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-mono text-right">
+                          {actual !== undefined ? `$${actual.toFixed(2)}` : "--"}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-mono font-medium text-right">
+                          {p.mape !== null ? (
+                            <span className={
+                              p.mape < 5 ? "text-green-600 dark:text-green-400" :
+                              p.mape < 10 ? "text-primary" :
+                              "text-red-600 dark:text-red-400"
+                            }>
+                              {p.mape.toFixed(1)}%
+                            </span>
+                          ) : "--"}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-right text-muted-foreground">
+                          {p.confidence !== null ? `${(p.confidence * 100).toFixed(0)}%` : "--"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </CardBody>
         </Card>
       </div>
