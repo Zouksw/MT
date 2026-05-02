@@ -10,6 +10,7 @@ import {
   chartTooltipStyles,
   chartAnimations,
 } from "@/lib/chart-config";
+import { getMapeFillColor } from "@/lib/ai-utils";
 import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
 
 const ResponsiveContainer = dynamic(
@@ -56,14 +57,6 @@ interface ModelPerformanceBarChartProps {
   models: ModelWithBacktest[];
 }
 
-function getMapeColor(mape: number | null): string {
-  if (mape === null) return "#6B7280";
-  if (mape < 3) return "#10B981";
-  if (mape < 7) return "#D4A030";
-  if (mape < 12) return "#F97316";
-  return "#EF4444";
-}
-
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const data = payload[0].payload;
@@ -99,7 +92,7 @@ export function ModelPerformanceBarChart({ models }: ModelPerformanceBarChartPro
       mape: m.avgMape,
       predictions: m.predictionCount,
       modelId: m.modelId,
-      fill: getMapeColor(m.avgMape),
+      fill: getMapeFillColor(m.avgMape),
     }));
 
     const avg =

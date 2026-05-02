@@ -2,6 +2,7 @@
 
 import SignalBadge from "./SignalBadge";
 import { Table } from "@/components/ui/Table";
+import { MODEL_NAME_MAP } from "@/types/accuracy";
 
 interface ModelSignal {
   modelId: string;
@@ -17,17 +18,12 @@ interface ModelConsensusTableProps {
   loading?: boolean;
 }
 
-const modelNameMap: Record<string, string> = {
-  arima: "ARIMA", holtwinters: "Holt-Winters", exponential_smoothing: "Exp. Smoothing",
-  naive_forecaster: "Naive", stl_forecaster: "STL", timer_xl: "Timer-XL", sundial: "Sundial",
-};
-
 export default function ModelConsensusTable({ signals, loading = false }: ModelConsensusTableProps) {
   const tableData = signals.filter(Boolean).map((s) => ({ ...s, id: s.modelId }));
 
   type Row = ModelSignal & { id: string };
   const columns = [
-    { key: "modelId", title: "Model", dataIndex: "modelId" as const, render: (_v: string, row: Row) => <span className="font-semibold font-mono text-[13px]">{modelNameMap[row.modelId] || row.modelId}</span> },
+    { key: "modelId", title: "Model", dataIndex: "modelId" as const, render: (_v: string, row: Row) => <span className="font-semibold font-mono text-[13px]">{MODEL_NAME_MAP[row.modelId] || row.modelId}</span> },
     { key: "type", title: "Signal", dataIndex: "type" as const, render: (_v: string, row: Row) => <SignalBadge type={row.type} confidence={row.confidence} size="small" /> },
     { key: "predictedValue", title: "Predicted", dataIndex: "predictedValue" as const, render: (_v: number, row: Row) => <span className="font-mono">{row.predictedValue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> },
     { key: "predictedChange", title: "Change", dataIndex: "predictedChange" as const, render: (_v: number, row: Row) => <span className="font-mono" style={{ color: row.predictedChange > 0 ? "#16a34a" : row.predictedChange < 0 ? "#dc2626" : undefined }}>{row.predictedChange > 0 ? "+" : ""}{row.predictedChange.toFixed(2)}%</span> },

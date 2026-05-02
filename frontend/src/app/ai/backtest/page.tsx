@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, BarChart3, TrendingUp, Target, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BarChart3, TrendingUp, Target, Calendar } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
@@ -10,8 +10,7 @@ import { Table } from "@/components/ui/Table";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { Button } from "@/components/ui/Button";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { getMapeTextColor, formatMape, API_BASE, getAuthHeaders } from "@/lib/ai-utils";
 
 interface Model {
   id: string;
@@ -32,16 +31,9 @@ interface BacktestResult {
   trend: string;
 }
 
-function formatMape(value: number | null): string {
-  if (value === null) return "--";
-  return `${value.toFixed(2)}%`;
-}
-
 function mapeColor(value: number | null): string {
   if (value === null) return "text-muted-foreground";
-  if (value < 5) return "text-green-600 dark:text-green-400";
-  if (value < 10) return "text-primary";
-  return "text-red-600 dark:text-red-400";
+  return getMapeTextColor(value);
 }
 
 function trendLabel(trend: string): string {
@@ -60,19 +52,12 @@ export default function BacktestPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getToken = useCallback(async () => {
-    const { tokenManager } = await import("@/lib/tokenManager");
-    return tokenManager.getToken();
-  }, []);
-
   // Fetch model list
   useEffect(() => {
     (async () => {
       try {
-        const token = await getToken();
-        const res = await fetch(`${API_BASE}/api/signals/models`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/api/signals/models`, { headers });
         const data = await res.json();
         if (data.success) {
           const modelIds = data.data.models;
@@ -87,7 +72,7 @@ export default function BacktestPage() {
         setLoading(false);
       }
     })();
-  }, [getToken, selectedModel]);
+  }, [selectedModel]);
 
   // Fetch backtest when model changes
   useEffect(() => {
@@ -96,10 +81,10 @@ export default function BacktestPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = await getToken();
+        const headers = await getAuthHeaders();
         const res = await fetch(
           `${API_BASE}/api/signals/models/${selectedModel}/backtest`,
-          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+          { headers }
         );
         const data = await res.json();
         if (data.success) {
@@ -113,7 +98,7 @@ export default function BacktestPage() {
         setLoading(false);
       }
     })();
-  }, [selectedModel, getToken]);
+  }, [selectedModel]);
 
   const bestWindow = backtest?.windows?.reduce<BacktestWindow | null>((best, w) =>
     !best || (w.mape !== null && best.mape !== null && w.mape < best.mape) ? w : best

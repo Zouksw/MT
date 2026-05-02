@@ -7,6 +7,7 @@ import type {
   BacktestResponse,
   ModelWithBacktest,
 } from "@/types/accuracy";
+import { MODEL_NAME_MAP } from "@/types/accuracy";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -69,18 +70,9 @@ export function useAccuracyData() {
   }, [fetchData]);
 
   const models: ModelWithBacktest[] = useMemo(() => {
-    const nameMap: Record<string, string> = {
-      arima: "ARIMA",
-      holtwinters: "Holt-Winters",
-      exponential_smoothing: "Exp. Smoothing",
-      naive_forecaster: "Naive",
-      stl_forecaster: "STL",
-      timer_xl: "Timer-XL",
-      sundial: "Sundial",
-    };
     return accuracy.map((m) => ({
       ...m,
-      displayName: nameMap[m.modelId] || m.modelId,
+      displayName: MODEL_NAME_MAP[m.modelId] || m.modelId,
       backtest: backtests.get(m.modelId),
     }));
   }, [accuracy, backtests]);

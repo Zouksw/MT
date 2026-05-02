@@ -3,6 +3,7 @@
 import { Info } from "lucide-react";
 import SignalBadge from "./SignalBadge";
 import { TRADING_COLORS } from "@/lib/trading-chart-config";
+import { MODEL_NAME_MAP } from "@/types/accuracy";
 
 interface ModelSignal {
   modelId: string;
@@ -29,16 +30,6 @@ interface TradingSignalPanelProps {
   bestModelId?: string;
   loading?: boolean;
 }
-
-const modelNameMap: Record<string, string> = {
-  arima: "ARIMA",
-  holtwinters: "Holt-Winters",
-  exponential_smoothing: "Exp. Smoothing",
-  naive_forecaster: "Naive",
-  stl_forecaster: "STL",
-  timer_xl: "Timer-XL",
-  sundial: "Sundial",
-};
 
 const signalSymbols: Record<string, { symbol: string; color: string; border: string }> = {
   BUY: { symbol: "▲", color: TRADING_COLORS.buy, border: `4px solid ${TRADING_COLORS.buy}` },
@@ -172,14 +163,14 @@ export default function TradingSignalPanel({
                     opacity: isUnavailable ? 0.6 : 1,
                   }}
                   role="status"
-                  aria-label={`${modelNameMap[signal.modelId] || signal.modelId}: ${isUnavailable ? "unavailable" : signal.type} signal, confidence ${Math.round(signal.confidence * 100)}%`}
+                  aria-label={`${MODEL_NAME_MAP[signal.modelId] || signal.modelId}: ${isUnavailable ? "unavailable" : signal.type} signal, confidence ${Math.round(signal.confidence * 100)}%`}
                 >
                   <span className="flex items-center gap-1">
                     <span
                       className="font-semibold font-mono text-xs"
                       style={{ color: isUnavailable ? "#9CA3AF" : style.color }}
                     >
-                      {style.symbol} {modelNameMap[signal.modelId] || signal.modelId}
+                      {style.symbol} {MODEL_NAME_MAP[signal.modelId] || signal.modelId}
                     </span>
                     {bestModelId === signal.modelId && !isUnavailable && (
                       <span className="ml-1 px-1 py-px text-[9px] font-semibold rounded bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 leading-none">
@@ -240,7 +231,7 @@ export default function TradingSignalPanel({
                   return (
                     <div key={signal.modelId} className="flex items-center gap-2">
                       <span className="text-xs font-mono text-muted-foreground w-24 shrink-0">
-                        {modelNameMap[signal.modelId] || signal.modelId}
+                        {MODEL_NAME_MAP[signal.modelId] || signal.modelId}
                       </span>
                       <div className="flex-1 h-4 relative bg-muted rounded-sm">
                         {/* Range bar */}

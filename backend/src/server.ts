@@ -251,7 +251,7 @@ httpServer.listen(config.server.port, () => {
   // Run initial data fetch (don't block server startup)
   scraperManager.runAll().then(async (results) => {
     const summary = Object.entries(results)
-      .map(([name, r]) => `${name}: ${'error' in r ? 'error' : `${(r as any).inserted} inserted, ${(r as any).updated} updated`}`)
+      .map(([name, r]) => `${name}: ${'error' in r ? 'error' : `${r.inserted} inserted, ${r.updated} updated`}`)
       .join('; ');
     logger.info(`📊 Initial data fetch: ${summary}`);
 
@@ -261,8 +261,7 @@ httpServer.listen(config.server.port, () => {
         if ('error' in result) {
           await prisma.ingestionLog.create({ data: { source, status: 'error', errorMessage: result.error } });
         } else {
-          const r = result as { inserted: number; updated: number };
-          await prisma.ingestionLog.create({ data: { source, status: 'success', inserted: r.inserted, updated: r.updated } });
+          await prisma.ingestionLog.create({ data: { source, status: 'success', inserted: result.inserted, updated: result.updated } });
         }
       } catch {}
     }
@@ -314,7 +313,7 @@ setInterval(async () => {
   try {
     const results = await scraperManager.runAll();
     const summary = Object.entries(results)
-      .map(([name, r]) => `${name}: ${'error' in r ? 'error' : `${(r as any).inserted}+${(r as any).updated}`}`)
+      .map(([name, r]) => `${name}: ${'error' in r ? 'error' : `${r.inserted}+${r.updated}`}`)
       .join('; ');
     logger.info(`📊 Daily data refresh: ${summary}`);
 
@@ -323,8 +322,7 @@ setInterval(async () => {
         if ('error' in result) {
           await prisma.ingestionLog.create({ data: { source, status: 'error', errorMessage: result.error } });
         } else {
-          const r = result as { inserted: number; updated: number };
-          await prisma.ingestionLog.create({ data: { source, status: 'success', inserted: r.inserted, updated: r.updated } });
+          await prisma.ingestionLog.create({ data: { source, status: 'success', inserted: result.inserted, updated: result.updated } });
         }
       } catch {}
     }

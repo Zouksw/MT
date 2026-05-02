@@ -14,8 +14,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { MODEL_NAME_MAP, MODEL_COLORS, getMapeTextColor, formatMape, API_BASE, getAuthHeaders } from "@/lib/ai-utils";
 
 interface ModelAccuracy {
   modelId: string;
@@ -43,33 +42,9 @@ interface EnrichedModel extends ModelAccuracy {
   verificationRate: number;
 }
 
-const MODEL_NAMES: Record<string, string> = {
-  arima: "ARIMA",
-  holtwinters: "Holt-Winters",
-  exponential_smoothing: "Exp. Smoothing",
-  naive_forecaster: "Naive",
-  stl_forecaster: "STL",
-  timer_xl: "Timer-XL",
-  sundial: "Sundial",
-};
-
-const MODEL_COLORS: Record<string, string> = {
-  arima: "#B8860B",
-  holtwinters: "#8B5CF6",
-  exponential_smoothing: "#EC4899",
-  naive_forecaster: "#F97316",
-  stl_forecaster: "#14B8A6",
-  timer_xl: "#06B6D4",
-  sundial: "#6366F1",
-};
-
 function mapeBadge(mape: number | null) {
   if (mape === null) return <span className="text-muted-foreground">--</span>;
-  const cls =
-    mape < 5 ? "text-green-600 dark:text-green-400" :
-    mape < 10 ? "text-primary" :
-    "text-red-600 dark:text-red-400";
-  return <span className={`font-mono font-medium ${cls}`}>{mape.toFixed(2)}%</span>;
+  return <span className={`font-mono font-medium ${getMapeTextColor(mape)}`}>{mape.toFixed(2)}%</span>;
 }
 
 function trendBadge(trend: string) {
@@ -90,17 +65,10 @@ export default function AIModelsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getToken = useCallback(async () => {
-    const { tokenManager } = await import("@/lib/tokenManager");
-    return tokenManager.getToken();
-  }, []);
-
   useEffect(() => {
     (async () => {
       try {
-        const token = await getToken();
-        const headers: Record<string, string> = {};
-        if (token) headers.Authorization = `Bearer ${token}`;
+        const headers = await getAuthHeaders();
 
         const accRes = await fetch(`${API_BASE}/api/signals/models/accuracy`, { headers });
         const accData = await accRes.json();
@@ -123,7 +91,7 @@ export default function AIModelsPage() {
 
         const enriched: EnrichedModel[] = accuracyList.map((m) => ({
           ...m,
-          displayName: MODEL_NAMES[m.modelId] || m.modelId,
+          displayName: MODEL_NAME_MAP[m.modelId] || m.modelId,
           backtest: backtestMap.get(m.modelId) ?? null,
           verificationRate: m.predictionCount > 0
             ? Math.round((m.verifiedCount / m.predictionCount) * 100)
@@ -137,7 +105,7 @@ export default function AIModelsPage() {
         setLoading(false);
       }
     })();
-  }, [getToken]);
+  }, []);
 
   const stats = useMemo(() => {
     const valid = models.filter((m) => m.avgMape !== null);

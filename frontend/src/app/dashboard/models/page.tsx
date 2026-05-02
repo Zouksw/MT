@@ -8,6 +8,8 @@ import { Tag } from "@/components/ui/Tag";
 import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
+import { MODEL_NAME_MAP } from "@/types/accuracy";
+import { getMapeFillColor } from "@/lib/ai-utils";
 
 interface ModelAccuracy {
   modelId: string;
@@ -15,16 +17,6 @@ interface ModelAccuracy {
   predictionCount: number;
   verifiedCount: number;
 }
-
-const modelNameMap: Record<string, string> = {
-  arima: "ARIMA",
-  holtwinters: "Holt-Winters",
-  exponential_smoothing: "Exp. Smoothing",
-  naive_forecaster: "Naive",
-  stl_forecaster: "STL",
-  timer_xl: "Timer-XL",
-  sundial: "Sundial",
-};
 
 const modelDescMap: Record<string, string> = {
   arima: "AutoRegressive Integrated Moving Average",
@@ -49,13 +41,6 @@ function getMapeLabel(mape: number | null): string {
   if (mape < 7) return "Good";
   if (mape < 15) return "Fair";
   return "Poor";
-}
-
-function getMapeColor(mape: number | null): string {
-  if (mape === null) return "#9CA3AF";
-  if (mape < 3) return "#10B981";
-  if (mape < 7) return "#D97706";
-  return "#EF4444";
 }
 
 export default function ModelsComparisonPage() {
@@ -104,7 +89,7 @@ export default function ModelsComparisonPage() {
 
   const tableData = accuracy.map((a) => ({
     id: a.modelId,
-    model: modelNameMap[a.modelId] || a.modelId,
+    model: MODEL_NAME_MAP[a.modelId] || a.modelId,
     description: modelDescMap[a.modelId] || "",
     mape: a.avgMape,
     predictionCount: a.predictionCount,
@@ -129,7 +114,7 @@ export default function ModelsComparisonPage() {
       title: "MAPE",
       render: (row: typeof tableData[0]) => (
         <div className="flex items-center gap-2">
-          <span className="font-semibold font-mono text-base" style={{ color: getMapeColor(row.mape) }}>
+          <span className="font-semibold font-mono text-base" style={{ color: getMapeFillColor(row.mape) }}>
             {row.mape !== null ? `${row.mape.toFixed(2)}%` : "—"}
           </span>
           <Tag color={getMapeVariant(row.mape)}>{getMapeLabel(row.mape)}</Tag>
@@ -195,7 +180,7 @@ export default function ModelsComparisonPage() {
           />
         </div>
         {bestModel && bestModel.avgMape !== null && (
-          <Tag color="success">{modelNameMap[bestModel.modelId]} (MAPE {bestModel.avgMape.toFixed(2)}%)</Tag>
+          <Tag color="success">{MODEL_NAME_MAP[bestModel.modelId]} (MAPE {bestModel.avgMape.toFixed(2)}%)</Tag>
         )}
       </div>
 
