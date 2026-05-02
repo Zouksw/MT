@@ -31,7 +31,7 @@ import { registerAllScrapers, scraperManager } from '@/services/dataIngestion';
 import { syncCommoditiesToIoTDB, scheduleAllCommodityPredictions } from '@/services/dataIngestion/iotdbSync';
 import { initPredictionQueue } from '@/services/predictionQueue';
 import { errorHandler } from '@/middleware/errorHandler';
-import { logger, jwtUtils } from '@/lib';
+import { logger, jwtUtils, prisma } from '@/lib';
 import { securityHeaders } from '@/middleware/security';
 import { config } from './lib';
 import { loggingMiddleware, errorLoggingMiddleware } from '@/middleware/logging';
@@ -249,11 +249,23 @@ httpServer.listen(config.server.port, () => {
   logger.info('📊 Data scrapers registered');
 
   // Run initial data fetch (don't block server startup)
-  scraperManager.runAll().then((results) => {
+  scraperManager.runAll().then(async (results) => {
     const summary = Object.entries(results)
       .map(([name, r]) => `${name}: ${'error' in r ? 'error' : `${(r as any).inserted} inserted, ${(r as any).updated} updated`}`)
       .join('; ');
     logger.info(`📊 Initial data fetch: ${summary}`);
+
+    // Log to IngestionLog
+    for (const [source, result] of Object.entries(results)) {
+      try {
+        if ('error' in result) {
+          await prisma.ingestionLog.create({ data: { source, status: 'error', errorMessage: result.error } });
+        } else {
+          const r = result as { inserted: number; updated: number };
+          await prisma.ingestionLog.create({ data: { source, status: 'success', inserted: r.inserted, updated: r.updated } });
+        }
+      } catch {}
+    }
   }).catch((err) => {
     logger.error(`📊 Initial data fetch failed: ${err}`);
   });
@@ -305,6 +317,17 @@ setInterval(async () => {
       .map(([name, r]) => `${name}: ${'error' in r ? 'error' : `${(r as any).inserted}+${(r as any).updated}`}`)
       .join('; ');
     logger.info(`📊 Daily data refresh: ${summary}`);
+
+    for (const [source, result] of Object.entries(results)) {
+      try {
+        if ('error' in result) {
+          await prisma.ingestionLog.create({ data: { source, status: 'error', errorMessage: result.error } });
+        } else {
+          const r = result as { inserted: number; updated: number };
+          await prisma.ingestionLog.create({ data: { source, status: 'success', inserted: r.inserted, updated: r.updated } });
+        }
+      } catch {}
+    }
   } catch (err) {
     logger.error(`📊 Daily data refresh failed: ${err}`);
   }

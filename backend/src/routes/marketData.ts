@@ -452,4 +452,164 @@ router.post(
   }),
 );
 
+// Manual scraper trigger — run a single source
+router.post(
+  '/sources/:sourceId/refresh',
+  authenticate,
+  authorize('ADMIN'),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { sourceId } = req.params;
+    const health = scraperManager.getHealth();
+
+    if (!health[sourceId] && !scraperManager.getHealth()[sourceId]) {
+      throw new NotFoundError(`Data source '${sourceId}'`);
+    }
+
+    const startTime = Date.now();
+    try {
+      const result = await scraperManager.runSource(sourceId);
+      const elapsed = Date.now() - startTime;
+
+      await prisma.ingestionLog.create({
+        data: {
+          source: sourceId,
+          status: 'success',
+          inserted: result.inserted,
+          updated: result.updated,
+          durationMs: elapsed,
+        },
+      });
+
+      success(res, { source: sourceId, ...result, elapsedMs: elapsed });
+    } catch (err) {
+      const elapsed = Date.now() - startTime;
+      await prisma.ingestionLog.create({
+        data: {
+          source: sourceId,
+          status: 'error',
+          errorMessage: err instanceof Error ? err.message : String(err),
+          durationMs: elapsed,
+        },
+      });
+      throw err;
+    }
+  }),
+);
+
+// Refresh all sources — admin only
+router.post(
+  '/sources/refresh-all',
+  authenticate,
+  authorize('ADMIN'),
+  asyncHandler(async (_req, res) => {
+    const startTime = Date.now();
+    const results = await scraperManager.runAll();
+    const elapsed = Date.now() - startTime;
+
+    for (const [source, result] of Object.entries(results)) {
+      if ('error' in result) {
+        await prisma.ingestionLog.create({
+          data: {
+            source,
+            status: 'error',
+            errorMessage: result.error,
+            durationMs: elapsed,
+          },
+        });
+      } else {
+        const r = result as { inserted: number; updated: number };
+        await prisma.ingestionLog.create({
+          data: {
+            source,
+            status: 'success',
+            inserted: r.inserted,
+            updated: r.updated,
+            durationMs: elapsed,
+          },
+        });
+      }
+    }
+
+    success(res, { results, elapsedMs: elapsed });
+  }),
+);
+
+// Data freshness monitoring
+router.get(
+  '/sources/freshness',
+  authenticate,
+  asyncHandler(async (_req, res) => {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get latest ingestion log per source
+    const latestLogs = await prisma.ingestionLog.groupBy({
+      by: ['source'],
+      _max: { createdAt: true },
+      where: { createdAt: { gte: sevenDaysAgo } },
+    });
+
+    // Get success rate per source (last 7 days)
+    const recentLogs = await prisma.ingestionLog.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const sourceStats = new Map<string, { total: number; success: number; lastRun: Date | null; lastInserted: number; lastUpdated: number }>();
+    for (const log of recentLogs) {
+      const stat = sourceStats.get(log.source) || { total: 0, success: 0, lastRun: null as Date | null, lastInserted: 0, lastUpdated: 0 };
+      stat.total++;
+      if (log.status === 'success') stat.success++;
+      if (!stat.lastRun || log.createdAt > stat.lastRun) {
+        stat.lastRun = log.createdAt;
+        stat.lastInserted = log.inserted;
+        stat.lastUpdated = log.updated;
+      }
+      sourceStats.set(log.source, stat);
+    }
+
+    const freshness = Array.from(sourceStats.entries()).map(([source, stat]) => ({
+      source,
+      successRate: stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0,
+      lastRun: stat.lastRun,
+      stale: stat.lastRun ? (now.getTime() - stat.lastRun.getTime()) > oneDayAgo.getTime() : true,
+      lastInserted: stat.lastInserted,
+      lastUpdated: stat.lastUpdated,
+      totalRuns: stat.total,
+    }));
+
+    const staleSources = freshness.filter((f) => f.stale);
+    const healthySources = freshness.filter((f) => !f.stale);
+
+    success(res, {
+      freshness,
+      summary: {
+        total: freshness.length,
+        healthy: healthySources.length,
+        stale: staleSources.length,
+        staleSources: staleSources.map((s) => s.source),
+      },
+    });
+  }),
+);
+
+// Ingestion history for a specific source
+router.get(
+  '/sources/:sourceId/history',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { sourceId } = req.params;
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+
+    const logs = await prisma.ingestionLog.findMany({
+      where: { source: sourceId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    success(res, { source: sourceId, logs, count: logs.length });
+  }),
+);
+
 export { router as marketDataRouter };

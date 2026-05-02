@@ -7,7 +7,7 @@ import { Tag } from "@/components/ui/Tag";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { authFetch, getAuthToken, getCachedUser } from "@/utils/auth";
-import { User, Bell, Clock, KeyRound, ChevronRight, Shield, CircleCheck } from "lucide-react";
+import { User, Bell, Clock, KeyRound, ChevronRight, Shield, CircleCheck, Database } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -71,6 +71,13 @@ export default function SettingsPage() {
       icon: <KeyRound className="size-[18px]" />,
       color: "from-purple-500 to-indigo-400",
       path: "/apikeys",
+    },
+    {
+      title: "Data Sources",
+      description: "Monitor data pipeline health and refresh sources",
+      icon: <Database className="size-[18px]" />,
+      color: "from-teal-500 to-cyan-400",
+      path: "/settings/data-sources",
     },
   ];
 

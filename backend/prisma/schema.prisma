@@ -822,3 +822,18 @@ model ColdStorage {
   @@unique([country, category, date, source])
   @@map("cold_storage")
 }
+
+model IngestionLog {
+  id           String   @id @default(cuid())
+  source       String
+  status       String   // "success" | "error"
+  inserted     Int      @default(0)
+  updated      Int      @default(0)
+  errorMessage String?  @map("error_message")
+  durationMs   Int      @default(0) @map("duration_ms")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([source, createdAt])
+  @@index([status, createdAt])
+  @@map("ingestion_logs")
+}
