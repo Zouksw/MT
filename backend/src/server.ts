@@ -1,9 +1,9 @@
 import { createServer } from "node:http";
 import compression from "compression";
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import { Server as SocketIOServer } from "socket.io";
+
 import { jwtUtils, logger, prisma } from "@/lib";
 import { errorHandler } from "@/middleware/errorHandler";
 import {
@@ -41,8 +41,6 @@ import {
 import { initPredictionQueue } from "@/services/predictionQueue";
 import { checkLimitOrders } from "@/services/simulationEngine";
 import { config } from "./lib";
-
-dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);

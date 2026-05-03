@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch -r dotenv/config src/server.ts",
     "build": "tsc && tsc-alias",
     "start": "node dist/src/server-with-docs.js",
     "test": "vitest run",
