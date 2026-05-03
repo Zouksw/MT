@@ -1,5 +1,5 @@
 export {
-  OnlineStatus,
-  OnlineStatusCompact,
-  OnlineStatusText,
+	OnlineStatus,
+	OnlineStatusCompact,
+	OnlineStatusText,
 } from "../OnlineStatus";

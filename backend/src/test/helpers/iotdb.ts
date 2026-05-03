@@ -6,10 +6,10 @@
  */
 
 export interface TimeSeriesTestData {
-  name: string;
-  dataType: 'INT32' | 'INT64' | 'FLOAT' | 'DOUBLE' | 'BOOLEAN' | 'TEXT';
-  encoding: 'PLAIN' | 'RLE' | 'DIFF' | 'TS_2DIFF' | 'GORILLA';
-  compression?: 'SNAPPY' | 'LZ4' | 'GZIP' | 'UNCOMPRESSED';
+	name: string;
+	dataType: "INT32" | "INT64" | "FLOAT" | "DOUBLE" | "BOOLEAN" | "TEXT";
+	encoding: "PLAIN" | "RLE" | "DIFF" | "TS_2DIFF" | "GORILLA";
+	compression?: "SNAPPY" | "LZ4" | "GZIP" | "UNCOMPRESSED";
 }
 
 /**
@@ -24,10 +24,10 @@ export interface TimeSeriesTestData {
  * // Returns: 'root.test.performance_1648123456789'
  * ```
  */
-export function generateTestTimeseries(prefix = 'root.test'): string {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  return `${prefix}_${timestamp}_${random}`;
+export function generateTestTimeseries(prefix = "root.test"): string {
+	const timestamp = Date.now();
+	const random = Math.floor(Math.random() * 1000);
+	return `${prefix}_${timestamp}_${random}`;
 }
 
 /**
@@ -44,14 +44,16 @@ export function generateTestTimeseries(prefix = 'root.test'): string {
  * });
  * ```
  */
-export function createTestTimeseriesData(overrides: Partial<TimeSeriesTestData> = {}): TimeSeriesTestData {
-  return {
-    name: generateTestTimeseries(),
-    dataType: 'DOUBLE',
-    encoding: 'GORILLA',
-    compression: 'SNAPPY',
-    ...overrides,
-  };
+export function createTestTimeseriesData(
+	overrides: Partial<TimeSeriesTestData> = {},
+): TimeSeriesTestData {
+	return {
+		name: generateTestTimeseries(),
+		dataType: "DOUBLE",
+		encoding: "GORILLA",
+		compression: "SNAPPY",
+		...overrides,
+	};
 }
 
 /**
@@ -67,16 +69,18 @@ export function createTestTimeseriesData(overrides: Partial<TimeSeriesTestData> 
  * ```
  */
 export function createTestTimeseriesBatch(
-  count: number,
-  prefix = 'root.test'
+	count: number,
+	prefix = "root.test",
 ): TimeSeriesTestData[] {
-  const series: TimeSeriesTestData[] = [];
-  for (let i = 0; i < count; i++) {
-    series.push(createTestTimeseriesData({
-      name: generateTestTimeseries(`${prefix}.${i}`),
-    }));
-  }
-  return series;
+	const series: TimeSeriesTestData[] = [];
+	for (let i = 0; i < count; i++) {
+		series.push(
+			createTestTimeseriesData({
+				name: generateTestTimeseries(`${prefix}.${i}`),
+			}),
+		);
+	}
+	return series;
 }
 
 /**
@@ -94,21 +98,21 @@ export function createTestTimeseriesBatch(
  * ```
  */
 export function generateTestDataPoints(
-  count: number,
-  startTime?: number,
-  intervalMs = 60000
+	count: number,
+	startTime?: number,
+	intervalMs = 60000,
 ): Array<{ timestamp: number; value: number }> {
-  const start = startTime || (Date.now() - 3600000); // 1 hour ago
-  const points: Array<{ timestamp: number; value: number }> = [];
+	const start = startTime || Date.now() - 3600000; // 1 hour ago
+	const points: Array<{ timestamp: number; value: number }> = [];
 
-  for (let i = 0; i < count; i++) {
-    points.push({
-      timestamp: start + i * intervalMs,
-      value: Math.random() * 100,
-    });
-  }
+	for (let i = 0; i < count; i++) {
+		points.push({
+			timestamp: start + i * intervalMs,
+			value: Math.random() * 100,
+		});
+	}
 
-  return points;
+	return points;
 }
 
 /**
@@ -127,28 +131,28 @@ export function generateTestDataPoints(
  * ```
  */
 export function generateTestDataPointsWithTrend(
-  count: number,
-  trend: 'up' | 'down' | 'random' = 'random',
-  startTime?: number,
-  intervalMs = 60000
+	count: number,
+	trend: "up" | "down" | "random" = "random",
+	startTime?: number,
+	intervalMs = 60000,
 ): Array<{ timestamp: number; value: number }> {
-  const start = startTime || (Date.now() - 3600000);
-  const points: Array<{ timestamp: number; value: number }> = [];
-  let value = 50; // Starting value
+	const start = startTime || Date.now() - 3600000;
+	const points: Array<{ timestamp: number; value: number }> = [];
+	let value = 50; // Starting value
 
-  for (let i = 0; i < count; i++) {
-    // Add trend and random noise
-    const trendDelta = trend === 'up' ? 0.5 : trend === 'down' ? -0.5 : 0;
-    const noise = (Math.random() - 0.5) * 2; // -1 to 1
-    value = Math.max(0, Math.min(100, value + trendDelta + noise)); // Clamp to 0-100
+	for (let i = 0; i < count; i++) {
+		// Add trend and random noise
+		const trendDelta = trend === "up" ? 0.5 : trend === "down" ? -0.5 : 0;
+		const noise = (Math.random() - 0.5) * 2; // -1 to 1
+		value = Math.max(0, Math.min(100, value + trendDelta + noise)); // Clamp to 0-100
 
-    points.push({
-      timestamp: start + i * intervalMs,
-      value,
-    });
-  }
+		points.push({
+			timestamp: start + i * intervalMs,
+			value,
+		});
+	}
 
-  return points;
+	return points;
 }
 
 /**
@@ -166,24 +170,28 @@ export function generateTestDataPointsWithTrend(
  * ```
  */
 export function generateAnomalyTestData(
-  normalCount: number,
-  anomalyCount: number,
-  anomalyValue = 200
+	normalCount: number,
+	anomalyCount: number,
+	anomalyValue = 200,
 ): Array<{ timestamp: number; value: number; isAnomaly: boolean }> {
-  const points = generateTestDataPoints(normalCount);
-  const anomalies: Array<{ timestamp: number; value: number; isAnomaly: boolean }> = [];
+	const points = generateTestDataPoints(normalCount);
+	const anomalies: Array<{
+		timestamp: number;
+		value: number;
+		isAnomaly: boolean;
+	}> = [];
 
-  // Add anomalies
-  for (let i = 0; i < anomalyCount; i++) {
-    const lastPoint = points[points.length - 1];
-    anomalies.push({
-      timestamp: lastPoint.timestamp + 60000,
-      value: anomalyValue + (Math.random() - 0.5) * 10, // Anomaly with slight noise
-      isAnomaly: true,
-    });
-  }
+	// Add anomalies
+	for (let i = 0; i < anomalyCount; i++) {
+		const lastPoint = points[points.length - 1];
+		anomalies.push({
+			timestamp: lastPoint.timestamp + 60000,
+			value: anomalyValue + (Math.random() - 0.5) * 10, // Anomaly with slight noise
+			isAnomaly: true,
+		});
+	}
 
-  return [...points.map(p => ({ ...p, isAnomaly: false })), ...anomalies];
+	return [...points.map((p) => ({ ...p, isAnomaly: false })), ...anomalies];
 }
 
 /**
@@ -199,7 +207,7 @@ export function generateAnomalyTestData(
  * ```
  */
 export function formatTimeseriesList(timeseries: string[]): string {
-  return timeseries.join(',');
+	return timeseries.join(",");
 }
 
 /**
@@ -215,6 +223,6 @@ export function formatTimeseriesList(timeseries: string[]): string {
  * ```
  */
 export function extractDeviceName(timeseries: string): string {
-  const parts = timeseries.split('.');
-  return parts.length > 1 ? parts[parts.length - 2] : timeseries;
+	const parts = timeseries.split(".");
+	return parts.length > 1 ? parts[parts.length - 2] : timeseries;
 }

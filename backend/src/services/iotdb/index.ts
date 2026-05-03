@@ -7,12 +7,10 @@
  * @module services/iotdb
  */
 
-export * from './client';
-export * from './rpc-client';
-export * from './ai';
-
+export * from "./ai";
+export { iotdbAIService } from "./ai";
+export * from "./client";
 // Re-export default instances
-export { iotdbClient } from './client';
-export { iotdbRPCClient } from './rpc-client';
-export { iotdbAIService } from './ai';
-export { iotdbConfig } from './client';
+export { iotdbClient, iotdbConfig } from "./client";
+export * from "./rpc-client";
+export { iotdbRPCClient } from "./rpc-client";

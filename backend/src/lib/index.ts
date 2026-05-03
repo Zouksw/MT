@@ -2,13 +2,16 @@
  * Unified exports for lib module
  */
 
-export { prisma, default as database } from './database';
-export { config, default as appConfig } from './config';
-export { jwtUtils, default as jwt } from './jwt';
-export { responseUtils, default as response } from './response';
-export { redis } from './redis';
-export { logger } from './logger';
-
+export { config, default as appConfig } from "./config";
+export { default as database, prisma } from "./database";
 // Re-export types
-export type { TokenPayload } from './jwt';
-export type { SuccessResponse, ErrorResponse, PaginationMeta } from './response';
+export type { TokenPayload } from "./jwt";
+export { default as jwt, jwtUtils } from "./jwt";
+export { logger } from "./logger";
+export { redis } from "./redis";
+export type {
+	ErrorResponse,
+	PaginationMeta,
+	SuccessResponse,
+} from "./response";
+export { default as response, responseUtils } from "./response";

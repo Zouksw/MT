@@ -3,20 +3,20 @@
  * Endpoints for managing API keys
  */
 
-import { Router, type Response } from 'express';
-import { authenticate, type AuthRequest } from '@/middleware/auth';
-import { apiKeyCreationLimiter } from '@/middleware/rateLimiter';
-import { asyncHandler, UnauthorizedError } from '@/middleware/errorHandler';
+import { type Response, Router } from "express";
+import { success } from "@/lib/response";
+import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { asyncHandler, UnauthorizedError } from "@/middleware/errorHandler";
+import { apiKeyCreationLimiter } from "@/middleware/rateLimiter";
+import { validate } from "@/middleware/security";
 import {
-  createApiKey,
-  listApiKeys,
-  revokeApiKey,
-  deleteApiKey,
-  updateApiKeyExpiration,
-  apiKeysSchemas,
-} from '@/services/apiKeys';
-import { validate } from '@/middleware/security';
-import { success } from '@/lib/response';
+	apiKeysSchemas,
+	createApiKey,
+	deleteApiKey,
+	listApiKeys,
+	revokeApiKey,
+	updateApiKeyExpiration,
+} from "@/services/apiKeys";
 
 const router = Router();
 
@@ -74,27 +74,27 @@ const router = Router();
  * Create a new API key
  */
 router.post(
-  '/',
-  authenticate,
-  apiKeyCreationLimiter,
-  validate(apiKeysSchemas.create),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.userId) {
-      throw new UnauthorizedError();
-    }
+	"/",
+	authenticate,
+	apiKeyCreationLimiter,
+	validate(apiKeysSchemas.create),
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
 
-    const { name, expiresIn } = req.body;
+		const { name, expiresIn } = req.body;
 
-    const result = await createApiKey({
-      userId: req.userId,
-      name,
-      expiresIn,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent') || '',
-    });
+		const result = await createApiKey({
+			userId: req.userId,
+			name,
+			expiresIn,
+			ipAddress: req.ip,
+			userAgent: req.get("user-agent") || "",
+		});
 
-    return success(res, result, 201);
-  })
+		return success(res, result, 201);
+	}),
 );
 
 /**
@@ -130,18 +130,22 @@ router.post(
  * GET /api/api-keys
  * List all API keys for the authenticated user
  */
-router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
-  if (!req.userId) {
-    throw new UnauthorizedError();
-  }
+router.get(
+	"/",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
 
-  const apiKeys = await listApiKeys(req.userId);
+		const apiKeys = await listApiKeys(req.userId);
 
-  return success(res, {
-    apiKeys,
-    total: apiKeys.length,
-  });
-}));
+		return success(res, {
+			apiKeys,
+			total: apiKeys.length,
+		});
+	}),
+);
 
 /**
  * @openapi
@@ -170,17 +174,21 @@ router.get('/', authenticate, asyncHandler(async (req: AuthRequest, res: Respons
  * DELETE /api/api-keys/:id/revoke
  * Revoke (deactivate) an API key
  */
-router.delete('/:id/revoke', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
-  if (!req.userId) {
-    throw new UnauthorizedError();
-  }
+router.delete(
+	"/:id/revoke",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
 
-  const { id } = req.params;
+		const { id } = req.params;
 
-  const result = await revokeApiKey(req.userId, id);
+		const result = await revokeApiKey(req.userId, id);
 
-  return success(res, result);
-}));
+		return success(res, result);
+	}),
+);
 
 /**
  * @openapi
@@ -209,17 +217,21 @@ router.delete('/:id/revoke', authenticate, asyncHandler(async (req: AuthRequest,
  * DELETE /api/api-keys/:id
  * Permanently delete an API key
  */
-router.delete('/:id', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
-  if (!req.userId) {
-    throw new UnauthorizedError();
-  }
+router.delete(
+	"/:id",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
 
-  const { id } = req.params;
+		const { id } = req.params;
 
-  const result = await deleteApiKey(req.userId, id);
+		const result = await deleteApiKey(req.userId, id);
 
-  return success(res, result);
-}));
+		return success(res, result);
+	}),
+);
 
 /**
  * @openapi
@@ -262,21 +274,21 @@ router.delete('/:id', authenticate, asyncHandler(async (req: AuthRequest, res: R
  * Update API key expiration
  */
 router.patch(
-  '/:id/expiration',
-  authenticate,
-  validate(apiKeysSchemas.updateExpiration),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.userId) {
-      throw new UnauthorizedError();
-    }
+	"/:id/expiration",
+	authenticate,
+	validate(apiKeysSchemas.updateExpiration),
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
 
-    const { id } = req.params;
-    const { expiresIn } = req.body;
+		const { id } = req.params;
+		const { expiresIn } = req.body;
 
-    const result = await updateApiKeyExpiration(req.userId, id, expiresIn);
+		const result = await updateApiKeyExpiration(req.userId, id, expiresIn);
 
-    return success(res, result);
-  })
+		return success(res, result);
+	}),
 );
 
 export default router;

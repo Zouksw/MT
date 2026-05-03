@@ -42,6 +42,8 @@
     }
   },
   "formatter": {
-    "enabled": false
+    "enabled": true,
+    "indentStyle": "tab",
+    "lineWidth": 100
   }
 }

@@ -1,45 +1,52 @@
-import { spawn } from 'node:child_process';
-import { iotdbConfig } from './client';
-import { Socket } from 'node:net';
+import { spawn } from "node:child_process";
+import { Socket } from "node:net";
+import { iotdbConfig } from "./client";
 
 export interface PredictionRequest {
-  timeseries: string;
-  horizon: number;
-  // AI Node 直接使用的模型名称（小写）:
-  // ML models: arima, holtwinters, exponential_smoothing, naive_forecaster, stl_forecaster
-  // Deep learning: timer_xl, sundial (需要模型权重)
-  algorithm?: 'arima' | 'timer_xl' | 'sundial' | 'holtwinters' | 'exponential_smoothing' | 'naive_forecaster' | 'stl_forecaster';
-  confidenceLevel?: number;
+	timeseries: string;
+	horizon: number;
+	// AI Node 直接使用的模型名称（小写）:
+	// ML models: arima, holtwinters, exponential_smoothing, naive_forecaster, stl_forecaster
+	// Deep learning: timer_xl, sundial (需要模型权重)
+	algorithm?:
+		| "arima"
+		| "timer_xl"
+		| "sundial"
+		| "holtwinters"
+		| "exponential_smoothing"
+		| "naive_forecaster"
+		| "stl_forecaster";
+	confidenceLevel?: number;
 }
 
 export interface PredictionResult {
-  timestamps: number[];
-  values: number[];
-  confidence?: number[];
-  lowerBound?: number[];
-  upperBound?: number[];
+	timestamps: number[];
+	values: number[];
+	confidence?: number[];
+	lowerBound?: number[];
+	upperBound?: number[];
 }
 
 export interface AnomalyDetectionRequest {
-  timeseries: string;
-  method?: 'statistical' | 'ml' | 'rule_based' | 'STRAY';
-  threshold?: number;
-  windowSize?: number;
-  startTime?: number;
-  endTime?: number;
+	timeseries: string;
+	method?: "statistical" | "ml" | "rule_based" | "STRAY";
+	threshold?: number;
+	windowSize?: number;
+	startTime?: number;
+	endTime?: number;
 }
 
 export interface AnomalyDetectionResult {
-  anomalies: Array<{
-    timestamp: number;
-    value: number;
-    score: number;
-    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  }>;
-  statistics: {
-    total: number;
-    bySeverity: Record<string, number>;
-  };
+	anomalies: Array<{
+		timestamp: number;
+		value: number;
+		score: number;
+		severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+	}>;
+	statistics: {
+		total: number;
+		bySeverity: Record<string, number>;
+	};
 }
 
 /**
@@ -60,143 +67,155 @@ export interface AnomalyDetectionResult {
  * - STRAY: 异常检测
  */
 export class IoTDBAIService {
-  private pythonPath: string;
-  private ainodeHome: string;
-  private config = iotdbConfig;
+	private pythonPath: string;
+	private ainodeHome: string;
+	private config = iotdbConfig;
 
-  constructor() {
-    // Use environment variables with fallbacks
-    this.ainodeHome = process.env.AI_NODE_HOME || '/opt/iotdb/apache-iotdb-2.0.8-all-bin';
-    this.pythonPath = process.env.PYTHON_PATH || `${this.ainodeHome}/venv/bin/python3`;
-  }
+	constructor() {
+		// Use environment variables with fallbacks
+		this.ainodeHome =
+			process.env.AI_NODE_HOME || "/opt/iotdb/apache-iotdb-2.0.8-all-bin";
+		this.pythonPath =
+			process.env.PYTHON_PATH || `${this.ainodeHome}/venv/bin/python3`;
+	}
 
-  /**
-   * Check if AI Node is available
-   */
-  private async isAINodeAvailable(): Promise<boolean> {
-    const aiNodeHost = process.env.AI_NODE_HOST || '127.0.0.1';
-    const aiNodePort = parseInt(process.env.AI_NODE_PORT || '10810', 10);
+	/**
+	 * Check if AI Node is available
+	 */
+	private async isAINodeAvailable(): Promise<boolean> {
+		const aiNodeHost = process.env.AI_NODE_HOST || "127.0.0.1";
+		const aiNodePort = parseInt(process.env.AI_NODE_PORT || "10810", 10);
 
-    return new Promise((resolve) => {
-      const socket = new Socket();
+		return new Promise((resolve) => {
+			const socket = new Socket();
 
-      socket.connect(aiNodePort, aiNodeHost, () => {
-        socket.destroy();
-        resolve(true);
-      });
+			socket.connect(aiNodePort, aiNodeHost, () => {
+				socket.destroy();
+				resolve(true);
+			});
 
-      socket.on('error', () => {
-        resolve(false);
-      });
+			socket.on("error", () => {
+				resolve(false);
+			});
 
-      socket.setTimeout(5000, () => {
-        socket.destroy();
-        resolve(false);
-      });
-    });
-  }
+			socket.setTimeout(5000, () => {
+				socket.destroy();
+				resolve(false);
+			});
+		});
+	}
 
-  /**
-   * Execute AI Node Python script
-   */
-  private async executeAIScript(script: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const python = spawn(this.pythonPath, ['-c', script], {
-        env: {
-          ...process.env,
-          PYTHONPATH: `${this.ainodeHome}/lib:${this.ainodeHome}/venv/lib/python3.10/site-packages`,
-        },
-      });
+	/**
+	 * Execute AI Node Python script
+	 */
+	private async executeAIScript(script: string): Promise<any> {
+		return new Promise((resolve, reject) => {
+			const python = spawn(this.pythonPath, ["-c", script], {
+				env: {
+					...process.env,
+					PYTHONPATH: `${this.ainodeHome}/lib:${this.ainodeHome}/venv/lib/python3.10/site-packages`,
+				},
+			});
 
-      let output = '';
-      let errorOutput = '';
+			let output = "";
+			let errorOutput = "";
 
-      python.stdout.on('data', (data) => {
-        output += data.toString();
-      });
+			python.stdout.on("data", (data) => {
+				output += data.toString();
+			});
 
-      python.stderr.on('data', (data) => {
-        const str = data.toString();
-        // 只记录错误，忽略日志
-        if (str.toLowerCase().includes('error') || str.toLowerCase().includes('exception')) {
-          errorOutput += str;
-        }
-      });
+			python.stderr.on("data", (data) => {
+				const str = data.toString();
+				// 只记录错误，忽略日志
+				if (
+					str.toLowerCase().includes("error") ||
+					str.toLowerCase().includes("exception")
+				) {
+					errorOutput += str;
+				}
+			});
 
-      python.on('close', (code) => {
-        // 提取 JSON 输出（可能前后有日志行）
-        const lines = output.trim().split('\n');
-        let jsonMatch = null;
+			python.on("close", (code) => {
+				// 提取 JSON 输出（可能前后有日志行）
+				const lines = output.trim().split("\n");
+				let jsonMatch = null;
 
-        for (const line of lines) {
-          if (line.trim().startsWith('{') || line.trim().startsWith('[')) {
-            try {
-              jsonMatch = JSON.parse(line.trim());
-              if (jsonMatch.timestamps || jsonMatch.anomalies || jsonMatch.models || jsonMatch.values) {
-                break;
-              }
-            } catch (_e) {
-              // 不是有效的 JSON，继续
-            }
-          }
-        }
+				for (const line of lines) {
+					if (line.trim().startsWith("{") || line.trim().startsWith("[")) {
+						try {
+							jsonMatch = JSON.parse(line.trim());
+							if (
+								jsonMatch.timestamps ||
+								jsonMatch.anomalies ||
+								jsonMatch.models ||
+								jsonMatch.values
+							) {
+								break;
+							}
+						} catch (_e) {
+							// 不是有效的 JSON，继续
+						}
+					}
+				}
 
-        if (code === 0) {
-          if (jsonMatch) {
-            if (jsonMatch.error) {
-              reject(new Error(jsonMatch.error));
-            } else {
-              resolve(jsonMatch);
-            }
-          } else {
-            reject(new Error(`Failed to parse AI response: ${output}`));
-          }
-        } else {
-          reject(new Error(`AI execution failed: ${errorOutput || output}`));
-        }
-      });
+				if (code === 0) {
+					if (jsonMatch) {
+						if (jsonMatch.error) {
+							reject(new Error(jsonMatch.error));
+						} else {
+							resolve(jsonMatch);
+						}
+					} else {
+						reject(new Error(`Failed to parse AI response: ${output}`));
+					}
+				} else {
+					reject(new Error(`AI execution failed: ${errorOutput || output}`));
+				}
+			});
 
-      python.on('error', (err) => {
-        reject(new Error(`Failed to start Python: ${err.message}`));
-      });
+			python.on("error", (err) => {
+				reject(new Error(`Failed to start Python: ${err.message}`));
+			});
 
-      setTimeout(() => {
-        python.kill();
-        reject(new Error('AI execution timeout'));
-      }, 120000);
-    });
-  }
+			setTimeout(() => {
+				python.kill();
+				reject(new Error("AI execution timeout"));
+			}, 120000);
+		});
+	}
 
-  // === 时序预测 (使用 AI Node InferenceManager) ===
+	// === 时序预测 (使用 AI Node InferenceManager) ===
 
-  /**
-   * Predict future values using AI Node
-   *
-   * 直接使用 AI Node 模型名称（小写）:
-   * - arima: AutoRegressive Integrated Moving Average
-   * - timer_xl: Long Short-Term Memory (LSTM)
-   * - sundial: Transformer-based model
-   * - holtwinters: Holt-Winters 三次指数平滑
-   * - exponential_smoothing: 指数平滑
-   * - naive_forecaster: 朴素预测
-   * - stl_forecaster: STL 分解预测
-   */
-  private validateTimeseriesPath(timeseries: string): void {
-    if (!/^root\.[a-zA-Z0-9_.]+$/.test(timeseries)) {
-      throw new Error(`Invalid timeseries path: ${timeseries}. Must match pattern: root.xxx.xxx`);
-    }
-  }
+	/**
+	 * Predict future values using AI Node
+	 *
+	 * 直接使用 AI Node 模型名称（小写）:
+	 * - arima: AutoRegressive Integrated Moving Average
+	 * - timer_xl: Long Short-Term Memory (LSTM)
+	 * - sundial: Transformer-based model
+	 * - holtwinters: Holt-Winters 三次指数平滑
+	 * - exponential_smoothing: 指数平滑
+	 * - naive_forecaster: 朴素预测
+	 * - stl_forecaster: STL 分解预测
+	 */
+	private validateTimeseriesPath(timeseries: string): void {
+		if (!/^root\.[a-zA-Z0-9_.]+$/.test(timeseries)) {
+			throw new Error(
+				`Invalid timeseries path: ${timeseries}. Must match pattern: root.xxx.xxx`,
+			);
+		}
+	}
 
-  async predict(request: PredictionRequest): Promise<PredictionResult> {
-    // Validate timeseries path to prevent SQL injection
-    this.validateTimeseriesPath(request.timeseries);
+	async predict(request: PredictionRequest): Promise<PredictionResult> {
+		// Validate timeseries path to prevent SQL injection
+		this.validateTimeseriesPath(request.timeseries);
 
-    // 直接使用用户指定的模型名称（小写），不做任何映射
-    const modelType = request.algorithm || 'arima';
+		// 直接使用用户指定的模型名称（小写），不做任何映射
+		const modelType = request.algorithm || "arima";
 
-    const horizon = request.horizon;
+		const horizon = request.horizon;
 
-    const pythonScript = `
+		const pythonScript = `
 import sys
 import os
 os.chdir('${this.ainodeHome}')
@@ -306,52 +325,56 @@ except Exception as e:
     sys.exit(1)
 `;
 
-    try {
-      const aiNodeAvailable = await this.isAINodeAvailable();
+		try {
+			const aiNodeAvailable = await this.isAINodeAvailable();
 
-      if (!aiNodeAvailable) {
-        throw new Error('AI Node is not available on port 10810');
-      }
+			if (!aiNodeAvailable) {
+				throw new Error("AI Node is not available on port 10810");
+			}
 
-      const result = await this.executeAIScript(pythonScript);
+			const result = await this.executeAIScript(pythonScript);
 
-      return {
-        timestamps: result.timestamps || [],
-        values: result.values || [],
-        confidence: result.confidence,
-      };
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`AI Node prediction failed: ${message}`);
-      throw new Error(`Prediction failed: ${message}`);
-    }
-  }
+			return {
+				timestamps: result.timestamps || [],
+				values: result.values || [],
+				confidence: result.confidence,
+			};
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`AI Node prediction failed: ${message}`);
+			throw new Error(`Prediction failed: ${message}`);
+		}
+	}
 
-  /**
-   * Batch predict for multiple time series
-   */
-  async batchPredict(requests: PredictionRequest[]): Promise<PredictionResult[]> {
-    return Promise.all(requests.map(req => this.predict(req)));
-  }
+	/**
+	 * Batch predict for multiple time series
+	 */
+	async batchPredict(
+		requests: PredictionRequest[],
+	): Promise<PredictionResult[]> {
+		return Promise.all(requests.map((req) => this.predict(req)));
+	}
 
-  // === 异常检测 (使用 AI Node) ===
+	// === 异常检测 (使用 AI Node) ===
 
-  /**
-   * Detect anomalies using AI Node
-   *
-   * 支持的异常检测方法:
-   * - STRAY: STRAY 算法
-   * - statistical: Z-score 统计方法
-   * - ml: 机器学习方法
-   */
-  async detectAnomalies(request: AnomalyDetectionRequest): Promise<AnomalyDetectionResult> {
-    // Validate timeseries path to prevent SQL injection
-    this.validateTimeseriesPath(request.timeseries);
+	/**
+	 * Detect anomalies using AI Node
+	 *
+	 * 支持的异常检测方法:
+	 * - STRAY: STRAY 算法
+	 * - statistical: Z-score 统计方法
+	 * - ml: 机器学习方法
+	 */
+	async detectAnomalies(
+		request: AnomalyDetectionRequest,
+	): Promise<AnomalyDetectionResult> {
+		// Validate timeseries path to prevent SQL injection
+		this.validateTimeseriesPath(request.timeseries);
 
-    const threshold = request.threshold || 2.5;
-    const method = request.method || 'ml';
+		const threshold = request.threshold || 2.5;
+		const method = request.method || "ml";
 
-    const pythonScript = `
+		const pythonScript = `
 import sys
 import os
 os.chdir('${this.ainodeHome}')
@@ -438,145 +461,155 @@ print(json.dumps({
 }))
 `;
 
-    try {
-      const aiNodeAvailable = await this.isAINodeAvailable();
+		try {
+			const aiNodeAvailable = await this.isAINodeAvailable();
 
-      if (!aiNodeAvailable) {
-        throw new Error('AI Node is not available on port 10810');
-      }
+			if (!aiNodeAvailable) {
+				throw new Error("AI Node is not available on port 10810");
+			}
 
-      const result = await this.executeAIScript(pythonScript);
-      return result;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`AI Node anomaly detection failed: ${message}`);
-      throw new Error(`Anomaly detection failed: ${message}`);
-    }
-  }
+			const result = await this.executeAIScript(pythonScript);
+			return result;
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`AI Node anomaly detection failed: ${message}`);
+			throw new Error(`Anomaly detection failed: ${message}`);
+		}
+	}
 
-  // === 模型管理 ===
+	// === 模型管理 ===
 
-  /**
-   * List available AI models from AI Node
-   * 直接使用 AI Node 模型名称（小写）
-   */
-  async listModels(): Promise<any[]> {
-    // AI Node 内置模型 - 使用小写模型 ID
-    return [
-      {
-        id: 'arima',
-        name: 'ARIMA',
-        type: 'prediction',
-        description: 'AutoRegressive Integrated Moving Average - AI Node 内置模型',
-        status: 'available',
-        ainode: true,
-        useCase: '短期预测、季节性数据',
-        parameters: {
-          p: 'AR 阶数(自回归)',
-          d: '差分阶数(积分)',
-          q: 'MA 阶数(移动平均)',
-        },
-      },
-      {
-        id: 'timer_xl',
-        name: 'TIMER_XL (LSTM)',
-        type: 'prediction',
-        description: 'Long Short-Term Memory Network - AI Node Timer-XL 模型 (已下载权重)',
-        status: 'available',
-        ainode: true,
-        useCase: '复杂模式、长期依赖',
-        parameters: {
-          hidden_size: '隐藏单元数量',
-          num_layers: 'LSTM 层数',
-          dropout: 'Dropout 率',
-        },
-      },
-      {
-        id: 'sundial',
-        name: 'SUNDIAL (Transformer)',
-        type: 'prediction',
-        description: 'Transformer-based 模型 - AI Node Timer-Sundial 模型 (已下载权重)',
-        status: 'available',
-        ainode: true,
-        useCase: '复杂时间模式',
-        parameters: {
-          d_model: '模型维度',
-          nhead: '注意力头数量',
-          num_layers: '层数',
-        },
-      },
-      {
-        id: 'holtwinters',
-        name: 'Holt-Winters',
-        type: 'prediction',
-        description: 'Holt-Winters 三次指数平滑',
-        status: 'available',
-        ainode: true,
-        useCase: '具有趋势和季节性的数据',
-        parameters: {
-          trend: '趋势类型',
-          seasonal: '季节性周期',
-        },
-      },
-      {
-        id: 'exponential_smoothing',
-        name: 'Exponential Smoothing',
-        type: 'prediction',
-        description: '指数平滑法',
-        status: 'available',
-        ainode: true,
-        useCase: '短期预测、无趋势数据',
-        parameters: {
-          alpha: '平滑系数',
-        },
-      },
-      {
-        id: 'naive_forecaster',
-        name: 'Naive Forecaster',
-        type: 'prediction',
-        description: '朴素预测法',
-        status: 'available',
-        ainode: true,
-        useCase: '基准预测',
-      },
-      {
-        id: 'stl_forecaster',
-        name: 'STL Forecaster',
-        type: 'prediction',
-        description: 'STL 分解预测',
-        status: 'available',
-        ainode: true,
-        useCase: '复杂季节性模式',
-        parameters: {
-          period: '季节周期',
-        },
-      },
-    ];
-  }
+	/**
+	 * List available AI models from AI Node
+	 * 直接使用 AI Node 模型名称（小写）
+	 */
+	async listModels(): Promise<any[]> {
+		// AI Node 内置模型 - 使用小写模型 ID
+		return [
+			{
+				id: "arima",
+				name: "ARIMA",
+				type: "prediction",
+				description:
+					"AutoRegressive Integrated Moving Average - AI Node 内置模型",
+				status: "available",
+				ainode: true,
+				useCase: "短期预测、季节性数据",
+				parameters: {
+					p: "AR 阶数(自回归)",
+					d: "差分阶数(积分)",
+					q: "MA 阶数(移动平均)",
+				},
+			},
+			{
+				id: "timer_xl",
+				name: "TIMER_XL (LSTM)",
+				type: "prediction",
+				description:
+					"Long Short-Term Memory Network - AI Node Timer-XL 模型 (已下载权重)",
+				status: "available",
+				ainode: true,
+				useCase: "复杂模式、长期依赖",
+				parameters: {
+					hidden_size: "隐藏单元数量",
+					num_layers: "LSTM 层数",
+					dropout: "Dropout 率",
+				},
+			},
+			{
+				id: "sundial",
+				name: "SUNDIAL (Transformer)",
+				type: "prediction",
+				description:
+					"Transformer-based 模型 - AI Node Timer-Sundial 模型 (已下载权重)",
+				status: "available",
+				ainode: true,
+				useCase: "复杂时间模式",
+				parameters: {
+					d_model: "模型维度",
+					nhead: "注意力头数量",
+					num_layers: "层数",
+				},
+			},
+			{
+				id: "holtwinters",
+				name: "Holt-Winters",
+				type: "prediction",
+				description: "Holt-Winters 三次指数平滑",
+				status: "available",
+				ainode: true,
+				useCase: "具有趋势和季节性的数据",
+				parameters: {
+					trend: "趋势类型",
+					seasonal: "季节性周期",
+				},
+			},
+			{
+				id: "exponential_smoothing",
+				name: "Exponential Smoothing",
+				type: "prediction",
+				description: "指数平滑法",
+				status: "available",
+				ainode: true,
+				useCase: "短期预测、无趋势数据",
+				parameters: {
+					alpha: "平滑系数",
+				},
+			},
+			{
+				id: "naive_forecaster",
+				name: "Naive Forecaster",
+				type: "prediction",
+				description: "朴素预测法",
+				status: "available",
+				ainode: true,
+				useCase: "基准预测",
+			},
+			{
+				id: "stl_forecaster",
+				name: "STL Forecaster",
+				type: "prediction",
+				description: "STL 分解预测",
+				status: "available",
+				ainode: true,
+				useCase: "复杂季节性模式",
+				parameters: {
+					period: "季节周期",
+				},
+			},
+		];
+	}
 
-  /**
-   * Get model information
-   */
-  async getModelInfo(modelId: string): Promise<any> {
-    const models = await this.listModels();
-    const model = models.find(m => m.id === modelId.toLowerCase());
+	/**
+	 * Get model information
+	 */
+	async getModelInfo(modelId: string): Promise<any> {
+		const models = await this.listModels();
+		const model = models.find((m) => m.id === modelId.toLowerCase());
 
-    if (!model) {
-      throw new Error(`Model not found: ${modelId}`);
-    }
+		if (!model) {
+			throw new Error(`Model not found: ${modelId}`);
+		}
 
-    return model;
-  }
+		return model;
+	}
 
-  /**
-   * Check/train model using AI Node
-   */
-  async trainModel(params: {
-    timeseries: string;
-    algorithm: 'arima' | 'timer_xl' | 'sundial' | 'holtwinters' | 'exponential_smoothing' | 'naive_forecaster' | 'stl_forecaster';
-    parameters?: Record<string, any>;
-  }): Promise<any> {
-    const pythonScript = `
+	/**
+	 * Check/train model using AI Node
+	 */
+	async trainModel(params: {
+		timeseries: string;
+		algorithm:
+			| "arima"
+			| "timer_xl"
+			| "sundial"
+			| "holtwinters"
+			| "exponential_smoothing"
+			| "naive_forecaster"
+			| "stl_forecaster";
+		parameters?: Record<string, any>;
+	}): Promise<any> {
+		const pythonScript = `
 import sys
 import os
 os.chdir('${this.ainodeHome}')
@@ -607,20 +640,20 @@ except Exception as e:
     sys.exit(1)
 `;
 
-    try {
-      const aiNodeAvailable = await this.isAINodeAvailable();
+		try {
+			const aiNodeAvailable = await this.isAINodeAvailable();
 
-      if (!aiNodeAvailable) {
-        throw new Error('AI Node is not available');
-      }
+			if (!aiNodeAvailable) {
+				throw new Error("AI Node is not available");
+			}
 
-      const result = await this.executeAIScript(pythonScript);
-      return result;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Model training failed: ${message}`);
-    }
-  }
+			const result = await this.executeAIScript(pythonScript);
+			return result;
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new Error(`Model training failed: ${message}`);
+		}
+	}
 }
 
 // Export singleton instance

@@ -3,12 +3,12 @@
  * Provides system health status and readiness checks
  */
 
-import { Router, type Request, type Response } from 'express';
-import { prisma } from '@/lib';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { success, error } from '@/lib/response';
-import { getRedisClient } from '@/lib/redis';
-import { iotdbClient } from '@/services/iotdb';
+import { type Request, type Response, Router } from "express";
+import { prisma } from "@/lib";
+import { getRedisClient } from "@/lib/redis";
+import { error, success } from "@/lib/response";
+import { asyncHandler } from "@/middleware/errorHandler";
+import { iotdbClient } from "@/services/iotdb";
 
 const router = Router();
 
@@ -50,13 +50,13 @@ const router = Router();
  * GET /health
  * Basic health check
  */
-router.get('/', (_req: Request, res: Response) => {
-  return success(res, {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-  });
+router.get("/", (_req: Request, res: Response) => {
+	return success(res, {
+		status: "ok",
+		timestamp: new Date().toISOString(),
+		uptime: process.uptime(),
+		environment: process.env.NODE_ENV || "development",
+	});
 });
 
 /**
@@ -98,48 +98,58 @@ router.get('/', (_req: Request, res: Response) => {
  * GET /health/ready
  * Readiness check - verifies all services are connected
  */
-router.get('/ready', asyncHandler(async (_req: Request, res: Response) => {
-  const checks = {
-    database: false,
-    redis: false,
-    iotdb: false,
-  };
+router.get(
+	"/ready",
+	asyncHandler(async (_req: Request, res: Response) => {
+		const checks = {
+			database: false,
+			redis: false,
+			iotdb: false,
+		};
 
-  let allHealthy = true;
+		let allHealthy = true;
 
-  // Check database connection
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    checks.database = true;
-  } catch (_error) {
-    allHealthy = false;
-  }
+		// Check database connection
+		try {
+			await prisma.$queryRaw`SELECT 1`;
+			checks.database = true;
+		} catch (_error) {
+			allHealthy = false;
+		}
 
-  // Check Redis connection
-  try {
-    const redis = await getRedisClient();
-    checks.redis = redis ? await redis.ping().then(() => true).catch(() => false) : false;
-  } catch {
-    checks.redis = false;
-  }
+		// Check Redis connection
+		try {
+			const redis = await getRedisClient();
+			checks.redis = redis
+				? await redis
+						.ping()
+						.then(() => true)
+						.catch(() => false)
+				: false;
+		} catch {
+			checks.redis = false;
+		}
 
-  // Check IoTDB connection
-  try {
-    checks.iotdb = await iotdbClient.healthCheck();
-  } catch {
-    checks.iotdb = false;
-  }
+		// Check IoTDB connection
+		try {
+			checks.iotdb = await iotdbClient.healthCheck();
+		} catch {
+			checks.iotdb = false;
+		}
 
-  if (allHealthy) {
-    return success(res, {
-      status: 'ready',
-      checks,
-      timestamp: new Date().toISOString(),
-    });
-  } else {
-    return error(res, 'Service not ready', 503, 'SERVICE_NOT_READY', { checks });
-  }
-}));
+		if (allHealthy) {
+			return success(res, {
+				status: "ready",
+				checks,
+				timestamp: new Date().toISOString(),
+			});
+		} else {
+			return error(res, "Service not ready", 503, "SERVICE_NOT_READY", {
+				checks,
+			});
+		}
+	}),
+);
 
 /**
  * @openapi
@@ -181,13 +191,13 @@ router.get('/ready', asyncHandler(async (_req: Request, res: Response) => {
  * GET /health/live
  * Liveness check - verifies the process is running
  */
-router.get('/live', (_req: Request, res: Response) => {
-  return success(res, {
-    status: 'alive',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-  });
+router.get("/live", (_req: Request, res: Response) => {
+	return success(res, {
+		status: "alive",
+		timestamp: new Date().toISOString(),
+		uptime: process.uptime(),
+		memory: process.memoryUsage(),
+	});
 });
 
 export default router;

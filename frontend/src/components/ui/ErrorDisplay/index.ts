@@ -1,2 +1,2 @@
-export { ErrorDisplay, ErrorInline, ErrorToastOnly } from "../ErrorDisplay";
 export type { ErrorDisplayProps } from "../ErrorDisplay";
+export { ErrorDisplay, ErrorInline, ErrorToastOnly } from "../ErrorDisplay";

@@ -10,11 +10,11 @@ import { tokenManager } from "@/lib/tokenManager";
  * Cached user data
  */
 interface CachedUser {
-  id: string;
-  email: string;
-  name: string | null;
-  avatar?: string;
-  roles?: string[];
+	id: string;
+	email: string;
+	name: string | null;
+	avatar?: string;
+	roles?: string[];
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -24,7 +24,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
  * @returns The JWT token or null
  */
 export const getAuthToken = (): string | null => {
-  return tokenManager.getToken();
+	return tokenManager.getToken();
 };
 
 /**
@@ -33,22 +33,22 @@ export const getAuthToken = (): string | null => {
  * @param rememberMe - Whether to persist the session
  */
 export const setAuthToken = (token: string, rememberMe?: boolean): void => {
-  tokenManager.setToken(token, rememberMe);
+	tokenManager.setToken(token, rememberMe);
 };
 
 /**
  * Remove the authentication token
  */
 export const removeAuthToken = (): void => {
-  tokenManager.removeToken();
+	tokenManager.removeToken();
 };
 
 /**
  * Clear all authentication tokens
  */
 export const clearAuthTokens = (): void => {
-  tokenManager.removeToken();
-  // Note: HttpOnly cookie is cleared by backend logout endpoint
+	tokenManager.removeToken();
+	// Note: HttpOnly cookie is cleared by backend logout endpoint
 };
 
 /**
@@ -56,11 +56,11 @@ export const clearAuthTokens = (): void => {
  * @returns The Authorization header value or undefined
  */
 export const getAuthHeader = (): { Authorization: string } | undefined => {
-  const token = tokenManager.getToken();
-  if (token) {
-    return { Authorization: `Bearer ${token}` };
-  }
-  return undefined;
+	const token = tokenManager.getToken();
+	if (token) {
+		return { Authorization: `Bearer ${token}` };
+	}
+	return undefined;
 };
 
 /**
@@ -69,27 +69,24 @@ export const getAuthHeader = (): { Authorization: string } | undefined => {
  * @param options - Fetch options
  * @returns The fetch response
  */
-export const authFetch = async (
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> => {
-  const token = tokenManager.getToken();
+export const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+	const token = tokenManager.getToken();
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+		...options.headers,
+	};
 
-  // Add auth header if token exists
-  if (token) {
-    (headers as Record<string, string>).Authorization = `Bearer ${token}`;
-  }
+	// Add auth header if token exists
+	if (token) {
+		(headers as Record<string, string>).Authorization = `Bearer ${token}`;
+	}
 
-  return fetch(`${API_BASE}${url}`, {
-    ...options,
-    credentials: 'include', // Include cookies
-    headers,
-  });
+	return fetch(`${API_BASE}${url}`, {
+		...options,
+		credentials: "include", // Include cookies
+		headers,
+	});
 };
 
 /**
@@ -98,16 +95,18 @@ export const authFetch = async (
  * @returns True if user has a valid token in memory (may be false even if logged in)
  */
 export const isAuthenticated = (): boolean => {
-  const token = tokenManager.getToken();
-  const valid = token !== null && tokenManager.isTokenValid(token);
+	const token = tokenManager.getToken();
+	const valid = token !== null && tokenManager.isTokenValid(token);
 
-  // Warn in development that this function is deprecated
-  if (process.env.NODE_ENV === 'development' && !valid) {
-    // eslint-disable-next-line no-console
-    console.warn('[DEPRECATED] isAuthenticated() only checks memory. Use verifyAuthentication() instead.');
-  }
+	// Warn in development that this function is deprecated
+	if (process.env.NODE_ENV === "development" && !valid) {
+		// eslint-disable-next-line no-console
+		console.warn(
+			"[DEPRECATED] isAuthenticated() only checks memory. Use verifyAuthentication() instead.",
+		);
+	}
 
-  return valid;
+	return valid;
 };
 
 /**
@@ -116,14 +115,14 @@ export const isAuthenticated = (): boolean => {
  * @returns Promise<boolean> - true if user is authenticated via server session
  */
 export async function verifyAuthentication(): Promise<boolean> {
-  try {
-    const response = await authFetch('/api/auth/verify', {
-      method: 'GET',
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+	try {
+		const response = await authFetch("/api/auth/verify", {
+			method: "GET",
+		});
+		return response.ok;
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -131,17 +130,17 @@ export async function verifyAuthentication(): Promise<boolean> {
  * @returns The cached user object or null
  */
 export const getCachedUser = (): CachedUser | null => {
-  if (typeof window !== "undefined") {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        return JSON.parse(userStr);
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
+	if (typeof window !== "undefined") {
+		const userStr = localStorage.getItem("user");
+		if (userStr) {
+			try {
+				return JSON.parse(userStr);
+			} catch {
+				return null;
+			}
+		}
+	}
+	return null;
 };
 
 /**
@@ -149,26 +148,26 @@ export const getCachedUser = (): CachedUser | null => {
  * @param user - The user object to cache
  */
 export const setCachedUser = (user: CachedUser): void => {
-  if (typeof window !== "undefined") {
-    // Only store non-sensitive data
-    const safeUser = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar: user.avatar,
-      roles: user.roles || [],
-    };
-    localStorage.setItem("user", JSON.stringify(safeUser));
-  }
+	if (typeof window !== "undefined") {
+		// Only store non-sensitive data
+		const safeUser = {
+			id: user.id,
+			email: user.email,
+			name: user.name,
+			avatar: user.avatar,
+			roles: user.roles || [],
+		};
+		localStorage.setItem("user", JSON.stringify(safeUser));
+	}
 };
 
 /**
  * Clear the cached user info
  */
 export const clearCachedUser = (): void => {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("user");
-  }
+	if (typeof window !== "undefined") {
+		localStorage.removeItem("user");
+	}
 };
 
 /**
@@ -176,7 +175,7 @@ export const clearCachedUser = (): void => {
  * @returns True if token will expire within 5 minutes
  */
 export const isTokenExpiringSoon = (): boolean => {
-  return tokenManager.isTokenExpiringSoon();
+	return tokenManager.isTokenExpiringSoon();
 };
 
 /**
@@ -184,7 +183,7 @@ export const isTokenExpiringSoon = (): boolean => {
  * @returns User ID or null
  */
 export const getUserId = (): string | null => {
-  return tokenManager.getUserId();
+	return tokenManager.getUserId();
 };
 
 /**
@@ -192,5 +191,5 @@ export const getUserId = (): string | null => {
  * @returns User role or null
  */
 export const getUserRole = (): string | null => {
-  return tokenManager.getUserRole();
+	return tokenManager.getUserRole();
 };

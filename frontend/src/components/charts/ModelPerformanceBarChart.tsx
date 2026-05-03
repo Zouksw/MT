@@ -1,183 +1,174 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type React from "react";
 import { useMemo } from "react";
-import dynamic from "next/dynamic";
-import type { ModelWithBacktest } from "@/types/accuracy";
-import {
-  chartGridStyles,
-  chartAxisStyles,
-  chartTooltipStyles,
-  chartAnimations,
-} from "@/lib/chart-config";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getMapeFillColor } from "@/lib/ai-utils";
-import { Card, CardHeader, CardTitle, CardBody } from "@/components/ui/Card";
+import {
+	chartAnimations,
+	chartAxisStyles,
+	chartGridStyles,
+	chartTooltipStyles,
+} from "@/lib/chart-config";
+import type { ModelWithBacktest } from "@/types/accuracy";
 
 const ResponsiveContainer = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-  { ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> }
+	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
+	{ ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> },
 ) as React.ComponentType<any>;
 
-const BarChart = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.BarChart })),
-  { ssr: false }
-) as React.ComponentType<any>;
+const BarChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.BarChart })), {
+	ssr: false,
+}) as React.ComponentType<any>;
 
-const Bar = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Bar })),
-  { ssr: false }
-) as React.ComponentType<any>;
+const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar })), {
+	ssr: false,
+}) as React.ComponentType<any>;
 
-const XAxis = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.XAxis })),
-  { ssr: false }
-) as React.ComponentType<any>;
+const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
+	ssr: false,
+}) as React.ComponentType<any>;
 
-const YAxis = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.YAxis })),
-  { ssr: false }
-) as React.ComponentType<any>;
+const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
+	ssr: false,
+}) as React.ComponentType<any>;
 
 const CartesianGrid = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
-  { ssr: false }
+	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
+	{ ssr: false },
 ) as React.ComponentType<any>;
 
-const Tooltip = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.Tooltip })),
-  { ssr: false }
-) as React.ComponentType<any>;
+const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
+	ssr: false,
+}) as React.ComponentType<any>;
 
 const ReferenceLine = dynamic(
-  () => import("recharts").then((mod) => ({ default: mod.ReferenceLine })),
-  { ssr: false }
+	() => import("recharts").then((mod) => ({ default: mod.ReferenceLine })),
+	{ ssr: false },
 ) as React.ComponentType<any>;
 
 interface ModelPerformanceBarChartProps {
-  models: ModelWithBacktest[];
+	models: ModelWithBacktest[];
 }
 
 function CustomTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null;
-  const data = payload[0].payload;
-  return (
-    <div
-      style={{
-        backgroundColor: chartTooltipStyles.backgroundColor,
-        border: chartTooltipStyles.border,
-        borderRadius: chartTooltipStyles.borderRadius,
-        padding: chartTooltipStyles.padding,
-        boxShadow: chartTooltipStyles.boxShadow,
-      }}
-    >
-      <p className="text-xs font-medium text-foreground mb-1">{data.name}</p>
-      <p className="text-xs text-muted-foreground">
-        MAPE: {data.mape !== null ? `${data.mape.toFixed(1)}%` : "N/A"}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        Predictions: {data.predictions}
-      </p>
-    </div>
-  );
+	if (!active || !payload?.length) return null;
+	const data = payload[0].payload;
+	return (
+		<div
+			style={{
+				backgroundColor: chartTooltipStyles.backgroundColor,
+				border: chartTooltipStyles.border,
+				borderRadius: chartTooltipStyles.borderRadius,
+				padding: chartTooltipStyles.padding,
+				boxShadow: chartTooltipStyles.boxShadow,
+			}}
+		>
+			<p className="text-xs font-medium text-foreground mb-1">{data.name}</p>
+			<p className="text-xs text-muted-foreground">
+				MAPE: {data.mape !== null ? `${data.mape.toFixed(1)}%` : "N/A"}
+			</p>
+			<p className="text-xs text-muted-foreground">Predictions: {data.predictions}</p>
+		</div>
+	);
 }
 
 export function ModelPerformanceBarChart({ models }: ModelPerformanceBarChartProps) {
-  const { chartData, avgMape } = useMemo(() => {
-    const valid = models
-      .filter((m) => m.avgMape !== null && m.avgMape !== undefined)
-      .sort((a, b) => (a.avgMape ?? Infinity) - (b.avgMape ?? Infinity));
+	const { chartData, avgMape } = useMemo(() => {
+		const valid = models
+			.filter((m) => m.avgMape !== null && m.avgMape !== undefined)
+			.sort((a, b) => (a.avgMape ?? Infinity) - (b.avgMape ?? Infinity));
 
-    const data = valid.map((m) => ({
-      name: m.displayName,
-      mape: m.avgMape,
-      predictions: m.predictionCount,
-      modelId: m.modelId,
-      fill: getMapeFillColor(m.avgMape),
-    }));
+		const data = valid.map((m) => ({
+			name: m.displayName,
+			mape: m.avgMape,
+			predictions: m.predictionCount,
+			modelId: m.modelId,
+			fill: getMapeFillColor(m.avgMape),
+		}));
 
-    const avg =
-      valid.length > 0
-        ? valid.reduce((sum, m) => sum + (m.avgMape ?? 0), 0) / valid.length
-        : null;
+		const avg =
+			valid.length > 0 ? valid.reduce((sum, m) => sum + (m.avgMape ?? 0), 0) / valid.length : null;
 
-    return { chartData: data, avgMape: avg };
-  }, [models]);
+		return { chartData: data, avgMape: avg };
+	}, [models]);
 
-  if (chartData.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Model Performance</CardTitle>
-        </CardHeader>
-        <CardBody>
-          <div className="h-[350px] flex items-center justify-center text-muted-foreground text-sm">
-            No accuracy data available yet
-          </div>
-        </CardBody>
-      </Card>
-    );
-  }
+	if (chartData.length === 0) {
+		return (
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-sm font-medium">Model Performance</CardTitle>
+				</CardHeader>
+				<CardBody>
+					<div className="h-[350px] flex items-center justify-center text-muted-foreground text-sm">
+						No accuracy data available yet
+					</div>
+				</CardBody>
+			</Card>
+		);
+	}
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">Model Performance</CardTitle>
-      </CardHeader>
-      <CardBody>
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
-          >
-            <CartesianGrid
-              strokeDasharray={chartGridStyles.strokeDasharray}
-              stroke={chartGridStyles.stroke}
-              horizontal={false}
-            />
-            <XAxis
-              type="number"
-              tick={{ fontSize: 11, fill: chartAxisStyles.tick.fill }}
-              axisLine={{ stroke: chartAxisStyles.line.stroke }}
-              tickLine={false}
-              tickFormatter={(v: number) => `${v}%`}
-            />
-            <YAxis
-              type="category"
-              dataKey="name"
-              tick={{ fontSize: 11, fill: chartAxisStyles.tick.fill }}
-              axisLine={{ stroke: chartAxisStyles.line.stroke }}
-              tickLine={false}
-              width={70}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {avgMape !== null && (
-              <ReferenceLine
-                x={avgMape}
-                stroke="#EF4444"
-                strokeDasharray="5 5"
-                strokeWidth={1.5}
-                label={{
-                  value: `Avg: ${avgMape.toFixed(1)}%`,
-                  position: "top",
-                  fill: "#EF4444",
-                  fontSize: 11,
-                }}
-              />
-            )}
-            <Bar
-              dataKey="mape"
-              radius={[0, 4, 4, 0]}
-              isAnimationActive={true}
-              animationDuration={chartAnimations.duration}
-            >
-              {chartData.map((entry, index) => (
-                <rect key={index} fill={entry.fill} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </CardBody>
-    </Card>
-  );
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm font-medium">Model Performance</CardTitle>
+			</CardHeader>
+			<CardBody>
+				<ResponsiveContainer width="100%" height={350}>
+					<BarChart
+						data={chartData}
+						layout="vertical"
+						margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
+					>
+						<CartesianGrid
+							strokeDasharray={chartGridStyles.strokeDasharray}
+							stroke={chartGridStyles.stroke}
+							horizontal={false}
+						/>
+						<XAxis
+							type="number"
+							tick={{ fontSize: 11, fill: chartAxisStyles.tick.fill }}
+							axisLine={{ stroke: chartAxisStyles.line.stroke }}
+							tickLine={false}
+							tickFormatter={(v: number) => `${v}%`}
+						/>
+						<YAxis
+							type="category"
+							dataKey="name"
+							tick={{ fontSize: 11, fill: chartAxisStyles.tick.fill }}
+							axisLine={{ stroke: chartAxisStyles.line.stroke }}
+							tickLine={false}
+							width={70}
+						/>
+						<Tooltip content={<CustomTooltip />} />
+						{avgMape !== null && (
+							<ReferenceLine
+								x={avgMape}
+								stroke="#EF4444"
+								strokeDasharray="5 5"
+								strokeWidth={1.5}
+								label={{
+									value: `Avg: ${avgMape.toFixed(1)}%`,
+									position: "top",
+									fill: "#EF4444",
+									fontSize: 11,
+								}}
+							/>
+						)}
+						<Bar
+							dataKey="mape"
+							radius={[0, 4, 4, 0]}
+							isAnimationActive={true}
+							animationDuration={chartAnimations.duration}
+						>
+							{chartData.map((entry, index) => (
+								<rect key={index} fill={entry.fill} />
+							))}
+						</Bar>
+					</BarChart>
+				</ResponsiveContainer>
+			</CardBody>
+		</Card>
+	);
 }

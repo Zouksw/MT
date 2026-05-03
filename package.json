@@ -21,13 +21,8 @@
 		"stop": "lsof -ti:3000,8000,5001 2>/dev/null | xargs kill -9 2>/dev/null; pkill -f 'iotdb.*ConfigNode' 2>/dev/null; pkill -f 'iotdb.*DataNode' 2>/dev/null; pkill -f 'ainode.*MainProcess' 2>/dev/null; echo 'All dev servers and IoTDB stopped'"
 	},
 	"lint-staged": {
-		"backend/src/**/*.{ts}": [
-			"eslint --fix",
-			"prettier --write"
-		],
-		"frontend/src/**/*.{ts,tsx}": [
-			"eslint --fix",
-			"prettier --write"
+		"*.{ts,tsx,js,jsx}": [
+			"biome check --write"
 		]
 	},
 	"dependencies": {

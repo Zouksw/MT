@@ -12,78 +12,60 @@
 
 "use client";
 
-import { useEffect, useSyncExternalStore, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { shouldReduceMotion } from "@/lib/animations";
 
 const emptySubscribe = () => () => {};
 
 export interface PageTransitionProps {
-  children: React.ReactNode;
-  className?: string;
-  variant?: "fade" | "slide-up" | "slide-down" | "scale";
+	children: React.ReactNode;
+	className?: string;
+	variant?: "fade" | "slide-up" | "slide-down" | "scale";
 }
 
 export const PageTransition: React.FC<PageTransitionProps> = ({
-  children,
-  className = "",
-  variant = "fade",
+	children,
+	className = "",
+	variant = "fade",
 }) => {
-  const respectMotionPreference = useSyncExternalStore(
-    emptySubscribe,
-    () => shouldReduceMotion(),
-    () => false
-  );
+	const respectMotionPreference = useSyncExternalStore(
+		emptySubscribe,
+		() => shouldReduceMotion(),
+		() => false,
+	);
 
-  const [isVisible, setIsVisible] = useState(false);
+	const [isVisible, setIsVisible] = useState(false);
 
-  useEffect(() => {
-    if (respectMotionPreference) return;
+	useEffect(() => {
+		if (respectMotionPreference) return;
 
-    const animationTimer = setTimeout(() => {
-      setIsVisible(true);
-    }, 50);
+		const animationTimer = setTimeout(() => {
+			setIsVisible(true);
+		}, 50);
 
-    return () => clearTimeout(animationTimer);
-  }, [respectMotionPreference]);
+		return () => clearTimeout(animationTimer);
+	}, [respectMotionPreference]);
 
-  // If user prefers reduced motion, just show content without animation
-  if (respectMotionPreference) {
-    return <div className={className}>{children}</div>;
-  }
+	// If user prefers reduced motion, just show content without animation
+	if (respectMotionPreference) {
+		return <div className={className}>{children}</div>;
+	}
 
-  // Animation variants
-  const animationClasses = {
-    fade: isVisible
-      ? "page-transition-fade-in"
-      : "page-transition-fade-out",
-    "slide-up": isVisible
-      ? "page-transition-slide-up-in"
-      : "page-transition-slide-up-out",
-    "slide-down": isVisible
-      ? "page-transition-slide-down-in"
-      : "page-transition-slide-down-out",
-    scale: isVisible
-      ? "page-transition-scale-in"
-      : "page-transition-scale-out",
-  };
+	// Animation variants
+	const animationClasses = {
+		fade: isVisible ? "page-transition-fade-in" : "page-transition-fade-out",
+		"slide-up": isVisible ? "page-transition-slide-up-in" : "page-transition-slide-up-out",
+		"slide-down": isVisible ? "page-transition-slide-down-in" : "page-transition-slide-down-out",
+		scale: isVisible ? "page-transition-scale-in" : "page-transition-scale-out",
+	};
 
-  return (
-    <div className={`${animationClasses[variant]} ${className}`.trim()}>
-      {children}
-    </div>
-  );
+	return <div className={`${animationClasses[variant]} ${className}`.trim()}>{children}</div>;
 };
 
 /**
  * Simple page wrapper that automatically applies page transitions
  * to all pages. Use this in layout.tsx to wrap the main content.
  */
-export const PageWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  return (
-    <PageTransition variant="slide-up">
-      {children}
-    </PageTransition>
-  );
+export const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	return <PageTransition variant="slide-up">{children}</PageTransition>;
 };

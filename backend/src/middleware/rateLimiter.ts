@@ -3,34 +3,38 @@
  * Protects against brute force attacks and API abuse
  */
 
-import rateLimit from 'express-rate-limit';
-import type { Request, Response } from 'express';
+import type { Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 
 /**
  * Generic rate limiter configuration
  */
 export const createRateLimiter = (options: {
-  windowMs?: number;
-  max?: number;
-  message?: string;
-  skipSuccessfulRequests?: boolean;
+	windowMs?: number;
+	max?: number;
+	message?: string;
+	skipSuccessfulRequests?: boolean;
 }) => {
-  return rateLimit({
-    windowMs: options.windowMs || 15 * 60 * 1000, // 15 minutes default
-    max: options.max || 100, // Limit each IP to 100 requests per windowMs
-    message: options.message || 'Too many requests from this IP, please try again later.',
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    skipSuccessfulRequests: options.skipSuccessfulRequests || false,
-    skip: (_req: Request) => process.env.NODE_ENV === 'development',
-    handler: (_req: Request, res: Response) => {
-      res.status(429).json({
-        error: 'Too many requests',
-        message: options.message || 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil((options.windowMs || 900000) / 1000),
-      });
-    },
-  });
+	return rateLimit({
+		windowMs: options.windowMs || 15 * 60 * 1000, // 15 minutes default
+		max: options.max || 100, // Limit each IP to 100 requests per windowMs
+		message:
+			options.message ||
+			"Too many requests from this IP, please try again later.",
+		standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+		legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+		skipSuccessfulRequests: options.skipSuccessfulRequests || false,
+		skip: (_req: Request) => process.env.NODE_ENV === "development",
+		handler: (_req: Request, res: Response) => {
+			res.status(429).json({
+				error: "Too many requests",
+				message:
+					options.message ||
+					"Too many requests from this IP, please try again later.",
+				retryAfter: Math.ceil((options.windowMs || 900000) / 1000),
+			});
+		},
+	});
 };
 
 /**
@@ -38,9 +42,9 @@ export const createRateLimiter = (options: {
  * 10 requests per 15 minutes per IP
  */
 export const authRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
-  message: 'Too many authentication attempts, please try again later.',
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 10,
+	message: "Too many authentication attempts, please try again later.",
 });
 
 /**
@@ -48,9 +52,9 @@ export const authRateLimiter = createRateLimiter({
  * 100 requests per 15 minutes per IP
  */
 export const apiRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  message: 'Too many API requests, please try again later.',
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 100,
+	message: "Too many API requests, please try again later.",
 });
 
 /**
@@ -58,9 +62,9 @@ export const apiRateLimiter = createRateLimiter({
  * 20 requests per minute per IP (AI is resource-intensive)
  */
 export const aiRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  max: 20,
-  message: 'Too many AI prediction requests, please try again later.',
+	windowMs: 60 * 1000, // 1 minute
+	max: 20,
+	message: "Too many AI prediction requests, please try again later.",
 });
 
 /**
@@ -68,9 +72,9 @@ export const aiRateLimiter = createRateLimiter({
  * 1000 requests per minute per IP
  */
 export const ingestionRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  max: 1000,
-  message: 'Too many data ingestion requests, please try again later.',
+	windowMs: 60 * 1000, // 1 minute
+	max: 1000,
+	message: "Too many data ingestion requests, please try again later.",
 });
 
 /**
@@ -78,9 +82,9 @@ export const ingestionRateLimiter = createRateLimiter({
  * 3 requests per hour per IP
  */
 export const passwordResetRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
-  message: 'Too many password reset attempts, please try again later.',
+	windowMs: 60 * 60 * 1000, // 1 hour
+	max: 3,
+	message: "Too many password reset attempts, please try again later.",
 });
 
 /**
@@ -88,9 +92,9 @@ export const passwordResetRateLimiter = createRateLimiter({
  * 3 registrations per hour per IP
  */
 export const registrationRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
-  message: 'Too many registration attempts, please try again later.',
+	windowMs: 60 * 60 * 1000, // 1 hour
+	max: 3,
+	message: "Too many registration attempts, please try again later.",
 });
 
 /**
@@ -98,7 +102,7 @@ export const registrationRateLimiter = createRateLimiter({
  * 5 creations per hour per user
  */
 export const apiKeyCreationLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
-  message: 'Too many API key creation attempts, please try again later.',
+	windowMs: 60 * 60 * 1000, // 1 hour
+	max: 5,
+	message: "Too many API key creation attempts, please try again later.",
 });

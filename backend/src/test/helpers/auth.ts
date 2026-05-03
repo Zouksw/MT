@@ -5,17 +5,17 @@
  * authentication tokens, and permissions.
  */
 
-import { type User, UserRole } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
-import { generateToken } from '@/lib/jwt';
+import { type User, UserRole } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { generateToken } from "@/lib/jwt";
 
 export interface TestUser {
-  id: string;
-  email: string;
-  password: string;
-  name: string;
-  role: UserRole;
-  token?: string;
+	id: string;
+	email: string;
+	password: string;
+	name: string;
+	role: UserRole;
+	token?: string;
 }
 
 /**
@@ -30,31 +30,33 @@ export interface TestUser {
  * // Use user.email and user.password for login tests
  * ```
  */
-export async function createTestUser(overrides: Partial<User> = {}): Promise<TestUser> {
-  const password = 'TestPassword123!';
-  const passwordHash = await bcrypt.hash(password, 10);
+export async function createTestUser(
+	overrides: Partial<User> = {},
+): Promise<TestUser> {
+	const password = "TestPassword123!";
+	const passwordHash = await bcrypt.hash(password, 10);
 
-  const timestamp = Date.now();
-  const userData: Partial<User> = {
-    email: `test-${timestamp}@example.com`,
-    name: 'Test User',
-    role: UserRole.VIEWER,
-    passwordHash,
-    ...overrides,
-  };
+	const timestamp = Date.now();
+	const userData: Partial<User> = {
+		email: `test-${timestamp}@example.com`,
+		name: "Test User",
+		role: UserRole.VIEWER,
+		passwordHash,
+		...overrides,
+	};
 
-  // Note: This helper doesn't create the user in the database.
-  // For database creation, use your Prisma client in tests:
-  // const user = await prisma.user.create({ data: userData });
-  //
-  // This helper provides the data structure and password hashing.
-  const user = {
-    id: `test-user-id-${timestamp}`,
-    ...userData,
-    password,
-  } as TestUser;
+	// Note: This helper doesn't create the user in the database.
+	// For database creation, use your Prisma client in tests:
+	// const user = await prisma.user.create({ data: userData });
+	//
+	// This helper provides the data structure and password hashing.
+	const user = {
+		id: `test-user-id-${timestamp}`,
+		...userData,
+		password,
+	} as TestUser;
 
-  return user;
+	return user;
 }
 
 /**
@@ -69,10 +71,12 @@ export async function createTestUser(overrides: Partial<User> = {}): Promise<Tes
  * // Use user.token in Authorization header
  * ```
  */
-export async function createTestUserWithToken(overrides: Partial<User> = {}): Promise<TestUser> {
-  const user = await createTestUser(overrides);
-  user.token = generateToken(user.id);
-  return user;
+export async function createTestUserWithToken(
+	overrides: Partial<User> = {},
+): Promise<TestUser> {
+	const user = await createTestUser(overrides);
+	user.token = generateToken(user.id);
+	return user;
 }
 
 /**
@@ -88,17 +92,20 @@ export async function createTestUserWithToken(overrides: Partial<User> = {}): Pr
  * const users = await createTestUsers(10, UserRole.VIEWER);
  * ```
  */
-export async function createTestUsers(count: number, role: UserRole = UserRole.VIEWER): Promise<TestUser[]> {
-  const users: TestUser[] = [];
-  for (let i = 0; i < count; i++) {
-    const user = await createTestUser({
-      email: `test-user-${i}-${Date.now()}@example.com`,
-      name: `Test User ${i}`,
-      role,
-    });
-    users.push(user);
-  }
-  return users;
+export async function createTestUsers(
+	count: number,
+	role: UserRole = UserRole.VIEWER,
+): Promise<TestUser[]> {
+	const users: TestUser[] = [];
+	for (let i = 0; i < count; i++) {
+		const user = await createTestUser({
+			email: `test-user-${i}-${Date.now()}@example.com`,
+			name: `Test User ${i}`,
+			role,
+		});
+		users.push(user);
+	}
+	return users;
 }
 
 /**
@@ -114,9 +121,9 @@ export async function createTestUsers(count: number, role: UserRole = UserRole.V
  * ```
  */
 export function getAuthHeaders(token: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${token}`,
-  };
+	return {
+		Authorization: `Bearer ${token}`,
+	};
 }
 
 /**
@@ -131,12 +138,12 @@ export function getAuthHeaders(token: string): Record<string, string> {
  * ```
  */
 export function createExpiredToken(): string {
-  // Token that expired in the past (1 hour ago)
-  const payload = {
-    userId: 'test-user-id',
-    role: UserRole.VIEWER as UserRole,
-    iat: Math.floor(Date.now() / 1000) - 7200, // Issued 2 hours ago
-    exp: Math.floor(Date.now() / 1000) - 3600, // Expired 1 hour ago
-  };
-  return Buffer.from(JSON.stringify(payload)).toString('base64');
+	// Token that expired in the past (1 hour ago)
+	const payload = {
+		userId: "test-user-id",
+		role: UserRole.VIEWER as UserRole,
+		iat: Math.floor(Date.now() / 1000) - 7200, // Issued 2 hours ago
+		exp: Math.floor(Date.now() / 1000) - 3600, // Expired 1 hour ago
+	};
+	return Buffer.from(JSON.stringify(payload)).toString("base64");
 }

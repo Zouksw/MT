@@ -5,16 +5,16 @@
  * following the project's fail-closed/fail-open philosophy
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 /**
  * Error handling options
  */
 export interface ErrorHandlerOptions {
-  /** Custom error message for production */
-  productionMessage?: string;
-  /** Whether to throw the error or return it */
-  shouldThrow?: true;
+	/** Custom error message for production */
+	productionMessage?: string;
+	/** Whether to throw the error or return it */
+	shouldThrow?: true;
 }
 
 /**
@@ -36,24 +36,25 @@ export interface ErrorHandlerOptions {
  * ```
  */
 export function handleServiceError(
-  error: unknown,
-  context: string,
-  options: ErrorHandlerOptions = {}
+	error: unknown,
+	context: string,
+	options: ErrorHandlerOptions = {},
 ): never {
-  const { productionMessage = 'System error. Please try again later.' } = options;
+	const { productionMessage = "System error. Please try again later." } =
+		options;
 
-  // Log the full error for debugging
-  logger.error(`[${context}] Error:`, error);
+	// Log the full error for debugging
+	logger.error(`[${context}] Error:`, error);
 
-  // Determine the error message based on environment
-  const message =
-    process.env.NODE_ENV === 'production'
-      ? productionMessage
-      : error instanceof Error
-        ? error.message
-        : String(error);
+	// Determine the error message based on environment
+	const message =
+		process.env.NODE_ENV === "production"
+			? productionMessage
+			: error instanceof Error
+				? error.message
+				: String(error);
 
-  throw new Error(message);
+	throw new Error(message);
 }
 
 /**
@@ -75,71 +76,71 @@ export function handleServiceError(
  * ```
  */
 export function handleErrorWithFallback<T>(
-  error: unknown,
-  context: string,
-  fallback: T
+	error: unknown,
+	context: string,
+	fallback: T,
 ): T {
-  logger.error(`[${context}] Error:`, error);
-  return fallback;
+	logger.error(`[${context}] Error:`, error);
+	return fallback;
 }
 
 /**
  * Type guard to check if value is an Error instance
  */
 export function isError(value: unknown): value is Error {
-  return value instanceof Error;
+	return value instanceof Error;
 }
 
 /**
  * Type guard to check if value has a message property
  */
 export function hasMessage(value: unknown): value is { message: string } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'message' in value &&
-    typeof (value as { message: unknown }).message === 'string'
-  );
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"message" in value &&
+		typeof (value as { message: unknown }).message === "string"
+	);
 }
 
 /**
  * Extract error message from unknown error type
  */
 export function extractErrorMessage(error: unknown): string {
-  if (isError(error)) {
-    return error.message;
-  }
-  if (hasMessage(error)) {
-    return error.message;
-  }
-  return String(error);
+	if (isError(error)) {
+		return error.message;
+	}
+	if (hasMessage(error)) {
+		return error.message;
+	}
+	return String(error);
 }
 
 /**
  * Create a standardized error object for API responses
  */
 export interface ApiErrorObject {
-  message: string;
-  code?: string;
-  context?: string;
-  isOperational?: boolean;
+	message: string;
+	code?: string;
+	context?: string;
+	isOperational?: boolean;
 }
 
 /**
  * Create an API error object
  */
 export function createApiError(
-  message: string,
-  options: {
-    code?: string;
-    context?: string;
-    isOperational?: boolean;
-  } = {}
+	message: string,
+	options: {
+		code?: string;
+		context?: string;
+		isOperational?: boolean;
+	} = {},
 ): ApiErrorObject {
-  return {
-    message,
-    ...options,
-  };
+	return {
+		message,
+		...options,
+	};
 }
 
 /**
@@ -156,21 +157,21 @@ export function createApiError(
  * ```
  */
 export async function withErrorHandling<T>(
-  operation: () => Promise<T>,
-  context: string,
-  options: {
-    productionMessage?: string;
-    fallback?: T;
-  } = {}
+	operation: () => Promise<T>,
+	context: string,
+	options: {
+		productionMessage?: string;
+		fallback?: T;
+	} = {},
 ): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (options.fallback !== undefined) {
-      return handleErrorWithFallback(error, context, options.fallback);
-    }
-    return handleServiceError(error, context, {
-      productionMessage: options.productionMessage,
-    });
-  }
+	try {
+		return await operation();
+	} catch (error) {
+		if (options.fallback !== undefined) {
+			return handleErrorWithFallback(error, context, options.fallback);
+		}
+		return handleServiceError(error, context, {
+			productionMessage: options.productionMessage,
+		});
+	}
 }

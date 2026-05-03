@@ -1,62 +1,60 @@
 "use client";
 
 import React, {
-  type PropsWithChildren,
-  createContext,
-  useCallback,
-  useSyncExternalStore,
-  useState,
+	createContext,
+	type PropsWithChildren,
+	useCallback,
+	useState,
+	useSyncExternalStore,
 } from "react";
 
 type ColorModeContextType = {
-  mode: string;
-  setMode: (mode: string) => void;
+	mode: string;
+	setMode: (mode: string) => void;
 };
 
-export const ColorModeContext = createContext<ColorModeContextType>(
-  {} as ColorModeContextType
-);
+export const ColorModeContext = createContext<ColorModeContextType>({} as ColorModeContextType);
 
 type ColorModeContextProviderProps = {
-  defaultMode?: string;
+	defaultMode?: string;
 };
 
 function subscribeToStorage(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
+	window.addEventListener("storage", callback);
+	return () => window.removeEventListener("storage", callback);
 }
 
 export const ColorModeContextProvider: React.FC<
-  PropsWithChildren<ColorModeContextProviderProps>
+	PropsWithChildren<ColorModeContextProviderProps>
 > = ({ children, defaultMode }) => {
-  const savedTheme = useSyncExternalStore(
-    subscribeToStorage,
-    () => localStorage.getItem("theme") || defaultMode || "dark",
-    () => defaultMode || "dark"
-  );
+	const savedTheme = useSyncExternalStore(
+		subscribeToStorage,
+		() => localStorage.getItem("theme") || defaultMode || "dark",
+		() => defaultMode || "dark",
+	);
 
-  const [localMode, setLocalMode] = useState<string | null>(null);
+	const [localMode, setLocalMode] = useState<string | null>(null);
 
-  const mode = localMode ?? savedTheme;
+	const mode = localMode ?? savedTheme;
 
-  const setColorMode = useCallback((newMode: string) => {
-    setLocalMode(newMode);
-    localStorage.setItem("theme", newMode);
-    document.documentElement.classList.toggle("dark", newMode === "dark");
-  }, []);
+	const setColorMode = useCallback((newMode: string) => {
+		setLocalMode(newMode);
+		localStorage.setItem("theme", newMode);
+		document.documentElement.classList.toggle("dark", newMode === "dark");
+	}, []);
 
-  React.useLayoutEffect(() => {
-    document.documentElement.classList.toggle("dark", mode === "dark");
-  }, [mode]);
+	React.useLayoutEffect(() => {
+		document.documentElement.classList.toggle("dark", mode === "dark");
+	}, [mode]);
 
-  return (
-    <ColorModeContext.Provider
-      value={{
-        setMode: setColorMode,
-        mode,
-      }}
-    >
-      {children}
-    </ColorModeContext.Provider>
-  );
+	return (
+		<ColorModeContext.Provider
+			value={{
+				setMode: setColorMode,
+				mode,
+			}}
+		>
+			{children}
+		</ColorModeContext.Provider>
+	);
 };

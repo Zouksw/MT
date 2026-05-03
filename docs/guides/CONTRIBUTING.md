@@ -1,6 +1,6 @@
-# Contributing to TradeMind AI
+# Contributing to MT
 
-Thank you for your interest in contributing to TradeMind AI! We welcome contributions from developers of all skill levels.
+Thank you for your interest in contributing to MT! We welcome contributions from developers of all skill levels.
 
 ## Table of Contents
 
@@ -18,10 +18,10 @@ Thank you for your interest in contributing to TradeMind AI! We welcome contribu
 
 ### Prerequisites
 
-- **Node.js**: 18.x or later
+- **Node.js**: 20.x or later
 - **PostgreSQL**: 15.x
 - **Redis**: 7.x
-- **Apache IoTDB**: 2.0.5 (optional, for AI features)
+- **Apache IoTDB**: 2.0.8 (optional, for AI features)
 - **pnpm**: Latest version (recommended package manager)
 
 ### Initial Setup

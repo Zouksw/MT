@@ -1,7 +1,7 @@
 # Backend Dockerfile — containerd/nerdctl compatible (no Docker daemon)
 # Multi-stage build for minimal image
 
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN npx prisma generate
 RUN pnpm run build
 
 # Production stage
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
@@ -36,8 +36,12 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.pnpm/@prisma+client*/node_modules/.prisma ./node_modules/.prisma
 
+RUN addgroup -g 1001 -S app && adduser -u 1001 -S app -G app
+
 ENV NODE_ENV=production
 ENV PORT=3001
+
+USER app
 
 EXPOSE 3001
 

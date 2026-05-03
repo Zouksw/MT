@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # MT — Development Server Restart
-# Usage: ./scripts/restart.sh [--backend|--frontend|--all]
+# Usage: ./scripts/restart.sh [--backend|--frontend|--iotdb|--all|--quick]
 # Default: --all
+# --quick: skip IoTDB, shorter waits (backend 10s, frontend 20s)
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
@@ -32,9 +33,11 @@ err()   { echo -e "${RED}[error]${NC} $1"; }
 
 # ── Parse args ──────────────────────────────────────────
 MODE="${1:---all}"
+QUICK=false
 case "$MODE" in
+  --quick) MODE="--all"; QUICK=true ;;
   --backend|--frontend|--iotdb|--all) ;;
-  *) err "Unknown option: $MODE"; echo "Usage: $0 [--backend|--frontend|--iotdb|--all]"; exit 1 ;;
+  *) err "Unknown option: $MODE"; echo "Usage: $0 [--backend|--frontend|--iotdb|--all|--quick]"; exit 1 ;;
 esac
 
 # ── Kill and verify ─────────────────────────────────────
@@ -64,7 +67,7 @@ kill_and_wait() {
     # Also kill anything on our ports
     for port in $BACKEND_PORT $FRONTEND_PORT $DEVTOOLS_PORT $IOTDB_CN_PORT $IOTDB_DN_PORT $IOTDB_REST_PORT $IOTDB_AI_PORT; do
       local port_pids
-      port_pids=$(lsof -ti:"$port" 2>/dev/null || true)
+      port_pids=$(timeout 3 lsof -ti:"$port" 2>/dev/null || true)
       if [ -n "$port_pids" ]; then
         log "Killing process on port $port"
         echo "$port_pids" | xargs kill -9 2>/dev/null || true
@@ -108,14 +111,14 @@ esac
 # Final port verification with aggressive cleanup
 for port in $BACKEND_PORT $FRONTEND_PORT $DEVTOOLS_PORT; do
   attempt=0
-  while lsof -ti:"$port" 2>/dev/null | head -1 | grep -q .; do
+  while timeout 3 lsof -ti:"$port" 2>/dev/null | head -1 | grep -q .; do
     attempt=$((attempt + 1))
     if [ $attempt -gt 5 ]; then
       err "Port $port still occupied after 5 kill attempts"
-      lsof -i:"$port" 2>/dev/null
+      timeout 3 lsof -i:"$port" 2>/dev/null
       exit 1
     fi
-    lsof -ti:"$port" | xargs kill -9 2>/dev/null || true
+    timeout 3 lsof -ti:"$port" | xargs kill -9 2>/dev/null || true
     sleep 1
   done
 done
@@ -127,7 +130,7 @@ wait_for_http() {
   local port=$1 label=$2 timeout=${3:-20}
   local elapsed=0
   while [ $elapsed -lt $timeout ]; do
-    if curl -s -o /dev/null -w "" http://localhost:"$port" 2>/dev/null; then
+    if curl -s --max-time 2 -o /dev/null -w "" http://localhost:"$port" 2>/dev/null; then
       return 0
     fi
     if ss -tlnp 2>/dev/null | grep -q ":$port "; then
@@ -139,6 +142,14 @@ wait_for_http() {
   return 1
 }
 
+# Quick mode: shorter timeouts
+BACKEND_WAIT=20
+FRONTEND_WAIT=40
+if [ "$QUICK" = true ]; then
+  BACKEND_WAIT=10
+  FRONTEND_WAIT=20
+fi
+
 mkdir -p "$ROOT_DIR/.logs"
 BACKEND_PID=""
 FRONTEND_PID=""
@@ -146,7 +157,9 @@ FRONTEND_PID=""
 # ── Start IoTDB ──────────────────────────────────────────
 case "$MODE" in
   --iotdb|--all)
-    if [ -d "$IOTDB_HOME/sbin" ]; then
+    if [ "$QUICK" = true ]; then
+      warn "Quick mode — skipping IoTDB"
+    elif [ -d "$IOTDB_HOME/sbin" ]; then
       log "Starting IoTDB ConfigNode on :$IOTDB_CN_PORT..."
       (cd "$IOTDB_HOME" && MEMORY_SIZE=1G exec sbin/start-confignode.sh) > "$ROOT_DIR/.logs/iotdb-cn.log" 2>&1
       if wait_for_http "$IOTDB_CN_PORT" "ConfigNode" 30; then
@@ -180,7 +193,7 @@ case "$MODE" in
     log "Starting backend on :$BACKEND_PORT..."
     (cd "$BACKEND_DIR" && exec pnpm dev) > "$ROOT_DIR/.logs/backend.log" 2>&1 &
     BACKEND_PID=$!
-    if wait_for_http "$BACKEND_PORT" "Backend" 20; then
+    if wait_for_http "$BACKEND_PORT" "Backend" $BACKEND_WAIT; then
       ok "Backend running on http://localhost:$BACKEND_PORT (PID: $BACKEND_PID)"
     else
       warn "Backend may still be starting. Check .logs/backend.log"
@@ -193,7 +206,7 @@ case "$MODE" in
     log "Starting frontend on :$FRONTEND_PORT..."
     (cd "$FRONTEND_DIR" && exec pnpm dev) > "$ROOT_DIR/.logs/frontend.log" 2>&1 &
     FRONTEND_PID=$!
-    if wait_for_http "$FRONTEND_PORT" "Frontend" 40; then
+    if wait_for_http "$FRONTEND_PORT" "Frontend" $FRONTEND_WAIT; then
       ok "Frontend running on http://localhost:$FRONTEND_PORT (PID: $FRONTEND_PID)"
     else
       warn "Frontend may still be compiling. Check .logs/frontend.log"

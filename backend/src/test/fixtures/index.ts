@@ -10,40 +10,39 @@
  * ```
  */
 
-// User fixtures
-export {
-  standardUser,
-  adminUser,
-  premiumUser,
-  fullUser,
-  invalidUsers,
-  edgeCaseUsers,
-  generateUserFixtures,
-  createUserWithPassword,
-  passwordFixtures,
-  loginScenarios,
-  permissionScenarios,
-} from './users';
-
 // Time series fixtures
 export {
-  standardTimeSeries,
-  integerTimeSeries,
-  booleanTimeSeries,
-  textTimeSeries,
-  multipleTimeSeries,
-  temperatureData,
-  humidityData,
-  pressureData,
-  anomalyData,
-  trendData,
-  invalidTimeSeriesNames,
-  validTimeSeriesPatterns,
-  dataTypeFixtures,
-  encodingFixtures,
-  compressionFixtures,
-  generateLargeDataset,
-  gappedData,
-  type TimeSeriesFixture,
-  type DataPointFixture,
-} from './timeseries';
+	anomalyData,
+	booleanTimeSeries,
+	compressionFixtures,
+	type DataPointFixture,
+	dataTypeFixtures,
+	encodingFixtures,
+	gappedData,
+	generateLargeDataset,
+	humidityData,
+	integerTimeSeries,
+	invalidTimeSeriesNames,
+	multipleTimeSeries,
+	pressureData,
+	standardTimeSeries,
+	type TimeSeriesFixture,
+	temperatureData,
+	textTimeSeries,
+	trendData,
+	validTimeSeriesPatterns,
+} from "./timeseries";
+// User fixtures
+export {
+	adminUser,
+	createUserWithPassword,
+	edgeCaseUsers,
+	fullUser,
+	generateUserFixtures,
+	invalidUsers,
+	loginScenarios,
+	passwordFixtures,
+	permissionScenarios,
+	premiumUser,
+	standardUser,
+} from "./users";

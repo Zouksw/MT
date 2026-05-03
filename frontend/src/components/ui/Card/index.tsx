@@ -1,41 +1,40 @@
 import type React from "react";
-import {
-  Card as ShadcnCard,
-  CardHeader as ShadcnCardHeader,
-  CardTitle as ShadcnCardTitle,
-  CardContent as ShadcnCardContent,
-  CardFooter as ShadcnCardFooter,
-  CardDescription,
-  CardAction,
-} from "../card";
 import { cn } from "@/lib/utils";
+import {
+	CardAction,
+	CardDescription,
+	Card as ShadcnCard,
+	CardContent as ShadcnCardContent,
+	CardFooter as ShadcnCardFooter,
+	CardHeader as ShadcnCardHeader,
+	CardTitle as ShadcnCardTitle,
+} from "../card";
 
-export { CardDescription, CardAction };
+export { CardAction, CardDescription };
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  hover?: boolean;
+	children: React.ReactNode;
+	hover?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
-  children,
-  className,
-  hover = false,
-  onClick,
-  ...props
+	children,
+	className,
+	hover = false,
+	onClick,
+	...props
 }) => (
-  <ShadcnCard
-    className={cn(
-      hover &&
-        "cursor-pointer transition-shadow hover:shadow-md hover:ring-foreground/15",
-      onClick && "cursor-pointer",
-      className
-    )}
-    onClick={onClick}
-    {...props}
-  >
-    {children}
-  </ShadcnCard>
+	<ShadcnCard
+		className={cn(
+			hover && "cursor-pointer transition-shadow hover:shadow-md hover:ring-foreground/15",
+			onClick && "cursor-pointer",
+			className,
+		)}
+		onClick={onClick}
+		{...props}
+	>
+		{children}
+	</ShadcnCard>
 );
 
 export const CardHeader = ShadcnCardHeader;

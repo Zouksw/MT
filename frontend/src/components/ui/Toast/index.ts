@@ -1,3 +1,2 @@
-export { ToastProvider } from '../Toast';
-export { useToast, useSuccess, useError, useWarning, useInfo } from '../Toast';
-export type { ToastOptions, ToastType } from '../Toast';
+export type { ToastOptions, ToastType } from "../Toast";
+export { ToastProvider, useError, useInfo, useSuccess, useToast, useWarning } from "../Toast";

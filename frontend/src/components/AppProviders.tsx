@@ -6,18 +6,18 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ColorModeContextProvider } from "@/contexts/color-mode";
 
 export default function AppProviders({
-  children,
-  defaultMode,
+	children,
+	defaultMode,
 }: {
-  children: React.ReactNode;
-  defaultMode?: string;
+	children: React.ReactNode;
+	defaultMode?: string;
 }) {
-  return (
-    <ColorModeContextProvider defaultMode={defaultMode}>
-      <main id="main-content">
-        <ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
-      </main>
-      <ToastProvider />
-    </ColorModeContextProvider>
-  );
+	return (
+		<ColorModeContextProvider defaultMode={defaultMode}>
+			<main id="main-content">
+				<ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
+			</main>
+			<ToastProvider />
+		</ColorModeContextProvider>
+	);
 }

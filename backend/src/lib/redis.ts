@@ -10,8 +10,8 @@
  * if initRedis() wasn't called.
  */
 
-import { createClient, type RedisClientType } from 'redis';
-import { logger } from './logger';
+import { createClient, type RedisClientType } from "redis";
+import { logger } from "./logger";
 
 let redisClient: RedisClientType | null = null;
 let initPromise: Promise<RedisClientType> | null = null;
@@ -22,47 +22,62 @@ let initialized = false;
  * @throws Error if Redis connection fails
  */
 export async function initRedis(): Promise<void> {
-  if (redisClient) {
-    return; // Already initialized
-  }
+	if (redisClient) {
+		return; // Already initialized
+	}
 
-  if (initPromise) {
-    await initPromise;
-    return;
-  }
+	if (initPromise) {
+		await initPromise;
+		return;
+	}
 
-  initPromise = (async () => {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+	initPromise = (async () => {
+		const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
-    const client = createClient({
-      url: redisUrl,
-      socket: {
-        reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            logger.error('[REDIS] Reconnection failed after 10 attempts');
-            return new Error('Redis reconnection failed');
-          }
-          return retries * 100;
-        },
-      },
-    }) as RedisClientType;
+		const client = createClient({
+			url: redisUrl,
+			socket: {
+				reconnectStrategy: (retries) => {
+					if (retries > 10) {
+						logger.error("[REDIS] Reconnection failed after 10 attempts");
+						return new Error("Redis reconnection failed");
+					}
+					return retries * 100;
+				},
+			},
+		}) as RedisClientType;
 
-    client.on('error', (err) => {
-      logger.error('[REDIS] Client error', { error: err.message });
-    });
+		client.on("error", (err) => {
+			logger.error("[REDIS] Client error", { error: err.message });
+		});
 
-    client.on('connect', () => {
-      logger.info('[REDIS] Client connected');
-    });
+		client.on("connect", () => {
+			logger.info("[REDIS] Client connected");
+		});
 
-    await client.connect();
-    redisClient = client;
-    initialized = true;
-    return redisClient;
-  })();
+		const connectPromise = client.connect();
+		await Promise.race([
+			connectPromise,
+			new Promise<never>((_, rej) =>
+				setTimeout(
+					() => rej(new Error("Redis connection timeout (10s)")),
+					10000,
+				),
+			),
+		]);
+		redisClient = client;
+		initialized = true;
+		return redisClient;
+	})();
 
-  await initPromise;
-  initPromise = null;
+	try {
+		await initPromise;
+	} catch (err) {
+		logger.warn(`[REDIS] Connection failed: ${err}. Running without cache.`);
+		redisClient = null;
+		initialized = false;
+	}
+	initPromise = null;
 }
 
 /**
@@ -72,27 +87,29 @@ export async function initRedis(): Promise<void> {
  * This method is kept for backward compatibility.
  */
 export async function getRedisClient(): Promise<RedisClientType> {
-  if (redisClient) {
-    return redisClient;
-  }
+	if (redisClient) {
+		return redisClient;
+	}
 
-  if (initialized) {
-    throw new Error('Redis client was initialized but is not available');
-  }
+	if (initialized) {
+		throw new Error("Redis client was initialized but is not available");
+	}
 
-  // Lazy initialization for backward compatibility
-  logger.warn('[REDIS] Using lazy initialization. Call initRedis() during app startup for better performance.');
+	// Lazy initialization for backward compatibility
+	logger.warn(
+		"[REDIS] Using lazy initialization. Call initRedis() during app startup for better performance.",
+	);
 
-  if (initPromise) {
-    return initPromise;
-  }
+	if (initPromise) {
+		return initPromise;
+	}
 
-  return initRedis().then(() => {
-    if (!redisClient) {
-      throw new Error('Redis client initialization failed');
-    }
-    return redisClient;
-  });
+	return initRedis().then(() => {
+		if (!redisClient) {
+			throw new Error("Redis client initialization failed");
+		}
+		return redisClient;
+	});
 }
 
 /**
@@ -100,7 +117,7 @@ export async function getRedisClient(): Promise<RedisClientType> {
  * Usage: await redis().set('key', 'value')
  */
 export async function redis(): Promise<RedisClientType> {
-  return getRedisClient();
+	return getRedisClient();
 }
 
 /**

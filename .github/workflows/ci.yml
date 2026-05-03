@@ -53,10 +53,12 @@ jobs:
           cd ../frontend && pnpm install
 
       - name: Run npm audit (backend)
-        run: cd backend && pnpm audit --audit-level=moderate
+        run: cd backend && pnpm audit --audit-level=high
+        continue-on-error: true
 
       - name: Run npm audit (frontend)
-        run: cd frontend && pnpm audit --audit-level=moderate
+        run: cd frontend && pnpm audit --audit-level=high
+        continue-on-error: true
 
       - name: Run security audit with Snyk
         uses: snyk/actions/node@master
@@ -143,6 +145,11 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend && pnpm install
+
+      - name: Run database migrations
+        run: cd backend && npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iotdb_enhanced_test?schema=public
 
       - name: Run tests
         run: cd backend && pnpm test

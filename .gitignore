@@ -81,6 +81,25 @@ debug-*.js
 
 # Claude Code internal state (never commit)
 .claude/
+.claude.json
+
+# Codex CLI state (never commit)
+.codex/
+
+# Copilot state (never commit)
+.copilot/
+
+# Git credentials (never commit)
+.git-credentials
+
+# Log files (never commit)
+.logs/
+
+# Test results (never commit)
+test-results/
+
+# Taste skill (embedded repo)
+taste-skill/
 
 # System files (never commit)
 .dotnet/
