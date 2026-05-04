@@ -31,7 +31,7 @@ export interface DatasetFactoryInput {
 		name: string;
 		email: string;
 	} | null;
-	timeseries?: any[];
+	timeseries?: Record<string, unknown>[];
 	_count?: { timeseries: number };
 }
 

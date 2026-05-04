@@ -30,7 +30,7 @@ export default function ModelConsensusTable({
 			key: "modelId",
 			title: "Model",
 			dataIndex: "modelId" as const,
-			render: (_v: string, row: Row) => (
+			render: (_v: unknown, row: Row) => (
 				<span className="font-semibold font-mono text-[13px]">
 					{MODEL_NAME_MAP[row.modelId] || row.modelId}
 				</span>
@@ -40,7 +40,7 @@ export default function ModelConsensusTable({
 			key: "type",
 			title: "Signal",
 			dataIndex: "type" as const,
-			render: (_v: string, row: Row) => (
+			render: (_v: unknown, row: Row) => (
 				<SignalBadge type={row.type} confidence={row.confidence} size="small" />
 			),
 		},
@@ -48,7 +48,7 @@ export default function ModelConsensusTable({
 			key: "predictedValue",
 			title: "Predicted",
 			dataIndex: "predictedValue" as const,
-			render: (_v: number, row: Row) => (
+			render: (_v: unknown, row: Row) => (
 				<span className="font-mono">
 					{row.predictedValue?.toLocaleString("en-US", {
 						minimumFractionDigits: 2,
@@ -61,7 +61,7 @@ export default function ModelConsensusTable({
 			key: "predictedChange",
 			title: "Change",
 			dataIndex: "predictedChange" as const,
-			render: (_v: number, row: Row) => (
+			render: (_v: unknown, row: Row) => (
 				<span
 					className="font-mono"
 					style={{
@@ -78,7 +78,7 @@ export default function ModelConsensusTable({
 			key: "confidence",
 			title: "Confidence",
 			dataIndex: "confidence" as const,
-			render: (_v: number, row: Row) => {
+			render: (_v: unknown, row: Row) => {
 				const pct = Math.round(row.confidence * 100);
 				const color =
 					row.confidence > 0.7 ? "#16a34a" : row.confidence > 0.4 ? "#d97706" : "#dc2626";

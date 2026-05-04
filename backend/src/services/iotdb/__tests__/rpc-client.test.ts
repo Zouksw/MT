@@ -24,12 +24,12 @@ const spawnMock = spawn as vi.Mock;
 const IoTDBRPCClientClass =
 	RpcClientModule.IoTDBRPCClient ||
 	RpcClientModule.default?.IoTDBRPCClient ||
-	(RpcClientModule as any).iotdbRPCClient?.constructor;
+	(RpcClientModule as Record<string, unknown>).iotdbRPCClient?.constructor;
 
 describe("IoTDBRPCClient", () => {
-	let client: any;
-	let mockStdin: any;
-	let mockCli: any;
+	let client: Record<string, unknown>;
+	let mockStdin: Record<string, unknown>;
+	let mockCli: Record<string, unknown>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -42,14 +42,14 @@ describe("IoTDBRPCClient", () => {
 
 		mockCli = {
 			stdin: mockStdin,
-			stdout: null as any,
-			stderr: null as any,
-			on: vi.fn((event: string, handler: any) => {
+			stdout: null as Record<string, unknown>,
+			stderr: null as Record<string, unknown>,
+			on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
 				if (event === "close") {
-					(mockCli as any).closeHandler = handler;
+					(mockCli as Record<string, unknown>).closeHandler = handler;
 				}
 				if (event === "error") {
-					(mockCli as any).errorHandler = handler;
+					(mockCli as Record<string, unknown>).errorHandler = handler;
 				}
 				return mockCli;
 			}),
@@ -57,17 +57,17 @@ describe("IoTDBRPCClient", () => {
 		};
 
 		mockCli.stdout = {
-			on: vi.fn((event: string, handler: any) => {
+			on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
 				if (event === "data") {
-					(mockCli.stdout as any).dataHandler = handler;
+					(mockCli.stdout as Record<string, unknown>).dataHandler = handler;
 				}
 			}),
 		};
 
 		mockCli.stderr = {
-			on: vi.fn((event: string, handler: any) => {
+			on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
 				if (event === "data") {
-					(mockCli.stderr as any).dataHandler = handler;
+					(mockCli.stderr as Record<string, unknown>).dataHandler = handler;
 				}
 			}),
 		};
@@ -79,7 +79,7 @@ describe("IoTDBRPCClient", () => {
 			client = new IoTDBRPCClientClass();
 		} else {
 			// Fallback: access the class through the module
-			const { IoTDBRPCClient } = RpcClientModule as any;
+			const { IoTDBRPCClient } = RpcClientModule as Record<string, unknown>;
 			client = new IoTDBRPCClient();
 		}
 	});
@@ -209,7 +209,7 @@ describe("IoTDBRPCClient", () => {
 			const promise = client.insertRecords(records);
 
 			// The implementation joins statements with semicolons
-			const calls = mockStdin.write.mock.calls.map((c: any) => c[0]);
+			const calls = (mockStdin.write as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0]);
 			const sqlCall = calls.find((c: string) => c.includes("INSERT INTO"));
 
 			expect(sqlCall).toContain(
@@ -264,7 +264,7 @@ describe("IoTDBRPCClient", () => {
 			const promise = client.insertOneRecord(record);
 
 			const calls = mockStdin.write.mock.calls;
-			const sqlCall = calls.find((call: any[]) =>
+			const sqlCall = calls.find((call: unknown[]) =>
 				call[0]?.includes("INSERT INTO"),
 			);
 

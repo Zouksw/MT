@@ -152,31 +152,35 @@ export default function ForecastDetailPage() {
 			key: "value",
 			title: "Predicted Value",
 			dataIndex: "value",
-			render: (value: number) => (
-				<span style={{ fontVariantNumeric: "tabular-nums" }}>{value.toFixed(4)}</span>
+			render: (value: unknown) => (
+				<span style={{ fontVariantNumeric: "tabular-nums" }}>{(value as number).toFixed(4)}</span>
 			),
 		},
 		{
 			key: "lower",
 			title: "Lower Bound",
 			dataIndex: "lower",
-			render: (lower?: number) =>
-				lower !== undefined ? (
-					<span style={{ fontVariantNumeric: "tabular-nums" }}>{lower.toFixed(4)}</span>
+			render: (lower: unknown) => {
+				const l = lower as number | undefined;
+				return l !== undefined ? (
+					<span style={{ fontVariantNumeric: "tabular-nums" }}>{l.toFixed(4)}</span>
 				) : (
 					"-"
-				),
+				);
+			},
 		},
 		{
 			key: "upper",
 			title: "Upper Bound",
 			dataIndex: "upper",
-			render: (upper?: number) =>
-				upper !== undefined ? (
-					<span style={{ fontVariantNumeric: "tabular-nums" }}>{upper.toFixed(4)}</span>
+			render: (upper: unknown) => {
+				const u = upper as number | undefined;
+				return u !== undefined ? (
+					<span style={{ fontVariantNumeric: "tabular-nums" }}>{u.toFixed(4)}</span>
 				) : (
 					"-"
-				),
+				);
+			},
 		},
 	];
 

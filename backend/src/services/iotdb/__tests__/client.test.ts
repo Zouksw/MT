@@ -26,12 +26,12 @@ vi.mock("@/utils/logger", () => ({
 
 // Mock global fetch
 const mockFetch = vi.fn();
-global.fetch = mockFetch as any;
+global.fetch = mockFetch as unknown as typeof global.fetch;
 
 describe("IoTDBClient", () => {
 	let client: IoTDBClient;
 
-	const mockSuccessResponse = (data: any) => ({
+	const mockSuccessResponse = (data: Record<string, unknown>) => ({
 		ok: true,
 		status: 200,
 		statusText: "OK",
@@ -120,7 +120,7 @@ describe("IoTDBClient", () => {
 			await expect(
 				client.createTimeseries({
 					path: "root.test1.temp",
-					dataType: "INVALID_TYPE" as any,
+					dataType: "INVALID_TYPE" as unknown as string,
 					encoding: "GORILLA",
 				}),
 			).rejects.toThrow("Invalid IoTDB data type");
@@ -131,7 +131,7 @@ describe("IoTDBClient", () => {
 				client.createTimeseries({
 					path: "root.test1.temp",
 					dataType: "DOUBLE",
-					encoding: "INVALID_ENCODING" as any,
+					encoding: "INVALID_ENCODING" as unknown as string,
 				}),
 			).rejects.toThrow("Invalid IoTDB encoding");
 		});
@@ -597,7 +597,7 @@ describe("IoTDBClient", () => {
 					throw new Error("Not JSON");
 				},
 				text: async () => "Plain text response",
-			} as any);
+			} as unknown as Response);
 
 			const result = await client.query("SELECT * FROM root.test1");
 			expect(result).toBe("Plain text response");

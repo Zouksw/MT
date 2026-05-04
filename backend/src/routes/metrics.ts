@@ -17,7 +17,7 @@ router.use((req, _res, next) => {
 	if (req.method === "POST" && req.path === "/web-vitals") {
 		return next();
 	}
-	authenticate(req as any, _res as any, next);
+	authenticate(req as unknown as Request, _res as unknown as Response, next);
 });
 
 // --- In-memory metrics store ---

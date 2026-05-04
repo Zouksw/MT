@@ -24,6 +24,22 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 	);
 }
 
+// Row type for column render functions
+interface DsRow {
+	id: string;
+	name: string;
+	description?: string;
+	isPublic?: boolean;
+	storageFormat?: string;
+	rowsCount?: number;
+	_count?: { timeseries: number };
+	createdAt: string;
+}
+
+function asRow(record: Record<string, unknown>): DsRow {
+	return record as unknown as DsRow;
+}
+
 /* ── page ───────────────────────────────────────────────────────────────── */
 
 export default function DatasetsList() {
@@ -35,7 +51,7 @@ export default function DatasetsList() {
 	const pageSize = isMobile ? 10 : 20;
 
 	// Main data
-	const { data, total, loading, mutate } = useList<any>("datasets", {
+	const { data, total, loading, mutate } = useList("datasets", {
 		page,
 		pageSize,
 		sort: "createdAt",
@@ -43,21 +59,21 @@ export default function DatasetsList() {
 	});
 
 	// Stats data
-	const { data: statsData } = useList<any>("datasets", {
+	const { data: statsData } = useList("datasets", {
 		pageSize: 1000,
 	});
 
 	const totalDatasets = statsData.length;
-	const publicDatasets = statsData.filter((ds: any) => ds.isPublic).length;
-	const importedDatasets = statsData.filter((ds: any) => ds.isImported).length;
+	const publicDatasets = statsData.filter((ds: Record<string, unknown>) => ds.isPublic).length;
+	const importedDatasets = statsData.filter((ds: Record<string, unknown>) => ds.isImported).length;
 
 	// Delete modal
-	const [deleteTarget, setDeleteTarget] = useState<any>(null);
+	const [deleteTarget, setDeleteTarget] = useState<Record<string, unknown> | null>(null);
 
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
 		try {
-			await deleteRecord("datasets", deleteTarget.id);
+			await deleteRecord("datasets", String(deleteTarget.id));
 			toast.showSuccess("Dataset deleted");
 			mutate();
 			setDeleteTarget(null);
@@ -70,48 +86,57 @@ export default function DatasetsList() {
 
 	/* ── columns ────────────────────────────────────────────────────────── */
 
-	const columns: Column<any>[] = useMemo(() => {
-		const cols: Column<any>[] = [
+	const columns: Column<Record<string, unknown>>[] = useMemo(() => {
+		const cols: Column<Record<string, unknown>>[] = [
 			{
 				key: "id",
 				title: "ID",
 				width: 100,
-				render: (_v: any, record: any) => (
-					<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground data-text">
-						{record.id.slice(0, 8)}...
-					</code>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground data-text">
+							{r.id.slice(0, 8)}...
+						</code>
+					);
+				},
 			},
 			{
 				key: "name",
 				title: "Name",
 				width: 200,
-				render: (_v: any, record: any) => (
-					<div className="flex items-center gap-2">
-						<span className="font-semibold">{record.name}</span>
-						{record.isPublic && <Tag color="success">Public</Tag>}
-					</div>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<div className="flex items-center gap-2">
+							<span className="font-semibold">{r.name}</span>
+							{r.isPublic && <Tag color="success">Public</Tag>}
+						</div>
+					);
+				},
 			},
 			{
 				key: "description",
 				title: "Description",
 				width: 250,
-				render: (_v: any, record: any) => (
-					<span
-						className="truncate block max-w-60 text-muted-foreground"
-						title={record.description}
-					>
-						{record.description || "-"}
-					</span>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<span
+							className="truncate block max-w-60 text-muted-foreground"
+							title={r.description}
+						>
+							{r.description || "-"}
+						</span>
+					);
+				},
 			},
 			{
 				key: "storageFormat",
 				title: "Storage",
 				width: 130,
-				render: (_v: any, record: any) => (
-					<Tag color="info">{record.storageFormat || "IOTDB_CACHE"}</Tag>
+				render: (_v: unknown, record: Record<string, unknown>) => (
+					<Tag color="info">{asRow(record).storageFormat || "IOTDB_CACHE"}</Tag>
 				),
 			},
 			{
@@ -119,19 +144,23 @@ export default function DatasetsList() {
 				title: "Rows",
 				width: 100,
 				align: "right",
-				render: (_v: any, record: any) => (
-					<span className="data-text text-[13px] text-foreground">
-						{(record.rowsCount ?? 0).toLocaleString()}
-					</span>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<span className="data-text text-[13px] text-foreground">
+							{(r.rowsCount ?? 0).toLocaleString()}
+						</span>
+					);
+				},
 			},
 			{
 				key: "timeseries",
 				title: "Time Series",
 				width: 110,
 				align: "center",
-				render: (_v: any, record: any) => {
-					const count = record._count?.timeseries ?? 0;
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					const count = r._count?.timeseries ?? 0;
 					return <Tag color={count > 0 ? "info" : "default"}>{count}</Tag>;
 				},
 			},
@@ -139,40 +168,43 @@ export default function DatasetsList() {
 				key: "createdAt",
 				title: "Created",
 				width: 140,
-				render: (_v: any, record: any) => new Date(record.createdAt).toISOString().split("T")[0],
+				render: (_v: unknown, record: Record<string, unknown>) => new Date(asRow(record).createdAt).toISOString().split("T")[0],
 			},
 			{
 				key: "actions",
 				title: "Actions",
 				width: isMobile ? 80 : 140,
-				render: (_v: any, record: any) => (
-					<div className="flex items-center gap-1">
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="View"
-							onClick={() => router.push(`/datasets/show/${record.id}`)}
-						>
-							<Eye className="size-3.5" />
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="Edit"
-							onClick={() => router.push(`/datasets/edit/${record.id}`)}
-						>
-							<Pencil className="size-3.5" />
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="Delete"
-							onClick={() => setDeleteTarget(record)}
-						>
-							<Trash2 className="size-3.5" />
-						</Button>
-					</div>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<div className="flex items-center gap-1">
+							<Button
+								variant="ghost"
+								size="sm"
+								aria-label="View"
+								onClick={() => router.push(`/datasets/show/${r.id}`)}
+							>
+								<Eye className="size-3.5" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								aria-label="Edit"
+								onClick={() => router.push(`/datasets/edit/${r.id}`)}
+							>
+								<Pencil className="size-3.5" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								aria-label="Delete"
+								onClick={() => setDeleteTarget(record)}
+							>
+								<Trash2 className="size-3.5" />
+							</Button>
+						</div>
+					);
+				},
 			},
 		];
 		return cols;

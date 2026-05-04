@@ -25,8 +25,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
 	componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
 		console.error("Error Boundary caught an error:", error, errorInfo);
-		if (typeof window !== "undefined" && (window as any).Sentry) {
-			(window as any).Sentry.captureException(error, {
+		if (typeof window !== "undefined" && (window as unknown as { Sentry?: { captureException: (error: Error, options: Record<string, unknown>) => void } }).Sentry) {
+			(window as unknown as { Sentry?: { captureException: (error: Error, options: Record<string, unknown>) => void } }).Sentry!.captureException(error, {
 				contexts: { react: { componentStack: errorInfo.componentStack } },
 			});
 		}
@@ -75,9 +75,8 @@ export class ErrorBoundary extends Component<Props, State> {
 								<strong>Message:</strong> {this.state.error.message}
 								{"\n\n"}
 								<strong>Stack:</strong> {this.state.error.stack}
-								{this.state.errorInfo && (
-									<>{`\n\nComponent Stack: ${this.state.errorInfo.componentStack}`}</>
-								)}
+								{this.state.errorInfo &&
+									`\n\nComponent Stack: ${this.state.errorInfo.componentStack}`}
 							</pre>
 						)}
 					</div>

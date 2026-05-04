@@ -158,7 +158,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 			// Generate filename
 			const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 			const sanitizedTimeseries = config.timeseries.replace(/[^a-zA-Z0-9_-]/g, "_");
-			const formatConfig = exportFormats.find((f) => f.id === config.format)!;
+			const formatConfig = exportFormats.find((f) => f.id === config.format) ?? exportFormats[0];
 			const filename = `${sanitizedTimeseries}_export_${timestamp}.${formatConfig.extension}`;
 
 			// Export based on format
@@ -193,8 +193,8 @@ export const DataExport: React.FC<DataExportProps> = ({
 					endDate: "",
 				});
 			}, 1000);
-		} catch (error: any) {
-			showToast("error", `Export failed: ${error.message}`);
+		} catch (error: unknown) {
+			showToast("error", `Export failed: ${error instanceof Error ? error.message : String(error)}`);
 			setExporting(false);
 			setProgress(0);
 		}

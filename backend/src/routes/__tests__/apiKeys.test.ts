@@ -4,15 +4,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import request from "supertest";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const TEST_PREFIX = `ak-${Date.now()}`;
 const REAL_DB_URL =

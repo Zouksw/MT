@@ -185,7 +185,7 @@ export default function AlertList() {
 			dataIndex: "isRead",
 			width: 80,
 			align: "center",
-			render: (_value: boolean, record: AlertItem) => (
+			render: (_value: unknown, record: AlertItem) => (
 				<span title={record.isRead ? "Read" : "New"}>
 					{record.isRead ? (
 						<span className="inline-block w-2 h-2 rounded-full bg-gray-300" />
@@ -200,15 +200,16 @@ export default function AlertList() {
 			title: "Type",
 			dataIndex: "type",
 			width: 160,
-			render: (type: string) => {
+			render: (type: unknown) => {
+				const t = String(type);
 				const icons: Record<string, string> = {
 					ANOMALY: "\u{1F6A8}",
 					FORECAST_READY: "\u{1F4C8}",
 					SYSTEM: "⚙️",
 				};
 				return (
-					<Tag color={getAlertTypeTagColor(type)}>
-						{icons[type] || ""} {type.replace(/_/g, " ")}
+					<Tag color={getAlertTypeTagColor(t)}>
+						{icons[t] || ""} {t.replace(/_/g, " ")}
 					</Tag>
 				);
 			},
@@ -219,18 +220,19 @@ export default function AlertList() {
 			dataIndex: "severity",
 			width: 110,
 			align: "center",
-			render: (severity: string) => (
-				<Tag color={getAlertSeverityTagColor(severity)}>{severity}</Tag>
-			),
+			render: (severity: unknown) => {
+				const s = String(severity);
+				return <Tag color={getAlertSeverityTagColor(s)}>{s}</Tag>;
+			},
 		},
 		{
 			key: "message",
 			title: "Message",
 			dataIndex: "message",
-			render: (message: string, record: AlertItem) => (
+			render: (message: unknown, record: AlertItem) => (
 				<div className="flex items-center gap-2">
 					{getAlertIcon(record.severity)}
-					<span className="text-body truncate">{message}</span>
+					<span className="text-body truncate">{String(message)}</span>
 				</div>
 			),
 		},
@@ -254,19 +256,23 @@ export default function AlertList() {
 			title: "Time",
 			dataIndex: "createdAt",
 			width: 140,
-			render: (date: string) => (
-				<span
-					title={dayjs(date).format("YYYY-MM-DD HH:mm:ss")}
-					className="text-body-sm text-muted-foreground"
-				>
-					{dayjs(date).fromNow()}
-				</span>
-			),
+			render: (date: unknown) => {
+				const d = String(date);
+				return (
+					<span
+						title={dayjs(d).format("YYYY-MM-DD HH:mm:ss")}
+						className="text-body-sm text-muted-foreground"
+					>
+						{dayjs(d).fromNow()}
+					</span>
+				);
+			},
 		},
 		{
 			key: "actions",
 			title: "Actions",
 			width: isMobile ? 80 : 180,
+			// biome-ignore lint/suspicious/noExplicitAny: Table render callback requires any for value param
 			render: (_value: any, record: AlertItem) => (
 				<div className="flex items-center gap-2">
 					{!record.isRead && (

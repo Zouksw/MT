@@ -291,7 +291,7 @@ router.get(
 			query.timestamp = {
 				gte: startDate ? new Date(startDate as string) : undefined,
 				lte: endDate ? new Date(endDate as string) : undefined,
-			} as any;
+			};
 		}
 
 		// Parse pagination parameters

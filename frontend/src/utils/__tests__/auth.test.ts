@@ -302,7 +302,7 @@ describe("auth utilities", () => {
 			setCachedUser(testUser);
 
 			const stored = localStorageMock.getItem("user");
-			const parsedUser = JSON.parse(stored!);
+			const parsedUser = JSON.parse(stored as string);
 			expect(parsedUser).toEqual({
 				id: "1",
 				name: "Test User",
@@ -324,7 +324,7 @@ describe("auth utilities", () => {
 			setCachedUser(testUser as any);
 
 			const stored = localStorageMock.getItem("user");
-			const parsedUser = JSON.parse(stored!);
+			const parsedUser = JSON.parse(stored as string);
 			expect(parsedUser.password).toBeUndefined();
 			expect(parsedUser.apiKey).toBeUndefined();
 		});

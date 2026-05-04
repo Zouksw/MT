@@ -108,7 +108,7 @@ export class IoTDBAIService {
 	/**
 	 * Execute AI Node Python script
 	 */
-	private async executeAIScript(script: string): Promise<any> {
+	private async executeAIScript(script: string): Promise<Record<string, unknown>> {
 		return new Promise((resolve, reject) => {
 			const python = spawn(this.pythonPath, ["-c", script], {
 				env: {
@@ -335,9 +335,9 @@ except Exception as e:
 			const result = await this.executeAIScript(pythonScript);
 
 			return {
-				timestamps: result.timestamps || [],
-				values: result.values || [],
-				confidence: result.confidence,
+				timestamps: (result.timestamps as number[]) || [],
+				values: (result.values as number[]) || [],
+				confidence: result.confidence as number[] | undefined,
 			};
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -469,7 +469,7 @@ print(json.dumps({
 			}
 
 			const result = await this.executeAIScript(pythonScript);
-			return result;
+			return result as unknown as AnomalyDetectionResult;
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);
 			console.error(`AI Node anomaly detection failed: ${message}`);
@@ -483,7 +483,7 @@ print(json.dumps({
 	 * List available AI models from AI Node
 	 * 直接使用 AI Node 模型名称（小写）
 	 */
-	async listModels(): Promise<any[]> {
+	async listModels(): Promise<Record<string, unknown>[]> {
 		// AI Node 内置模型 - 使用小写模型 ID
 		return [
 			{
@@ -583,7 +583,7 @@ print(json.dumps({
 	/**
 	 * Get model information
 	 */
-	async getModelInfo(modelId: string): Promise<any> {
+	async getModelInfo(modelId: string): Promise<Record<string, unknown>> {
 		const models = await this.listModels();
 		const model = models.find((m) => m.id === modelId.toLowerCase());
 
@@ -607,8 +607,8 @@ print(json.dumps({
 			| "exponential_smoothing"
 			| "naive_forecaster"
 			| "stl_forecaster";
-		parameters?: Record<string, any>;
-	}): Promise<any> {
+		parameters?: Record<string, unknown>;
+	}): Promise<Record<string, unknown>> {
 		const pythonScript = `
 import sys
 import os

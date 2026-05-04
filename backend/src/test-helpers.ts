@@ -5,6 +5,7 @@
  * vi.mock() factories. These are safe to call inside hoisted vi.mock()
  * because they don't call vi.mock() themselves — they just create data.
  */
+import type { NextFunction, Request, Response } from "express";
 import { vi } from "vitest";
 
 /**
@@ -64,9 +65,9 @@ export function createConfigMock() {
 }
 
 /** Mock authenticate middleware that sets a test user */
-export const mockAuthenticate = (req: any, _res: any, next: any) => {
+export const mockAuthenticate = (req: Request, _res: Response, next: NextFunction) => {
 	req.userId = "test-user-id";
-	req.user = {
+	(req as unknown as Record<string, unknown>).user = {
 		id: "test-user-id",
 		email: "test@example.com",
 		name: "Test",
@@ -76,14 +77,15 @@ export const mockAuthenticate = (req: any, _res: any, next: any) => {
 };
 
 /** Mock cacheRoute middleware — passes through */
-export const mockCacheRoute = () => (_req: any, _res: any, next: any) => next();
+export const mockCacheRoute = () => (_req: Request, _res: Response, next: NextFunction) => next();
 
 /** Mock asyncHandler — catches errors and forwards to error handler */
-export const mockAsyncHandler = (fn: any) => (req: any, res: any, next: any) =>
-	Promise.resolve(fn(req, res, next)).catch(next);
+export const mockAsyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => unknown) =>
+	(req: Request, res: Response, next: NextFunction) =>
+		Promise.resolve(fn(req, res, next)).catch(next);
 
 /** Mock errorHandler — returns JSON error responses */
-export const mockErrorHandler = (err: any, _req: any, res: any, _next: any) => {
+export const mockErrorHandler = (err: Error & { statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
 	res
 		.status(err.statusCode || 500)
 		.json({ success: false, error: { message: err.message } });
@@ -107,4 +109,4 @@ export const MockConflictError = class extends Error {
 };
 
 /** Pass-through rate limiter */
-export const passThrough = (_req: any, _res: any, next: any) => next();
+export const passThrough = (_req: Request, _res: Response, next: NextFunction) => next();

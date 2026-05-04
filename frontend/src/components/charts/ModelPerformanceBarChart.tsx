@@ -13,46 +13,46 @@ import {
 } from "@/lib/chart-config";
 import type { ModelWithBacktest } from "@/types/accuracy";
 
-const ResponsiveContainer = dynamic(
+const ResponsiveContainer = dynamic<any>(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const BarChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.BarChart })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const ReferenceLine = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ReferenceLine })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 interface ModelPerformanceBarChartProps {
 	models: ModelWithBacktest[];
 }
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; mape: number | null; predictions: number } }> }) {
 	if (!active || !payload?.length) return null;
 	const data = payload[0].payload;
 	return (

@@ -43,7 +43,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 	const toast = useToast();
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-	const { data: alert, loading, mutate } = useOne<any>("alerts", id);
+	const { data: alert, loading, mutate } = useOne("alerts", id);
 
 	const handleMarkAsRead = async () => {
 		try {
@@ -89,8 +89,8 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 		);
 	}
 
-	const severityConfig = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.INFO;
-	const typeConfig = ALERT_TYPE_CONFIG[alert.type] || { label: alert.type, icon: "\u{1F4E2}" };
+	const severityConfig = SEVERITY_CONFIG[alert.severity as string] || SEVERITY_CONFIG.INFO;
+	const typeConfig = ALERT_TYPE_CONFIG[alert.type as string] || { label: alert.type as string, icon: "\u{1F4E2}" };
 
 	return (
 		<div className="min-h-screen bg-muted p-4 md:p-6">
@@ -128,7 +128,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 						variant={severityConfig.alertVariant}
 						title={`${typeConfig.icon} ${typeConfig.label} - ${severityConfig.label} Severity`}
 					>
-						{alert.message || alert.description || "No description provided"}
+						{String(alert.message || alert.description || "No description provided")}
 					</Alert>
 				</div>
 
@@ -149,7 +149,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 										</dt>
 										<dd>
 											<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
-												{alert.id}
+												{String(alert.id)}
 											</code>
 										</dd>
 									</div>
@@ -160,7 +160,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 											Name
 										</dt>
 										<dd className="font-semibold text-foreground">
-											{alert.name || "Unnamed Alert"}
+											{String(alert.name ?? "Unnamed Alert")}
 										</dd>
 									</div>
 
@@ -171,7 +171,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 										</dt>
 										<dd>
 											<Tag color="info">
-												{typeConfig.icon} {typeConfig.label}
+												{String(typeConfig.icon)} {String(typeConfig.label)}
 											</Tag>
 										</dd>
 									</div>
@@ -207,23 +207,23 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 											Created At
 										</dt>
 										<dd className="text-sm text-foreground">
-											{dayjs(alert.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+											{dayjs(String(alert.createdAt)).format("YYYY-MM-DD HH:mm:ss")}
 										</dd>
 									</div>
 
 									{/* Time Series */}
-									{alert.timeseries && (
+									{!!alert.timeseries && (
 										<div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
 											<dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">
 												Time Series
 											</dt>
 											<dd className="flex items-center gap-2">
 												<span className="font-semibold text-foreground">
-													{alert.timeseries.name}
+													{String((alert.timeseries as Record<string, unknown>).name)}
 												</span>
-												{alert.timeseries.unit && (
+												{!!(alert.timeseries as Record<string, unknown>).unit && (
 													<span className="text-sm text-muted-foreground">
-														({alert.timeseries.unit})
+														({String((alert.timeseries as Record<string, unknown>).unit)})
 													</span>
 												)}
 											</dd>
@@ -231,12 +231,12 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 									)}
 
 									{/* Description */}
-									{alert.description && (
+									{!!alert.description && (
 										<div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
 											<dt className="text-sm font-medium text-muted-foreground sm:w-40 shrink-0">
 												Description
 											</dt>
-											<dd className="text-sm text-foreground">{alert.description}</dd>
+											<dd className="text-sm text-foreground">{alert.description as string}</dd>
 										</div>
 									)}
 								</dl>
@@ -277,13 +277,13 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 									<div className="flex justify-between">
 										<dt className="text-sm text-muted-foreground">Created At</dt>
 										<dd className="text-sm text-foreground">
-											{dayjs(alert.createdAt).format("YYYY-MM-DD HH:mm")}
+											{dayjs(String(alert.createdAt)).format("YYYY-MM-DD HH:mm")}
 										</dd>
 									</div>
 									<div className="flex justify-between">
 										<dt className="text-sm text-muted-foreground">Time</dt>
 										<dd className="text-sm text-foreground">
-											{dayjs(alert.createdAt).format("HH:mm:ss")}
+											{dayjs(String(alert.createdAt)).format("HH:mm:ss")}
 										</dd>
 									</div>
 								</dl>

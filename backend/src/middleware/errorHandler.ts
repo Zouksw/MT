@@ -34,7 +34,7 @@ export function errorHandler(
 
 	// Handle Prisma-specific errors
 	if (err.constructor.name === "PrismaClientKnownRequestError") {
-		const prismaError = err as any;
+		const prismaError = err as unknown as Record<string, unknown>;
 
 		// Unique constraint violation
 		if (prismaError.code === "P2002") {
@@ -43,7 +43,7 @@ export function errorHandler(
 				error: {
 					message: "Resource already exists",
 					code: "CONFLICT",
-					details: prismaError.meta?.target || "Unique constraint violated",
+					details: (prismaError.meta as Record<string, unknown>)?.target || "Unique constraint violated",
 				},
 			});
 		}
@@ -142,7 +142,7 @@ export class ApiError extends Error implements AppError {
  * Async handler wrapper to catch errors in async route handlers
  */
 export const asyncHandler = (
-	fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+	fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
 ) => {
 	return (req: Request, res: Response, next: NextFunction) => {
 		Promise.resolve(fn(req, res, next)).catch(next);
@@ -183,12 +183,12 @@ export class ConflictError extends ApiError {
 }
 
 export class ValidationError extends ApiError {
-	constructor(details: any) {
+	constructor(details: unknown) {
 		super(400, "Validation failed");
 		this.details = details;
 	}
 
-	details?: any;
+	details?: unknown;
 }
 
 export class ServiceUnavailableError extends ApiError {

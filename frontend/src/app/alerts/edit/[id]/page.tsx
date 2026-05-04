@@ -56,31 +56,31 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 	const [cooldownMinutes, setCooldownMinutes] = useState("5");
 
 	// Get alert data
-	const { data: alert, loading: isLoadingAlert } = useOne<any>("alerts", id);
+	const { data: alert, loading: isLoadingAlert } = useOne("alerts", id);
 
 	// Get timeseries list
-	const { data: timeseriesList } = useList<any>("timeseries", {
+	const { data: timeseriesList } = useList("timeseries", {
 		pageSize: 1000,
 		sort: "name",
 		order: "asc",
 	});
 
-	const timeseriesOptions = timeseriesList.map((ts: any) => ({
-		value: ts.id,
-		label: ts.name,
+	const timeseriesOptions = timeseriesList.map((ts: Record<string, unknown>) => ({
+		value: String(ts.id),
+		label: String(ts.name),
 	}));
 
 	// Set form values when data is loaded
 	useEffect(() => {
 		if (alert && !initialized) {
-			setName(alert.name || "");
-			setType(alert.type || "");
-			setSeverity(alert.severity || "");
-			setTimeseriesId(alert.timeseriesId || "");
-			setDescription(alert.description || "");
+			setName(String(alert.name ?? ""));
+			setType(String(alert.type ?? ""));
+			setSeverity(String(alert.severity ?? ""));
+			setTimeseriesId(String(alert.timeseriesId ?? ""));
+			setDescription(String(alert.description ?? ""));
 			setEnabled(alert.isRead !== false);
-			setConditionOperator(alert.condition?.operator || ">");
-			setConditionValue(alert.condition?.value != null ? String(alert.condition.value) : "");
+			setConditionOperator((alert.condition as Record<string, unknown>)?.operator as string || ">");
+			setConditionValue((alert.condition as Record<string, unknown>)?.value != null ? String((alert.condition as Record<string, unknown>).value) : "");
 			setCooldownMinutes(alert.cooldownMinutes != null ? String(alert.cooldownMinutes) : "5");
 			setInitialized(true);
 		}
@@ -150,8 +150,8 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 			setTimeout(() => {
 				router.push("/alerts");
 			}, 1000);
-		} catch (error: any) {
-			toast.showError("Failed to Update Alert", error.message);
+		} catch (error: unknown) {
+			toast.showError("Failed to Update Alert", error instanceof Error ? error.message : String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -198,7 +198,7 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 					<div>
 						<h1 className="text-2xl font-semibold text-foreground tracking-tight">Edit Alert</h1>
 						<p className="text-sm text-muted-foreground mt-1">
-							Editing alert: {alert?.name || id.slice(0, 8)}...
+							Editing alert: {(alert?.name as string) || id.slice(0, 8)}...
 						</p>
 					</div>
 					<Button variant="ghost" onClick={() => router.push("/alerts")}>

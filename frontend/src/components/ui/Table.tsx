@@ -4,6 +4,7 @@ export interface Column<T> {
 	key: string;
 	title: string;
 	dataIndex?: keyof T;
+	// biome-ignore lint/suspicious/noExplicitAny: render value type depends on column — standard table library pattern
 	render?: (value: any, record: T, index: number) => React.ReactNode;
 	width?: number | string;
 	align?: "left" | "center" | "right";
@@ -27,7 +28,7 @@ export interface TableProps<T> {
 	emptyText?: string;
 }
 
-export function Table<T extends Record<string, any>>({
+export function Table<T>({
 	columns,
 	dataSource,
 	rowKey = "id" as keyof T,
@@ -129,7 +130,7 @@ export function Table<T extends Record<string, any>>({
 											key={col.key}
 											className={`px-4 py-3 text-sm whitespace-nowrap ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
 										>
-											{content}
+											{content as React.ReactNode}
 										</td>
 									);
 								})}

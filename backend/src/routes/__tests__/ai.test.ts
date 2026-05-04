@@ -7,7 +7,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import request from "supertest";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const ADMIN_EMAIL = "admin@trademind.com";
 const ADMIN_PASSWORD = "Admin123!";

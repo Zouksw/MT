@@ -2,7 +2,6 @@
 
 import {
 	Activity,
-	ArrowRight,
 	CheckCircle,
 	ChevronDown,
 	ChevronUp,

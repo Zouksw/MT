@@ -24,6 +24,7 @@ const Spinner = () => (
 );
 
 // Dynamic imports for Recharts components to reduce initial bundle size
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const ComposedChart = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
 	{
@@ -260,8 +261,8 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 		}
 	};
 
-	// Custom tooltip
-	const CustomTooltip = ({ active, payload }: any) => {
+	// biome-ignore lint/suspicious/noExplicitAny: Recharts tooltip passes dynamic payload data
+	const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: any }> }) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;
 			return (

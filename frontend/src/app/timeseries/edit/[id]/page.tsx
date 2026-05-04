@@ -18,13 +18,13 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 	const [saving, setSaving] = useState(false);
 
 	// Fetch the existing record
-	const { data: record, loading: recordLoading } = useOne<any>("timeseries", id);
+	const { data: record, loading: recordLoading } = useOne("timeseries", id);
 
 	// Fetch datasets for select
-	const { data: datasets } = useList<any>("datasets", { pageSize: 1000 });
-	const datasetOptions = datasets.map((ds: any) => ({
-		value: ds.id,
-		label: ds.name,
+	const { data: datasets } = useList("datasets", { pageSize: 1000 });
+	const datasetOptions = datasets.map((ds: Record<string, unknown>) => ({
+		value: String(ds.id),
+		label: String(ds.name),
 	}));
 
 	// Form state
@@ -44,15 +44,16 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 	// Populate form when record loads
 	useEffect(() => {
 		if (record) {
+			const r = record as Record<string, unknown>;
 			setForm({
-				datasetId: record.datasetId || "",
-				name: record.name || "",
-				slug: record.slug || "",
-				description: record.description || "",
-				unit: record.unit || "",
-				colorHex: record.colorHex || "#B8860B",
-				timezone: record.timezone || "UTC",
-				isAnomalyDetectionEnabled: record.isAnomalyDetectionEnabled || false,
+				datasetId: String(r.datasetId || ""),
+				name: String(r.name || ""),
+				slug: String(r.slug || ""),
+				description: String(r.description || ""),
+				unit: String(r.unit || ""),
+				colorHex: String(r.colorHex || "#B8860B"),
+				timezone: String(r.timezone || "UTC"),
+				isAnomalyDetectionEnabled: Boolean(r.isAnomalyDetectionEnabled),
 			});
 		}
 	}, [record]);
@@ -88,7 +89,7 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 		try {
 			const result = await updateRecord("timeseries", id, form);
 			toast.showSuccess("Time series updated");
-			router.push(`/timeseries/show/${(result as any).id}`);
+			router.push(`/timeseries/show/${(result as Record<string, unknown>).id}`);
 		} catch (err) {
 			toast.showError(err instanceof Error ? err.message : "Failed to update time series");
 		} finally {

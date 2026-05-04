@@ -23,7 +23,7 @@ interface AnomalyDetailParams {
 	id: string;
 }
 
-interface AnomalyWithDetails extends Record<string, any> {
+interface AnomalyWithDetails extends Record<string, unknown> {
 	id: string;
 	timeseries?: {
 		id: string;

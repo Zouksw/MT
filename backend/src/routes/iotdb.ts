@@ -790,7 +790,7 @@ router.post(
 
 		res.json({
 			timeseries,
-			historical: historicalResult.data || [],
+			historical: (historicalResult as Record<string, unknown>).data || [],
 			prediction: predictionResult,
 			algorithm: normalizedAlgorithm,
 		});
@@ -945,7 +945,7 @@ router.post(
 
 		res.json({
 			timeseries,
-			historical: historicalResult.data || [],
+			historical: (historicalResult as Record<string, unknown>).data || [],
 			anomalies: anomalyResult.anomalies || [],
 			statistics: anomalyResult.statistics || { total: 0, bySeverity: {} },
 			method: method || "statistical",

@@ -192,7 +192,7 @@ router.get(
 		for (const p of prices) {
 			const src = p.source;
 			if (!bySource.has(src)) bySource.set(src, []);
-			bySource.get(src)!.push({
+			bySource.get(src)?.push({
 				date: p.date.toISOString().slice(0, 10),
 				close: Number(p.close),
 			});
@@ -471,8 +471,8 @@ router.post(
 		});
 
 		await new Promise<void>((resolve, reject) => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			upload.single("file")(req as any, res as any, (err) => {
+			// biome-ignore lint/suspicious/noExplicitAny: multer expects Express.Multer.Request which extends Request
+			upload.single("file")(req as unknown as any, res as unknown as any, (err) => {
 				if (err) reject(new BadRequestError(err.message));
 				else resolve();
 			});
@@ -517,8 +517,8 @@ router.post(
 		});
 
 		await new Promise<void>((resolve, reject) => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			upload.single("file")(req as any, res as any, (err) => {
+			// biome-ignore lint/suspicious/noExplicitAny: multer expects Express.Multer.Request which extends Request
+			upload.single("file")(req as unknown as any, res as unknown as any, (err) => {
 				if (err) reject(new BadRequestError(err.message));
 				else resolve();
 			});
@@ -665,7 +665,7 @@ router.get(
 		const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
 		// Get latest ingestion log per source
-		const latestLogs = await prisma.ingestionLog.groupBy({
+		const _latestLogs = await prisma.ingestionLog.groupBy({
 			by: ["source"],
 			_max: { createdAt: true },
 			where: { createdAt: { gte: sevenDaysAgo } },

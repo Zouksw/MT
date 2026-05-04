@@ -18,12 +18,12 @@ const { mockVerifyToken, mockUserFindUnique, mockIsTokenBlacklisted } =
 vi.mock("@/lib", () => ({
 	prisma: {
 		user: {
-			findUnique: (...args: any[]) => mockUserFindUnique(...args),
+			findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
 			count: vi.fn().mockResolvedValue(0),
 		},
 	},
 	jwtUtils: {
-		verifyToken: (...args: any[]) => mockVerifyToken(...args),
+		verifyToken: (...args: unknown[]) => mockVerifyToken(...args),
 	},
 	logger: {
 		warn: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock("@/lib", () => ({
 }));
 
 vi.mock("@/services/tokenBlacklist", () => ({
-	isTokenBlacklisted: (...args: any[]) => mockIsTokenBlacklisted(...args),
+	isTokenBlacklisted: (...args: unknown[]) => mockIsTokenBlacklisted(...args),
 }));
 
 describe("authenticate middleware", () => {

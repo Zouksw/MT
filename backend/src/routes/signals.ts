@@ -137,7 +137,7 @@ router.get(
 		const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
 		const offset = parseInt(req.query.offset as string, 10) || 0;
 
-		const where: any = {
+		const where: Record<string, unknown> = {
 			modelId,
 			status: "verified",
 		};

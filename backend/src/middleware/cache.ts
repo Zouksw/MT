@@ -54,7 +54,7 @@ export const cacheResponse = (options: {
 		const originalJson = res.json.bind(res);
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		res.json = ((body: any): Response => {
+		res.json = ((body: unknown): Response => {
 			// Only cache successful responses
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				// Cache the response asynchronously (don't block the response)
@@ -64,7 +64,7 @@ export const cacheResponse = (options: {
 			}
 
 			return originalJson(body) as Response;
-		}) as any;
+		}) as unknown as typeof res.json;
 
 		next();
 	};
@@ -148,7 +148,7 @@ export const cacheConfigs = {
 	userData: cacheResponse({
 		ttl: 600,
 		keyGenerator: (req) => {
-			const userId = req.params.userId || (req as any).userId;
+			const userId = req.params.userId || (req as unknown as Record<string, unknown>).userId;
 			return cacheKeys.userSession(userId as string);
 		},
 	}),
@@ -218,7 +218,7 @@ export const etag = (options: { weak?: boolean } = {}) => {
 		const originalJson = res.json.bind(res);
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		res.json = ((body: any): Response => {
+		res.json = ((body: unknown): Response => {
 			// Generate ETag from response body
 			const crypto = require("node:crypto");
 			const hash = crypto
@@ -238,7 +238,7 @@ export const etag = (options: { weak?: boolean } = {}) => {
 			}
 
 			return originalJson(body) as Response;
-		}) as any;
+		}) as unknown as typeof res.json;
 
 		next();
 	};

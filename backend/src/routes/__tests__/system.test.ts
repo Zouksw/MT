@@ -6,7 +6,7 @@
  */
 
 import request from "supertest";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const BASE = `http://localhost:${process.env.PORT || 8000}`;
 let serverAvailable = false;

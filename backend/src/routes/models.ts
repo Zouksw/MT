@@ -230,7 +230,7 @@ router.post(
 		const trainResult = await iotdbClient.trainModel(
 			iotdbPath,
 			validatedData.algorithm as "ARIMA" | "PROPHET" | "LSTM" | "TRANSFORMER",
-			validatedData.hyperparameters || {},
+			(validatedData.hyperparameters || {}) as import("../../src/types/iotdb").IoTDBTrainingHyperparameters,
 		);
 
 		const trainingDuration = Date.now() - startTime;

@@ -19,7 +19,7 @@ export const modelsQuerySchema = paginationSchema.extend({
 export const trainModelSchema = z.object({
 	timeseriesId: z.string().uuid(),
 	algorithm: z.enum(["ARIMA", "PROPHET", "LSTM", "TRANSFORMER", "ENSEMBLE"]),
-	hyperparameters: z.record(z.any()).optional(),
+	hyperparameters: z.record(z.unknown()).optional(),
 	trainingStart: z.string().datetime().optional(),
 	trainingEnd: z.string().datetime().optional(),
 });

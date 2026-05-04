@@ -10,50 +10,58 @@ import {
 } from "@/lib/chart-config";
 import type { PredictionLog } from "@/types/accuracy";
 
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <div className="h-[300px] bg-muted animate-pulse rounded" /> },
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 ) as React.ComponentType<any>;
 
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const ComposedChart = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
 	{ ssr: false },
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 ) as React.ComponentType<any>;
 
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 }) as React.ComponentType<any>;
 
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), {
 	ssr: false,
+// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 }) as React.ComponentType<any>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 interface BacktestDetailChartProps {
 	prediction: PredictionLog;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number | undefined; color: string }>; label?: string | number }) {
 	if (!active || !payload?.length) return null;
 	return (
 		<div
@@ -66,7 +74,7 @@ function CustomTooltip({ active, payload, label }: any) {
 			}}
 		>
 			<p className="text-xs font-medium text-muted-foreground mb-1">Step {label}</p>
-			{payload.map((entry: any) => (
+			{payload.map((entry: { name: string; value: number | undefined; color: string }) => (
 				<p key={entry.name} className="text-xs" style={{ color: entry.color }}>
 					{entry.name}: {entry.value !== undefined ? entry.value.toFixed(2) : "N/A"}
 				</p>

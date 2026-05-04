@@ -2,9 +2,8 @@
 
 import { Activity, BarChart3, Minus, Target, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
@@ -14,7 +13,6 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import {
 	API_BASE,
-	formatMape,
 	getAuthHeaders,
 	getMapeTextColor,
 	MODEL_COLORS,

@@ -26,7 +26,7 @@ vi.mock("@/lib", () => ({
 			delete: vi.fn(),
 		},
 		organizations: { findFirst: vi.fn(), create: vi.fn() },
-		$transaction: vi.fn((cb: any) => cb({})),
+		$transaction: vi.fn((cb: (p: unknown) => unknown) => cb({})),
 	},
 	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
@@ -39,12 +39,12 @@ vi.mock("@/utils/logger", () => ({
 }));
 
 vi.mock("@/middleware/cacheDecorator", () => ({
-	cacheRoute: () => (_req: any, _res: any, next: any) => next(),
+	cacheRoute: () => (_req: unknown, _res: unknown, next: () => void) => next(),
 	invalidateCache: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/middleware/auth", () => ({
-	authenticate: (req: any, _res: any, next: any) => {
+	authenticate: (req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
 		if (req.headers.authorization === "Bearer valid-admin-token") {
 			req.user = { id: "admin-user-id", role: "admin" };
 			req.userId = "admin-user-id";

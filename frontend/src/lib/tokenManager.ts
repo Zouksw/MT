@@ -24,8 +24,6 @@ interface TokenStorage {
 }
 
 class SecureTokenManager implements TokenStorage {
-	private readonly TOKEN_KEY = "auth_token";
-
 	// Memory storage for immediate access
 	private memoryToken: string | null = null;
 
@@ -78,7 +76,7 @@ class SecureTokenManager implements TokenStorage {
 		try {
 			const payload = this.parseJwt(token);
 			const now = Date.now() / 1000;
-			return payload.exp > now;
+			return (payload.exp ?? 0) > now;
 		} catch {
 			return false;
 		}
@@ -91,7 +89,7 @@ class SecureTokenManager implements TokenStorage {
 	getTokenExpiration(token: string): number | null {
 		try {
 			const payload = this.parseJwt(token);
-			return payload.exp * 1000; // Convert to milliseconds
+			return (payload.exp ?? 0) * 1000; // Convert to milliseconds
 		} catch {
 			return null;
 		}
@@ -115,7 +113,7 @@ class SecureTokenManager implements TokenStorage {
 	 * Parse JWT payload without verification (for client-side metadata only)
 	 * @private
 	 */
-	private parseJwt(token: string): any {
+	private parseJwt(token: string): { exp?: number; sub?: string; userId?: string; id?: string; role?: string } {
 		const parts = token.split(".");
 		if (parts.length !== 3) {
 			throw new Error("Invalid token format");

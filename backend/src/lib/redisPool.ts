@@ -50,7 +50,7 @@ const DEFAULT_CONFIG: Partial<RedisPoolConfig> = {
  * Redis Connection Pool Class
  */
 export class RedisPool {
-	private clients: Map<string, any> = new Map();
+	private clients: Map<string, ReturnType<typeof createClient>> = new Map();
 	private config: RedisPoolConfig;
 	private isShuttingDown = false;
 
@@ -61,7 +61,7 @@ export class RedisPool {
 	/**
 	 * Get or create a Redis client
 	 */
-	async getClient(name: string = "default"): Promise<any> {
+	async getClient(name: string = "default"): Promise<ReturnType<typeof createClient>> {
 		if (this.isShuttingDown) {
 			throw new Error("Redis pool is shutting down");
 		}
@@ -84,7 +84,7 @@ export class RedisPool {
 	/**
 	 * Create a new Redis client
 	 */
-	private createClient(name: string): any {
+	private createClient(name: string): ReturnType<typeof createClient> {
 		const client = createClient({
 			socket: {
 				host: this.config.host,
@@ -111,7 +111,7 @@ export class RedisPool {
 	 */
 	async execute<T>(
 		clientName: string,
-		command: (client: any) => Promise<T>,
+		command: (client: ReturnType<typeof createClient>) => Promise<T>,
 	): Promise<T> {
 		const client = await this.getClient(clientName);
 
@@ -260,7 +260,7 @@ export async function withRedis<T>(
 /**
  * Get Redis client
  */
-export async function getRedisClient(): Promise<any> {
+export async function getRedisClient(): Promise<ReturnType<typeof createClient>> {
 	const pool = getRedisPool();
 	return pool.getClient("default");
 }

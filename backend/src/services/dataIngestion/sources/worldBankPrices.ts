@@ -194,7 +194,7 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 		if (!record.value || !record.date) continue;
 		const code = record.commodity_code || record.commodity;
 		if (!grouped.has(code)) grouped.set(code, []);
-		grouped.get(code)!.push(record);
+		grouped.get(code)?.push(record);
 	}
 
 	// Process each known commodity

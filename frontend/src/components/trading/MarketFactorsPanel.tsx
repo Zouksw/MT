@@ -149,7 +149,7 @@ export default function MarketFactorsPanel({ factors, loading }: MarketFactorsPa
 		for (const f of factors) {
 			const type = f.type;
 			if (!map.has(type)) map.set(type, []);
-			map.get(type)!.push(f);
+			map.get(type)?.push(f);
 		}
 		// Sort each group by date desc
 		for (const [, items] of map) {

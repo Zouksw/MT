@@ -35,7 +35,7 @@ export default function CommunityPage() {
 			title: "Rank",
 			dataIndex: "rank" as const,
 			width: 60,
-			render: (_value: number, record: LeaderboardEntry) => {
+			render: (_value: unknown, record: LeaderboardEntry) => {
 				if (record.rank === 1) return <span className="text-yellow-500 font-bold">#1</span>;
 				if (record.rank === 2) return <span className="text-gray-400 font-bold">#2</span>;
 				if (record.rank === 3) return <span className="text-amber-700 font-bold">#3</span>;

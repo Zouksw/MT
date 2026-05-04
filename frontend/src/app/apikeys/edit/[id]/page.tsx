@@ -20,7 +20,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 
 	const [_loading, _setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
-	const [apiKey, setApiKey] = useState<any>(null);
+	const [apiKey, setApiKey] = useState<Record<string, unknown> | null>(null);
 	const [isLoadingKey, setIsLoadingKey] = useState(true);
 
 	// Form state
@@ -96,8 +96,8 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 			setTimeout(() => {
 				router.push("/apikeys");
 			}, 1000);
-		} catch (error: any) {
-			toast.showError("Failed to Update API Key", error.message);
+		} catch (error: unknown) {
+			toast.showError("Failed to Update API Key", error instanceof Error ? error.message : String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -138,7 +138,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 					<div>
 						<h1 className="text-2xl font-semibold text-foreground">Edit API Key</h1>
-						<p className="text-sm text-muted-foreground mt-1">Update API key: {apiKey.name}</p>
+						<p className="text-sm text-muted-foreground mt-1">Update API key: {apiKey.name as string}</p>
 					</div>
 					<Button
 						variant="ghost"
@@ -181,7 +181,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 									<div>
 										<span className="block text-xs text-muted-foreground mb-1">Key ID</span>
 										<div className="font-mono text-sm text-gray-900 dark:text-gray-100">
-											{apiKey.id.slice(0, 8)}...
+											{String(apiKey.id).slice(0, 8)}...
 										</div>
 									</div>
 									<div>
@@ -190,7 +190,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 										</span>
 										<div className="font-mono text-sm text-gray-900 dark:text-gray-100">
 											...
-											{apiKey.lastCharacters?.toString(16).toUpperCase().padStart(8, "0") || "N/A"}
+											{(apiKey.lastCharacters as number)?.toString(16).toUpperCase().padStart(8, "0") || "N/A"}
 										</div>
 									</div>
 								</div>
@@ -223,11 +223,11 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 											Usage Statistics
 										</span>
 										<div className="text-sm text-gray-900 dark:text-gray-100">
-											Total requests: <span className="font-semibold">{apiKey.usageCount}</span>
+											Total requests: <span className="font-semibold">{String(apiKey.usageCount)}</span>
 										</div>
-										{apiKey.lastUsedAt && (
+										{!!apiKey.lastUsedAt && (
 											<div className="text-sm text-muted-foreground mt-1">
-												Last used: {new Date(apiKey.lastUsedAt).toLocaleString()}
+												Last used: {new Date(String(apiKey.lastUsedAt)).toLocaleString()}
 											</div>
 										)}
 									</div>

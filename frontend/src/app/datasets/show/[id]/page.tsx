@@ -156,7 +156,7 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 		{
 			key: "name",
 			title: "Name",
-			render: (_v: any, record: TimeSeries) => (
+			render: (_v: unknown, record: TimeSeries) => (
 				<div className="flex items-center gap-2">
 					<Database className="size-4" />
 					<span className="font-semibold text-foreground">{record.name}</span>
@@ -166,30 +166,30 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 		{
 			key: "path",
 			title: "Path",
-			render: (_v: any, record: TimeSeries) => (
+			render: (_v: unknown, record: TimeSeries) => (
 				<span className="text-muted-foreground text-sm">{record.path}</span>
 			),
 		},
 		{
 			key: "unit",
 			title: "Unit",
-			render: (_v: any, record: TimeSeries) => (
-				<span className="text-muted-foreground">{(record as any).unit || "-"}</span>
+			render: (_v: unknown, record: TimeSeries) => (
+				<span className="text-muted-foreground">{String((record as unknown as Record<string, unknown>).unit || "-")}</span>
 			),
 		},
 		{
 			key: "datapoints",
 			title: "Data Points",
-			render: (_v: any, record: TimeSeries) => (
+			render: (_v: unknown, record: TimeSeries) => (
 				<span className="data-text text-[13px] text-foreground">
-					{(record as any)._count?.datapoints || 0}
+					{Number(((record as unknown as Record<string, unknown>)._count as Record<string, unknown>)?.datapoints || 0)}
 				</span>
 			),
 		},
 		{
 			key: "createdAt",
 			title: "Created",
-			render: (_v: any, record: TimeSeries) => (
+			render: (_v: unknown, record: TimeSeries) => (
 				<span className="text-sm text-muted-foreground">
 					{new Date(record.createdAt).toLocaleDateString()}
 				</span>

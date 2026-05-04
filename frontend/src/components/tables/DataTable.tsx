@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-export interface DataTableColumn<T = any> {
+export interface DataTableColumn<T = Record<string, unknown>> {
 	key: string;
 	header: string;
 	dataIndex?: string;
@@ -10,7 +10,7 @@ export interface DataTableColumn<T = any> {
 	width?: number | string;
 }
 
-export interface DataTableProps<T = any> {
+export interface DataTableProps<T = Record<string, unknown>> {
 	columns: DataTableColumn<T>[];
 	data: T[];
 	loading?: boolean;
@@ -20,7 +20,7 @@ export interface DataTableProps<T = any> {
 	compact?: boolean;
 }
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable<T>({
 	columns,
 	data,
 	loading = false,
@@ -59,8 +59,8 @@ export function DataTable<T extends Record<string, any>>({
 
 	const getCellValue = (row: T, col: DataTableColumn<T>) => {
 		if (col.render) return col.render(row);
-		if (col.dataIndex) return String((row as any)[col.dataIndex] ?? "");
-		return String((row as any)[col.key] ?? "");
+		if (col.dataIndex) return String((row as Record<string, unknown>)[col.dataIndex] ?? "");
+		return String((row as Record<string, unknown>)[col.key] ?? "");
 	};
 
 	return (
@@ -82,7 +82,7 @@ export function DataTable<T extends Record<string, any>>({
 				<tbody>
 					{data.map((row, i) => (
 						<tr
-							key={(row as any).id ?? i}
+							key={((row as Record<string, unknown>).id ?? i) as React.Key}
 							className={`border-b border-gray-100 dark:border-gray-800 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors ${enableZebraStriping && i % 2 === 1 ? "bg-gray-50/50 dark:bg-gray-800/30" : ""}`}
 						>
 							{columns.map((col) => (

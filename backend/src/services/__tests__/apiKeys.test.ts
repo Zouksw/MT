@@ -6,15 +6,7 @@
  */
 
 import bcrypt from "bcryptjs";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	createApiKey,
 	deleteApiKey,
@@ -88,7 +80,7 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 				where: { id: result.id },
 			});
 			expect(record).not.toBeNull();
-			expect(record!.isActive).toBe(true);
+			expect(record?.isActive).toBe(true);
 
 			// Verify audit log was created
 			const audit = await ctx.prisma.auditLog.findFirst({
@@ -125,8 +117,8 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 			const result = await validateApiKey(created.apiKey);
 
 			expect(result).not.toBeNull();
-			expect(result!.user.id).toBe(testUserId);
-			expect(result!.user.email).toBe(`${ctx.prefix}-user@test.com`);
+			expect(result?.user.id).toBe(testUserId);
+			expect(result?.user.email).toBe(`${ctx.prefix}-user@test.com`);
 		});
 
 		it("should increment usage count on validation", async () => {
@@ -141,8 +133,8 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 			const record = await ctx.prisma.apiKey.findUnique({
 				where: { id: created.id },
 			});
-			expect(record!.usageCount).toBe(2);
-			expect(record!.lastUsedAt).not.toBeNull();
+			expect(record?.usageCount).toBe(2);
+			expect(record?.lastUsedAt).not.toBeNull();
 		});
 
 		it("should return null for invalid key format", async () => {
@@ -190,7 +182,7 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 			const record = await ctx.prisma.apiKey.findUnique({
 				where: { id: created.id },
 			});
-			expect(record!.isActive).toBe(false);
+			expect(record?.isActive).toBe(false);
 		});
 
 		it("should throw for non-existent key", async () => {
@@ -231,7 +223,7 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 			const record = await ctx.prisma.apiKey.findUnique({
 				where: { id: created.id },
 			});
-			expect(record!.expiresAt).not.toBeNull();
+			expect(record?.expiresAt).not.toBeNull();
 		});
 	});
 });

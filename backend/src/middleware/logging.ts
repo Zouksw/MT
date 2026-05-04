@@ -122,7 +122,7 @@ export const slowQueryLogger = (threshold: number = 1000) => {
 // Security event logging
 export const securityEventLogger = (
 	eventType: string,
-	details: Record<string, any>,
+	details: Record<string, unknown>,
 	req?: Request,
 ) => {
 	logger.warn("SECURITY_EVENT", `Security event: ${eventType}`, {
@@ -141,7 +141,7 @@ export const auditLogger = (
 	entityType: string,
 	entityId: string,
 	userId: string,
-	details?: Record<string, any>,
+	details?: Record<string, unknown>,
 ) => {
 	logger.info("AUDIT_LOG", `${action} ${entityType}`, {
 		action,
@@ -156,7 +156,7 @@ export const auditLogger = (
 export const performanceLogger = (
 	operation: string,
 	duration: number,
-	metadata?: Record<string, any>,
+	metadata?: Record<string, unknown>,
 ) => {
 	logger.info("PERFORMANCE", `Operation: ${operation}`, {
 		operation,
@@ -168,7 +168,7 @@ export const performanceLogger = (
 // Health check logger
 export const healthLogger = (
 	status: "healthy" | "unhealthy",
-	details: Record<string, any>,
+	details: Record<string, unknown>,
 ) => {
 	logger.info("HEALTH_CHECK", `Health status: ${status}`, {
 		status,
@@ -182,7 +182,7 @@ export const dbLogger = (
 	table: string,
 	duration: number,
 	success: boolean,
-	details?: Record<string, any>,
+	details?: Record<string, unknown>,
 ) => {
 	const level = success ? "info" : "error";
 	logger[level](
@@ -204,7 +204,7 @@ export const iotdbLogger = (
 	device?: string,
 	duration?: number,
 	success: boolean = true,
-	details?: Record<string, any>,
+	details?: Record<string, unknown>,
 ) => {
 	const level = success ? "info" : "error";
 	logger[level](
@@ -226,7 +226,7 @@ export const aiLogger = (
 	modelName: string,
 	duration?: number,
 	success: boolean = true,
-	details?: Record<string, any>,
+	details?: Record<string, unknown>,
 ) => {
 	const level = success ? "info" : "error";
 	logger[level](

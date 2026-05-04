@@ -73,7 +73,7 @@ export function useMediaQuery(query: {
 	query?: string;
 }): boolean {
 	// Build media query string
-	let mediaQuery = query.query;
+	let mediaQuery: string = query.query ?? "";
 	if (!mediaQuery) {
 		const parts: string[] = [];
 		if (query.minWidth) parts.push(`(min-width: ${query.minWidth}px)`);
@@ -83,7 +83,7 @@ export function useMediaQuery(query: {
 
 	const subscribe = useCallback(
 		(callback: () => void) => {
-			const mediaQueryList = window.matchMedia(mediaQuery!);
+			const mediaQueryList = window.matchMedia(mediaQuery);
 			mediaQueryList.addEventListener("change", callback);
 			return () => mediaQueryList.removeEventListener("change", callback);
 		},
@@ -92,7 +92,7 @@ export function useMediaQuery(query: {
 
 	return useSyncExternalStore(
 		subscribe,
-		() => window.matchMedia(mediaQuery!).matches,
+		() => window.matchMedia(mediaQuery).matches,
 		() => false,
 	);
 }

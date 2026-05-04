@@ -89,13 +89,13 @@ function generateCacheKey(req: Request, options: CacheRouteOptions): string {
 
 	// Add query string
 	if (Object.keys(req.query).length > 0) {
-		const queryString = new URLSearchParams(req.query as any).toString();
+		const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
 		parts.push(queryString);
 	}
 
 	// Add user context if varyByUser is enabled
 	if (varyByUser) {
-		const user = (req as any).user;
+		const user = (req as unknown as Record<string, unknown>).user as Record<string, unknown> | undefined;
 		if (user?.id) {
 			parts.push(`user:${user.id}`);
 		}
@@ -239,13 +239,13 @@ export function cacheRoute(
 		let statusCode = 200;
 
 		// Intercept res.set()
-		res.set = function (header: any) {
+		res.set = function (header: Record<string, string> | string) {
 			if (typeof header === "string") {
 				headers[header] = arguments[1];
 			} else {
 				Object.assign(headers, header);
 			}
-			return originalSet.apply(res, arguments as any);
+			return originalSet.apply(res, arguments as unknown as Parameters<typeof originalSet>);
 		};
 
 		// Intercept res.status()
@@ -255,7 +255,7 @@ export function cacheRoute(
 		};
 
 		// Intercept res.json()
-		res.json = (body: any) => {
+		res.json = (body: unknown) => {
 			// Only cache successful responses
 			const cachePromise =
 				statusCode >= 200 && statusCode < 300
@@ -284,7 +284,7 @@ export function cacheRoute(
 			const result = originalJson(body);
 
 			// Attach cache promise for testing purposes
-			(result as any).cachePromise = cachePromise;
+			(result as unknown as Record<string, unknown>).cachePromise = cachePromise;
 
 			return result;
 		};
@@ -359,7 +359,7 @@ export async function invalidateCache(pattern: string): Promise<number> {
  * });
  * ```
  */
-export function cacheFn<T extends (...args: any[]) => Promise<any>>(
+export function cacheFn<T extends (...args: unknown[]) => Promise<unknown>>(
 	keyPrefix: string,
 	ttlOrOptions:
 		| number
@@ -394,7 +394,7 @@ export function cacheFn<T extends (...args: any[]) => Promise<any>>(
 		// Execute function
 		const result = await (async () => {
 			// This will be replaced with the actual function when used
-			return null as any;
+			return null as unknown as ReturnType<T>;
 			// @ts-expect-error - spread argument type issue
 		})(...args);
 		// Store in cache

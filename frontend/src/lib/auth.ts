@@ -45,7 +45,8 @@ export interface UserData {
 }
 
 function _persistUser(user: UserData, remember?: boolean) {
-	tokenManager.setToken((user as any).token || "", remember);
+	// biome-ignore lint/suspicious/noExplicitAny: accessing dynamic token property from auth response
+	tokenManager.setToken((user as any).token as string || "", remember);
 	Cookies.set("auth", JSON.stringify(user), {
 		expires: remember ? 30 : 7,
 		path: "/",
@@ -80,7 +81,7 @@ export async function login(
 			sameSite: "strict",
 		});
 		return { success: true, redirectTo: "/" };
-	} catch (error: any) {
+	} catch (error: unknown) {
 		const safeError = errorHandler.handleApiError(error);
 		return {
 			success: false,
@@ -116,7 +117,7 @@ export async function register(data: {
 			sameSite: "strict",
 		});
 		return { success: true, redirectTo: "/" };
-	} catch (error: any) {
+	} catch (error: unknown) {
 		const safeError = errorHandler.handleApiError(error);
 		return {
 			success: false,
@@ -129,7 +130,7 @@ export async function forgotPassword(email: string): Promise<AuthResult> {
 	try {
 		await axiosInstance.post("/auth/forgot-password", { email });
 		return { success: true };
-	} catch (error: any) {
+	} catch (error: unknown) {
 		const safeError = errorHandler.handleApiError(error);
 		return {
 			success: false,
@@ -142,7 +143,7 @@ export async function updatePassword(token: string, password: string): Promise<A
 	try {
 		await axiosInstance.post("/auth/reset-password", { token, password });
 		return { success: true };
-	} catch (error: any) {
+	} catch (error: unknown) {
 		const safeError = errorHandler.handleApiError(error);
 		return {
 			success: false,
@@ -154,7 +155,7 @@ export async function updatePassword(token: string, password: string): Promise<A
 export async function logout(): Promise<AuthResult> {
 	try {
 		await axiosInstance.post("/auth/logout");
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Logout error:", errorHandler.handleApiError(error));
 	} finally {
 		tokenManager.removeToken();

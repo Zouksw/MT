@@ -16,7 +16,7 @@ vi.mock("@/lib", () => {
 	return {
 		prisma: {
 			alertRule: {
-				create: vi.fn<any>((data: any) =>
+				create: vi.fn<unknown[], Record<string, unknown>>((data: Record<string, unknown>) =>
 					Promise.resolve({
 						id: "test-rule-id",
 						...data.data,
@@ -25,7 +25,7 @@ vi.mock("@/lib", () => {
 						updatedAt: new Date(),
 					}),
 				),
-				update: vi.fn<any>().mockResolvedValue({}),
+				update: vi.fn<unknown[], Record<string, unknown>>().mockResolvedValue({}),
 			},
 		},
 		logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },

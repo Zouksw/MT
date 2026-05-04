@@ -60,7 +60,7 @@ export interface AlertRule {
 export interface NotificationChannel {
 	type: "email" | "webhook" | "slack";
 	enabled: boolean;
-	config?: Record<string, any>;
+	config?: Record<string, unknown>;
 }
 
 /**
@@ -68,7 +68,7 @@ export interface NotificationChannel {
  */
 export interface TriggerAlertParams {
 	ruleId: string;
-	alertData: Record<string, any>;
+	alertData: Record<string, unknown>;
 }
 
 /**
@@ -81,7 +81,7 @@ export interface AlertWithMetadata {
 	type: string;
 	severity: string;
 	message: string;
-	metadata?: Record<string, any> | null;
+	metadata?: Record<string, unknown> | null;
 	isRead: boolean;
 	sentAt?: Date | null;
 	createdAt: Date;

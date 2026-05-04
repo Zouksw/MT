@@ -201,9 +201,9 @@ export default function ForecastList() {
 			title: "ID",
 			dataIndex: "id",
 			width: 100,
-			render: (id: string) => (
+			render: (id: unknown) => (
 				<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
-					{id?.slice(0, 8)}...
+					{(id as string)?.slice(0, 8)}...
 				</code>
 			),
 		},
@@ -212,9 +212,9 @@ export default function ForecastList() {
 			title: "Forecast Time",
 			dataIndex: "timestamp",
 			width: 160,
-			render: (value: string) =>
+			render: (value: unknown) =>
 				value
-					? new Date(value).toLocaleString("en-US", {
+					? new Date(value as string).toLocaleString("en-US", {
 							year: "numeric",
 							month: "2-digit",
 							day: "2-digit",
@@ -228,8 +228,8 @@ export default function ForecastList() {
 			title: "Time Series",
 			dataIndex: "timeseries",
 			width: 180,
-			render: (ts: ForecastRecord["timeseries"]) => (
-				<span className="font-semibold text-foreground">{ts?.name || "-"}</span>
+			render: (ts: unknown) => (
+				<span className="font-semibold text-foreground">{(ts as ForecastRecord["timeseries"])?.name || "-"}</span>
 			),
 		},
 		{
@@ -237,8 +237,9 @@ export default function ForecastList() {
 			title: "Model",
 			dataIndex: "model",
 			width: 140,
-			render: (model: ForecastRecord["model"]) => {
-				const algo = model?.algorithm;
+			render: (model: unknown) => {
+				const m = model as ForecastRecord["model"];
+				const algo = m?.algorithm;
 				return algo ? <Tag color={algoTagColor(algo)}>{algo}</Tag> : "-";
 			},
 		},
@@ -248,8 +249,8 @@ export default function ForecastList() {
 			dataIndex: "predictedValue",
 			width: 140,
 			align: "right",
-			render: (value: ForecastRecord["predictedValue"], record: ForecastRecord) => {
-				const numValue = toNum(value);
+			render: (value: unknown, record: ForecastRecord) => {
+				const numValue = toNum(value as number | { toNumber(): number } | null | undefined);
 				const unit = record.timeseries?.unit || "";
 				return (
 					<span
@@ -267,8 +268,8 @@ export default function ForecastList() {
 			dataIndex: "confidence",
 			width: 110,
 			align: "center",
-			render: (value: ForecastRecord["confidence"]) => {
-				const numValue = toNum(value);
+			render: (value: unknown) => {
+				const numValue = toNum(value as number | { toNumber(): number } | null | undefined);
 				const percentage = (numValue * 100).toFixed(0);
 				const color: "success" | "info" | "warning" =
 					numValue >= 0.9 ? "success" : numValue >= 0.7 ? "info" : "warning";
@@ -302,10 +303,10 @@ export default function ForecastList() {
 			dataIndex: "isAnomaly",
 			width: 100,
 			align: "center",
-			render: (isAnomaly: boolean, record: ForecastRecord) => {
+			render: (isAnomaly: unknown, record: ForecastRecord) => {
 				const probability = toNum(record.anomalyProbability);
 
-				if (isAnomaly) {
+				if (isAnomaly as boolean) {
 					return (
 						<div>
 							<span className="text-sm font-medium text-red-600 dark:text-red-400">Yes</span>
@@ -328,9 +329,9 @@ export default function ForecastList() {
 			title: "Created At",
 			dataIndex: "createdAt",
 			width: 140,
-			render: (value: string) =>
+			render: (value: unknown) =>
 				value
-					? new Date(value).toLocaleDateString("en-US", {
+					? new Date(value as string).toLocaleDateString("en-US", {
 							year: "numeric",
 							month: "2-digit",
 							day: "2-digit",

@@ -58,7 +58,7 @@ class InputSanitizer {
 		if (typeof window !== "undefined") {
 			try {
 				// Try to use DOMPurify from window if available (loaded by CDN or client-side)
-				const purify = (window as any).DOMPurify;
+				const purify = (window as unknown as { DOMPurify?: { sanitize: (dirty: string, config: Record<string, unknown>) => string } }).DOMPurify;
 				if (purify) {
 					return purify.sanitize(dirty, this.DOMPURIFY_CONFIG);
 				}
@@ -112,7 +112,7 @@ class InputSanitizer {
    * @param max - Maximum allowed value (optional)
    @returns Sanitized number or null if invalid
    */
-	sanitizeNumber(value: any, min?: number, max?: number): number | null {
+	sanitizeNumber(value: unknown, min?: number, max?: number): number | null {
 		const num = Number(value);
 
 		if (Number.isNaN(num) || !Number.isFinite(num)) {
@@ -131,7 +131,7 @@ class InputSanitizer {
 	 * @param maxLength - Maximum length (default 1000)
 	 * @returns Sanitized string
 	 */
-	sanitizeString(value: any, maxLength: number = 1000): string {
+	sanitizeString(value: unknown, maxLength: number = 1000): string {
 		if (typeof value !== "string") {
 			return "";
 		}
@@ -270,16 +270,17 @@ class InputSanitizer {
 	 * @param obj - Object to sanitize
 	 * @returns Object with sanitized keys
 	 */
-	sanitizeObjectKeys<T extends Record<string, any>>(obj: T): T {
-		const sanitized: any = {};
+	sanitizeObjectKeys<T extends Record<string, unknown>>(obj: T): T {
+		const sanitized = {} as T;
 
 		for (const key in obj) {
 			if (Object.hasOwn(obj, key)) {
 				const sanitizedKey = this.sanitizeString(key, 100);
-				sanitized[sanitizedKey] =
-					typeof obj[key] === "object" && obj[key] !== null
-						? this.sanitizeObjectKeys(obj[key])
-						: obj[key];
+				const value = obj[key];
+				(sanitized as Record<string, unknown>)[sanitizedKey] =
+					typeof value === "object" && value !== null
+						? this.sanitizeObjectKeys(value as Record<string, unknown>)
+						: value;
 			}
 		}
 
@@ -291,7 +292,7 @@ class InputSanitizer {
 	 * @param json - JSON string to validate
 	 * @returns Parsed object or null if invalid
 	 */
-	validateJson(json: string): any | null {
+	validateJson(json: string): unknown | null {
 		if (!json || typeof json !== "string") {
 			return null;
 		}

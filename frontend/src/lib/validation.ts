@@ -10,7 +10,7 @@
  * Defines the structure for a validation rule
  */
 export interface ValidationRule {
-	validate: (value: any, allValues?: Record<string, any>) => boolean;
+	validate: (value: unknown, allValues?: Record<string, unknown>) => boolean;
 	message: string;
 	errorCode?: string;
 }
@@ -26,7 +26,7 @@ class ValidationRules {
 	 * Validates email format using RFC 5322 compliant regex
 	 */
 	email: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			// RFC 5322 compliant email regex
 			const emailRegex =
@@ -42,7 +42,7 @@ class ValidationRules {
 	 * Requires: 8+ characters, uppercase, lowercase, number
 	 */
 	passwordStrength: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			// At least 8 chars, uppercase, lowercase, and number
 			const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
@@ -58,7 +58,7 @@ class ValidationRules {
 	 * Includes special character requirement
 	 */
 	passwordStrong: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			// 12+ chars, uppercase, lowercase, number, special char
 			const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
@@ -74,7 +74,7 @@ class ValidationRules {
 	 * Only allows letters, numbers, hyphens, and underscores
 	 */
 	datasetName: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			// 1-50 chars, alphanumeric, hyphens, underscores
 			const nameRegex = /^[a-zA-Z0-9_-]{1,50}$/;
@@ -90,7 +90,7 @@ class ValidationRules {
 	 * Must start with "root." and use valid characters
 	 */
 	timeseriesPath: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			// Must start with root., valid chars after
 			const pathRegex = /^root\.[a-zA-Z0-9_.]+(\.[a-zA-Z0-9_.]+)*$/;
@@ -106,7 +106,7 @@ class ValidationRules {
 	 * Validates that a string is a properly formatted URL
 	 */
 	url: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			try {
 				new URL(value);
@@ -124,7 +124,7 @@ class ValidationRules {
 	 * Validates port ranges 1-65535
 	 */
 	port: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			const num = Number(value);
 			if (Number.isNaN(num) || num < 1 || num > 65535) return false;
 			return Number.isInteger(num);
@@ -138,7 +138,7 @@ class ValidationRules {
 	 * Supports international formats (E.164)
 	 */
 	phoneNumber: ValidationRule = {
-		validate: (value: string) => {
+		validate: (value: unknown) => {
 			if (!value || typeof value !== "string") return false;
 			// Basic phone validation (international format)
 			const phoneRegex = /^\+?[1-9]\d{1,14}$/;
@@ -154,7 +154,7 @@ class ValidationRules {
 	 */
 	createRangeValidator(min: number, max: number, fieldName = "value"): ValidationRule {
 		return {
-			validate: (value: any) => {
+			validate: (value: unknown) => {
 				const num = Number(value);
 				if (Number.isNaN(num)) return false;
 				return num >= min && num <= max;
@@ -170,7 +170,7 @@ class ValidationRules {
 	 */
 	createMinLengthValidator(min: number, fieldName = "value"): ValidationRule {
 		return {
-			validate: (value: any) => {
+			validate: (value: unknown) => {
 				if (typeof value !== "string") return false;
 				return value.length >= min;
 			},
@@ -185,7 +185,7 @@ class ValidationRules {
 	 */
 	createMaxLengthValidator(max: number, fieldName = "value"): ValidationRule {
 		return {
-			validate: (value: any) => {
+			validate: (value: unknown) => {
 				if (typeof value !== "string") return false;
 				return value.length <= max;
 			},
@@ -204,7 +204,7 @@ class ValidationRules {
 		errorCode: string = "PATTERN_MISMATCH",
 	): ValidationRule {
 		return {
-			validate: (value: any) => {
+			validate: (value: unknown) => {
 				if (typeof value !== "string") return false;
 				return pattern.test(value);
 			},
@@ -220,7 +220,7 @@ class ValidationRules {
 	 */
 	getAntRule(rule: ValidationRule) {
 		return {
-			validator(_: any, value: any, source: Record<string, any>) {
+			validator(_: unknown, value: unknown, source: Record<string, unknown>) {
 				// Pass source to validation rules that need it (like confirmation)
 				if (rule.validate(value, source)) {
 					return Promise.resolve();
@@ -243,7 +243,7 @@ class ValidationRules {
 	 * Validate a value against multiple rules
 	 * Returns the first error message found, or null if all pass
 	 */
-	validateAll(value: any, rules: ValidationRule[]): string | null {
+	validateAll(value: unknown, rules: ValidationRule[]): string | null {
 		for (const rule of rules) {
 			if (!rule.validate(value)) {
 				return rule.message;
@@ -281,7 +281,7 @@ export const commonRules = {
  */
 export function required(fieldName: string = "This field"): ValidationRule {
 	return {
-		validate: (value: any) => {
+		validate: (value: unknown) => {
 			if (typeof value === "string") {
 				return value.trim().length > 0;
 			}
@@ -297,7 +297,7 @@ export function required(fieldName: string = "This field"): ValidationRule {
  */
 export function confirmation(matchFieldName: string): ValidationRule {
 	return {
-		validate: (value: any, allValues?: Record<string, any>) => {
+		validate: (value: unknown, allValues?: Record<string, unknown>) => {
 			if (!allValues) return false;
 			const matchValue = allValues[matchFieldName];
 			return value === matchValue;

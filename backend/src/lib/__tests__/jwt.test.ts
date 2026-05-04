@@ -327,10 +327,10 @@ describe("JWT Utilities", () => {
 
 		it("should handle decodeToken with completely invalid input", () => {
 			// Test with various invalid inputs
-			expect(decodeToken(null as any)).toBeNull();
-			expect(decodeToken(undefined as any)).toBeNull();
-			expect(decodeToken(123 as any)).toBeNull();
-			expect(decodeToken({} as any)).toBeNull();
+			expect(decodeToken(null as unknown as string)).toBeNull();
+			expect(decodeToken(undefined as unknown as string)).toBeNull();
+			expect(decodeToken(123 as unknown as string)).toBeNull();
+			expect(decodeToken({} as unknown as string)).toBeNull();
 		});
 
 		it("should handle decodeToken error in catch block", () => {

@@ -33,7 +33,7 @@ export interface AuditLog {
 	timestamp: number;
 	userId?: string;
 	sessionId: string;
-	details: Record<string, any>;
+	details: Record<string, unknown>;
 	severity: "low" | "medium" | "high" | "critical";
 	userAgent?: string;
 	url?: string;
@@ -84,7 +84,7 @@ class SecurityAuditLogger {
 	 */
 	log(
 		event: SecurityEvent,
-		details: Record<string, any> = {},
+		details: Record<string, unknown> = {},
 		severity: "low" | "medium" | "high" | "critical" = "low",
 	): void {
 		if (!this.config.enabled) {
@@ -206,7 +206,7 @@ class SecurityAuditLogger {
 	/**
 	 * Remove sensitive information from log details
 	 */
-	private sanitizeDetails(details: Record<string, any>): Record<string, any> {
+	private sanitizeDetails(details: Record<string, unknown>): Record<string, unknown> {
 		const sensitiveKeys = ["password", "token", "secret", "apiKey", "creditCard", "ssn"];
 		const sanitized = { ...details };
 
@@ -296,11 +296,11 @@ export const logAuthEvents = {
 };
 
 export const logSecurityEvents = {
-	csrfViolation: (details?: Record<string, any>) => {
+	csrfViolation: (details?: Record<string, unknown>) => {
 		auditLogger.log("CSRF_VIOLATION", details || {}, "critical");
 	},
 
-	xssAttempt: (details?: Record<string, any>) => {
+	xssAttempt: (details?: Record<string, unknown>) => {
 		auditLogger.log("XSS_ATTEMPT", details || {}, "critical");
 	},
 

@@ -32,7 +32,7 @@ describe("ChartToolbar", () => {
 			/>,
 		);
 
-		const candleBtn = screen.getByText("K线").closest("button")!;
+		const candleBtn = screen.getByText("K线").closest("button") as HTMLButtonElement;
 		expect(candleBtn.className).toContain("bg-[#171717]");
 	});
 

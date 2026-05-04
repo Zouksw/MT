@@ -13,39 +13,39 @@ import {
 import type { ModelWithBacktest } from "@/types/accuracy";
 import { MODEL_COLORS } from "@/types/accuracy";
 
-const ResponsiveContainer = dynamic(
+const ResponsiveContainer = dynamic<any>(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.LineChart })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 type WindowSize = 7 | 30 | 90;
 
@@ -59,7 +59,7 @@ interface AccuracyTrendChartProps {
 	models: ModelWithBacktest[];
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number | null; color: string }>; label?: string }) {
 	if (!active || !payload?.length) return null;
 	return (
 		<div
@@ -72,7 +72,7 @@ function CustomTooltip({ active, payload, label }: any) {
 			}}
 		>
 			<p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
-			{payload.map((entry: any) => (
+			{payload.map((entry: { name: string; value: number | null; color: string }) => (
 				<p key={entry.name} className="text-xs" style={{ color: entry.color }}>
 					{entry.name}: {entry.value !== null ? `${entry.value.toFixed(1)}%` : "N/A"}
 				</p>

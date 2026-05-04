@@ -5,15 +5,7 @@
  * No mocks — verifies real Redis key state after each operation.
  */
 
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	checkAccountLockout,
 	clearFailedLoginAttempts,
@@ -73,7 +65,7 @@ describe("authLockout service (real Redis)", () => {
 			expect(result.remainingAttempts).toBe(0);
 			expect(result.lockoutUntil).toBeInstanceOf(Date);
 			// Lockout should be in the future
-			expect(result.lockoutUntil!.getTime()).toBeGreaterThan(Date.now());
+			expect(result.lockoutUntil?.getTime()).toBeGreaterThan(Date.now());
 		});
 	});
 

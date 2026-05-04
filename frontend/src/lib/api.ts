@@ -20,7 +20,7 @@ async function apiFetcher(url: string) {
 
 	if (!res.ok) {
 		const error = new Error(`${res.status} ${res.statusText}`);
-		(error as any).status = res.status;
+		(error as { status?: number }).status = res.status;
 		throw error;
 	}
 
@@ -46,7 +46,7 @@ interface ListResult<T> {
 }
 
 /** Replace Refine's useList */
-export function useList<T = any>(resource: string, params?: ListParams): ListResult<T> {
+export function useList<T = Record<string, unknown>>(resource: string, params?: ListParams): ListResult<T> {
 	const searchParams = new URLSearchParams();
 	if (params?.page) searchParams.set("page", String(params.page));
 	if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
@@ -81,7 +81,7 @@ export function useList<T = any>(resource: string, params?: ListParams): ListRes
 }
 
 /** Replace Refine's useOne */
-export function useOne<T = any>(
+export function useOne<T = Record<string, unknown>>(
 	resource: string,
 	id: string | null,
 ): {
@@ -109,7 +109,7 @@ export function useOne<T = any>(
 
 // ── Mutation helpers (replace Refine dataProvider mutations) ────────────────
 
-export async function createRecord<T = any>(resource: string, payload: Partial<T>): Promise<T> {
+export async function createRecord<T = Record<string, unknown>>(resource: string, payload: Partial<T>): Promise<T> {
 	const res = await authFetch(`/api/${resource}`, {
 		method: "POST",
 		body: JSON.stringify(payload),
@@ -125,7 +125,7 @@ export async function createRecord<T = any>(resource: string, payload: Partial<T
 	return json.data ?? json;
 }
 
-export async function updateRecord<T = any>(
+export async function updateRecord<T = Record<string, unknown>>(
 	resource: string,
 	id: string,
 	payload: Partial<T>,

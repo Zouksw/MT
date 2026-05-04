@@ -97,9 +97,9 @@ export const detectSqlInjection = (
 		return sqlInjectionPatterns.some((pattern) => pattern.test(str));
 	};
 
-	const checkObject = (obj: any): boolean => {
+	const checkObject = (obj: unknown): boolean => {
 		if (!obj || typeof obj !== "object") return false;
-		for (const value of Object.values(obj)) {
+		for (const value of Object.values(obj as Record<string, unknown>)) {
 			if (typeof value === "string" && checkString(value)) {
 				return true;
 			}
@@ -215,9 +215,9 @@ export const detectXSS = (req: Request, res: Response, next: NextFunction) => {
 		return xssPatterns.some((pattern) => pattern.test(str));
 	};
 
-	const checkObject = (obj: any): boolean => {
+	const checkObject = (obj: unknown): boolean => {
 		if (!obj || typeof obj !== "object") return false;
-		for (const value of Object.values(obj)) {
+		for (const value of Object.values(obj as Record<string, unknown>)) {
 			if (typeof value === "string" && checkString(value)) {
 				return true;
 			}

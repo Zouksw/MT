@@ -76,7 +76,7 @@ const columns = [
 		key: "displayName",
 		title: "Model",
 		dataIndex: "displayName" as const,
-		render: (_: string, record: ModelWithBacktest) => (
+		render: (_value: unknown, record: ModelWithBacktest) => (
 			<Link
 				href={`/ai/accuracy/${record.modelId}`}
 				className="font-medium text-foreground hover:text-primary transition-colors"
@@ -90,12 +90,12 @@ const columns = [
 		title: "MAPE",
 		dataIndex: "avgMape" as const,
 		align: "right" as const,
-		render: (value: number | null) => <MapeBadge mape={value} />,
+		render: (value: unknown) => <MapeBadge mape={value as number | null} />,
 	},
 	{
 		key: "trend",
 		title: "Trend",
-		render: (_: string, record: ModelWithBacktest) => (
+		render: (_value: unknown, record: ModelWithBacktest) => (
 			<TrendIcon trend={record.backtest?.trend || "insufficient_data"} />
 		),
 	},
@@ -105,7 +105,7 @@ const columns = [
 		dataIndex: "predictionCount" as const,
 		align: "right" as const,
 		render: (value: number) => (
-			<span className="text-sm text-muted-foreground">{value.toLocaleString()}</span>
+			<span className="text-sm text-muted-foreground">{(value as number).toLocaleString()}</span>
 		),
 	},
 	{
@@ -113,8 +113,8 @@ const columns = [
 		title: "Verified",
 		dataIndex: "verifiedCount" as const,
 		align: "right" as const,
-		render: (value: number) => (
-			<span className="text-sm text-muted-foreground">{value.toLocaleString()}</span>
+		render: (value: unknown) => (
+			<span className="text-sm text-muted-foreground">{(value as number).toLocaleString()}</span>
 		),
 	},
 ];

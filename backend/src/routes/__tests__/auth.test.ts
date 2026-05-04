@@ -7,15 +7,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import request from "supertest";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const TEST_PREFIX = `auth-${Date.now()}`;
 const ADMIN_EMAIL = "admin@trademind.com";

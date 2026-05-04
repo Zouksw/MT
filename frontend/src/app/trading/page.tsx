@@ -39,7 +39,7 @@ export default function TradingPage() {
 	const [chartType, setChartType] = useState<ChartType>("candlestick");
 	const [showMultiSource, setShowMultiSource] = useState(false);
 	const [indicators, setIndicators] = useState({ sma20: true, sma50: true, bollinger: false });
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// biome-ignore lint/suspicious/noExplicitAny: signal shape is dynamic from API
 	const [signal, setSignal] = useState<any>(null);
 	const [signalLoading, setSignalLoading] = useState(false);
 	const [bestModelId, setBestModelId] = useState<string | undefined>();

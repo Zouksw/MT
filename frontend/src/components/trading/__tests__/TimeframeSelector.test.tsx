@@ -17,7 +17,7 @@ describe("TimeframeSelector", () => {
 	it("should highlight the active timeframe", () => {
 		render(<TimeframeSelector value="daily" onChange={jest.fn()} />);
 
-		const dailyBtn = screen.getByText("日").closest("button")!;
+		const dailyBtn = screen.getByText("日").closest("button") as HTMLButtonElement;
 		expect(dailyBtn.className).toContain("bg-[#171717]");
 	});
 
@@ -51,7 +51,7 @@ describe("TimeframeSelector", () => {
 	it("should apply active style to weekly when selected", () => {
 		render(<TimeframeSelector value="weekly" onChange={jest.fn()} />);
 
-		const weeklyBtn = screen.getByText("周").closest("button")!;
+		const weeklyBtn = screen.getByText("周").closest("button") as HTMLButtonElement;
 		expect(weeklyBtn.className).toContain("bg-[#171717]");
 	});
 });

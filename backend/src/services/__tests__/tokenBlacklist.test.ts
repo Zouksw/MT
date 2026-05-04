@@ -7,15 +7,7 @@
 
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	blacklistToken,
 	checkTokenBlacklist,

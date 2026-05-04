@@ -18,7 +18,7 @@ export const createAlertSchema = z.object({
 	description: z.string().optional(),
 	alertType: z.enum(["THRESHOLD", "ANOMALY", "SYSTEM"]),
 	timeseriesId: z.string().uuid().optional(),
-	conditions: z.record(z.any()),
+	conditions: z.record(z.unknown()),
 	actions: z.array(z.string()).optional(),
 	enabled: z.boolean().default(true),
 });
@@ -26,7 +26,7 @@ export const createAlertSchema = z.object({
 export const updateAlertSchema = z.object({
 	name: z.string().min(1).max(255).optional(),
 	description: z.string().optional(),
-	conditions: z.record(z.any()).optional(),
+	conditions: z.record(z.unknown()).optional(),
 	actions: z.array(z.string()).optional(),
 	enabled: z.boolean().optional(),
 });

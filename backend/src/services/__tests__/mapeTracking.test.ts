@@ -8,15 +8,7 @@
  * logic works end-to-end against the test DB.
  */
 
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	getAllModelAccuracy,
 	getModelAccuracy,
@@ -59,8 +51,8 @@ describe("MAPE Tracking (real DB)", () => {
 
 			const result = await verifyPrediction(id, [105, 195, 310]);
 			expect(result).not.toBeNull();
-			expect(result!.mape).toBeGreaterThan(0);
-			expect(result!.mape).toBeLessThan(10);
+			expect(result?.mape).toBeGreaterThan(0);
+			expect(result?.mape).toBeLessThan(10);
 		});
 
 		it("should compute MAPE of 0 for perfect predictions", async () => {
@@ -73,7 +65,7 @@ describe("MAPE Tracking (real DB)", () => {
 			});
 
 			const result = await verifyPrediction(id, [100, 200, 300]);
-			expect(result!.mape).toBe(0);
+			expect(result?.mape).toBe(0);
 		});
 
 		it("should return null for non-existent prediction", async () => {
@@ -97,7 +89,7 @@ describe("MAPE Tracking (real DB)", () => {
 
 			const result = await verifyPrediction(id, [101, 103, 105, 107, 109]);
 			expect(result).not.toBeNull();
-			expect(result!.mape).toBeGreaterThan(0);
+			expect(result?.mape).toBeGreaterThan(0);
 		});
 	});
 

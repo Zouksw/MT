@@ -40,15 +40,15 @@ export default function AnomalyCreate() {
 	const [notes, setNotes] = useState("");
 
 	// Get timeseries list
-	const { data: timeseriesList } = useList<any>("timeseries", {
+	const { data: timeseriesList } = useList("timeseries", {
 		pageSize: 1000,
 		sort: "name",
 		order: "asc",
 	});
 
-	const timeseriesOptions = (timeseriesList || []).map((ts: any) => ({
-		value: ts.id,
-		label: ts.name + (ts.unit ? ` (${ts.unit})` : ""),
+	const timeseriesOptions = (timeseriesList || []).map((ts: Record<string, unknown>) => ({
+		value: String(ts.id),
+		label: String(ts.name) + (ts.unit ? ` (${String(ts.unit)})` : ""),
 	}));
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +56,7 @@ export default function AnomalyCreate() {
 		setLoading(true);
 		try {
 			// Get timeseries path
-			const timeseries = (timeseriesList || []).find((ts: any) => ts.id === timeseriesId);
+			const timeseries = (timeseriesList || []).find((ts: Record<string, unknown>) => ts.id === timeseriesId);
 			if (!timeseries) {
 				throw new Error("Time series not found");
 			}
@@ -82,8 +82,8 @@ export default function AnomalyCreate() {
 			setTimeout(() => {
 				router.push("/anomalies");
 			}, 1000);
-		} catch (error: any) {
-			toast.showError("Failed to Create Anomaly", error.message);
+		} catch (error: unknown) {
+			toast.showError("Failed to Create Anomaly", error instanceof Error ? error.message : String(error));
 		} finally {
 			setLoading(false);
 		}

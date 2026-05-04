@@ -12,23 +12,23 @@ const BarChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.
 		</div>
 	),
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
@@ -37,7 +37,7 @@ const ResponsiveContainer = dynamic(
 
 const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 interface AlertDistributionChartProps {
 	data?: {
@@ -72,7 +72,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 
 		return SEVERITY_CONFIG.map((s) => ({
 			name: s.name,
-			value: (data as any)[s.key] || 0,
+			value: (data as Record<string, unknown>)[s.key] as number || 0,
 			color: s.color,
 			mutedColor: s.mutedColor,
 		})).filter((item) => item.value > 0);

@@ -6,13 +6,13 @@
 
 import { PrismaClient } from "@prisma/client";
 import request from "supertest";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const REAL_DB_URL =
 	"postgresql://iotdb_user:iotdb_password@localhost:5432/iotdb_enhanced";
 const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
-let prisma: PrismaClient;
+let _prisma: PrismaClient;
 let dbAvailable = false;
 let token: string;
 
@@ -51,7 +51,7 @@ describe("Signals Routes (Integration)", () => {
 	beforeAll(async () => {
 		dbAvailable = await checkDatabase();
 		if (!dbAvailable) return;
-		prisma = new PrismaClient({
+		_prisma = new PrismaClient({
 			log: ["error"],
 			datasources: { db: { url: REAL_DB_URL } },
 		});

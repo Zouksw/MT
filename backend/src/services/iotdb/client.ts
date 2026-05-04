@@ -103,7 +103,7 @@ export class IoTDBClient {
 
 	// === REST API基础方法 ===
 
-	private async request(endpoint: string, options?: RequestInit): Promise<any> {
+	private async request(endpoint: string, options?: RequestInit): Promise<unknown> {
 		const url = `${this.config.restUrl}/rest/v2${endpoint}`;
 
 		try {
@@ -122,7 +122,7 @@ export class IoTDBClient {
 					"Content-Type": "application/json",
 					...(options?.headers as Record<string, string>),
 				},
-			} as any);
+			} as RequestInit);
 
 			clearTimeout(timeout);
 
@@ -230,8 +230,8 @@ export class IoTDBClient {
 	async insertOneRecord(record: {
 		device: string;
 		timestamp: number;
-		measurements: Record<string, any>;
-	}): Promise<any> {
+		measurements: Record<string, unknown>;
+	}): Promise<IoTDBResponse> {
 		// Validate device name
 		validateDeviceName(record.device);
 
@@ -246,7 +246,7 @@ export class IoTDBClient {
 		return this.query(sql);
 	}
 
-	async query(sql: string): Promise<any> {
+	async query(sql: string): Promise<IoTDBResponse> {
 		const startTime = Date.now();
 		// IoTDB 2.0 REST API uses /query endpoint with POST
 		const result = await this.request("/query", {
@@ -259,7 +259,7 @@ export class IoTDBClient {
 			const _duration = (Date.now() - startTime) / 1000;
 		}
 
-		return result;
+		return result as IoTDBResponse;
 	}
 
 	async queryData(params: {
@@ -268,7 +268,7 @@ export class IoTDBClient {
 		offset?: number;
 		startTime?: number;
 		endTime?: number;
-	}): Promise<any> {
+	}): Promise<IoTDBResponse> {
 		// Validate path if provided
 		const path = params.path || "*";
 		if (path !== "*") {
@@ -298,7 +298,7 @@ export class IoTDBClient {
 		startTime?: number;
 		endTime?: number;
 		interval?: string;
-	}): Promise<any> {
+	}): Promise<IoTDBResponse> {
 		const sql = buildAggregateQuery(params);
 		return this.query(sql);
 	}
@@ -309,7 +309,7 @@ export class IoTDBClient {
 		path: string;
 		startTime?: number;
 		endTime?: number;
-	}): Promise<any> {
+	}): Promise<IoTDBResponse> {
 		// Validate path
 		validateIoTDBPath(params.path);
 

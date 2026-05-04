@@ -70,9 +70,9 @@ async function sendNotification(
 	};
 
 	const channels: ChannelType[] = [channel.type as ChannelType];
-	const emailRecipients =
+	const emailRecipients: string[] =
 		channel.type === "email" && channel.config?.email
-			? [channel.config.email]
+			? [channel.config.email as string]
 			: [];
 
 	await dispatchNotification(payload, channels, emailRecipients);
@@ -335,7 +335,7 @@ export async function triggerAlert(params: TriggerAlertParams): Promise<void> {
 		type: alertRecord.type,
 		severity: alertRecord.severity,
 		message: alertRecord.message,
-		metadata: alertRecord.metadata as Record<string, any> | null,
+		metadata: alertRecord.metadata as Record<string, unknown> | null,
 		isRead: alertRecord.isRead,
 		sentAt: alertRecord.sentAt || undefined,
 		createdAt: alertRecord.createdAt,

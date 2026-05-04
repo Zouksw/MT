@@ -13,32 +13,32 @@ const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod
 		</div>
 	),
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),

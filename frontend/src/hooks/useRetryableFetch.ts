@@ -45,7 +45,7 @@ export interface UseRetryableFetchResult<T> {
  * );
  * ```
  */
-export function useRetryableFetch<T = any>(
+export function useRetryableFetch<T = unknown>(
 	key: Key | null,
 	fetcher: (url: string) => Promise<T>,
 	options: RetryableFetchOptions = {},
@@ -150,7 +150,7 @@ export function useRetryableFetch<T = any>(
  * const { data, error } = useRetryableFetchSimple('/api/data', fetcher);
  * ```
  */
-export function useRetryableFetchSimple<T = any>(
+export function useRetryableFetchSimple<T = unknown>(
 	key: Key | null,
 	fetcher: (url: string) => Promise<T>,
 ): UseRetryableFetchResult<T> {

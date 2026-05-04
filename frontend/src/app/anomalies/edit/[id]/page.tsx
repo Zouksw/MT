@@ -44,10 +44,10 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 	const [notes, setNotes] = useState("");
 
 	// Get anomaly data
-	const { data: anomaly, loading: isLoadingAnomaly } = useOne<any>("anomalies", id);
+	const { data: anomaly, loading: isLoadingAnomaly } = useOne("anomalies", id);
 
 	// Get timeseries list (for display)
-	const { data: timeseriesList } = useList<any>("timeseries", {
+	const { data: timeseriesList } = useList("timeseries", {
 		pageSize: 1000,
 		sort: "name",
 		order: "asc",
@@ -56,19 +56,20 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 	// Populate form when anomaly data loads
 	useEffect(() => {
 		if (anomaly) {
-			setSeverity(anomaly.severity || "");
-			setDetectionMethod(anomaly.detectionMethod || "");
-			setValue(anomaly.value != null ? String(anomaly.value) : "");
-			setExpectedRangeMin(anomaly.minExpected != null ? String(anomaly.minExpected) : "");
-			setExpectedRangeMax(anomaly.maxExpected != null ? String(anomaly.maxExpected) : "");
-			setNotes(anomaly.notes || "");
+			const a = anomaly as Record<string, unknown>;
+			setSeverity(String(a.severity || ""));
+			setDetectionMethod(String(a.detectionMethod || ""));
+			setValue(a.value != null ? String(a.value) : "");
+			setExpectedRangeMin(a.minExpected != null ? String(a.minExpected) : "");
+			setExpectedRangeMax(a.maxExpected != null ? String(a.maxExpected) : "");
+			setNotes(String(a.notes || ""));
 		}
 	}, [anomaly]);
 
 	// Find timeseries name for display
 	const timeseriesName =
-		(timeseriesList || []).find((ts: any) => ts.id === anomaly?.timeseriesId)?.name ||
-		anomaly?.timeseriesId ||
+		(timeseriesList || []).find((ts: Record<string, unknown>) => ts.id === (anomaly as Record<string, unknown>)?.timeseriesId)?.name ||
+		(anomaly as Record<string, unknown>)?.timeseriesId ||
 		"-";
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -85,8 +86,8 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 			setTimeout(() => {
 				router.push("/anomalies");
 			}, 1000);
-		} catch (error: any) {
-			toast.showError("Failed to Update Anomaly", error.message);
+		} catch (error: unknown) {
+			toast.showError("Failed to Update Anomaly", error instanceof Error ? error.message : String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -146,7 +147,7 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 
 					<form onSubmit={handleSubmit} className="p-6 space-y-6">
 						{/* Time Series - Read Only */}
-						<Input label="Time Series" value={timeseriesName} disabled fullWidth />
+						<Input label="Time Series" value={timeseriesName as string} disabled fullWidth />
 
 						{/* Severity & Detection Method */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { Router } from "express";
 import Papa from "papaparse";
 import { logger, prisma } from "@/lib";
-import { paginated, success } from "@/lib/response";
+import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { cacheRoute, invalidateCache } from "@/middleware/cacheDecorator";
 import {

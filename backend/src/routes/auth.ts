@@ -610,14 +610,20 @@ router.put(
 		const updateSchema = z.object({
 			name: z.string().min(1).max(255).optional(),
 			avatarUrl: z.string().url().optional(),
-			preferences: z.any().optional(),
+			preferences: z.record(z.unknown()).optional(),
 		});
 
 		const validatedData = updateSchema.parse(req.body);
 
+		// Build Prisma update data with proper types
+		const updateData: { name?: string; avatarUrl?: string; preferences?: Record<string, unknown> } = {};
+		if (validatedData.name !== undefined) updateData.name = validatedData.name;
+		if (validatedData.avatarUrl !== undefined) updateData.avatarUrl = validatedData.avatarUrl;
+		if (validatedData.preferences !== undefined) updateData.preferences = validatedData.preferences;
+
 		const user = await prisma.user.update({
 			where: { id: userId },
-			data: validatedData,
+			data: updateData as unknown as Parameters<typeof prisma.user.update>[0]["data"],
 			select: {
 				id: true,
 				email: true,

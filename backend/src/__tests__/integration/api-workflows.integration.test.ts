@@ -15,7 +15,6 @@ import {
 	describe,
 	expect,
 	test,
-	vi,
 } from "vitest";
 
 const TEST_PREFIX = `wf-${Date.now()}`;

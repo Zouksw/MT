@@ -139,7 +139,7 @@ export class IoTDBRPCClient {
 		path: string;
 		startTime?: number;
 		endTime?: number;
-	}): Promise<any> {
+	}): Promise<RPCExecutionResult> {
 		const whereClause: string[] = [];
 
 		if (params.startTime) {
@@ -159,7 +159,7 @@ export class IoTDBRPCClient {
 	/**
 	 * Delete time series
 	 */
-	async deleteTimeseries(path: string): Promise<any> {
+	async deleteTimeseries(path: string): Promise<RPCExecutionResult> {
 		const sql = `DROP TIMESERIES ${path}`;
 		return this.executeSQL(sql);
 	}

@@ -132,7 +132,7 @@ export async function createDatabaseUser(
 			email,
 			name: overrides.name || "Test User",
 			passwordHash: overrides.passwordHash || "$2b$12$hashedpassword",
-			role: (overrides.role || "VIEWER") as any,
+			role: (overrides.role || "VIEWER") as "VIEWER" | "EDITOR" | "ADMIN",
 		},
 	});
 	return user;
@@ -173,7 +173,7 @@ export async function createDatabaseDataset(
 					.toLowerCase()
 					.replace(/\s+/g, "-")
 					.replace(/[^a-z0-9-]/g, ""),
-			storageFormat: (overrides.storageFormat || "CSV") as any,
+			storageFormat: (overrides.storageFormat || "IOTDB_CACHE") as "IOTDB_CACHE" | "INFLUXDB" | "OPENML",
 			ownerId: userId,
 			organization_id: org.id,
 		},

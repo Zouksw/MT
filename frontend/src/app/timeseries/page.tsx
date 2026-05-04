@@ -24,6 +24,23 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 	);
 }
 
+// Row type for column render functions
+interface TsRow {
+	id: string;
+	name: string;
+	slug: string;
+	unit?: string;
+	colorHex?: string;
+	isAnomalyDetectionEnabled?: boolean;
+	dataset?: { name: string };
+	_count?: { dataPoints: number; anomalies: number };
+	createdAt: string;
+}
+
+function asRow(record: Record<string, unknown>): TsRow {
+	return record as unknown as TsRow;
+}
+
 /* ── page ───────────────────────────────────────────────────────────────── */
 
 export default function TimeseriesList() {
@@ -35,7 +52,7 @@ export default function TimeseriesList() {
 	const pageSize = isMobile ? 10 : 20;
 
 	// Main data
-	const { data, total, loading, mutate } = useList<any>("timeseries", {
+	const { data, total, loading, mutate } = useList("timeseries", {
 		page,
 		pageSize,
 		sort: "createdAt",
@@ -43,27 +60,27 @@ export default function TimeseriesList() {
 	});
 
 	// Stats data
-	const { data: statsData } = useList<any>("timeseries", {
+	const { data: statsData } = useList("timeseries", {
 		pageSize: 1000,
 	});
 
 	const totalTimeseries = statsData.length;
 	const totalDataPoints = statsData.reduce(
-		(sum: number, ts: any) => sum + (ts._count?.dataPoints || 0),
+		(sum: number, ts: Record<string, unknown>) => sum + ((ts._count as Record<string, number>)?.dataPoints || 0),
 		0,
 	);
 	const totalAnomalies = statsData.reduce(
-		(sum: number, ts: any) => sum + (ts._count?.anomalies || 0),
+		(sum: number, ts: Record<string, unknown>) => sum + ((ts._count as Record<string, number>)?.anomalies || 0),
 		0,
 	);
 
 	// Delete modal
-	const [deleteTarget, setDeleteTarget] = useState<any>(null);
+	const [deleteTarget, setDeleteTarget] = useState<Record<string, unknown> | null>(null);
 
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
 		try {
-			await deleteRecord("timeseries", deleteTarget.id);
+			await deleteRecord("timeseries", String(deleteTarget.id));
 			toast.showSuccess("Time series deleted");
 			mutate();
 			setDeleteTarget(null);
@@ -76,75 +93,91 @@ export default function TimeseriesList() {
 
 	/* ── columns ────────────────────────────────────────────────────────── */
 
-	const columns: Column<any>[] = useMemo(() => {
-		const cols: Column<any>[] = [
+	const columns: Column<Record<string, unknown>>[] = useMemo(() => {
+		const cols: Column<Record<string, unknown>>[] = [
 			{
 				key: "id",
 				title: "ID",
 				width: 100,
-				render: (_v: any, record: any) => (
-					<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground data-text">
-						{record.id.slice(0, 8)}...
-					</code>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground data-text">
+							{r.id.slice(0, 8)}...
+						</code>
+					);
+				},
 			},
 			{
 				key: "name",
 				title: "Name",
 				width: 200,
-				render: (_v: any, record: any) => (
-					<div className="flex items-center gap-2">
-						<span className="font-semibold" style={{ color: record.colorHex || undefined }}>
-							{record.name}
-						</span>
-						{record.isAnomalyDetectionEnabled && <Tag color="warning">Anomaly Detection</Tag>}
-					</div>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<div className="flex items-center gap-2">
+							<span className="font-semibold" style={{ color: r.colorHex || undefined }}>
+								{r.name}
+							</span>
+							{r.isAnomalyDetectionEnabled && <Tag color="warning">Anomaly Detection</Tag>}
+						</div>
+					);
+				},
 			},
 			{
 				key: "slug",
 				title: "Slug",
 				width: 160,
-				render: (_v: any, record: any) => (
-					<span className="truncate block max-w-[160px]" title={record.slug}>
-						{record.slug}
-					</span>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<span className="truncate block max-w-[160px]" title={r.slug}>
+							{r.slug}
+						</span>
+					);
+				},
 			},
 			{
 				key: "unit",
 				title: "Unit",
 				width: 80,
-				render: (_v: any, record: any) => record.unit || "-",
+				render: (_v: unknown, record: Record<string, unknown>) => asRow(record).unit || "-",
 			},
 			{
 				key: "dataset",
 				title: "Dataset",
 				width: 180,
-				render: (_v: any, record: any) => (
-					<span className="truncate block max-w-[180px]" title={record.dataset?.name}>
-						{record.dataset?.name || "-"}
-					</span>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<span className="truncate block max-w-[180px]" title={r.dataset?.name}>
+							{r.dataset?.name || "-"}
+						</span>
+					);
+				},
 			},
 			{
 				key: "dataPoints",
 				title: "Data Points",
 				width: 120,
 				align: "right",
-				render: (_v: any, record: any) => (
-					<span className="data-text text-[13px] text-foreground">
-						{(record._count?.dataPoints ?? 0).toLocaleString()}
-					</span>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<span className="data-text text-[13px] text-foreground">
+							{(r._count?.dataPoints ?? 0).toLocaleString()}
+						</span>
+					);
+				},
 			},
 			{
 				key: "anomalies",
 				title: "Anomalies",
 				width: 100,
 				align: "center",
-				render: (_v: any, record: any) => {
-					const count = record._count?.anomalies ?? 0;
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					const count = r._count?.anomalies ?? 0;
 					return <Tag color={count > 0 ? "error" : "success"}>{count}</Tag>;
 				},
 			},
@@ -152,40 +185,43 @@ export default function TimeseriesList() {
 				key: "createdAt",
 				title: "Created",
 				width: 140,
-				render: (_v: any, record: any) => new Date(record.createdAt).toISOString().split("T")[0],
+				render: (_v: unknown, record: Record<string, unknown>) => new Date(asRow(record).createdAt).toISOString().split("T")[0],
 			},
 			{
 				key: "actions",
 				title: "Actions",
 				width: isMobile ? 80 : 140,
-				render: (_v: any, record: any) => (
-					<div className="flex items-center gap-1">
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="View"
-							onClick={() => router.push(`/timeseries/show/${record.id}`)}
-						>
-							<Eye className="size-3.5" />
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="Edit"
-							onClick={() => router.push(`/timeseries/edit/${record.id}`)}
-						>
-							<Pencil className="size-3.5" />
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="Delete"
-							onClick={() => setDeleteTarget(record)}
-						>
-							<Trash2 className="size-3.5" />
-						</Button>
-					</div>
-				),
+				render: (_v: unknown, record: Record<string, unknown>) => {
+					const r = asRow(record);
+					return (
+						<div className="flex items-center gap-1">
+							<Button
+								variant="ghost"
+								size="sm"
+								aria-label="View"
+								onClick={() => router.push(`/timeseries/show/${r.id}`)}
+							>
+								<Eye className="size-3.5" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								aria-label="Edit"
+								onClick={() => router.push(`/timeseries/edit/${r.id}`)}
+							>
+								<Pencil className="size-3.5" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								aria-label="Delete"
+								onClick={() => setDeleteTarget(record)}
+							>
+								<Trash2 className="size-3.5" />
+							</Button>
+						</div>
+					);
+				},
 			},
 		];
 		return cols;

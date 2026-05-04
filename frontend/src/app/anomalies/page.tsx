@@ -111,9 +111,9 @@ export default function AnomalyList() {
 			title: "ID",
 			dataIndex: "id",
 			width: 100,
-			render: (id: string) => (
+			render: (id: unknown) => (
 				<code className="text-xs px-1.5 py-0.5 bg-muted rounded text-foreground">
-					{id?.slice(0, 8)}...
+					{String(id)?.slice(0, 8)}...
 				</code>
 			),
 		},
@@ -122,19 +122,22 @@ export default function AnomalyList() {
 			title: "Severity",
 			dataIndex: "severity",
 			width: 130,
-			render: (severity: string) => (
-				<Tag color={severityTagColor(severity)}>
-					{severityIcon(severity)}
-					{severity}
-				</Tag>
-			),
+			render: (severity: unknown) => {
+				const s = severity as string;
+				return (
+					<Tag color={severityTagColor(s)}>
+						{severityIcon(s)}
+						{s}
+					</Tag>
+				);
+			},
 		},
 		{
 			key: "timeseries",
 			title: "Time Series",
 			dataIndex: "timeseries",
 			width: 180,
-			render: (ts: any) => ts?.name || "-",
+			render: (ts: unknown) => (ts as Record<string, unknown>)?.name as string || "-",
 		},
 		{
 			key: "value",
@@ -142,7 +145,7 @@ export default function AnomalyList() {
 			dataIndex: "value",
 			width: 120,
 			align: "right",
-			render: (val: number) => (
+			render: (val: unknown) => (
 				<span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(val || 0).toFixed(2)}</span>
 			),
 		},
@@ -150,27 +153,30 @@ export default function AnomalyList() {
 			key: "expectedRange",
 			title: "Expected Range",
 			width: 160,
-			render: (_: any, record: any) => (
-				<span style={{ fontVariantNumeric: "tabular-nums", fontSize: 13, color: "#6B7280" }}>
-					{record.minExpected} - {record.maxExpected}
-				</span>
-			),
+			render: (_v: unknown, record: unknown) => {
+				const r = record as Record<string, unknown>;
+				return (
+					<span style={{ fontVariantNumeric: "tabular-nums", fontSize: 13, color: "#6B7280" }}>
+						{String(r.minExpected)} - {String(r.maxExpected)}
+					</span>
+				);
+			},
 		},
 		{
 			key: "detectionMethod",
 			title: "Detection Method",
 			dataIndex: "detectionMethod",
 			width: 140,
-			render: (method: string) => (method ? <Tag>{method}</Tag> : "-"),
+			render: (method: unknown) => (method ? <Tag>{method as string}</Tag> : "-"),
 		},
 		{
 			key: "detectedAt",
 			title: "Detected At",
 			dataIndex: "detectedAt",
 			width: 150,
-			render: (value: string) =>
+			render: (value: unknown) =>
 				value
-					? new Date(value).toLocaleString("en-US", {
+					? new Date(value as string).toLocaleString("en-US", {
 							year: "numeric",
 							month: "2-digit",
 							day: "2-digit",
@@ -183,20 +189,23 @@ export default function AnomalyList() {
 			key: "actions",
 			title: "Actions",
 			width: isMobile ? 100 : 140,
-			render: (_: any, record: any) => (
-				<div className="flex gap-2">
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => router.push(`/anomalies/show/${record.id}`)}
-					>
-						View
-					</Button>
-					<Button variant="danger" size="sm" onClick={() => handleDelete(record.id)}>
-						Delete
-					</Button>
-				</div>
-			),
+			render: (_v: unknown, record: unknown) => {
+				const r = record as Record<string, unknown>;
+				return (
+					<div className="flex gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => router.push(`/anomalies/show/${r.id}`)}
+						>
+							View
+						</Button>
+						<Button variant="danger" size="sm" onClick={() => handleDelete(r.id as string)}>
+							Delete
+						</Button>
+					</div>
+				);
+			},
 		},
 	];
 

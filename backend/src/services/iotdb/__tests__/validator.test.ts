@@ -43,10 +43,10 @@ describe("IoTDB Validator - validateIoTDBPath", () => {
 	});
 
 	test("should reject non-string path", () => {
-		expect(() => validateIoTDBPath(null as any)).toThrow(
+		expect(() => validateIoTDBPath(null as unknown as string)).toThrow(
 			"Invalid IoTDB path: path must be a non-empty string",
 		);
-		expect(() => validateIoTDBPath(undefined as any)).toThrow(
+		expect(() => validateIoTDBPath(undefined as unknown as string)).toThrow(
 			"Invalid IoTDB path: path must be a non-empty string",
 		);
 	});
@@ -170,10 +170,10 @@ describe("IoTDB Validator - validateDeviceName", () => {
 	});
 
 	test("should reject non-string device name", () => {
-		expect(() => validateDeviceName(null as any)).toThrow(
+		expect(() => validateDeviceName(null as unknown as string)).toThrow(
 			"Invalid device name: must be a non-empty string",
 		);
-		expect(() => validateDeviceName(undefined as any)).toThrow(
+		expect(() => validateDeviceName(undefined as unknown as string)).toThrow(
 			"Invalid device name: must be a non-empty string",
 		);
 	});
@@ -216,10 +216,10 @@ describe("IoTDB Validator - validateMeasurement", () => {
 	});
 
 	test("should reject non-string measurement", () => {
-		expect(() => validateMeasurement(null as any)).toThrow(
+		expect(() => validateMeasurement(null as unknown as string)).toThrow(
 			"Invalid measurement: must be a non-empty string",
 		);
-		expect(() => validateMeasurement(undefined as any)).toThrow(
+		expect(() => validateMeasurement(undefined as unknown as string)).toThrow(
 			"Invalid measurement: must be a non-empty string",
 		);
 	});

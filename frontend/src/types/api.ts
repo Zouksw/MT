@@ -291,21 +291,21 @@ export interface AnomalyDetectionRequest {
 /**
  * Check if response is an API response
  */
-export function isApiResponse<T>(obj: any): obj is ApiResponse<T> {
+export function isApiResponse<T>(obj: unknown): obj is ApiResponse<T> {
 	return typeof obj === "object" && obj !== null && "success" in obj;
 }
 
 /**
  * Check if response is an error response
  */
-export function isApiErrorResponse(obj: any): obj is ApiErrorResponse {
+export function isApiErrorResponse(obj: unknown): obj is ApiErrorResponse {
 	return isApiResponse(obj) && obj.success === false;
 }
 
 /**
  * Check if response is a success response
  */
-export function isSuccessResponse<T>(obj: any): obj is ApiResponse<T> {
+export function isSuccessResponse<T>(obj: unknown): obj is ApiResponse<T> {
 	return isApiResponse(obj) && obj.success === true;
 }
 

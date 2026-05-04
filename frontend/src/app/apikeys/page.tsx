@@ -150,7 +150,7 @@ export default function ApiKeyList() {
 			title: "Name",
 			dataIndex: "name" as const,
 			width: 200,
-			render: (_value: string, record: ApiKey) => (
+			render: (_value: unknown, record: ApiKey) => (
 				<div>
 					<div className="font-semibold text-foreground">{record.name}</div>
 					<div className="text-xs text-muted-foreground">{record.id.slice(0, 8)}...</div>
@@ -162,23 +162,26 @@ export default function ApiKeyList() {
 			title: "Status",
 			dataIndex: "isActive" as const,
 			width: 100,
-			render: (isActive: boolean) => (
-				<Tag color={isActive ? "success" : "error"}>
-					<span className="inline-flex items-center gap-1">
-						{isActive ? <CircleCheck className="size-3" /> : <Clock className="size-3.5" />}
-						{isActive ? "Active" : "Inactive"}
-					</span>
-				</Tag>
-			),
+			render: (isActive: unknown) => {
+				const active = isActive as boolean;
+				return (
+					<Tag color={active ? "success" : "error"}>
+						<span className="inline-flex items-center gap-1">
+							{active ? <CircleCheck className="size-3" /> : <Clock className="size-3.5" />}
+							{active ? "Active" : "Inactive"}
+						</span>
+					</Tag>
+				);
+			},
 		},
 		{
 			key: "lastCharacters",
 			title: "Last Characters",
 			dataIndex: "lastCharacters" as const,
 			width: 140,
-			render: (lastChars: number) => (
+			render: (lastChars: unknown) => (
 				<code className="text-xs px-1.5 py-0.5 bg-muted rounded font-mono">
-					...{lastChars.toString(16).toUpperCase().padStart(8, "0")}
+					...{(lastChars as number).toString(16).toUpperCase().padStart(8, "0")}
 				</code>
 			),
 		},
@@ -187,9 +190,9 @@ export default function ApiKeyList() {
 			title: "Usage",
 			dataIndex: "usageCount" as const,
 			width: 140,
-			render: (count: number, record: ApiKey) => (
+			render: (count: unknown, record: ApiKey) => (
 				<div>
-					<div>{count} requests</div>
+					<div>{count as number} requests</div>
 					{record.lastUsedAt && (
 						<div className="text-xs text-muted-foreground">
 							Last: {dayjs(record.lastUsedAt).fromNow()}
@@ -203,12 +206,13 @@ export default function ApiKeyList() {
 			title: "Expires",
 			dataIndex: "expiresAt" as const,
 			width: 140,
-			render: (date: string | null) => {
-				if (!date) return <span className="text-muted-foreground">Never</span>;
-				const isExpired = dayjs(date).isBefore(dayjs());
+			render: (date: unknown) => {
+				const d = date as string | null;
+				if (!d) return <span className="text-muted-foreground">Never</span>;
+				const isExpired = dayjs(d).isBefore(dayjs());
 				return (
 					<span className={isExpired ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}>
-						{dayjs(date).format("YYYY-MM-DD")}
+						{dayjs(d).format("YYYY-MM-DD")}
 					</span>
 				);
 			},
@@ -218,8 +222,8 @@ export default function ApiKeyList() {
 			title: "Created",
 			dataIndex: "createdAt" as const,
 			width: 120,
-			render: (date: string) => (
-				<span className="text-muted-foreground">{dayjs(date).format("YYYY-MM-DD")}</span>
+			render: (date: unknown) => (
+				<span className="text-muted-foreground">{dayjs(date as string).format("YYYY-MM-DD")}</span>
 			),
 		},
 		{

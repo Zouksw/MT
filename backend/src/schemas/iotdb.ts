@@ -40,7 +40,7 @@ export const insertRecordsSchema = z.object({
 			measurements: z.array(
 				z.object({
 					name: z.string(),
-					value: z.any(),
+					value: z.unknown(),
 				}),
 			),
 		}),

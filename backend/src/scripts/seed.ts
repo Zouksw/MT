@@ -177,10 +177,10 @@ async function main() {
 	for (let i = 0; i < datapoints.length; i += batchSize) {
 		const batch = datapoints.slice(i, i + batchSize);
 		await prisma.datapoint.createMany({
-			data: batch.map((dp: any) => ({
+			data: batch.map((dp) => ({
 				timeseriesId: dp.timeseriesId,
 				timestamp: dp.timestamp,
-				valueJson: dp.valueJson as any,
+				valueJson: dp.valueJson as unknown as import("@prisma/client").Prisma.InputJsonValue,
 				qualityScore: dp.qualityScore,
 				isOutlier: dp.isOutlier,
 				isAnomaly: dp.isAnomaly,

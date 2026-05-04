@@ -63,12 +63,12 @@ export function setupDatasetsMocks() {
 	}));
 
 	jest.mock("@/middleware/cacheDecorator", () => ({
-		cacheRoute: () => (_req: any, _res: any, next: any) => next(),
+		cacheRoute: () => (_req: unknown, _res: unknown, next: () => void) => next(),
 		invalidateCache: jest.fn((): Promise<number> => Promise.resolve(0)),
 	}));
 
 	jest.mock("@/middleware/auth", () => ({
-		authenticate: (req: any, _res: any, next: any) => {
+		authenticate: (req: Record<string, unknown>, _res: unknown, next: () => void) => {
 			req.user = {
 				id: "test-user-id",
 				role: "admin",
@@ -126,7 +126,13 @@ export const otherOwnerDataset = {
 };
 
 /** Sets default mock return values for all Prisma methods */
-export function setDefaultMockReturns(prisma: any) {
+export function setDefaultMockReturns(prisma: {
+	dataset: Record<string, ReturnType<typeof jest.fn>>;
+	timeseries: Record<string, ReturnType<typeof jest.fn>>;
+	datapoint: Record<string, ReturnType<typeof jest.fn>>;
+	organizations: Record<string, ReturnType<typeof jest.fn>>;
+	$transaction: ReturnType<typeof jest.fn>;
+}) {
 	prisma.dataset.findMany.mockResolvedValue([]);
 	prisma.dataset.count.mockResolvedValue(0);
 	prisma.dataset.findUnique.mockResolvedValue(null);
@@ -145,5 +151,5 @@ export function setDefaultMockReturns(prisma: any) {
 		name: "Default",
 		slug: "default",
 	});
-	prisma.$transaction.mockImplementation(async (cb: any) => cb(prisma));
+	prisma.$transaction.mockImplementation(async (cb: (p: unknown) => unknown) => cb(prisma));
 }

@@ -21,7 +21,7 @@ export interface ApiError {
 				| {
 						message?: string;
 						code?: string;
-						details?: any;
+						details?: unknown;
 				  }
 				| string; // Support both old (string) and new (object) formats
 			message?: string; // Legacy support
@@ -377,7 +377,7 @@ export async function withErrorHandling<T>(
 	operation: () => Promise<T>,
 	options: {
 		showNotification?: boolean;
-		notificationApi?: any; // Ant Design message API
+		notificationApi?: { error: (message: string) => void }; // Ant Design message API
 		fallbackMessage?: string;
 	} = {},
 ): Promise<T | null> {

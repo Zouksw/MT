@@ -21,32 +21,32 @@ const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod
 		</div>
 	),
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
-}) as React.ComponentType<any>;
+}) as React.ComponentType<Record<string, unknown>>;
 
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
@@ -56,7 +56,7 @@ const ResponsiveContainer = dynamic(
 const ReferenceLine = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ReferenceLine })),
 	{ ssr: false },
-) as React.ComponentType<any>;
+) as React.ComponentType<Record<string, unknown>>;
 
 interface DataPoint {
 	timestamp: number;
@@ -231,7 +231,7 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 	}, [isConnected, isPaused]);
 
 	// Custom tooltip
-	const CustomTooltip = ({ active, payload }: any) => {
+	const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: { timestamp: number; value: number } }> }) => {
 		if (active && payload?.length) {
 			return (
 				<div

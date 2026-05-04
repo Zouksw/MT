@@ -130,23 +130,24 @@ export default function AIAnomaliesPage() {
 			key: "severity",
 			title: "Severity",
 			dataIndex: "severity" as keyof Anomaly,
-			render: (severity: string) => (
-				<Tag color={SEVERITY_TAG_COLORS[severity] || "default"}>{severity}</Tag>
-			),
+			render: (severity: unknown) => {
+				const s = severity as string;
+				return <Tag color={SEVERITY_TAG_COLORS[s] || "default"}>{s}</Tag>;
+			},
 		},
 		{
 			key: "timestamp",
 			title: "Timestamp",
 			dataIndex: "timestamp" as keyof Anomaly,
-			render: (ts: number) => formatTimestamp(ts),
+			render: (ts: unknown) => formatTimestamp(ts as number),
 		},
 		{
 			key: "value",
 			title: "Value",
 			dataIndex: "value" as keyof Anomaly,
 			align: "right" as const,
-			render: (val: number) => (
-				<span className="data-text text-[13px] text-foreground">{val.toFixed(2)}</span>
+			render: (val: unknown) => (
+				<span className="data-text text-[13px] text-foreground">{(val as number).toFixed(2)}</span>
 			),
 		},
 		{
@@ -154,17 +155,20 @@ export default function AIAnomaliesPage() {
 			title: "Anomaly Score",
 			dataIndex: "score" as keyof Anomaly,
 			align: "right" as const,
-			render: (score: number) => (
-				<span
-					className="font-semibold data-text"
-					style={{
-						color:
-							score > 4 ? "#EF4444" : score > 3 ? "#F59E0B" : score > 2 ? "#B8860B" : "#10B981",
-					}}
-				>
-					{score.toFixed(4)}
-				</span>
-			),
+			render: (score: unknown) => {
+				const s = score as number;
+				return (
+					<span
+						className="font-semibold data-text"
+						style={{
+							color:
+								s > 4 ? "#EF4444" : s > 3 ? "#F59E0B" : s > 2 ? "#B8860B" : "#10B981",
+						}}
+					>
+						{s.toFixed(4)}
+					</span>
+				);
+			},
 		},
 	];
 

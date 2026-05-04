@@ -26,8 +26,8 @@ export function WebVitals() {
 		sendToAnalytics(metric);
 
 		// Send to Google Analytics if available
-		if (typeof window !== "undefined" && (window as any).gtag) {
-			(window as any).gtag("event", metric.name, {
+		if (typeof window !== "undefined" && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
+			(window as unknown as { gtag?: (...args: unknown[]) => void }).gtag!("event", metric.name, {
 				value: Math.round(metric.name === "CLS" ? metric.value * 1000 : metric.value),
 				event_label: metric.id,
 				non_interaction: true,
@@ -99,7 +99,7 @@ function getRating(name: string, value: number): "good" | "needs-improvement" | 
  * Custom hook to track web vitals for debugging
  */
 export function useWebVitals() {
-	const [vitals, setVitals] = React.useState<any>({});
+	const [vitals, setVitals] = React.useState<Record<string, { value: number; rating: string }>>({});
 
 	React.useEffect(() => {
 		if (typeof window === "undefined" || !("PerformanceObserver" in window)) {
@@ -107,14 +107,15 @@ export function useWebVitals() {
 		}
 
 		const observeMetric = (name: string, _threshold: number) => {
-			const observer = new (PerformanceObserver as any)((list: any) => {
+			const observer = new (PerformanceObserver as unknown as new (cb: (list: PerformanceObserverEntryList) => void) => PerformanceObserver)((list: PerformanceObserverEntryList) => {
 				const entries = list.getEntries();
-				entries.forEach((entry: any) => {
-					setVitals((prev: any) => ({
+				entries.forEach((entry: PerformanceEntry) => {
+					const metricValue = (entry as unknown as { value: number }).value;
+					setVitals((prev: Record<string, { value: number; rating: string }>) => ({
 						...prev,
 						[name]: {
-							value: entry.value,
-							rating: getRating(name, entry.value),
+							value: metricValue,
+							rating: getRating(name, metricValue),
 						},
 					}));
 				});
@@ -166,7 +167,7 @@ export function WebVitalsDisplay() {
 			}}
 		>
 			<div>Web Vitals:</div>
-			{Object.entries(vitals).map(([name, data]: [string, any]) => (
+			{Object.entries(vitals).map(([name, data]: [string, { value: number; rating: string }]) => (
 				<div key={name}>
 					{name}: {data.value?.toFixed(2)} ({data.rating})
 				</div>

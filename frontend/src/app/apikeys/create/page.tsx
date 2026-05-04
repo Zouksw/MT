@@ -60,8 +60,8 @@ export default function ApiKeyCreate() {
 			await createRecord("api-keys", payload);
 			toast.showSuccess("API key created successfully");
 			router.push("/apikeys");
-		} catch (err: any) {
-			toast.showError("Failed to create API key", err?.message);
+		} catch (err: unknown) {
+			toast.showError("Failed to create API key", err instanceof Error ? err.message : String(err));
 		} finally {
 			setSaving(false);
 		}
