@@ -95,7 +95,7 @@ export const Header: React.FC<{ sticky?: boolean }> = ({ sticky = true }) => {
 				</a>
 
 				{/* Locale Switcher */}
-				<button
+				<button type="button"
 					onClick={toggleLocale}
 					className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
 					title={currentLocale === "en" ? "切换到中文" : "Switch to English"}
@@ -113,6 +113,7 @@ export const Header: React.FC<{ sticky?: boolean }> = ({ sticky = true }) => {
 					<DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-accent transition-colors outline-none">
 						<div className="w-8 h-8 rounded-full border-2 border-foreground/20 flex items-center justify-center bg-muted overflow-hidden">
 							{user?.avatar ? (
+								// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
 								<img src={user.avatar} alt="" className="w-full h-full object-cover" />
 							) : (
 								<User className="size-4" />

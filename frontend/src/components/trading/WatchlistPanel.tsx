@@ -45,8 +45,7 @@ export default function WatchlistPanel() {
 							<span className="text-xs text-gray-400 font-normal">({wl.itemCount})</span>
 						</span>
 						{!wl.isDefault && (
-							<button
-								type="button"
+							<button type="button"
 								className="p-1 text-gray-400 hover:text-red-500 transition-colors"
 								title="Delete watchlist"
 								onClick={async () => {

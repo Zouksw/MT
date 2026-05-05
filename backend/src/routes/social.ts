@@ -56,6 +56,32 @@ router.get(
 	}),
 );
 
+// GET /api/social/signals — list shared signals (alias for feed)
+router.get(
+	"/signals",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res) => {
+		const page = Math.max(1, Number(req.query.page) || 1);
+		const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+		const skip = (page - 1) * limit;
+
+		const [signals, total] = await Promise.all([
+			prisma.sharedSignal.findMany({
+				orderBy: { createdAt: "desc" },
+				skip,
+				take: limit,
+				include: {
+					user: { select: { id: true, name: true, avatarUrl: true } },
+					_count: { select: { signalComments: true, signalLikes: true } },
+				},
+			}),
+			prisma.sharedSignal.count(),
+		]);
+
+		success(res, { signals, total, page, limit });
+	}),
+);
+
 // POST /api/social/signals — share a signal
 router.post(
 	"/signals",

@@ -150,6 +150,7 @@ export default function CutDetail() {
 											) => {
 												const pct = ((p.price - spMin) / range) * 100;
 												return (
+													// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 													<tr key={`${p.date}-${p.factory?.code}-${i}`}>
 														<td className="text-xs text-gray-500">
 															{new Date(p.date).toLocaleDateString()}

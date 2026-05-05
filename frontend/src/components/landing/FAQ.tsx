@@ -86,7 +86,8 @@ export default function FAQ() {
 					<MotionReveal>
 						<div className="space-y-1" role="tablist" aria-label="FAQ questions">
 							{faqs.map((faq, index) => (
-								<button
+								<button type="button"
+									// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 									key={index}
 									role="tab"
 									aria-selected={selectedIndex === index}

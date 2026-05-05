@@ -117,7 +117,7 @@ export default function PricingPage() {
 					{/* Billing Toggle */}
 					<MotionReveal delay={0.15}>
 						<div className="inline-flex items-center gap-3 bg-muted rounded-full p-1">
-							<button
+							<button type="button"
 								onClick={() => setBillingCycle("monthly")}
 								className={`px-6 py-2 rounded-full text-body font-medium transition-all ${
 									billingCycle === "monthly" ? "bg-black text-white" : "text-muted-foreground"
@@ -125,7 +125,7 @@ export default function PricingPage() {
 							>
 								Monthly
 							</button>
-							<button
+							<button type="button"
 								onClick={() => setBillingCycle("yearly")}
 								className={`px-6 py-2 rounded-full text-body font-medium transition-all relative ${
 									billingCycle === "yearly" ? "bg-black text-white" : "text-muted-foreground"
@@ -181,6 +181,7 @@ export default function PricingPage() {
 									</div>
 									<ul className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
 										{proPlan.features.map((feature, featureIdx) => (
+											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<li key={featureIdx} className="flex items-start gap-3">
 												<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 												<span className="text-body text-muted-foreground">{feature}</span>
@@ -218,6 +219,7 @@ export default function PricingPage() {
 								</Link>
 								<ul className="space-y-3">
 									{freePlan.features.map((feature, featureIdx) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										<li key={featureIdx} className="flex items-start gap-3">
 											<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 											<span className="text-body text-muted-foreground">{feature}</span>
@@ -256,6 +258,7 @@ export default function PricingPage() {
 								</Link>
 								<ul className="space-y-3">
 									{enterprisePlan.features.map((feature, featureIdx) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										<li key={featureIdx} className="flex items-start gap-3">
 											<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 											<span className="text-body text-muted-foreground">{feature}</span>
@@ -305,6 +308,7 @@ export default function PricingPage() {
 								a: "Enterprise includes private deployment, custom AI model training, dedicated API endpoints, SLA guarantees, priority support, and a dedicated account manager.",
 							},
 						].map((faq, idx) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
 								<div className="bg-card rounded-lg p-6 outline outline-black/5 dark:outline-white/10 border-l-4 border-l-primary">
 									<h3 className="text-h4 font-display font-semibold text-foreground mb-2">

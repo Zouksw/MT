@@ -88,6 +88,7 @@ export default function AboutPage() {
 							{ number: "47", label: "Countries", Icon: Globe },
 							{ number: "1.2B", label: "Data Points/Day", Icon: ChartBar },
 						].map((stat, idx) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
 								<ShimmerCard
 									className={`stagger-slide-up bg-white dark:bg-gray-900 rounded-xl p-6 text-center relative overflow-hidden group transition-all duration-200 outline outline-black/5 dark:outline-white/10 ${idx === 0 ? "md:py-8" : ""}`}
@@ -147,6 +148,7 @@ export default function AboutPage() {
 											{ value: "10M+", label: "Points per Second" },
 											{ value: "24/7", label: "Expert Support" },
 										].map((stat, idx) => (
+											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<div key={idx} className="text-center">
 												<div className="text-2xl font-display font-semibold text-primary mb-1 tabular-nums">
 													{stat.value}
@@ -208,6 +210,7 @@ export default function AboutPage() {
 								span: "",
 							},
 						].map((value, idx) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx} className={value.span}>
 								<div
 									className={`relative bg-white dark:bg-gray-900 rounded-xl p-8 group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full`}
@@ -261,6 +264,7 @@ export default function AboutPage() {
 								<div className="md:w-2/5 bg-gray-50 dark:bg-gray-800 flex items-center justify-center p-8 md:p-12">
 									<div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl overflow-hidden outline outline-black/5 dark:outline-white/10 transition-transform duration-200 group-hover:scale-105">
 										{/* eslint-disable-next-line @next/next/no-img-element */}
+										{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
 										<img
 											src="https://picsum.photos/seed/marcus-chen/200/200"
 											alt="Marcus Chen"
@@ -288,6 +292,7 @@ export default function AboutPage() {
 							<div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full flex items-start gap-5 p-6">
 								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden outline outline-black/5 dark:outline-white/10 transition-transform duration-200 group-hover:scale-105">
 									{/* eslint-disable-next-line @next/next/no-img-element */}
+									{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
 									<img
 										src="https://picsum.photos/seed/elena-vasquez/200/200"
 										alt="Elena Vasquez"
@@ -315,6 +320,7 @@ export default function AboutPage() {
 							<div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full flex items-start gap-5 p-6">
 								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden outline outline-black/5 dark:outline-white/10 transition-transform duration-200 group-hover:scale-105">
 									{/* eslint-disable-next-line @next/next/no-img-element */}
+									{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
 									<img
 										src="https://picsum.photos/seed/david-okonkwo/200/200"
 										alt="David Okonkwo"

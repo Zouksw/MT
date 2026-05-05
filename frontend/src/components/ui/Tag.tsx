@@ -30,7 +30,7 @@ export const Tag: React.FC<TagProps> = ({
 	onClick,
 }) => {
 	return (
-		<span
+			<span
 			className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${COLOR_MAP[color]} ${onClick ? "cursor-pointer hover:opacity-80" : ""} ${className}`}
 			onClick={onClick}
 		>

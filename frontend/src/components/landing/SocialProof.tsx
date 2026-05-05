@@ -77,6 +77,7 @@ export const SocialProof: React.FC = () => {
 			<div className="max-w-6xl mx-auto px-6">
 				<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
 					{stats.map((stat, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={i} className="text-center">
 							<div className="flex items-center justify-center gap-2 mb-1">
 								<span className="text-muted-foreground">{stat.icon}</span>

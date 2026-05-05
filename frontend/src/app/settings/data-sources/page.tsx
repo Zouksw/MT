@@ -326,8 +326,7 @@ export default function DataSourcesPage() {
 												)}
 											</div>
 											<div className="flex items-center gap-2">
-												<button
-													type="button"
+												<button type="button"
 													onClick={() => loadHistory(source.id)}
 													className="p-1.5 rounded-md hover:bg-accent transition-colors"
 													title="View history"
@@ -338,8 +337,7 @@ export default function DataSourcesPage() {
 														<ChevronDown className="size-3.5 text-muted-foreground" />
 													)}
 												</button>
-												<button
-													type="button"
+												<button type="button"
 													onClick={() => refreshSource(source.id)}
 													disabled={isRefreshing}
 													className="p-1.5 rounded-md hover:bg-accent transition-colors disabled:opacity-50"

@@ -162,7 +162,7 @@ export default function TimeseriesCreate() {
 					<CardBody>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div className="w-full">
-								<label className="block text-sm font-medium text-foreground mb-1">Color</label>
+															<label className="block text-sm font-medium text-foreground mb-1">Color</label>
 								<input
 									type="color"
 									value={form.colorHex}
@@ -193,8 +193,7 @@ export default function TimeseriesCreate() {
 					</CardHeader>
 					<CardBody>
 						<label className="flex items-center gap-3 cursor-pointer">
-							<button
-								type="button"
+							<button type="button"
 								role="switch"
 								aria-checked={form.isAnomalyDetectionEnabled}
 								onClick={() =>

@@ -174,6 +174,7 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<Input label="Anomalous Value" type="text" value={value} disabled fullWidth />
 							<div>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: section heading */}
 								<label className="block text-sm font-medium text-foreground mb-1">
 									Expected Range
 								</label>

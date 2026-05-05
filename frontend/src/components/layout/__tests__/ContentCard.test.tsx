@@ -52,7 +52,7 @@ describe("ContentCard", () => {
 
 	it("should show actions when provided", () => {
 		render(
-			<ContentCard title="Test Card" actions={<button>Edit</button>}>
+			<ContentCard title="Test Card" actions={<button type="button">Edit</button>}>
 				<p>Content</p>
 			</ContentCard>,
 		);

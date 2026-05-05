@@ -164,6 +164,7 @@ export function ModelPerformanceBarChart({ models }: ModelPerformanceBarChartPro
 							animationDuration={chartAnimations.duration}
 						>
 							{chartData.map((entry, index) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								<rect key={index} fill={entry.fill} />
 							))}
 						</Bar>

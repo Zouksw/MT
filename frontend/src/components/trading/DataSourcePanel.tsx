@@ -143,6 +143,7 @@ export default function DataSourcePanel({
 						</h4>
 						{factorSources.map((f, i) => (
 							<div
+								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								key={`${f.source}-${f.type}-${i}`}
 								className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50"
 							>

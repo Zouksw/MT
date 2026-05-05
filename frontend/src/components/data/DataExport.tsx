@@ -284,7 +284,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 			{/* Modal */}
 			{modalVisible && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center">
-					<div
+									<div
 						className="absolute inset-0 bg-black/40"
 						onClick={() => {
 							if (!exporting) {
@@ -311,7 +311,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 							<div className={exporting ? "opacity-50 pointer-events-none" : ""}>
 								{/* Time Series */}
 								<div className="mb-4">
-									<label className="block text-sm font-medium text-foreground mb-1">
+																	<label className="block text-sm font-medium text-foreground mb-1">
 										Time Series
 									</label>
 									<input
@@ -326,7 +326,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 								{/* Format + Limit row */}
 								<div className="grid grid-cols-2 gap-4 mb-4">
 									<div>
-										<label className="block text-sm font-medium text-foreground mb-1">
+																			<label className="block text-sm font-medium text-foreground mb-1">
 											Export Format
 										</label>
 										<select
@@ -342,7 +342,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 										</select>
 									</div>
 									<div>
-										<label className="block text-sm font-medium text-foreground mb-1">
+																			<label className="block text-sm font-medium text-foreground mb-1">
 											Max Records
 										</label>
 										<input
@@ -361,7 +361,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 								{/* Time Range */}
 								<div className="grid grid-cols-2 gap-4 mb-4">
 									<div>
-										<label className="block text-sm font-medium text-foreground mb-1">
+																			<label className="block text-sm font-medium text-foreground mb-1">
 											Start Time
 										</label>
 										<input
@@ -372,7 +372,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 										/>
 									</div>
 									<div>
-										<label className="block text-sm font-medium text-foreground mb-1">
+																			<label className="block text-sm font-medium text-foreground mb-1">
 											End Time
 										</label>
 										<input
@@ -443,7 +443,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 
 						{/* Modal Footer */}
 						<div className="flex justify-end gap-3 px-6 py-4 border-t border">
-							<button
+							<button type="button"
 								onClick={() => {
 									if (!exporting) {
 										setModalVisible(false);
@@ -454,7 +454,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 							>
 								Cancel
 							</button>
-							<button
+							<button type="button"
 								onClick={handleExport}
 								disabled={exporting || !formState.timeseries}
 								className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"

@@ -64,7 +64,7 @@ export const Alert: React.FC<AlertProps> = ({
 				<div className="text-sm">{children}</div>
 			</div>
 			{closable && (
-				<button
+				<button type="button"
 					onClick={onClose}
 					className="text-current opacity-40 hover:opacity-70 transition-opacity text-sm leading-none"
 					aria-label="Close"

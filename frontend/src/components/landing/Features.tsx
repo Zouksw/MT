@@ -179,6 +179,7 @@ export const Features: React.FC = () => {
 				{/* Metrics strip */}
 				<StaggerContainer className="mb-16 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4 lg:mb-20">
 					{metrics.map((metric, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index}>
 							<div
 								className={`group rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-card-dark bg-white dark:bg-gray-950 p-5 md:p-7 text-center transition-all duration-300 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:hover:shadow-card-hover-dark ${index === 0 ? "md:py-9" : ""}`}
@@ -198,6 +199,7 @@ export const Features: React.FC = () => {
 				{/* Features Grid */}
 				<StaggerContainer className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:gap-6 grid-flow-dense">
 					{features.map((feature, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index} className={feature.span}>
 							<div
 								className={`group rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-card-dark bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:hover:shadow-card-hover-dark h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
@@ -219,6 +221,7 @@ export const Features: React.FC = () => {
 								<div className="mt-4 flex flex-wrap gap-2">
 									{feature.details.map((detail, idx) => (
 										<span
+											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											key={idx}
 											className="bg-[#FDF6E3] dark:bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary dark:text-primary rounded-full"
 										>

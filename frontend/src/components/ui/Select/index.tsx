@@ -45,7 +45,7 @@ export const Select: React.FC<SelectProps> = ({
 }) => {
 	return (
 		<div className={fullWidth ? "w-full" : ""}>
-			{label && <label className="block text-sm font-medium text-foreground mb-1">{label}</label>}
+					{label && <label className="block text-sm font-medium text-foreground mb-1">{label}</label>}
 			<SelectRoot
 				value={value}
 				defaultValue={defaultValue}

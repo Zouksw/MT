@@ -149,6 +149,7 @@ const _TopoLines: React.FC<{ className?: string }> = ({ className }) => {
 			fill="none"
 		>
 			{paths.map((d, i) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 				<path key={i} d={d} stroke="rgba(255, 255, 255, 0.08)" strokeWidth={1} fill="none" />
 			))}
 		</svg>
@@ -234,6 +235,7 @@ const _BrokenHex: React.FC<{ className?: string }> = ({ className }) => {
 				if (i === brokenIndex) return null; // rendered separately below
 				return (
 					<polygon
+						// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 						key={i}
 						points={hexPoints(c.x, c.y, R)}
 						stroke="#B8860B"

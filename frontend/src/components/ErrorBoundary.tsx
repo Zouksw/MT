@@ -58,13 +58,13 @@ export class ErrorBoundary extends Component<Props, State> {
 							An unexpected error occurred. Please try again or contact support.
 						</p>
 						<div className="flex gap-3 justify-center">
-							<button
+							<button type="button"
 								onClick={this.handleReset}
 								className="px-5 py-2.5 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors"
 							>
 								Try Again
 							</button>
-							<button
+							<button type="button"
 								onClick={this.handleReload}
 								className="px-5 py-2.5 rounded-lg bg-card text-gray-900 dark:text-gray-100 font-medium border hover:bg-accent transition-colors"
 							>

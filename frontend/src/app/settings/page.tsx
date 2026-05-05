@@ -117,6 +117,7 @@ export default function SettingsPage() {
 						<div className="flex flex-col items-center -mt-10 px-6">
 							<div className="w-20 h-20 rounded-full border-[3px] border-foreground/20 flex items-center justify-center bg-muted overflow-hidden ring-4 ring-card shadow-lg">
 								{user?.avatar ? (
+									// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
 									<img src={user.avatar} alt="" className="w-full h-full object-cover" />
 								) : (
 									<User className="size-8 text-gray-400" />
@@ -157,7 +158,8 @@ export default function SettingsPage() {
 						</div>
 						<div className="space-y-2">
 							{settingsSections.map((section, index) => (
-								<button
+								<button type="button"
+									// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 									key={index}
 									onClick={() => router.push(section.path)}
 									className="w-full flex items-center gap-4 p-4 rounded-xl text-left transition-all duration-200 hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] group"
@@ -236,6 +238,7 @@ export default function SettingsPage() {
 						</div>
 						<div className="space-y-3 mb-6">
 							{securityItems.map((item, idx) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								<div key={idx} className="flex items-center gap-3">
 									{item.enabled ? (
 										<CircleCheck className="size-4 text-green-500" />
@@ -311,7 +314,8 @@ export default function SettingsPage() {
 								icon: <User className="size-4" />,
 							},
 						].map((action, idx) => (
-							<button
+							<button type="button"
+								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								key={idx}
 								onClick={() => router.push(action.path)}
 								className="w-full p-4 rounded-xl text-left group transition-shadow duration-200 bg-card hover:shadow-md"

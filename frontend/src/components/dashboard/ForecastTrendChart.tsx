@@ -110,7 +110,7 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
 						{/* Time Range Selector */}
 						<div className="flex gap-1 rounded-lg bg-muted p-0.5">
 							{ranges.map((r) => (
-								<button
+								<button type="button"
 									key={r.key}
 									onClick={() => setRange(r.key)}
 									className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${

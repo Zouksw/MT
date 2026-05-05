@@ -41,7 +41,7 @@ describe("PageHeader", () => {
 	});
 
 	it("should render action buttons", () => {
-		render(<PageHeader title="Dashboard" actions={<button>Create New</button>} />);
+		render(<PageHeader title="Dashboard" actions={<button type="button">Create New</button>} />);
 		expect(screen.getByText("Create New")).toBeInTheDocument();
 	});
 
@@ -51,7 +51,7 @@ describe("PageHeader", () => {
 				title="Dashboard"
 				description="Overview"
 				breadcrumbs={[{ label: "Home", href: "/" }]}
-				actions={<button>Action</button>}
+				actions={<button type="button">Action</button>}
 			/>,
 		);
 		expect(screen.getByText("Dashboard")).toBeInTheDocument();

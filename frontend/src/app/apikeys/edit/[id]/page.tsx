@@ -197,9 +197,9 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 
 								{/* Active Status */}
 								<div>
+									{/* biome-ignore lint/a11y/noLabelWithoutControl: section heading */}
 									<label className="block text-sm font-medium text-foreground mb-2">Status</label>
-									<button
-										type="button"
+									<button type="button"
 										onClick={() => setIsActive(!isActive)}
 										className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 											isActive ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"

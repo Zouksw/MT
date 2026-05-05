@@ -219,7 +219,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
 					return (
 						<div key={item.key}>
-							<div
+													<div
 								className={`desktop-nav-item ${isActive && !hasChildren ? "active" : ""} ${collapsed ? "p-3 justify-center" : "py-2.5 px-3 justify-start"} relative`}
 								onClick={() => handleNavClick(item)}
 								title={collapsed ? item.label : undefined}
@@ -241,7 +241,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 									{item.children?.map((child) => {
 										const childActive = pathname === child.path;
 										return (
-											<div
+																					<div
 												key={child.key}
 												className={`desktop-nav-item ${childActive ? "active" : ""} py-1.5 px-3 text-[13px]`}
 												onClick={() => handleNavClick(child)}
@@ -319,7 +319,7 @@ export const MobileTabBar: React.FC = () => {
 				const isActive = pathname === item.path;
 
 				return (
-					<div
+									<div
 						key={item.key}
 						className={`mobile-tab-item ${isActive ? "active" : ""}`}
 						onClick={() => handleTabClick(item)}
@@ -392,7 +392,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, action, onBac
 	return (
 		<header className="mobile-header">
 			{onBack && (
-				<div className="mobile-header-action mr-2" onClick={onBack}>
+							<div className="mobile-header-action mr-2" onClick={onBack}>
 					←
 				</div>
 			)}
@@ -400,7 +400,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, action, onBac
 			<h1 className="mobile-header-title flex-1 m-0 text-h4 font-semibold">{title || "MT"}</h1>
 
 			{action || (
-				<div
+							<div
 					className="mobile-header-action"
 					onClick={() => router.push("/settings/notifications")}
 				>

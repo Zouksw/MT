@@ -23,9 +23,8 @@ export default function TimeframeSelector({ value, onChange }: TimeframeSelector
 			{options.map((opt) => {
 				const isActive = value === opt.key;
 				return (
-					<button
+					<button type="button"
 						key={opt.key}
-						type="button"
 						onClick={() => onChange(opt.key)}
 						className={`
               px-4 py-1.5 text-xs font-medium transition-colors

@@ -58,6 +58,7 @@ export const DataPageStats: React.FC<DataPageStatsProps> = ({
 						: ("default" as StatCardVariant));
 				return (
 					<div
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						key={index}
 						className="stagger-slide-up"
 						style={{ animationDelay: `${index * 80}ms` }}

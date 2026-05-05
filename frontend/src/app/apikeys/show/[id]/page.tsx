@@ -314,6 +314,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					<span>Home</span>
 				</a>
 				{breadcrumb.map((item, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 					<span key={i} className="flex items-center gap-2">
 						<span className="text-muted-foreground">/</span>
 						{item.href ? (
@@ -512,6 +513,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 									<span className="text-xs text-muted-foreground">IP Whitelist</span>
 									<div className="flex flex-col gap-1 mt-1">
 										{apiKey.ipWhitelist.map((ip, index) => (
+											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<Tag key={index} color="success">
 												{ip}
 											</Tag>

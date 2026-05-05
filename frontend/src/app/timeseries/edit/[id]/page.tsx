@@ -167,7 +167,7 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 							/>
 
 							<div className="w-full">
-								<label className="block text-sm font-medium text-foreground mb-1">Color</label>
+															<label className="block text-sm font-medium text-foreground mb-1">Color</label>
 								<input
 									type="color"
 									value={form.colorHex}
@@ -184,8 +184,7 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 							/>
 
 							<label className="flex items-center gap-3 cursor-pointer">
-								<button
-									type="button"
+								<button type="button"
 									role="switch"
 									aria-checked={form.isAnomalyDetectionEnabled}
 									onClick={() =>

@@ -56,30 +56,18 @@ const fetcher = async (url: string) => {
 
 export const useDashboardStats = () => {
 	const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+	const isAuth = !!getAuthToken();
 
-	// If not authenticated, return immediately — don't hang in loading state
-	if (!getAuthToken()) {
-		return {
-			stats: null,
-			loading: false,
-			error: new Error("Not authenticated"),
-			manualRetry: () => {},
-		};
-	}
+	const retryOpts = { maxRetries: 3, retryDelay: 1000, backoffMultiplier: 2 };
 
-	// Use useRetryableFetch for each API endpoint with automatic retry
 	const {
 		data: datasetsData,
 		error: datasetsError,
 		isLoading: datasetsLoading,
 	} = useRetryableFetch(
-		() => (getAuthToken() ? `${API_BASE}/datasets?page=1&limit=1` : null),
+		() => (isAuth ? `${API_BASE}/datasets?page=1&limit=1` : null),
 		fetcher,
-		{
-			maxRetries: 3,
-			retryDelay: 1000,
-			backoffMultiplier: 2,
-		},
+		retryOpts,
 	);
 
 	const {
@@ -87,13 +75,9 @@ export const useDashboardStats = () => {
 		error: timeseriesError,
 		isLoading: timeseriesLoading,
 	} = useRetryableFetch(
-		() => (getAuthToken() ? `${API_BASE}/timeseries?page=1&limit=1` : null),
+		() => (isAuth ? `${API_BASE}/timeseries?page=1&limit=1` : null),
 		fetcher,
-		{
-			maxRetries: 3,
-			retryDelay: 1000,
-			backoffMultiplier: 2,
-		},
+		retryOpts,
 	);
 
 	const {
@@ -101,51 +85,35 @@ export const useDashboardStats = () => {
 		error: forecastsError,
 		isLoading: forecastsLoading,
 	} = useRetryableFetch(
-		() => (getAuthToken() ? `${API_BASE}/models?page=1&limit=1` : null),
+		() => (isAuth ? `${API_BASE}/models?page=1&limit=1` : null),
 		fetcher,
-		{
-			maxRetries: 3,
-			retryDelay: 1000,
-			backoffMultiplier: 2,
-		},
+		retryOpts,
 	);
 
 	const { data: alertsData, isLoading: alertsLoading } = useRetryableFetch(
-		() => (getAuthToken() ? `${API_BASE}/alerts?page=1&limit=100` : null),
+		() => (isAuth ? `${API_BASE}/alerts?page=1&limit=100` : null),
 		fetcher,
-		{
-			maxRetries: 3,
-			retryDelay: 1000,
-			backoffMultiplier: 2,
-		},
+		retryOpts,
 	);
 
 	const { data: recentAlertsData } = useRetryableFetch(
-		() => (getAuthToken() ? `${API_BASE}/alerts?limit=5` : null),
+		() => (isAuth ? `${API_BASE}/alerts?limit=5` : null),
 		fetcher,
-		{
-			maxRetries: 3,
-			retryDelay: 1000,
-			backoffMultiplier: 2,
-		},
+		retryOpts,
 	);
 
 	const { data: recentForecastsData } = useRetryableFetch(
-		() => (getAuthToken() ? `${API_BASE}/models?limit=5` : null),
+		() => (isAuth ? `${API_BASE}/models?limit=5` : null),
 		fetcher,
-		{
-			maxRetries: 3,
-			retryDelay: 1000,
-			backoffMultiplier: 2,
-		},
+		retryOpts,
 	);
 
 	// Combine loading states - using useRetryableFetch's isLoading
-	const loading = datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
+	const loading = !isAuth ? false : datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
 
 	// Derive error from individual errors - no setState needed
 	const errors = [datasetsError, timeseriesError, forecastsError].filter(Boolean);
-	const error = errors.length > 0 ? (errors[0] as Error) : null;
+	const error = !isAuth ? new Error("Not authenticated") : errors.length > 0 ? (errors[0] as Error) : null;
 
 	// Calculate trends (mock data for now) - use useMemo to avoid impure function calls during render
 	const mockTrends = useMemo(

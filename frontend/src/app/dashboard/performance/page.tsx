@@ -481,8 +481,7 @@ export default function PerformancePage() {
 					<div className="flex items-center gap-3">
 						<div className="flex items-center gap-2">
 							<span className="text-sm text-muted-foreground">Auto-refresh</span>
-							<button
-								type="button"
+							<button type="button"
 								role="switch"
 								aria-checked={autoRefresh}
 								onClick={() => setAutoRefresh(!autoRefresh)}
@@ -504,6 +503,7 @@ export default function PerformancePage() {
 
 			<div className={`grid grid-cols-2 md:grid-cols-4 gap-${gap} mb-3`}>
 				{statCards.map((stat, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 					<StatCard key={`wv-${i}`} {...stat} loading={loading} />
 				))}
 			</div>
@@ -511,6 +511,7 @@ export default function PerformancePage() {
 			<div className={`grid grid-cols-2 md:grid-cols-4 gap-${gap} mb-6`}>
 				{serverStatCards.map((stat, i) => (
 					<StatCard
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						key={`srv-${i}`}
 						{...stat}
 						loading={loading}

@@ -39,13 +39,13 @@ export default function ErrorPage({
 				)}
 
 				<div className="flex gap-4 justify-center flex-wrap">
-					<button
+					<button type="button"
 						onClick={() => reset()}
 						className="h-12 px-8 text-base font-semibold rounded-lg bg-primary text-white border-none cursor-pointer hover:bg-primary-hover transition-colors"
 					>
 						Try Again
 					</button>
-					<button
+					<button type="button"
 						onClick={() => router.push("/")}
 						className="h-12 px-8 text-base font-semibold rounded-lg bg-white text-gray-900 border cursor-pointer hover:bg-gray-50 transition-colors"
 					>

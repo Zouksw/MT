@@ -21,7 +21,7 @@ export function AuthPage(props: AuthPageProps) {
 				return (
 					<p className="mt-6 text-center text-sm text-gray-500">
 						Don&apos;t have an account?{" "}
-						<button
+						<button type="button"
 							onClick={() => router.push("/register")}
 							className="font-semibold text-primary hover:text-primary-hover"
 						>
@@ -33,7 +33,7 @@ export function AuthPage(props: AuthPageProps) {
 				return (
 					<p className="mt-6 text-center text-sm text-gray-500">
 						Already have an account?{" "}
-						<button
+						<button type="button"
 							onClick={() => router.push("/login")}
 							className="font-semibold text-primary hover:text-primary-hover"
 						>
@@ -45,7 +45,7 @@ export function AuthPage(props: AuthPageProps) {
 			case "updatePassword":
 				return (
 					<div className="mt-6 text-center">
-						<button
+						<button type="button"
 							onClick={() => router.push("/login")}
 							className="text-sm text-gray-500 hover:text-gray-700"
 						>
@@ -165,6 +165,7 @@ export function AuthPage(props: AuthPageProps) {
 						},
 					].map((f, i) => (
 						<motion.div
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							key={i}
 							initial={{ opacity: 0, y: 8 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -226,11 +227,11 @@ export function AuthPage(props: AuthPageProps) {
 					<div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-6 text-center">
 						<p className="text-xs text-gray-400">
 							By continuing, you agree to our{" "}
-							<a href="#" className="text-gray-500 hover:text-gray-700">
+													<a href="#" className="text-gray-500 hover:text-gray-700">
 								Terms of Service
 							</a>{" "}
 							and{" "}
-							<a href="#" className="text-gray-500 hover:text-gray-700">
+													<a href="#" className="text-gray-500 hover:text-gray-700">
 								Privacy Policy
 							</a>
 						</p>

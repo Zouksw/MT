@@ -30,7 +30,7 @@ export const Tabs: React.FC<TabsProps> = ({ items, activeKey, onChange, classNam
 		<div className={className}>
 			<div className="flex border-b border" role="tablist">
 				{items.map((item) => (
-					<button
+					<button type="button"
 						key={item.key}
 						role="tab"
 						aria-selected={item.key === currentKey}

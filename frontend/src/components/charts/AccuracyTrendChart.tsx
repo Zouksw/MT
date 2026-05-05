@@ -123,7 +123,7 @@ export function AccuracyTrendChart({ models }: AccuracyTrendChartProps) {
 				<CardTitle className="text-sm font-medium">Accuracy Trend</CardTitle>
 				<div className="flex gap-1">
 					{WINDOW_OPTIONS.map((opt) => (
-						<button
+						<button type="button"
 							key={opt.value}
 							onClick={() => setActiveWindow(opt.value)}
 							className={`px-3 py-1 text-xs rounded-full transition-colors ${

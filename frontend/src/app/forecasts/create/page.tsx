@@ -331,6 +331,7 @@ export default function ForecastCreate() {
 								<p className="font-semibold mb-1">{algorithmInfo.label} features:</p>
 								<ul className="list-disc pl-5 space-y-0.5 text-sm">
 									{algorithmInfo.features.map((feature, idx) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										<li key={idx}>{feature}</li>
 									))}
 								</ul>
@@ -375,8 +376,7 @@ export default function ForecastCreate() {
 					{/* Hyperparameters (collapsible) */}
 					{algorithmInfo && algorithmInfo.hyperparameters.length > 0 && (
 						<div className="border border rounded-lg">
-							<button
-								type="button"
+							<button type="button"
 								className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"
 								onClick={() => setShowHyperparams(!showHyperparams)}
 							>

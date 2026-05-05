@@ -53,7 +53,7 @@ export const QuickActions: React.FC = () => {
 			<h5 className="text-base font-semibold mb-4">Quick Actions</h5>
 			<div className="grid grid-cols-2 gap-3">
 				{quickActions.map((action, i) => (
-					<button
+					<button type="button"
 						key={action.key}
 						onClick={() => router.push(action.path)}
 						className={`group relative w-full flex items-center gap-3 p-4 rounded-lg text-left transition-shadow duration-200 stagger-slide-up ${

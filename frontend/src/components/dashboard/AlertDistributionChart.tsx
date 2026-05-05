@@ -145,6 +145,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 									animationEasing="ease-out"
 								>
 									{chartData.map((entry, index) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										<Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.85} />
 									))}
 								</Bar>

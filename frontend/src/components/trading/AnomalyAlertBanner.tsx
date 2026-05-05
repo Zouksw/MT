@@ -65,8 +65,7 @@ export default function AnomalyAlertBanner({ anomalies, onViewDetails }: Anomaly
 				)}
 			</div>
 			{onViewDetails && (
-				<button
-					type="button"
+				<button type="button"
 					onClick={onViewDetails}
 					className="mt-2 text-sm text-amber-600 hover:underline"
 				>

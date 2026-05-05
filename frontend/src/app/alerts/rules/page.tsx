@@ -212,6 +212,7 @@ export default function AlertRules() {
 			render: (_value: unknown, record: AlertRule) => (
 				<div className="flex flex-wrap gap-1">
 					{record.notificationChannels.map((ch, idx) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<Tag key={idx} color="default">
 							{ch.type}
 						</Tag>
@@ -250,10 +251,9 @@ export default function AlertRules() {
 					>
 						{!isMobile && "Edit"}
 					</Button>
-					<button
+					<button type="button"
 						className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${record.enabled ? "bg-green-500" : "bg-gray-300"}`}
 						onClick={() => handleToggleEnabled(record)}
-						type="button"
 					>
 						<span
 							className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${record.enabled ? "translate-x-4" : "translate-x-1"}`}
@@ -509,6 +509,7 @@ function AlertRuleModal({
 				/>
 
 				<div>
+					{/* biome-ignore lint/a11y/noLabelWithoutControl: section heading */}
 					<label className="block text-sm font-medium text-foreground mb-1">Condition</label>
 					<div className="flex gap-2">
 						<div className="w-2/5">
@@ -578,11 +579,13 @@ function AlertRuleModal({
 				/>
 
 				<div>
+					{/* biome-ignore lint/a11y/noLabelWithoutControl: section heading */}
 					<label className="block text-sm font-medium text-foreground mb-2">
 						Notification Channels
 					</label>
 					<div className="space-y-3">
 						{notificationChannels.map((channel, index) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<Card key={index}>
 								<CardBody>
 									<div className="space-y-3">

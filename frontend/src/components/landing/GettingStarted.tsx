@@ -153,6 +153,7 @@ export default function GettingStarted() {
 
 					<div className="space-y-6">
 						{steps.map((step, index) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={index}>
 								<div className="flex gap-6 items-start">
 									<div className="relative flex-shrink-0">
@@ -184,6 +185,7 @@ export default function GettingStarted() {
 				{/* Feature list */}
 				<StaggerContainer className="mx-auto mb-12 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
 					{features.map((feature, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index}>
 							<div className="flex items-center gap-3 rounded-xl outline outline-black/5 dark:outline-white/10 px-5 py-4">
 								<CheckCircle size={20} weight="fill" className="text-green-500 flex-shrink-0" />

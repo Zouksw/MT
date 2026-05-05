@@ -273,6 +273,7 @@ export const Hero: React.FC = () => {
 				{/* Bento Feature Cards — outline style */}
 				<StaggerContainer className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-6">
 					{features.map((feature, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={i} className={`${feature.span}`}>
 							<div className="group relative rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-card-dark bg-white dark:bg-gray-950 p-6 transition-all duration-300 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),_0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-card-hover-dark">
 								<div className="absolute top-2 right-4 text-7xl font-display font-semibold text-gray-100 dark:text-gray-800/60 select-none leading-none">

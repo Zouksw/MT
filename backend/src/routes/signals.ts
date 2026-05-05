@@ -269,7 +269,6 @@ router.get(
 		const { commodityId } = req.params;
 		const params = signalQuerySchema.parse(req.query);
 
-		let currentPrice = params.currentPrice;
 		const isUuid =
 			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
 				commodityId,
@@ -277,6 +276,17 @@ router.get(
 		const priceWhere = isUuid
 			? { commodityId }
 			: { commodity: { slug: commodityId } };
+
+		const commodity = isUuid
+			? await prisma.commodity.findUnique({ where: { id: commodityId } })
+			: await prisma.commodity.findFirst({ where: { slug: commodityId } });
+		if (!commodity) {
+			throw new BadRequestError(
+				`Commodity "\${commodityId}" not found. Use GET /api/signals/commodities to list available commodities.`,
+			);
+		}
+
+		let currentPrice = params.currentPrice;
 		if (!currentPrice || !Number.isFinite(currentPrice)) {
 			const latest = await prisma.commodityPrice.findFirst({
 				where: priceWhere,

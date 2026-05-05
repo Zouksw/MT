@@ -60,6 +60,7 @@ export function DetailPageLayout({
 
 	const breadcrumbItems = breadcrumb ? [{ label: "Home", href: "/" }, ...breadcrumb] : [];
 	const actionButtons = actions?.map((action, index) => (
+		// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 		<Button key={index} variant={action.danger ? "danger" : "ghost"} onClick={action.onClick}>
 			{action.icon}
 			{!isMobile && <span className="ml-2">{action.label}</span>}

@@ -132,7 +132,7 @@ export default function LandingPage() {
 					</div>
 
 					{/* Mobile hamburger */}
-					<button
+					<button type="button"
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 						className="flex md:hidden items-center justify-center min-w-[44px] min-h-[44px] text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
 					>
@@ -246,7 +246,7 @@ export default function LandingPage() {
 
 					<div className="border-t border-black/5 dark:border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
 						<p className="text-xs text-gray-400">&copy; 2026 MT. All rights reserved.</p>
-						<button
+						<button type="button"
 							onClick={scrollToTop}
 							className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 						>

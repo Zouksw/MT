@@ -10,7 +10,7 @@ export default function GlobalError({
 	reset: () => void;
 }) {
 	return (
-		<html>
+		<html lang="en">
 			<body>
 				<div className="min-h-screen flex items-center justify-center bg-background p-6">
 					<div className="max-w-[600px] text-center">
@@ -35,7 +35,7 @@ export default function GlobalError({
 						)}
 
 						<div className="flex gap-4 justify-center flex-wrap">
-							<button
+							<button type="button"
 								onClick={() => reset()}
 								className="h-12 px-8 text-base font-semibold rounded-lg bg-primary text-primary-foreground border-none cursor-pointer hover:bg-primary-hover transition-colors"
 							>

@@ -22,6 +22,7 @@ export const MobileStatsCard: React.FC<MobileStatsCardProps> = ({ items, feature
 				const isFeatured = index === featuredIndex;
 				return (
 					<div
+						// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 						key={index}
 						className={`shrink-0 snap-start ${isFeatured ? "w-[280px] min-w-[280px]" : "w-[200px] min-w-[200px]"}`}
 					>
@@ -76,6 +77,7 @@ export const DesktopGridStats: React.FC<DesktopGridStatsProps> = ({
 				const isFeatured = index === featuredIndex;
 				return (
 					<div
+						// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 						key={index}
 						className={`col-span-2 ${isFeatured ? `md:col-span-${columns.featured}` : `md:col-span-${columns.standard}`}`}
 					>

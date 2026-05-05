@@ -498,6 +498,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 							<Scatter data={anomalyScatterData} fill={severityFillColors.HIGH} name="Anomalies">
 								{anomalyScatterData.map((entry, index) => (
 									<Cell
+										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										key={`cell-${index}`}
 										fill={
 											severityFillColors[entry.anomalySeverity as keyof typeof severityFillColors]

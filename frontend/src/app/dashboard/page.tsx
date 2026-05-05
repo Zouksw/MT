@@ -124,6 +124,7 @@ export default function DashboardPage() {
 							}}
 						>
 							{user?.avatar ? (
+								// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
 								<img src={user.avatar} alt="" className="w-full h-full object-cover rounded-2xl" />
 							) : (
 								<User className={isMobile ? "size-[18px]" : "size-[22px]"} />
@@ -137,6 +138,7 @@ export default function DashboardPage() {
 						aria-atomic="true"
 					>
 						{statCards.map((stat, index) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StatCard key={index} {...stat} loading={loading} />
 						))}
 					</div>
@@ -197,6 +199,7 @@ export default function DashboardPage() {
 										<div className="hidden sm:flex items-center gap-1.5">
 											{Array.from({ length: stats.aiModels.total }).map((_, i) => (
 												<div
+													// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 													key={i}
 													className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
 														i < stats.aiModels.active

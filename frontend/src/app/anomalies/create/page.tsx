@@ -168,6 +168,7 @@ export default function AnomalyCreate() {
 								required
 							/>
 							<div>
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: section heading */}
 								<label className="block text-sm font-medium text-foreground mb-1">
 									Expected Range
 								</label>

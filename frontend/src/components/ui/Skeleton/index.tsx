@@ -19,6 +19,7 @@ function ShimmerBlock({
 export const StatsCardSkeleton: React.FC<{ count?: number }> = ({ count = 4 }) => (
 	<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 		{Array.from({ length: count }).map((_, i) => (
+			// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 			<div key={i} className="bg-card rounded-lg border p-5">
 				<ShimmerBlock width={120} height={24} className="mb-3" />
 				<ShimmerBlock width={80} height={32} className="mb-2" />
@@ -36,10 +37,12 @@ export const TableSkeleton: React.FC<{
 		<ShimmerBlock width={200} height={20} className="mb-4" />
 		{Array.from({ length: rows }).map((_, row) => (
 			<div
+				// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 				key={row}
 				className={`flex gap-4 py-3 ${row < rows - 1 ? "border-b border-border" : ""}`}
 			>
 				{Array.from({ length: columns }).map((_, col) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 					<ShimmerBlock key={col} width={col === 0 ? 150 : 100} height={20} className="flex-1" />
 				))}
 			</div>
@@ -51,6 +54,7 @@ export const FormSkeleton: React.FC<{ fieldCount?: number }> = ({ fieldCount = 4
 	<div className="bg-card rounded-lg border p-6 max-w-lg">
 		<ShimmerBlock width={200} height={28} className="mb-6" />
 		{Array.from({ length: fieldCount }).map((_, i) => (
+			// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 			<div key={i} className="mb-5">
 				<ShimmerBlock width={120} height={16} className="mb-2" />
 				<ShimmerBlock height={40} />
@@ -63,6 +67,7 @@ export const FormSkeleton: React.FC<{ fieldCount?: number }> = ({ fieldCount = 4
 export const CardListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => (
 	<div className="flex flex-col gap-4">
 		{Array.from({ length: count }).map((_, i) => (
+			// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 			<div key={i} className="bg-card rounded-lg border p-5">
 				<div className="flex gap-4 mb-4">
 					<div className="w-12 h-12 bg-muted rounded animate-pulse" />
@@ -90,6 +95,7 @@ export const DetailPageSkeleton: React.FC = () => (
 		<div className="bg-card rounded-lg border p-6">
 			<ShimmerBlock width={180} height={20} className="mb-4" />
 			{Array.from({ length: 4 }).map((_, i) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 				<ShimmerBlock key={i} height={16} className="mb-3" />
 			))}
 		</div>
@@ -103,6 +109,7 @@ export const InlineSkeleton: React.FC<{
 	<div>
 		{Array.from({ length: lines }).map((_, i) => (
 			<ShimmerBlock
+				// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 				key={i}
 				width={i === lines - 1 ? "70%" : width}
 				height={16}

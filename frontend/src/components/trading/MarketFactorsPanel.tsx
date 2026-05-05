@@ -75,8 +75,7 @@ function FactorGroup({
 
 	return (
 		<div className="border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-			<button
-				type="button"
+			<button type="button"
 				className="w-full flex items-center justify-between p-3 text-left cursor-pointer"
 				onClick={() => setExpanded(!expanded)}
 			>
