@@ -220,8 +220,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 					return (
 						<div key={item.key}>
 													<div
+								role="button"
+								tabIndex={0}
 								className={`desktop-nav-item ${isActive && !hasChildren ? "active" : ""} ${collapsed ? "p-3 justify-center" : "py-2.5 px-3 justify-start"} relative`}
 								onClick={() => handleNavClick(item)}
+								onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleNavClick(item); }}
 								title={collapsed ? item.label : undefined}
 							>
 								<span className="text-[18px] shrink-0">{item.icon}</span>
@@ -243,8 +246,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 										return (
 																					<div
 												key={child.key}
+												role="button"
+												tabIndex={0}
 												className={`desktop-nav-item ${childActive ? "active" : ""} py-1.5 px-3 text-[13px]`}
 												onClick={() => handleNavClick(child)}
+												onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleNavClick(child); }}
 											>
 												<span className="text-sm shrink-0">{child.icon}</span>
 												<span className="flex-1">{child.label}</span>
@@ -321,8 +327,11 @@ export const MobileTabBar: React.FC = () => {
 				return (
 									<div
 						key={item.key}
+						role="button"
+						tabIndex={0}
 						className={`mobile-tab-item ${isActive ? "active" : ""}`}
 						onClick={() => handleTabClick(item)}
+						onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleTabClick(item); }}
 					>
 						<span className="mobile-tab-item-icon">{item.icon}</span>
 						<span>{item.label}</span>
@@ -392,7 +401,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, action, onBac
 	return (
 		<header className="mobile-header">
 			{onBack && (
-							<div className="mobile-header-action mr-2" onClick={onBack}>
+							<div role="button" tabIndex={0} className="mobile-header-action mr-2" onClick={onBack}
+				onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onBack?.(); }}>
 					←
 				</div>
 			)}
@@ -401,8 +411,11 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, action, onBac
 
 			{action || (
 							<div
+					role="button"
+					tabIndex={0}
 					className="mobile-header-action"
 					onClick={() => router.push("/settings/notifications")}
+				onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push("/settings/notifications"); }}
 				>
 					<Bell className="w-[18px] h-[18px]" />
 				</div>

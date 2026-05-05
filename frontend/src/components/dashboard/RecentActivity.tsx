@@ -95,9 +95,12 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 							{alertsItems.map((item, i) => (
 															<div
 									key={item.id}
+									role="button"
+									tabIndex={0}
 									className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors stagger-slide-up"
 									style={{ animationDelay: `${i * 50}ms` }}
 									onClick={() => router.push(`/alerts/show/${item.id}`)}
+									onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/alerts/show/${item.id}`); }}
 								>
 									<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 dark:bg-gray-700/50">
 										<Bell className="size-4 text-amber-600" />
@@ -120,9 +123,12 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 						{forecastsItems.map((item, i) => (
 													<div
 								key={item.id}
+								role="button"
+								tabIndex={0}
 								className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors stagger-slide-up"
 								style={{ animationDelay: `${i * 50}ms` }}
 								onClick={() => router.push("/forecasts")}
+								onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push("/forecasts"); }}
 							>
 								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30">
 									<Zap className="size-4 text-purple-500" />

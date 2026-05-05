@@ -227,11 +227,11 @@ export function AuthPage(props: AuthPageProps) {
 					<div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-6 text-center">
 						<p className="text-xs text-gray-400">
 							By continuing, you agree to our{" "}
-													<a href="#" className="text-gray-500 hover:text-gray-700">
+													<a href="/terms" className="text-gray-500 hover:text-gray-700">
 								Terms of Service
 							</a>{" "}
 							and{" "}
-													<a href="#" className="text-gray-500 hover:text-gray-700">
+													<a href="/privacy" className="text-gray-500 hover:text-gray-700">
 								Privacy Policy
 							</a>
 						</p>

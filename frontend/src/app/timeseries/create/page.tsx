@@ -162,8 +162,8 @@ export default function TimeseriesCreate() {
 					<CardBody>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div className="w-full">
-															<label className="block text-sm font-medium text-foreground mb-1">Color</label>
-								<input
+															<label htmlFor="ts-color" className="block text-sm font-medium text-foreground mb-1">Color</label>
+																<input id="ts-color"
 									type="color"
 									value={form.colorHex}
 									onChange={(e) => handleChange("colorHex", e.target.value)}

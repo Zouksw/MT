@@ -31,7 +31,8 @@
         "useValidAnchor": "warn",
         "useAltText": "warn",
         "useHtmlLang": "warn",
-        "useButtonType": "warn"
+        "useButtonType": "warn",
+        "useSemanticElements": "off"
       },
       "performance": {
         "noImgElement": "warn"

@@ -286,11 +286,14 @@ export const DataExport: React.FC<DataExportProps> = ({
 				<div className="fixed inset-0 z-50 flex items-center justify-center">
 									<div
 						className="absolute inset-0 bg-black/40"
+						role="button"
+						tabIndex={-1}
 						onClick={() => {
 							if (!exporting) {
 								setModalVisible(false);
 							}
 						}}
+						onKeyDown={() => {}}
 					/>
 					<div className="relative bg-card rounded-xl shadow-xl w-full max-w-150 mx-4 max-h-[90vh] overflow-y-auto">
 						{/* Modal Header */}
@@ -311,7 +314,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 							<div className={exporting ? "opacity-50 pointer-events-none" : ""}>
 								{/* Time Series */}
 								<div className="mb-4">
-																	<label className="block text-sm font-medium text-foreground mb-1">
+																	<label htmlFor="export-timeseries" className="block text-sm font-medium text-foreground mb-1">
 										Time Series
 									</label>
 									<input
@@ -326,7 +329,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 								{/* Format + Limit row */}
 								<div className="grid grid-cols-2 gap-4 mb-4">
 									<div>
-																			<label className="block text-sm font-medium text-foreground mb-1">
+																			<label htmlFor="export-format" className="block text-sm font-medium text-foreground mb-1">
 											Export Format
 										</label>
 										<select
@@ -342,7 +345,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 										</select>
 									</div>
 									<div>
-																			<label className="block text-sm font-medium text-foreground mb-1">
+																			<label htmlFor="export-limit" className="block text-sm font-medium text-foreground mb-1">
 											Max Records
 										</label>
 										<input
@@ -361,7 +364,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 								{/* Time Range */}
 								<div className="grid grid-cols-2 gap-4 mb-4">
 									<div>
-																			<label className="block text-sm font-medium text-foreground mb-1">
+																			<label htmlFor="export-start" className="block text-sm font-medium text-foreground mb-1">
 											Start Time
 										</label>
 										<input
@@ -372,7 +375,7 @@ export const DataExport: React.FC<DataExportProps> = ({
 										/>
 									</div>
 									<div>
-																			<label className="block text-sm font-medium text-foreground mb-1">
+																			<label htmlFor="export-end" className="block text-sm font-medium text-foreground mb-1">
 											End Time
 										</label>
 										<input

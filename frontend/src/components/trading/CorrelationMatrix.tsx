@@ -94,9 +94,10 @@ export default function CorrelationMatrixChart({
 							{commodities[i]}
 						</div>
 						{row.map((value, j) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: matrix cell position is the key
+							// biome-ignore lint/a11y/noStaticElementInteractions: interactive tooltip cell
 							<div
-															key={`${i}-${j}`}
+							// biome-ignore lint/suspicious/noArrayIndexKey: matrix cell position is the key
+							key={`${i}-${j}`}
 								style={{
 									width: cellSize,
 									height: cellSize,

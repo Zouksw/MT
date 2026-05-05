@@ -151,7 +151,6 @@ export default function ProfessionalChart({
 	resistanceLevel,
 	loading = false,
 	height = 480,
-	darkMode = false,
 	showSma20 = true,
 	showSma50 = true,
 	chartType = "candlestick",
