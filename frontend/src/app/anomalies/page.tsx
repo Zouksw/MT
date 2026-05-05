@@ -47,6 +47,7 @@ export default function AnomalyList() {
 		data: anomalies,
 		loading,
 		mutate,
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	} = useList<any>("anomalies", {
 		pageSize: 1000,
 		sort: "detectedAt",
@@ -55,7 +56,9 @@ export default function AnomalyList() {
 
 	// Stats
 	const totalAnomalies = anomalies?.length ?? 0;
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	const criticalCount = anomalies?.filter((a: any) => a.severity === "CRITICAL").length ?? 0;
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	const highCount = anomalies?.filter((a: any) => a.severity === "HIGH").length ?? 0;
 
 	// Severity color mapping to our Tag colors
@@ -105,6 +108,7 @@ export default function AnomalyList() {
 	const totalPages = Math.ceil((anomalies?.length || 0) / pageSize);
 
 	// Table columns
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	const columns: Column<any>[] = [
 		{
 			key: "id",

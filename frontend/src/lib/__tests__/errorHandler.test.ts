@@ -17,6 +17,7 @@ global.console = {
 describe("errorHandler", () => {
 	describe("handleApiError", () => {
 		it("should handle 401 Unauthorized", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const error: any = {
 				response: {
 					status: 401,
@@ -33,6 +34,7 @@ describe("errorHandler", () => {
 		});
 
 		it("should handle 403 Forbidden", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const error: any = {
 				response: {
 					status: 403,
@@ -48,6 +50,7 @@ describe("errorHandler", () => {
 		});
 
 		it("should handle 404 Not Found", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const error: any = {
 				response: {
 					status: 404,
@@ -64,6 +67,7 @@ describe("errorHandler", () => {
 		});
 
 		it("should handle 500 Server Error", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const error: any = {
 				response: {
 					status: 500,
@@ -107,6 +111,7 @@ describe("errorHandler", () => {
 
 	describe("requiresReauth", () => {
 		it("should return true for 401 errors", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const error: any = errorHandler.createSafeError({
 				response: { status: 401 },
 			});
@@ -115,6 +120,7 @@ describe("errorHandler", () => {
 		});
 
 		it("should return false for other errors", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const error: any = errorHandler.createSafeError({
 				response: { status: 404 },
 			});

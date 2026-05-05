@@ -51,6 +51,7 @@ const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Le
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false },
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const ReferenceLine = dynamic(

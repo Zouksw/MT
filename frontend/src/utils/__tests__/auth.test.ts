@@ -222,6 +222,7 @@ describe("auth utilities", () => {
 
 		it("should warn in development when not authenticated", () => {
 			const originalEnv = process.env.NODE_ENV;
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			(process.env as any).NODE_ENV = "development";
 			const warnSpy = jest.spyOn(console, "warn").mockImplementation();
 
@@ -233,6 +234,7 @@ describe("auth utilities", () => {
 			);
 
 			warnSpy.mockRestore();
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			(process.env as any).NODE_ENV = originalEnv;
 		});
 	});
@@ -321,6 +323,7 @@ describe("auth utilities", () => {
 				apiKey: "key-123",
 			};
 
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			setCachedUser(testUser as any);
 
 			const stored = localStorageMock.getItem("user");

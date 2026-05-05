@@ -13,6 +13,7 @@ import "@testing-library/jest-dom";
 // Mock recharts dynamic imports
 jest.mock("recharts", () => {
 	const createComponent = (name: string) => {
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		const Comp = React.forwardRef((props: any, ref: any) => (
 			<div ref={ref} data-testid={`recharts-${name}`} {...props} />
 		));
@@ -20,6 +21,7 @@ jest.mock("recharts", () => {
 		return Comp;
 	};
 	return {
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		LineChart: ({ children }: any) => <div data-testid="recharts-LineChart">{children}</div>,
 		Line: createComponent("Line"),
 		XAxis: createComponent("XAxis"),
@@ -27,6 +29,7 @@ jest.mock("recharts", () => {
 		CartesianGrid: createComponent("CartesianGrid"),
 		Tooltip: createComponent("Tooltip"),
 		Legend: createComponent("Legend"),
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		ResponsiveContainer: ({ children }: any) => (
 			<div data-testid="recharts-ResponsiveContainer">{children}</div>
 		),
@@ -36,6 +39,7 @@ jest.mock("recharts", () => {
 
 // Mock fetch for polling
 const mockFetch = jest.fn();
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 global.fetch = mockFetch as any;
 
 import { RealTimeChart } from "../RealTimeChart";

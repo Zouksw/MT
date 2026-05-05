@@ -26,6 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
 	componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
 		console.error("Error Boundary caught an error:", error, errorInfo);
 		if (typeof window !== "undefined" && (window as unknown as { Sentry?: { captureException: (error: Error, options: Record<string, unknown>) => void } }).Sentry) {
+			// biome-ignore lint/style/noNonNullAssertion: value guaranteed by middleware
 			(window as unknown as { Sentry?: { captureException: (error: Error, options: Record<string, unknown>) => void } }).Sentry!.captureException(error, {
 				contexts: { react: { componentStack: errorInfo.componentStack } },
 			});

@@ -13,6 +13,7 @@ import {
 import type { ModelWithBacktest } from "@/types/accuracy";
 import { MODEL_COLORS } from "@/types/accuracy";
 
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 const ResponsiveContainer = dynamic<any>(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> },

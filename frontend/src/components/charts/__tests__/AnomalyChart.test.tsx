@@ -12,6 +12,7 @@ import "@testing-library/jest-dom";
 // Mock recharts dynamic imports
 jest.mock("recharts", () => {
 	const createComponent = (name: string) => {
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		const Comp = React.forwardRef((props: any, ref: any) => (
 			<div ref={ref} data-testid={`recharts-${name}`} {...props} />
 		));
@@ -25,9 +26,11 @@ jest.mock("recharts", () => {
 		CartesianGrid: createComponent("CartesianGrid"),
 		Tooltip: createComponent("Tooltip"),
 		Legend: createComponent("Legend"),
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		ResponsiveContainer: ({ children }: any) => (
 			<div data-testid="recharts-ResponsiveContainer">{children}</div>
 		),
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		ComposedChart: ({ children, ...props }: any) => (
 			<div data-testid="recharts-ComposedChart" {...props}>
 				{children}

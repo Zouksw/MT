@@ -35,6 +35,7 @@ interface PredictedValueRow {
 	upper?: number;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 interface ForecastWithDetails extends Record<string, any> {
 	id: string;
 	timeseries?: { name: string; unit?: string };

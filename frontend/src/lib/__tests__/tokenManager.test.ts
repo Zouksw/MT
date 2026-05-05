@@ -118,6 +118,7 @@ describe("tokenManager", () => {
 			const token = `header.${encodedPayload}.signature`;
 
 			// Access private method through testing
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const parsed = (tokenManager as any).parseJwt(token);
 
 			expect(parsed).toEqual(payload);
@@ -132,6 +133,7 @@ describe("tokenManager", () => {
 				.replace(/=/g, "");
 			const token = `header.${encodedPayload}.signature`;
 
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const parsed = (tokenManager as any).parseJwt(token);
 
 			expect(parsed.userId).toBe("user+1/2");
@@ -142,7 +144,9 @@ describe("tokenManager", () => {
 		it("should handle null and undefined gracefully", () => {
 			expect(tokenManager.getToken()).toBeNull();
 			expect(tokenManager.isTokenValid("")).toBe(false);
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			expect(tokenManager.isTokenValid(null as any)).toBe(false);
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			expect(tokenManager.isTokenValid(undefined as any)).toBe(false);
 		});
 

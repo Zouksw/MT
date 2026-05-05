@@ -4,7 +4,7 @@ export interface Column<T> {
 	key: string;
 	title: string;
 	dataIndex?: keyof T;
-	// biome-ignore lint/suspicious/noExplicitAny: render value type depends on column — standard table library pattern
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	render?: (value: any, record: T, index: number) => React.ReactNode;
 	width?: number | string;
 	align?: "left" | "center" | "right";

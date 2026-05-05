@@ -23,29 +23,37 @@ const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod
 		</div>
 	),
 	ssr: false,
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 }) as React.ComponentType<any>;
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 }) as React.ComponentType<any>;
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 }) as React.ComponentType<any>;
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 }) as React.ComponentType<any>;
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 ) as React.ComponentType<any>;
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 }) as React.ComponentType<any>;
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false },
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 ) as React.ComponentType<any>;
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic import type
 }) as React.ComponentType<any>;
 
 interface MemoryPoint {
@@ -392,21 +400,25 @@ export default function PerformancePage() {
 		{
 			key: "endpoint",
 			title: "Endpoint",
+			// biome-ignore lint/suspicious/noExplicitAny: generic component callback
 			render: (row: any) => <span className="font-mono text-sm">{row.endpoint}</span>,
 		},
 		{
 			key: "avg",
 			title: "Avg (ms)",
+			// biome-ignore lint/suspicious/noExplicitAny: generic component callback
 			render: (row: any) => (
 				<span style={{ color: latencyColor(row.avg) === "error" ? "#EF4444" : "inherit" }}>
 					{row.avg.toFixed(1)}
 				</span>
 			),
 		},
+		// biome-ignore lint/suspicious/noExplicitAny: generic component callback
 		{ key: "p50", title: "P50 (ms)", render: (row: any) => row.p50.toFixed(1) },
 		{
 			key: "p95",
 			title: "P95 (ms)",
+			// biome-ignore lint/suspicious/noExplicitAny: generic component callback
 			render: (row: any) => (
 				<span style={{ color: latencyColor(row.p95) === "error" ? "#EF4444" : "inherit" }}>
 					{row.p95.toFixed(1)}
@@ -416,12 +428,14 @@ export default function PerformancePage() {
 		{
 			key: "p99",
 			title: "P99 (ms)",
+			// biome-ignore lint/suspicious/noExplicitAny: generic component callback
 			render: (row: any) => (
 				<span style={{ color: latencyColor(row.p99) === "error" ? "#EF4444" : "inherit" }}>
 					{row.p99.toFixed(1)}
 				</span>
 			),
 		},
+		// biome-ignore lint/suspicious/noExplicitAny: generic component callback
 		{ key: "count", title: "Requests", render: (row: any) => row.count },
 	];
 

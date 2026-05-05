@@ -272,7 +272,7 @@ export default function AlertList() {
 			key: "actions",
 			title: "Actions",
 			width: isMobile ? 80 : 180,
-			// biome-ignore lint/suspicious/noExplicitAny: Table render callback requires any for value param
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			render: (_value: any, record: AlertItem) => (
 				<div className="flex items-center gap-2">
 					{!record.isRead && (

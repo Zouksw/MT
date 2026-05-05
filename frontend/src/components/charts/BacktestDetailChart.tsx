@@ -10,30 +10,26 @@ import {
 } from "@/lib/chart-config";
 import type { PredictionLog } from "@/types/accuracy";
 
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <div className="h-[300px] bg-muted animate-pulse rounded" /> },
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const ComposedChart = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
 const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: Recharts components have complex generic types
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {

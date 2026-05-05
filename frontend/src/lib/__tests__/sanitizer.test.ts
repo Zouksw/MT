@@ -37,7 +37,9 @@ describe("sanitizer", () => {
 		});
 
 		it("should handle null and undefined", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			expect(sanitizer.sanitizeHtml(null as any)).toBe("");
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			expect(sanitizer.sanitizeHtml(undefined as any)).toBe("");
 		});
 
@@ -68,6 +70,7 @@ describe("sanitizer", () => {
 		it("should handle invalid URLs", () => {
 			expect(sanitizer.sanitizeUrl("not-a-url")).toBe("#");
 			expect(sanitizer.sanitizeUrl("")).toBe("#");
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			expect(sanitizer.sanitizeUrl(null as any)).toBe("#");
 		});
 	});

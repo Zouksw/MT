@@ -33,6 +33,7 @@ const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.T
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false },
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), {

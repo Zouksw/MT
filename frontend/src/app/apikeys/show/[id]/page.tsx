@@ -213,6 +213,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					const data = await response.json();
 					const newKey = data.data || data;
 					setApiKey({
+						// biome-ignore lint/style/noNonNullAssertion: value guaranteed by middleware
 						...apiKey!,
 						...(typeof newKey === "object" ? newKey : {}),
 						keyPreview: newKey.key

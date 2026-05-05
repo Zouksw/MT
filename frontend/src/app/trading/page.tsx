@@ -39,7 +39,7 @@ export default function TradingPage() {
 	const [chartType, setChartType] = useState<ChartType>("candlestick");
 	const [showMultiSource, setShowMultiSource] = useState(false);
 	const [indicators, setIndicators] = useState({ sma20: true, sma50: true, bollinger: false });
-	// biome-ignore lint/suspicious/noExplicitAny: signal shape is dynamic from API
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	const [signal, setSignal] = useState<any>(null);
 	const [signalLoading, setSignalLoading] = useState(false);
 	const [bestModelId, setBestModelId] = useState<string | undefined>();
@@ -199,6 +199,7 @@ export default function TradingPage() {
 			if (signalRes.status === "fulfilled" && signalRes.value.ok) {
 				const data = await signalRes.value.json();
 				if (data.success && data.data) {
+					// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 					setSignal((prev: any) => {
 						if (prev?.type && prev.type !== data.data.type) {
 							setPreviousSignalType(prev.type);

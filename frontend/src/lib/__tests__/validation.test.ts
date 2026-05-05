@@ -286,6 +286,7 @@ describe("validationRules", () => {
 		describe("confirmation", () => {
 			it("should validate matching values", () => {
 				const validator = confirmation("password");
+				// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 				const allValues = { password: "same" } as any;
 
 				expect(validator.validate("same", allValues)).toBe(true);
@@ -299,6 +300,7 @@ describe("validationRules", () => {
 
 			it("should handle missing match field", () => {
 				const validator = confirmation("password");
+				// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 				const allValues = {} as any;
 
 				expect(validator.validate("value", allValues)).toBe(false);

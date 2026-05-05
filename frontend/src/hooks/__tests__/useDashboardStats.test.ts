@@ -45,9 +45,11 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should fetch and parse stats successfully", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		mockUseRetryableFetch.mockImplementation((_key: any, _fetcher: any) => {
 			// Return different data based on call order
 			const callIndex = mockUseRetryableFetch.mock.calls.length - 1;
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const _dataMap: any[] = [
 				{ total: 10, data: [] }, // datasets
 				{ total: 25, data: [] }, // timeseries
@@ -66,6 +68,7 @@ describe("useDashboardStats", () => {
 			];
 
 			// Use a simple counter approach - return data based on how many calls so far
+			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			const dataByCallOrder: Record<number, any> = {
 				0: { total: 10, data: [] },
 				1: { total: 25, data: [] },
