@@ -284,8 +284,8 @@ describe("IoTDB Query Builder - buildSelectQuery", () => {
 	test("should handle string numbers for time range", () => {
 		const result = buildSelectQuery({
 			path: "root.device1.*",
-			startTime: "1234567890000" as any,
-			endTime: "1234567990000" as any,
+			startTime: "1234567890000" as unknown as number,
+			endTime: "1234567990000" as unknown as number,
 		});
 		expect(result).toBe(
 			"SELECT * FROM root.device1.* WHERE time >= 1234567890000 AND time <= 1234567990000",

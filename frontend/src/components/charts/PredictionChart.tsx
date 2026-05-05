@@ -209,7 +209,6 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 		}
 	};
 
-	// biome-ignore lint/suspicious/noExplicitAny: Recharts tooltip passes dynamic payload data
 	const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: any }> }) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;

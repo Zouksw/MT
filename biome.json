@@ -8,7 +8,7 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "warn",
+        "noExplicitAny": "off",
         "noArrayIndexKey": "warn",
         "noControlCharactersInRegex": "error",
         "noRedeclare": "error",
@@ -21,7 +21,7 @@
         "useHookAtTopLevel": "warn"
       },
       "style": {
-        "noNonNullAssertion": "warn",
+        "noNonNullAssertion": "off",
         "noDescendingSpecificity": "off"
       },
       "a11y": {

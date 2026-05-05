@@ -94,7 +94,7 @@ describe("Config Module", () => {
 
 	describe("IoTDB credentials validation", () => {
 		test("should use default IoTDB credentials when not set (with warning)", async () => {
-			const { logger } = await import("../../utils/logger");
+			await import("../../utils/logger");
 
 			process.env.JWT_SECRET = "a".repeat(32);
 			process.env.SESSION_SECRET = "b".repeat(32);

@@ -239,13 +239,13 @@ export function cacheRoute(
 		let statusCode = 200;
 
 		// Intercept res.set()
-		res.set = function (header: Record<string, string> | string) {
+		res.set = (header: Record<string, string> | string, value?: string) => {
 			if (typeof header === "string") {
-				headers[header] = arguments[1];
+				headers[header] = value ?? "";
 			} else {
 				Object.assign(headers, header);
 			}
-			return originalSet.apply(res, arguments as unknown as Parameters<typeof originalSet>);
+			return originalSet.apply(res, [header, value] as unknown as Parameters<typeof originalSet>);
 		};
 
 		// Intercept res.status()

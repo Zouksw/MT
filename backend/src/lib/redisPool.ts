@@ -251,6 +251,7 @@ export async function closeRedisPool(): Promise<void> {
  * Execute Redis command using default client
  */
 export async function withRedis<T>(
+	// biome-ignore lint/suspicious/noExplicitAny: Redis client type is library-specific
 	command: (client: any) => Promise<T>,
 ): Promise<T> {
 	const pool = getRedisPool();
