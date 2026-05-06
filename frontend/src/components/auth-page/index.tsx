@@ -1,10 +1,8 @@
 "use client";
 
-import { ChartLineUp, GithubLogo, Lightning, ShieldCheck } from "@phosphor-icons/react";
+import { GithubLogo, Lightning } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { TopoLines } from "@/components/ui/GeometricArt";
-import { FloatElement } from "@/components/ui/ShimmerCard";
 import { SPRING_DEFAULTS } from "@/lib/motion";
 import type { AuthPageProps } from "./auth-types";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
@@ -105,111 +103,82 @@ export function AuthPage(props: AuthPageProps) {
 
 	return (
 		<div className="flex min-h-screen">
-			{/* Left Side — Clean editorial treatment */}
-			<div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-black dark:bg-gray-950 text-white p-12">
+			{/* Left Side — Dark brand panel, refined industrial */}
+			<div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-[#0a0a0a] text-white p-12">
 				{/* Dot pattern */}
 				<div
-					className="pointer-events-none absolute inset-0 opacity-[0.04]"
+					className="pointer-events-none absolute inset-0 opacity-[0.03]"
 					style={{
 						backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
 						backgroundSize: "24px 24px",
 					}}
 				/>
-				{/* Ambient gradient blobs */}
+				{/* Gold glow — single warm accent */}
 				<div
 					className="pointer-events-none absolute inset-0"
 					style={{
 						background:
-							"radial-gradient(ellipse 50% 50% at 10% 90%, rgba(184, 134, 11, 0.08), transparent), radial-gradient(ellipse 40% 40% at 80% 20%, rgba(184, 134, 11, 0.06), transparent)",
+							"radial-gradient(ellipse 60% 40% at 50% 80%, rgba(184, 134, 11, 0.07), transparent)",
 					}}
 				/>
 
-				{/* Topographic lines decoration */}
-				<TopoLines className="absolute bottom-0 left-0 opacity-50" />
-
-				{/* Content */}
+				{/* Brand mark */}
 				<div className="relative z-10">
-					{/* Logo */}
-					<div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
-						<Lightning size={32} weight="duotone" className="text-gray-900" />
+					<div className="mb-10 flex h-14 w-14 items-center justify-center rounded-xl bg-[#B8860B]/10 ring-1 ring-[#B8860B]/20">
+						<Lightning size={28} weight="duotone" className="text-[#B8860B]" />
 					</div>
+				</div>
 
+				{/* Central statement — bold, data-driven */}
+				<motion.div
+					initial={{ opacity: 0, y: 12 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+					className="relative z-10"
+				>
 					<h1
-						className="font-display text-4xl font-semibold leading-tight tracking-tight"
+						className="font-display text-5xl font-semibold leading-[1.1] tracking-tight text-white"
 						style={{ letterSpacing: "-0.03em" }}
 					>
 						MT
 					</h1>
-					<p className="mt-4 max-w-sm text-lg leading-relaxed text-white/60">
-						Commodity market intelligence with real-time data and multi-factor analysis
+					<p className="mt-6 max-w-xs text-xl font-medium leading-relaxed text-white/80">
+						108 commodities.
+						<br />
+						7 AI models.
+						<br />
+						<span className="text-[#B8860B]">One signal.</span>
 					</p>
-				</div>
+					<p className="mt-4 text-sm text-white/40">
+						AI-powered commodity market analytics
+					</p>
+				</motion.div>
 
-				{/* Features */}
-				<div className="relative z-10 space-y-6">
-					{[
-						{
-							icon: <ChartLineUp size={24} weight="duotone" />,
-							title: "55+ Commodities",
-							desc: "Real-time prices across all major markets",
-						},
-						{
-							icon: <Lightning size={24} weight="duotone" />,
-							title: "7 AI Models",
-							desc: "Independent signal generation with confidence scores",
-						},
-						{
-							icon: <ShieldCheck size={24} weight="duotone" />,
-							title: "Multi-Factor Analysis",
-							desc: "Weather, forex, tariffs, and shipping factors",
-						},
-					].map((f, i) => (
-						<motion.div
-							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-							key={i}
-							initial={{ opacity: 0, y: 8 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.3 + i * 0.5, duration: 0.6, ease: "easeOut" }}
-						>
-							<FloatElement duration={4} amplitude={4}>
-								<div className="flex items-center gap-4">
-									<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 outline outline-white/10 text-primary">
-										{f.icon}
-									</div>
-									<div>
-										<p className="font-semibold text-white/90">{f.title}</p>
-										<p className="text-sm text-white/50">{f.desc}</p>
-									</div>
-								</div>
-							</FloatElement>
-						</motion.div>
-					))}
-				</div>
-
-				{/* Social */}
-				<div className="relative z-10 flex items-center gap-4 text-white/40">
+				{/* Footer */}
+				<div className="relative z-10 flex items-center gap-4 text-white/30">
 					<GithubLogo
-						size={20}
+						size={18}
 						weight="duotone"
-						className="cursor-pointer text-white/40 transition-colors hover:text-white"
+						className="cursor-pointer transition-colors hover:text-white/60"
 					/>
+					<span className="text-xs">&copy; 2026 MT</span>
 				</div>
 			</div>
 
-			{/* Right Side — Clean form with micro-interactions */}
-			<div className="flex flex-1 items-center justify-center bg-white dark:bg-gray-900 px-6 py-12 md:px-12">
+			{/* Right Side — Form */}
+			<div className="flex flex-1 items-center justify-center bg-white dark:bg-[#111] px-6 py-12 md:px-12">
 				<motion.div
 					initial={{ opacity: 0, y: 16 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ ...SPRING_DEFAULTS, delay: 0.1 }}
 					className="w-full max-w-md"
 				>
-					{/* Gold accent bar — animated width */}
+					{/* Gold accent bar */}
 					<motion.div
 						initial={{ width: 0 }}
 						animate={{ width: 48 }}
 						transition={SPRING_DEFAULTS}
-						className="mb-8 h-1 rounded-full bg-primary"
+						className="mb-8 h-1 rounded-full bg-[#B8860B]"
 					/>
 
 					<h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white">
@@ -224,14 +193,14 @@ export function AuthPage(props: AuthPageProps) {
 					{renderFooter()}
 
 					{/* Terms */}
-					<div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-6 text-center">
+					<div className="mt-8 border-t border-gray-100 dark:border-white/[0.06] pt-6 text-center">
 						<p className="text-xs text-gray-400">
 							By continuing, you agree to our{" "}
-													<a href="/terms" className="text-gray-500 hover:text-gray-700">
+							<a href="/terms" className="text-gray-500 hover:text-gray-700">
 								Terms of Service
 							</a>{" "}
 							and{" "}
-													<a href="/privacy" className="text-gray-500 hover:text-gray-700">
+							<a href="/privacy" className="text-gray-500 hover:text-gray-700">
 								Privacy Policy
 							</a>
 						</p>
