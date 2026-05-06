@@ -16,9 +16,9 @@ import { ShimmerCard } from "@/components/ui/ShimmerCard";
 
 export default function AboutPage() {
 	return (
-		<div className="min-h-screen bg-white dark:bg-gray-900">
+		<div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
 			{/* Navigation */}
-			<nav className="border-b border-black/5 dark:border-white/10 bg-white dark:bg-gray-900 sticky top-0 z-50">
+			<nav className="border-b border-black/5 dark:border-white/10 bg-white dark:bg-[#0a0a0a] sticky top-0 z-50">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex justify-between items-center h-16">
 						<Link href="/" className="flex items-center gap-2">
@@ -54,7 +54,7 @@ export default function AboutPage() {
 			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8">
 				<div className="max-w-5xl mx-auto">
 					<MotionReveal>
-						<div className="inline-flex items-center gap-2 rounded-full bg-primary/10 outline outline-primary/20 px-4 py-1.5 text-sm font-medium text-primary mb-6">
+						<div className="inline-flex items-center gap-2 rounded-full bg-[#B8860B]/10 outline outline-[#B8860B]/20 px-4 py-1.5 text-sm font-medium text-[#B8860B] mb-6">
 							About Us
 						</div>
 					</MotionReveal>
@@ -79,7 +79,7 @@ export default function AboutPage() {
 			</section>
 
 			{/* Stats Section — asymmetric grid */}
-			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-800">
+			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-[#111]">
 				<div className="max-w-5xl mx-auto">
 					<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 						{[
@@ -91,15 +91,15 @@ export default function AboutPage() {
 							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
 								<ShimmerCard
-									className={`stagger-slide-up bg-white dark:bg-gray-900 rounded-xl p-6 text-center relative overflow-hidden group transition-all duration-200 outline outline-black/5 dark:outline-white/10 ${idx === 0 ? "md:py-8" : ""}`}
+									className={`stagger-slide-up bg-white dark:bg-[#0a0a0a] rounded-xl p-6 text-center relative overflow-hidden group transition-all duration-200 ring-1 ring-black/[0.06] dark:ring-white/[0.08] ${idx === 0 ? "md:py-8" : ""}`}
 								>
-									<div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
+									<div className="absolute top-0 left-0 right-0 h-0.5 bg-[#B8860B]" />
 									<div className="flex justify-center mb-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+										<div className="text-[#B8860B]">
 											<stat.Icon size={22} weight="duotone" />
 										</div>
 									</div>
-									<div className="text-3xl md:text-4xl font-display font-semibold text-primary mb-2 tabular-nums">
+									<div className="text-3xl md:text-4xl font-display font-semibold text-[#B8860B] mb-2 tabular-nums">
 										{stat.number}
 									</div>
 									<div className="text-body-sm text-muted-foreground font-medium">{stat.label}</div>
@@ -140,7 +140,7 @@ export default function AboutPage() {
 						</div>
 						<div className="md:col-span-2">
 							<MotionReveal delay={0.2}>
-								<div className="rounded-xl p-8 bg-primary-light dark:bg-gray-800 outline outline-black/5 dark:outline-white/10">
+								<div className="rounded-xl p-8 bg-[#B8860B]/5 dark:bg-[#111] ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
 									<div className="grid grid-cols-2 gap-8">
 										{[
 											{ value: "99.94%", label: "Platform Uptime" },
@@ -150,7 +150,7 @@ export default function AboutPage() {
 										].map((stat, idx) => (
 											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<div key={idx} className="text-center">
-												<div className="text-2xl font-display font-semibold text-primary mb-1 tabular-nums">
+												<div className="text-2xl font-display font-semibold text-[#B8860B] mb-1 tabular-nums">
 													{stat.value}
 												</div>
 												<div className="text-body-sm text-muted-foreground">{stat.label}</div>
@@ -165,7 +165,7 @@ export default function AboutPage() {
 			</section>
 
 			{/* Values Section — bento grid */}
-			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-800">
+			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-[#111]">
 				<div className="max-w-7xl mx-auto">
 					<div className="mb-12 max-w-2xl">
 						<MotionReveal>
@@ -213,16 +213,16 @@ export default function AboutPage() {
 							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx} className={value.span}>
 								<div
-									className={`relative bg-white dark:bg-gray-900 rounded-xl p-8 group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full`}
+									className={`relative bg-white dark:bg-[#0a0a0a] rounded-xl p-8 group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full`}
 								>
 									<div className="absolute top-4 right-4 text-7xl font-display font-semibold text-gray-100 dark:text-gray-700/50 select-none leading-none">
 										{value.number}
 									</div>
 									<div className="relative z-10">
 										<div
-											className={`w-12 h-12 rounded-lg bg-primary flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110`}
+											className="mb-4 text-[#B8860B] transition-transform duration-200 group-hover:scale-110"
 										>
-											<value.Icon size={24} weight="duotone" className="text-white" />
+											<value.Icon size={24} weight="duotone" />
 										</div>
 										<h3 className="text-h4 font-display font-semibold text-foreground mb-3">
 											{value.title}
@@ -260,9 +260,9 @@ export default function AboutPage() {
 					<StaggerContainer className="grid grid-cols-1 md:grid-cols-5 md:grid-rows-2 gap-6">
 						{/* CEO — featured card, spans left 3 cols and 2 rows */}
 						<StaggerChild className="md:col-span-3 md:row-span-2">
-							<div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full flex flex-col md:flex-row">
-								<div className="md:w-2/5 bg-gray-50 dark:bg-gray-800 flex items-center justify-center p-8 md:p-12">
-									<div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl overflow-hidden outline outline-black/5 dark:outline-white/10 transition-transform duration-200 group-hover:scale-105">
+							<div className="bg-white dark:bg-[#0a0a0a] rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex flex-col md:flex-row">
+								<div className="md:w-2/5 bg-gray-50 dark:bg-[#111] flex items-center justify-center p-8 md:p-12">
+									<div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
 										{/* eslint-disable-next-line @next/next/no-img-element */}
 										{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
 										<img
@@ -278,7 +278,7 @@ export default function AboutPage() {
 									<h3 className="text-h2 font-display font-semibold text-foreground mb-1">
 										Marcus Chen
 									</h3>
-									<p className="text-body font-medium text-primary mb-4">CEO & Co-Founder</p>
+									<p className="text-body font-medium text-[#B8860B] mb-4">CEO & Co-Founder</p>
 									<p className="text-body text-muted-foreground leading-relaxed">
 										Former head of commodity analytics at a top-5 agricultural trading firm. 12
 										years of experience bridging quantitative analysis with commercial strategy.
@@ -289,8 +289,8 @@ export default function AboutPage() {
 
 						{/* CTO — stacked on right */}
 						<StaggerChild className="md:col-span-2">
-							<div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full flex items-start gap-5 p-6">
-								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden outline outline-black/5 dark:outline-white/10 transition-transform duration-200 group-hover:scale-105">
+							<div className="bg-white dark:bg-[#0a0a0a] rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex items-start gap-5 p-6">
+								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
 									{/* eslint-disable-next-line @next/next/no-img-element */}
 									{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
 									<img
@@ -305,7 +305,7 @@ export default function AboutPage() {
 									<h3 className="text-h4 font-display font-semibold text-foreground mb-0.5">
 										Elena Vasquez
 									</h3>
-									<p className="text-body-sm font-medium text-primary mb-2">CTO & Co-Founder</p>
+									<p className="text-body-sm font-medium text-[#B8860B] mb-2">CTO & Co-Founder</p>
 									<p className="text-body-sm text-muted-foreground leading-relaxed">
 										PhD in time-series forecasting from ETH Zurich. Previously built ML
 										infrastructure at a Series-C climate analytics startup serving 200+ enterprise
@@ -317,8 +317,8 @@ export default function AboutPage() {
 
 						{/* VP of Engineering — stacked on right */}
 						<StaggerChild className="md:col-span-2">
-							<div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden group transition-all duration-300 outline outline-black/5 dark:outline-white/10 h-full flex items-start gap-5 p-6">
-								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden outline outline-black/5 dark:outline-white/10 transition-transform duration-200 group-hover:scale-105">
+							<div className="bg-white dark:bg-[#0a0a0a] rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex items-start gap-5 p-6">
+								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
 									{/* eslint-disable-next-line @next/next/no-img-element */}
 									{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
 									<img
@@ -333,7 +333,7 @@ export default function AboutPage() {
 									<h3 className="text-h4 font-display font-semibold text-foreground mb-0.5">
 										David Okonkwo
 									</h3>
-									<p className="text-body-sm font-medium text-primary mb-2">VP of Engineering</p>
+									<p className="text-body-sm font-medium text-[#B8860B] mb-2">VP of Engineering</p>
 									<p className="text-body-sm text-muted-foreground leading-relaxed">
 										Former principal engineer at Bloomberg, responsible for real-time data pipeline
 										architecture handling 500k+ events per second across 40 markets.
@@ -346,7 +346,7 @@ export default function AboutPage() {
 			</section>
 
 			{/* CTA Section — dark bg with accent text */}
-			<section className="relative py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gray-900 dark:bg-gray-800">
+			<section className="relative py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gray-900 dark:bg-[#111]">
 				<div className="relative z-10 max-w-4xl mx-auto text-center">
 					<MotionReveal>
 						<h2

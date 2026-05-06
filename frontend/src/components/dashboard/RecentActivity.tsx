@@ -47,7 +47,7 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 
 		if (loading) {
 			return (
-				<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-4 h-full">
+				<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] p-4 h-full">
 					<div className="animate-pulse">
 						<div className="h-5 bg-muted rounded w-32 mb-4" />
 						<div className="space-y-3">
@@ -61,7 +61,7 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 		}
 
 		return (
-			<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-4 h-full">
+			<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] p-4 h-full">
 				<div className="flex items-center justify-between mb-4">
 					<h5 className="text-base font-semibold m-0">Recent Activity</h5>
 					<button type="button"

@@ -31,7 +31,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
 	if (loading) {
 		return (
-			<div className="overflow-hidden rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+			<div className="overflow-hidden rounded-lg ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
 				<div className="animate-pulse">
 					<div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 flex gap-4">
 						{columns.map((col) => (
@@ -64,7 +64,7 @@ export function DataTable<T>({
 	};
 
 	return (
-		<div className="overflow-x-auto rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+		<div className="overflow-x-auto rounded-lg ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
 			<table className="w-full text-sm">
 				<thead>
 					<tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200/60 dark:border-gray-700/60">

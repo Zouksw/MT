@@ -509,17 +509,17 @@
 
 @media (max-width: 1023px) and (prefers-color-scheme: dark) {
   .mobile-tab-bar {
-    background: #1F2937;
+    background: #171717;
     border-top-color: #374151;
   }
 
   .mobile-header {
-    background: #1F2937;
+    background: #171717;
     border-bottom-color: #374151;
   }
 
   .mobile-table-card {
-    background: #1F2937;
+    background: #171717;
     border-color: #374151;
   }
 }
@@ -527,7 +527,7 @@
 /* Class-based dark mode (matches project's darkMode: "class") */
 @media (max-width: 1023px) {
   .dark .mobile-tab-bar {
-    background: #1F2937;
+    background: #171717;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 -2px 8px rgba(0, 0, 0, 0.2);
   }
 
@@ -540,7 +540,7 @@
   }
 
   .dark .mobile-header {
-    background: #1F2937;
+    background: #171717;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
@@ -553,12 +553,12 @@
   }
 
   .dark .mobile-table-card {
-    background: #1F2937;
+    background: #171717;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   .dark .mobile-bottom-sheet {
-    background: #1F2937;
+    background: #171717;
   }
 
   .dark .mobile-bottom-sheet-handle {

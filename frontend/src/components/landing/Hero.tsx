@@ -155,15 +155,15 @@ export const Hero: React.FC = () => {
 							<h1 className="text-4xl sm:text-5xl lg:text-7xl tracking-tighter font-semibold text-gray-900 dark:text-white">
 								Commodity Market
 								<br />
-								<span className="text-primary dark:text-primary">Intelligence, Decoded</span>
+								<span className="text-[#B8860B]">Intelligence, Decoded</span>
 							</h1>
 						</MotionReveal>
 
 						<MotionReveal delay={0.2}>
 							<p className="mt-6 max-w-xl text-lg font-medium text-muted-foreground leading-relaxed">
 								Track commodity prices with AI-driven signals across weather, forex, tariffs, and
-								shipping factors. <span className="font-mono text-primary">55+ commodities</span>,{" "}
-								<span className="font-mono text-primary">7 AI models</span>, real-time data.
+								shipping factors. <span className="font-mono text-[#B8860B]">55+ commodities</span>,{" "}
+								<span className="font-mono text-[#B8860B]">7 AI models</span>, real-time data.
 							</p>
 						</MotionReveal>
 
@@ -189,19 +189,19 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.4}>
 							<div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-mono tabular-nums">
 								<div className="flex items-center gap-2">
-									<span className="text-primary dark:text-primary font-semibold text-base">
+									<span className="text-[#B8860B] font-semibold text-base">
 										55+
 									</span>
 									<span>Commodities Tracked</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-primary dark:text-primary font-semibold text-base">7</span>
+									<span className="text-[#B8860B] font-semibold text-base">7</span>
 									<span>AI Signal Models</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-primary dark:text-primary font-semibold text-base">
+									<span className="text-[#B8860B] font-semibold text-base">
 										Real-time
 									</span>
 									<span>Market Data</span>
@@ -213,7 +213,7 @@ export const Hero: React.FC = () => {
 					{/* Right: Dashboard mockup (2/5) — dark panel, Tailwind code panel style */}
 					<div className="lg:col-span-2">
 						<MotionReveal delay={0.3}>
-							<div className="rounded-2xl bg-gray-950 p-4 text-white">
+							<div className="rounded-2xl bg-[#0a0a0a] p-4 text-white">
 								{/* Window chrome — 3 dots */}
 								<div className="mb-3 flex items-center gap-1.5">
 									<div className="size-2 rounded-full bg-white/20" />
@@ -224,7 +224,7 @@ export const Hero: React.FC = () => {
 								{/* Header bar */}
 								<div className="mb-3 flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<TrendUp size={16} weight="duotone" className="text-primary" />
+										<TrendUp size={16} weight="duotone" className="text-[#B8860B]" />
 										<span className="text-sm font-medium text-gray-400">Live Dashboard</span>
 									</div>
 									<div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ export const Hero: React.FC = () => {
 
 								{/* Signal bar */}
 								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
-									<Gauge size={14} weight="duotone" className="text-primary" />
+									<Gauge size={14} weight="duotone" className="text-[#B8860B]" />
 									<span className="text-xs font-medium text-gray-400">AI Consensus</span>
 									<span className="text-xs font-semibold text-green-400 ml-auto">Strong Buy</span>
 									<span className="text-xs text-gray-500 font-mono tabular-nums">73%</span>

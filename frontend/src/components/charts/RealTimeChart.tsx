@@ -270,7 +270,7 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 	};
 
 	return (
-		<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-5">
+		<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] p-5">
 			{/* Header */}
 			<div className="flex justify-between items-center mb-5">
 				<div className="flex flex-col gap-0">

@@ -2,12 +2,12 @@
  * Trading Chart Color Configuration
  *
  * Amber-themed colors for trading dashboard charts.
- * Global app uses gold (#B8860B) — trading dashboard uses amber (#F59E0B).
+ * Global app uses gold (#B8860B) — trading dashboard uses amber (#B8860B).
  */
 
 export const TRADING_COLORS = {
 	// Primary amber palette
-	primary: "#F59E0B",
+	primary: "#B8860B",
 	primaryLight: "#FEF3C7",
 	primaryDark: "#D97706",
 
@@ -20,7 +20,7 @@ export const TRADING_COLORS = {
 	holdBg: "#F8FAFC",
 
 	// Chart colors
-	forecastLine: "#F59E0B",
+	forecastLine: "#B8860B",
 	historicalLine: "#94A3B8",
 	confidenceBand: "rgba(245, 158, 11, 0.15)",
 	confidenceBorder: "rgba(245, 158, 11, 0.3)",
@@ -30,7 +30,7 @@ export const TRADING_COLORS = {
 
 	// Model-specific chart colors (for multi-model overlay)
 	modelColors: {
-		arima: "#F59E0B",
+		arima: "#B8860B",
 		holtwinters: "#B8860B",
 		exponential_smoothing: "#8B5CF6",
 		naive_forecaster: "#64748B",

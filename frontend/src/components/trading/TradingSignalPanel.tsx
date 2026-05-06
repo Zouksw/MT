@@ -53,7 +53,7 @@ export default function TradingSignalPanel({
 }: TradingSignalPanelProps) {
 	if (loading) {
 		return (
-			<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+			<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] mb-4">
 				<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">
 					Signal Analysis
 				</div>
@@ -70,7 +70,7 @@ export default function TradingSignalPanel({
 	const safeSignals = individualSignals.filter(Boolean);
 	if (!safeSignals.length) {
 		return (
-			<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+			<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] mb-4">
 				<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">
 					Signal Analysis
 				</div>
@@ -83,7 +83,7 @@ export default function TradingSignalPanel({
 
 	if (availableCount === 0) {
 		return (
-			<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+			<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] mb-4">
 				<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">
 					Signal Analysis
 				</div>
@@ -102,7 +102,7 @@ export default function TradingSignalPanel({
 	const holdPct = totalModels > 0 ? (distribution.hold / totalModels) * 100 : 0;
 
 	return (
-		<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 mb-4">
+		<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] mb-4">
 			<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">
 				Signal Analysis
 			</div>

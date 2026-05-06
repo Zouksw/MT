@@ -63,7 +63,7 @@ export const Header: React.FC<{ sticky?: boolean }> = ({ sticky = true }) => {
 
 	return (
 		<header
-			className={`flex justify-between items-center px-6 h-16 bg-white/85 dark:bg-slate-900/90 border-b border-gray-200/60 dark:border-gray-700/40 shadow-sm ${sticky ? "sticky top-0 z-50" : ""}`}
+			className={`flex justify-between items-center px-6 h-16 bg-white/85 dark:bg-[#0a0a0a]/90 border-b border-gray-200/60 dark:border-white/[0.06] shadow-sm ${sticky ? "sticky top-0 z-50" : ""}`}
 			style={{ backdropFilter: "blur(8px)" }}
 		>
 			<div className="flex items-center gap-3">

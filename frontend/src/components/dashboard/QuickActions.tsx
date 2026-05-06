@@ -49,7 +49,7 @@ export const QuickActions: React.FC = () => {
 	const router = useRouter();
 
 	return (
-		<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-4">
+		<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] p-4">
 			<h5 className="text-base font-semibold mb-4">Quick Actions</h5>
 			<div className="grid grid-cols-2 gap-3">
 				{quickActions.map((action, i) => (

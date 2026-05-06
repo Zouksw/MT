@@ -25,7 +25,7 @@ export default function WatchlistPanel() {
 
 	if (loading) {
 		return (
-			<div className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60 p-5 flex justify-center">
+			<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] p-5 flex justify-center">
 				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
 			</div>
 		);
@@ -36,7 +36,7 @@ export default function WatchlistPanel() {
 			{watchlists.map((wl) => (
 				<div
 					key={wl.id}
-					className="rounded-lg bg-card border border-gray-200/60 dark:border-gray-700/60"
+					className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08]"
 				>
 					<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 flex items-center justify-between">
 						<span className="flex items-center gap-2 font-semibold">
