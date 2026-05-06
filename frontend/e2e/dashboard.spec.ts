@@ -8,7 +8,7 @@ test.describe('Dashboard Pages', () => {
 
   test('/dashboard - main dashboard loads', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
     const text = await page.locator('body').textContent();
     expect(text!.length).toBeGreaterThan(50);
@@ -16,19 +16,19 @@ test.describe('Dashboard Pages', () => {
 
   test('/dashboard/models - model accuracy page loads', async ({ page }) => {
     await page.goto('/dashboard/models');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('/dashboard/analysis - analysis page loads', async ({ page }) => {
     await page.goto('/dashboard/analysis');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('/dashboard/performance - performance page loads', async ({ page }) => {
     await page.goto('/dashboard/performance');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 });

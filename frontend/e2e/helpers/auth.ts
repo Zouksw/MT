@@ -21,24 +21,34 @@ async function getAuthOnce(): Promise<{ token: string; user: any }> {
 export async function loginAsAdmin(page: Page) {
   const { token, user } = await getAuthOnce();
 
-  // Set cookies and storage on the blank page before navigating
+  // Set cookies on the app domain before navigating
   await page.goto('about:blank');
-  // Navigate to the app domain to set cookies
-  await page.context().addCookies([{
-    name: 'auth',
-    value: encodeURIComponent(JSON.stringify({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar: user.avatarUrl,
-      roles: [user.role],
-    })),
-    domain: 'localhost',
-    path: '/',
-    expires: Math.floor(Date.now() / 1000) + 86400,
-  }]);
+  await page.context().addCookies([
+    {
+      // JWT token — checked by Next.js middleware for route protection
+      name: 'token',
+      value: token,
+      domain: 'localhost',
+      path: '/',
+      expires: Math.floor(Date.now() / 1000) + 86400,
+    },
+    {
+      // User info cookie — used by auth-provider for identity
+      name: 'auth',
+      value: encodeURIComponent(JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatarUrl,
+        roles: [user.role],
+      })),
+      domain: 'localhost',
+      path: '/',
+      expires: Math.floor(Date.now() / 1000) + 86400,
+    },
+  ]);
 
-  // Now navigate to the target page and inject sessionStorage
+  // Navigate and set sessionStorage
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 20000 });
   await page.evaluate((token) => {
     sessionStorage.setItem('auth_token', token);

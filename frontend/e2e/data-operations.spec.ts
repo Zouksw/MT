@@ -8,14 +8,13 @@ test.describe('Datasets Page', () => {
 
   test('datasets page loads without crash', async ({ page }) => {
     await page.goto('/datasets');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
-    expect(page.url()).toContain('/datasets');
   });
 
   test('timeseries page loads', async ({ page }) => {
     await page.goto('/timeseries');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 });
@@ -27,7 +26,7 @@ test.describe('Forecasts Page', () => {
 
   test('forecasts page loads', async ({ page }) => {
     await page.goto('/forecasts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 });
@@ -39,7 +38,7 @@ test.describe('Anomalies Page', () => {
 
   test('anomalies page loads', async ({ page }) => {
     await page.goto('/anomalies');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 });

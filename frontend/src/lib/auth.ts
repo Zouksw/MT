@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 import { errorHandler } from "@/lib/errorHandler";
 import { tokenManager } from "@/lib/tokenManager";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const axiosInstance = axios.create({
 	baseURL: API_URL,
@@ -61,7 +61,7 @@ export async function login(
 	remember?: boolean,
 ): Promise<AuthResult> {
 	try {
-		const response = await axiosInstance.post("/auth/login", {
+		const response = await axiosInstance.post("/api/auth/login", {
 			email,
 			password,
 		});
@@ -96,7 +96,7 @@ export async function register(data: {
 	name?: string;
 }): Promise<AuthResult> {
 	try {
-		const response = await axiosInstance.post("/auth/register", {
+		const response = await axiosInstance.post("/api/auth/register", {
 			email: data.email,
 			password: data.password,
 			name: data.name || "",
@@ -128,7 +128,7 @@ export async function register(data: {
 
 export async function forgotPassword(email: string): Promise<AuthResult> {
 	try {
-		await axiosInstance.post("/auth/forgot-password", { email });
+		await axiosInstance.post("/api/auth/forgot-password", { email });
 		return { success: true };
 	} catch (error: unknown) {
 		const safeError = errorHandler.handleApiError(error);
@@ -141,7 +141,7 @@ export async function forgotPassword(email: string): Promise<AuthResult> {
 
 export async function updatePassword(token: string, password: string): Promise<AuthResult> {
 	try {
-		await axiosInstance.post("/auth/reset-password", { token, password });
+		await axiosInstance.post("/api/auth/reset-password", { token, password });
 		return { success: true };
 	} catch (error: unknown) {
 		const safeError = errorHandler.handleApiError(error);
@@ -154,7 +154,7 @@ export async function updatePassword(token: string, password: string): Promise<A
 
 export async function logout(): Promise<AuthResult> {
 	try {
-		await axiosInstance.post("/auth/logout");
+		await axiosInstance.post("/api/auth/logout");
 	} catch (error: unknown) {
 		console.error("Logout error:", errorHandler.handleApiError(error));
 	} finally {
@@ -175,7 +175,7 @@ export async function checkAuth(): Promise<boolean> {
 	}
 
 	try {
-		await axiosInstance.get("/auth/verify");
+		await axiosInstance.get("/api/auth/verify");
 		return true;
 	} catch {
 		tokenManager.removeToken();
