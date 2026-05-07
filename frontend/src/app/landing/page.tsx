@@ -180,29 +180,29 @@ export default function LandingPage() {
 			<FAQ />
 
 			{/* CTA Section — clean white, no gradients */}
-			<section className="bg-white dark:bg-gray-950 border-t border-black/5 dark:border-white/10">
+			<section className="bg-white dark:bg-[#0a0a0a] border-t border-black/5 dark:border-white/10">
 				<div className="px-6 py-24 md:py-36 lg:py-48">
 					<MotionReveal className="text-center max-w-[700px] mx-auto">
 						<h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
-							Ready to get started?
+							Start receiving signals today
 						</h2>
 						<div className="mt-8">
 							<a
 								href="/register"
 								className="rounded-full bg-black px-8 py-3 text-base font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
 							>
-								Start free trial
+								Create free account
 							</a>
 						</div>
 						<p className="text-sm text-gray-400 mt-5">
-							No credit card required. Free 14-day trial.
+							Free tier includes 108 commodity prices. Upgrade for AI signals.
 						</p>
 					</MotionReveal>
 				</div>
 			</section>
 
 			{/* Footer — clean, minimal */}
-			<footer className="bg-white dark:bg-gray-950 border-t border-black/5 dark:border-white/10 px-6 py-16 md:py-24">
+			<footer className="bg-white dark:bg-[#0a0a0a] border-t border-black/5 dark:border-white/10 px-6 py-16 md:py-24">
 				<div className="max-w-[1200px] mx-auto">
 					<div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
 						{/* Brand */}
@@ -216,7 +216,7 @@ export default function LandingPage() {
 								</span>
 							</div>
 							<p className="text-sm text-muted-foreground leading-relaxed">
-								AI-powered commodity market intelligence for 55+ commodities.
+								108 commodities. 7 signal models. 131 market factors.
 							</p>
 						</div>
 

@@ -189,7 +189,7 @@ export default function AboutPage() {
 								number: "01",
 								title: "Signal Over Noise",
 								description:
-									"We filter market chaos into actionable signals. Every feature we ship must help users make better decisions, not just display more data.",
+									"Every feature answers a question: What moved? Why? What next? If a feature doesn't help answer one of those, it doesn't ship.",
 								Icon: ShieldCheck,
 								span: "md:col-span-2",
 							},
@@ -197,7 +197,7 @@ export default function AboutPage() {
 								number: "02",
 								title: "Transparent Models",
 								description:
-									"Every AI prediction comes with confidence scores, model comparison, and factor attribution. We never ask users to trust a black box.",
+									"Every signal shows which model generated it, the confidence interval, the MAPE accuracy score, and which factors are driving the prediction. No blind trust required.",
 								Icon: Lightning,
 								span: "",
 							},
@@ -205,7 +205,7 @@ export default function AboutPage() {
 								number: "03",
 								title: "User-Driven Development",
 								description:
-									"We build what analysts and traders actually need, not what looks impressive in a demo. Our roadmap is shaped by the people who use the platform daily.",
+									"Feature requests from active users get prioritized. The backtest comparison tool, correlation heatmap, and beef cut detail pages all came from user feedback.",
 								Icon: Users,
 								span: "",
 							},
@@ -252,7 +252,7 @@ export default function AboutPage() {
 						</MotionReveal>
 						<MotionReveal delay={0.1}>
 							<p className="text-body-lg text-muted-foreground">
-								Experienced operators from commodity markets, AI research, and platform engineering
+								Commodity markets + time-series ML + high-throughput data pipelines
 							</p>
 						</MotionReveal>
 					</div>
@@ -358,7 +358,7 @@ export default function AboutPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-gray-300 mb-10">
-							Join analysts from 47 countries using MT to decode commodity markets
+							108 commodities. 7 models. 131 factors. Start free.
 						</p>
 					</MotionReveal>
 					<MotionReveal delay={0.2}>

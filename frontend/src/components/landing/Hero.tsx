@@ -110,20 +110,20 @@ const features = [
 		icon: <ChartLineUp size={24} weight="duotone" />,
 		title: "Multi-Factor Analysis",
 		description:
-			"Track weather, exchange rates, tariffs, and shipping costs alongside commodity prices",
+			"131 market factors correlated with price movements — weather, FX, tariffs, freight indices",
 		span: "md:col-span-2",
 	},
 	{
 		icon: <Lightning size={24} weight="duotone" />,
 		title: "7 AI Signal Models",
 		description:
-			"ARIMA, HoltWinters, ExponentialSmoothing and more — generating buy/sell signals automatically",
+			"ARIMA, Holt-Winters, STL decomposition, Timer-XL — each model produces independent buy/sell signals with MAPE scores",
 		span: "",
 	},
 	{
 		icon: <WarningCircle size={24} weight="duotone" />,
 		title: "Real-Time Alerts",
-		description: "Price breakouts, trend reversals, and anomaly notifications delivered instantly",
+		description: "Custom price thresholds, breakout detection, and anomaly alerts via WebSocket — avg latency 47ms",
 		span: "",
 	},
 ];
@@ -146,8 +146,8 @@ export const Hero: React.FC = () => {
 					{/* Left: Text content (3/5) */}
 					<div className="lg:col-span-3">
 						<MotionReveal>
-							<p className="mb-6 text-sm font-medium text-muted-foreground">
-								AI-Powered Commodity Intelligence
+							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-[#B8860B]">
+								108 commodities &middot; 7 models &middot; 18 data sources
 							</p>
 						</MotionReveal>
 
@@ -161,9 +161,9 @@ export const Hero: React.FC = () => {
 
 						<MotionReveal delay={0.2}>
 							<p className="mt-6 max-w-xl text-lg font-medium text-muted-foreground leading-relaxed">
-								Track commodity prices with AI-driven signals across weather, forex, tariffs, and
-								shipping factors. <span className="font-mono text-[#B8860B]">55+ commodities</span>,{" "}
-								<span className="font-mono text-[#B8860B]">7 AI models</span>, real-time data.
+								Seven independent models — ARIMA, Holt-Winters, STL, Timer-XL — run price forecasts
+								on <span className="font-mono text-[#B8860B]">108 commodities</span> across 13 categories.
+								Multi-factor correlation: weather, FX, tariffs, freight.
 							</p>
 						</MotionReveal>
 
@@ -180,7 +180,7 @@ export const Hero: React.FC = () => {
 									href="#features"
 									className="inline-flex items-center gap-2 rounded-full border border-black/20 px-6 py-3 text-sm font-semibold text-black hover:bg-black/5 dark:border-white/20 dark:text-white dark:hover:bg-white/5 transition-colors"
 								>
-									View Demo
+									See How It Works
 								</a>
 							</div>
 						</MotionReveal>
@@ -225,7 +225,7 @@ export const Hero: React.FC = () => {
 								<div className="mb-3 flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<TrendUp size={16} weight="duotone" className="text-[#B8860B]" />
-										<span className="text-sm font-medium text-gray-400">Live Dashboard</span>
+										<span className="text-sm font-medium text-gray-400">WTI Crude — 4H</span>
 									</div>
 									<div className="flex items-center gap-2">
 										<div className="size-1.5 rounded-full bg-green-500" />

@@ -12,12 +12,12 @@ export default function PricingPage() {
 	const plans = [
 		{
 			name: "Free",
-			description: "For individual analysts tracking commodity markets",
+			description: "108 commodity prices, basic charts, 7-day history",
 			price: { monthly: 0, yearly: 0 },
 			features: [
-				"55+ commodity prices",
+				"108 commodity prices",
 				"5 watchlist items",
-				"3 AI prediction models",
+				"3 of 7 AI models",
 				"Basic charts & OHLCV data",
 				"7-day price history",
 			],
@@ -26,11 +26,11 @@ export default function PricingPage() {
 		},
 		{
 			name: "Professional",
-			description: "For teams needing AI-driven commodity signals",
+			description: "7 AI models, multi-factor analysis, alerts, API access",
 			price: { monthly: 49, yearly: 39 },
 			features: [
-				"All 55+ commodities",
-				"7 AI signal models (ARIMA, HoltWinters, etc.)",
+				"All 108 commodities",
+				"All 7 AI models with consensus signals",
 				"Multi-factor analysis (weather, forex, shipping)",
 				"Price alerts & anomaly detection",
 				"Email notifications",
@@ -43,10 +43,10 @@ export default function PricingPage() {
 		},
 		{
 			name: "Enterprise",
-			description: "For institutions requiring custom deployments",
+			description: "Private deployment, custom model training, dedicated support",
 			price: { monthly: 199, yearly: 159 },
 			features: [
-				"Unlimited commodity data",
+				"All 108 commodities + custom sources",
 				"All AI models with priority inference",
 				"Advanced correlation & seasonality",
 				"Dedicated API endpoints",
@@ -105,12 +105,12 @@ export default function PricingPage() {
 				<div className="max-w-4xl mx-auto text-center">
 					<MotionReveal>
 						<h1 className="text-display text-foreground mb-6" style={{ letterSpacing: "-0.04em" }}>
-							Simple, Transparent Pricing
+							Plans
 						</h1>
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-muted-foreground mb-10">
-							Choose the plan that fits your analysis needs. Upgrade or cancel anytime.
+							Free tier includes all 108 commodity prices. Paid tiers unlock AI signals and advanced analytics.
 						</p>
 					</MotionReveal>
 
@@ -289,11 +289,11 @@ export default function PricingPage() {
 						{[
 							{
 								q: "Can I cancel my subscription anytime?",
-								a: "Yes, you can cancel anytime with no questions asked. You'll retain access until the end of your current billing period.",
+								a: "Cancel anytime. Access continues through the end of your billing period. No cancellation fees.",
 							},
 							{
 								q: "Is the free plan really free?",
-								a: "Yes, the free plan has no time limit. You get access to 55+ commodity prices and basic charts forever. Upgrade only when you need AI signals or advanced features.",
+								a: "No time limit. All 108 commodity prices with OHLCV charts and 7-day history, permanently free. Upgrade for AI signals and extended history.",
 							},
 							{
 								q: "What payment methods do you accept?",
@@ -330,12 +330,12 @@ export default function PricingPage() {
 							className="text-h1 font-display text-foreground mb-6"
 							style={{ letterSpacing: "-0.04em" }}
 						>
-							Still Have Questions?
+							Need a custom plan?
 						</h2>
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-muted-foreground mb-10">
-							Our team is here to help you find the right plan
+							Enterprise deployments, custom models, and dedicated infrastructure available.
 						</p>
 					</MotionReveal>
 					<MotionReveal delay={0.15}>

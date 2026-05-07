@@ -30,7 +30,7 @@ const features = [
 		icon: <ChartLineUp size={28} weight="duotone" />,
 		title: "Multi-Factor Analysis",
 		description:
-			"Correlate commodity prices with weather patterns, exchange rates, tariffs, and shipping costs.",
+			"131 market factors — weather, FX, tariffs, freight indices — correlated with commodity prices via Pearson coefficient.",
 		details: ["Weather data", "Forex rates", "Shipping indices"],
 		span: "md:col-span-2",
 		visual: "factors",
@@ -39,7 +39,7 @@ const features = [
 		icon: <Lightning size={28} weight="duotone" />,
 		title: "AI Signal Engine",
 		description:
-			"7 AI models generate independent buy/sell signals with confidence scores and MAPE tracking.",
+			"Seven independent models — ARIMA, Holt-Winters, STL, Timer-XL — each producing buy/sell signals with confidence intervals and MAPE verification.",
 		details: ["7 AI models", "Signal confidence", "MAPE tracking"],
 		span: "",
 		visual: null,
@@ -49,7 +49,7 @@ const features = [
 		icon: <Flask size={28} weight="duotone" />,
 		title: "55+ Commodities",
 		description:
-			"Beef, grain, oil, metals, and more. OHLCV candlestick data and historical trends across all categories.",
+			"108 commodities across 13 categories — beef cuts to brent crude. OHLCV candlestick data with multi-source overlay.",
 		details: ["Beef & livestock", "Grains & oilseeds", "Energy & metals"],
 		span: "md:col-span-2",
 		visual: "commodities",
@@ -58,7 +58,7 @@ const features = [
 		icon: <WarningCircle size={28} weight="duotone" />,
 		title: "Price Alerts",
 		description:
-			"Set custom price thresholds and get notified instantly. Breakout and reversal detection built in.",
+			"Custom price thresholds with breakout and reversal detection. WebSocket-powered alerts avg 47ms latency.",
 		details: ["Price thresholds", "Trend alerts", "Severity levels"],
 		span: "",
 		visual: null,
@@ -66,27 +66,27 @@ const features = [
 	{
 		icon: <ChartBar size={28} weight="duotone" />,
 		title: "Seasonality & Correlation",
-		description: "Discover monthly price patterns and cross-commodity correlations.",
+		description: "Monthly seasonality decomposition and Pearson cross-commodity correlation matrix with interactive heatmap.",
 		details: ["Monthly patterns", "Correlation matrix", "Trend analysis"],
 		span: "",
 		visual: null,
 	},
 	{
 		icon: <Users size={28} weight="duotone" />,
-		title: "Community Signals",
+		title: "Backtest & Accuracy",
 		description:
-			"Share AI-generated signals and compare model accuracy on the community leaderboard.",
-		details: ["Signal sharing", "Leaderboard", "Accuracy rankings"],
+			"Backtest AI model accuracy with rolling MAPE windows. Compare model performance across 30/60/90-day horizons.",
+		details: ["Rolling MAPE", "30/60/90 day windows", "Model comparison"],
 		span: "",
 		visual: null,
 	},
 ];
 
 const metrics = [
-	{ value: "55+", label: "Commodities", icon: <Flask size={22} weight="duotone" /> },
+	{ value: "108", label: "Commodities", icon: <Flask size={22} weight="duotone" /> },
 	{ value: "7", label: "AI Models", icon: <Lightning size={22} weight="duotone" /> },
-	{ value: "24/7", label: "Market Data", icon: <ChartLineUp size={22} weight="duotone" /> },
-	{ value: "5+", label: "Factor Types", icon: <ChartBar size={22} weight="duotone" /> },
+	{ value: "18", label: "Data Sources", icon: <ChartLineUp size={22} weight="duotone" /> },
+	{ value: "131", label: "Market Factors", icon: <ChartBar size={22} weight="duotone" /> },
 ];
 
 function FactorVisual() {
@@ -97,7 +97,7 @@ function FactorVisual() {
 					<span className="text-xs text-muted-foreground w-28 shrink-0">{item.pair}</span>
 					<div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
 						<div
-							className="h-full rounded-full bg-primary/60 transition-all duration-700"
+							className="h-full rounded-full bg-[#B8860B]/50 transition-all duration-700"
 							style={{ width: `${Math.abs(item.value) * 100}%` }}
 						/>
 					</div>
@@ -166,12 +166,12 @@ export const Features: React.FC = () => {
 							className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl lg:text-5xl"
 							style={{ letterSpacing: "-2.4px" }}
 						>
-							Everything you need
+							Data-first market analysis
 						</h2>
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
 						<p className="mt-4 text-lg text-muted-foreground">
-							Purpose-built tools for commodity market analysis and AI-driven price intelligence
+							Multi-factor correlation, 7 independent signal models, 131 market factors — not a dashboard, a signal engine.
 						</p>
 					</MotionReveal>
 				</div>
@@ -182,12 +182,12 @@ export const Features: React.FC = () => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index}>
 							<div
-								className={`group rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-card-dark bg-white dark:bg-gray-950 p-5 md:p-7 text-center transition-all duration-300 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:hover:shadow-card-hover-dark ${index === 0 ? "md:py-9" : ""}`}
+								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-7 text-center transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] ${index === 0 ? "md:py-9" : ""}`}
 							>
-								<div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary md:h-12 md:w-12">
+								<div className="mx-auto mb-3 text-[#B8860B] md:h-12 md:w-12">
 									{metric.icon}
 								</div>
-								<div className="font-mono text-2xl font-semibold text-primary md:text-3xl tabular-nums">
+								<div className="font-mono text-2xl font-semibold text-[#B8860B] md:text-3xl tabular-nums">
 									{metric.value}
 								</div>
 								<div className="mt-1 text-sm text-muted-foreground">{metric.label}</div>
@@ -202,9 +202,9 @@ export const Features: React.FC = () => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index} className={feature.span}>
 							<div
-								className={`group rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-card-dark bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:hover:shadow-card-hover-dark h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
+								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
 							>
-								<div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 transition-transform duration-200 group-hover:scale-105">
+								<div className="mb-4 text-[#B8860B] transition-transform duration-200 group-hover:scale-105">
 									{feature.icon}
 								</div>
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -223,7 +223,7 @@ export const Features: React.FC = () => {
 										<span
 											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											key={idx}
-											className="bg-[#FDF6E3] dark:bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary dark:text-primary rounded-full"
+											className="bg-[#B8860B]/10 px-2.5 py-1 text-xs font-medium text-[#B8860B] rounded-full"
 										>
 											{detail}
 										</span>

@@ -36,7 +36,7 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
 	return (
 		<span
 			ref={ref}
-			className="font-mono text-2xl md:text-3xl font-semibold text-primary dark:text-primary tabular-nums"
+			className="font-mono text-2xl md:text-3xl font-semibold text-[#B8860B] tabular-nums"
 		>
 			{value}
 			{suffix}
@@ -47,27 +47,27 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
 const stats = [
 	{
 		icon: <Flask size={22} weight="duotone" />,
-		numericValue: 55,
-		suffix: "+",
-		label: "Commodities tracked",
+		numericValue: 108,
+		suffix: "",
+		label: "Commodities",
 	},
 	{
 		icon: <Lightning size={22} weight="duotone" />,
 		numericValue: 7,
 		suffix: "",
-		label: "AI prediction models",
+		label: "AI signal models",
 	},
 	{
 		icon: <ChartLineUp size={22} weight="duotone" />,
-		numericValue: 24,
-		suffix: "/7",
-		label: "Real-time data feeds",
+		numericValue: 18,
+		suffix: "",
+		label: "Data ingestion modules",
 	},
 	{
 		icon: <Globe size={22} weight="duotone" />,
-		numericValue: 5,
-		suffix: "+",
-		label: "Data sources",
+		numericValue: 131,
+		suffix: "",
+		label: "Market factors tracked",
 	},
 ];
 

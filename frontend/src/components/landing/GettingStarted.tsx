@@ -16,7 +16,7 @@ const steps = [
 		number: 1,
 		title: "Create Your Account",
 		description:
-			"Sign up free and customize your commodity watchlist. Choose the markets you care about.",
+			"Free account. Pick from 108 commodities. No credit card.",
 		icon: <RocketLaunch size={24} weight="duotone" />,
 		preview: null,
 	},
@@ -24,7 +24,7 @@ const steps = [
 		number: 2,
 		title: "Explore Market Data",
 		description:
-			"Browse 55+ commodities with real-time prices, candlestick charts, and historical trends.",
+			"108 commodities with OHLCV candlestick data, multi-source price overlay, and 30-day history.",
 		icon: <ChartLineUp size={24} weight="duotone" />,
 		preview: (
 			<div className="space-y-2 mt-3">
@@ -57,7 +57,7 @@ const steps = [
 		number: 3,
 		title: "Set Up AI Signals",
 		description:
-			"Configure which AI models to follow, set price alerts, and customize your dashboard.",
+			"Enable ARIMA, Holt-Winters, STL — see consensus signals with confidence intervals and MAPE scores.",
 		icon: <GearSix size={24} weight="duotone" />,
 		preview: (
 			<div className="mt-3 space-y-2">
@@ -72,7 +72,7 @@ const steps = [
 					>
 						<span className="text-xs font-medium text-muted-foreground w-24">{s.model}</span>
 						<div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-							<div className="h-full rounded-full bg-primary/50" style={{ width: `${s.conf}%` }} />
+							<div className="h-full rounded-full bg-[#B8860B]/50" style={{ width: `${s.conf}%` }} />
 						</div>
 						<span
 							className={`text-xs font-mono tabular-nums ${s.signal === "Buy" ? "text-green-600 dark:text-green-400" : "text-amber-500"}`}
@@ -88,11 +88,11 @@ const steps = [
 		number: 4,
 		title: "Track & Decide",
 		description:
-			"Monitor AI-generated signals, compare model accuracy, and use multi-factor analysis.",
+			"7 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
 		icon: <Lightning size={24} weight="duotone" />,
 		preview: (
 			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-gray-800/60">
-				<Brain size={20} weight="duotone" className="text-primary shrink-0" />
+				<Brain size={20} weight="duotone" className="text-[#B8860B] shrink-0" />
 				<div className="flex-1">
 					<div className="text-xs font-medium text-foreground">AI Consensus</div>
 					<div className="text-xs text-muted-foreground">Strong Buy — 73% confidence</div>
@@ -104,17 +104,17 @@ const steps = [
 ];
 
 const features = [
-	"5-minute quick start",
-	"Interactive commodity charts",
-	"AI signal dashboard",
-	"Sample commodity data",
-	"Community leaderboard",
-	"API documentation",
+	"Under 5 min to first signal",
+	"OHLCV candlestick charts",
+	"7-model consensus signals",
+	"108 commodities with live data",
+	"Model backtest comparison",
+	"REST API access",
 ];
 
 export default function GettingStarted() {
 	return (
-		<section className="relative overflow-hidden bg-white dark:bg-gray-900 px-6 py-24 md:py-36 lg:py-48">
+		<section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-24 md:py-36 lg:py-48">
 			{/* Dot grid pattern */}
 			<div
 				className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
@@ -137,12 +137,12 @@ export default function GettingStarted() {
 							className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl lg:text-5xl"
 							style={{ letterSpacing: "-0.04em" }}
 						>
-							Get started in minutes
+							From signup to first signal
 						</h2>
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
 						<p className="mt-4 text-lg text-muted-foreground">
-							Start analyzing commodity markets with our AI-powered platform
+							Create an account, pick your commodities, get AI consensus signals in under 5 minutes.
 						</p>
 					</MotionReveal>
 				</div>
@@ -157,14 +157,14 @@ export default function GettingStarted() {
 							<StaggerChild key={index}>
 								<div className="flex gap-6 items-start">
 									<div className="relative flex-shrink-0">
-										<div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 dark:bg-white text-sm font-semibold text-white dark:text-gray-900">
+										<div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full ring-1 ring-[#B8860B]/30 text-sm font-semibold text-[#B8860B]">
 											{step.number}
 										</div>
 									</div>
 
-									<div className="flex-1 rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:outline-black/10 dark:hover:outline-white/15">
+									<div className="flex-1 rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-[#111] p-5 md:p-6 transition-all duration-300 hover:outline-black/10 dark:hover:outline-white/15">
 										<div className="flex items-center gap-3 mb-2">
-											<div className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900">
+											<div className="flex h-8 w-8 items-center justify-center rounded-md text-[#B8860B]">
 												{step.icon}
 											</div>
 											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
