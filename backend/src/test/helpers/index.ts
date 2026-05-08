@@ -28,15 +28,4 @@ export {
 	cleanupTestTimeseries,
 	verifyCleanup,
 } from "./cleanup";
-// IoTDB helpers
-export {
-	createTestTimeseriesBatch,
-	createTestTimeseriesData,
-	extractDeviceName,
-	formatTimeseriesList,
-	generateAnomalyTestData,
-	generateTestDataPoints,
-	generateTestDataPointsWithTrend,
-	generateTestTimeseries,
-	type TimeSeriesTestData,
-} from "./iotdb";
+// Inference helpers

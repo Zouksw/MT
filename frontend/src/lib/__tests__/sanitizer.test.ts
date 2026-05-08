@@ -13,7 +13,9 @@ const mockSanitize = jest.fn((html: string) => {
 });
 
 if (typeof window !== "undefined") {
-	(window as unknown as { DOMPurify: { sanitize: (input: string) => string } }).DOMPurify = { sanitize: mockSanitize };
+	(window as unknown as { DOMPurify: { sanitize: (input: string) => string } }).DOMPurify = {
+		sanitize: mockSanitize,
+	};
 }
 
 import { sanitizer } from "../sanitizer";

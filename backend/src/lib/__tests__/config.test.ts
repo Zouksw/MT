@@ -92,51 +92,6 @@ describe("Config Module", () => {
 		});
 	});
 
-	describe("IoTDB credentials validation", () => {
-		test("should use default IoTDB credentials when not set (with warning)", async () => {
-			await import("../../utils/logger");
-
-			process.env.JWT_SECRET = "a".repeat(32);
-			process.env.SESSION_SECRET = "b".repeat(32);
-			delete process.env.IOTDB_USERNAME;
-			delete process.env.IOTDB_PASSWORD;
-
-			const config = await import("../config");
-
-			expect(config.config.iotdb.username).toBe("root");
-			expect(config.config.iotdb.password).toBe("root");
-		});
-
-		test("should warn when using default IoTDB credentials", async () => {
-			const { logger } = await import("../../utils/logger");
-
-			process.env.JWT_SECRET = "a".repeat(32);
-			process.env.SESSION_SECRET = "b".repeat(32);
-			process.env.IOTDB_USERNAME = "root";
-			process.env.IOTDB_PASSWORD = "password";
-
-			await import("../config");
-
-			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining(
-					"SECURITY WARNING: Using default IoTDB credentials",
-				),
-			);
-		});
-
-		test("should accept custom IoTDB credentials", async () => {
-			process.env.JWT_SECRET = "a".repeat(32);
-			process.env.SESSION_SECRET = "b".repeat(32);
-			process.env.IOTDB_USERNAME = "customuser";
-			process.env.IOTDB_PASSWORD = "custompass";
-
-			const config = await import("../config");
-
-			expect(config.config.iotdb.username).toBe("customuser");
-			expect(config.config.iotdb.password).toBe("custompass");
-		});
-	});
-
 	describe("Server configuration", () => {
 		test("should use default port when not set", async () => {
 			process.env.JWT_SECRET = "a".repeat(32);
@@ -183,39 +138,47 @@ describe("Config Module", () => {
 		});
 	});
 
-	describe("IoTDB configuration", () => {
-		test("should use default host and port when not set", async () => {
+	describe("Inference configuration", () => {
+		test("should use default inference URL when not set", async () => {
 			process.env.JWT_SECRET = "a".repeat(32);
 			process.env.SESSION_SECRET = "b".repeat(32);
-			delete process.env.IOTDB_HOST;
-			delete process.env.IOTDB_PORT;
+			delete process.env.INFERENCE_URL;
 
 			const config = await import("../config");
 
-			expect(config.config.iotdb.host).toBe("localhost");
-			expect(config.config.iotdb.port).toBe(6667);
+			expect(config.config.inference.url).toBe("http://localhost:10810");
 		});
 
-		test("should use custom host and port when set", async () => {
+		test("should use default inference timeout when not set", async () => {
 			process.env.JWT_SECRET = "a".repeat(32);
 			process.env.SESSION_SECRET = "b".repeat(32);
-			process.env.IOTDB_HOST = "iotdb.example.com";
-			process.env.IOTDB_PORT = "6668";
+			delete process.env.INFERENCE_TIMEOUT;
 
 			const config = await import("../config");
 
-			expect(config.config.iotdb.host).toBe("iotdb.example.com");
-			expect(config.config.iotdb.port).toBe(6668);
+			expect(config.config.inference.timeout).toBe(120000);
 		});
 
-		test("should parse AI enabled flag correctly", async () => {
+		test("should use custom inference URL when INFERENCE_URL is set", async () => {
 			process.env.JWT_SECRET = "a".repeat(32);
 			process.env.SESSION_SECRET = "b".repeat(32);
-			process.env.IOTDB_AI_ENABLED = "true";
+			process.env.INFERENCE_URL = "http://inference.example.com:8080";
 
 			const config = await import("../config");
 
-			expect(config.config.iotdb.aiEnabled).toBe(true);
+			expect(config.config.inference.url).toBe(
+				"http://inference.example.com:8080",
+			);
+		});
+
+		test("should use custom inference timeout when INFERENCE_TIMEOUT is set", async () => {
+			process.env.JWT_SECRET = "a".repeat(32);
+			process.env.SESSION_SECRET = "b".repeat(32);
+			process.env.INFERENCE_TIMEOUT = "30000";
+
+			const config = await import("../config");
+
+			expect(config.config.inference.timeout).toBe(30000);
 		});
 	});
 

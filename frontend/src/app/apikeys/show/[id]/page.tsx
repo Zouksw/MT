@@ -92,11 +92,7 @@ const usageLogColumns = [
 		width: 80,
 		render: (method: unknown) => {
 			const m = method as string;
-			return (
-				<Tag color={m === "GET" ? "success" : m === "POST" ? "info" : "warning"}>
-					{m}
-				</Tag>
-			);
+			return <Tag color={m === "GET" ? "success" : m === "POST" ? "info" : "warning"}>{m}</Tag>;
 		},
 	},
 	{
@@ -106,12 +102,7 @@ const usageLogColumns = [
 		width: 100,
 		render: (status: unknown) => {
 			const s = status as number;
-			const color =
-				s >= 200 && s < 300
-					? "success"
-					: s >= 300 && s < 400
-						? "warning"
-						: "error";
+			const color = s >= 200 && s < 300 ? "success" : s >= 300 && s < 400 ? "warning" : "error";
 			return <Tag color={color}>{s}</Tag>;
 		},
 	},

@@ -29,7 +29,6 @@ const router = Router();
 const signalQuerySchema = z.object({
 	horizon: z.coerce.number().min(1).max(100).default(10),
 	currentPrice: z.coerce.number().positive().optional(),
-	timeseriesPath: z.string().min(1).optional().default("default"),
 	models: z.string().optional(), // comma-separated model IDs
 });
 
@@ -149,7 +148,6 @@ router.get(
 				select: {
 					id: true,
 					commodityId: true,
-					timeseriesPath: true,
 					horizon: true,
 					predictedValues: true,
 					actualValues: true,
@@ -301,8 +299,7 @@ router.get(
 			: undefined;
 
 		const signal = await generateSignal({
-			commodityId,
-			timeseriesPath: params.timeseriesPath,
+			commodityId: commodity.id,
 			horizon: params.horizon,
 			currentPrice,
 			models,

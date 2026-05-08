@@ -55,7 +55,6 @@ export interface TradingSignal {
 
 export interface SignalRequest {
 	commodityId: string;
-	timeseriesPath: string;
 	horizon: number;
 	currentPrice: number;
 	models?: string[];
@@ -124,7 +123,6 @@ export async function generateSignal(
 				if (!prediction) {
 					prediction = await runAndCachePrediction(
 						req.commodityId,
-						req.timeseriesPath,
 						modelId,
 						horizon,
 					);

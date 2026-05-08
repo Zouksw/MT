@@ -66,11 +66,13 @@ export default function TimeseriesList() {
 
 	const totalTimeseries = statsData.length;
 	const totalDataPoints = statsData.reduce(
-		(sum: number, ts: Record<string, unknown>) => sum + ((ts._count as Record<string, number>)?.dataPoints || 0),
+		(sum: number, ts: Record<string, unknown>) =>
+			sum + ((ts._count as Record<string, number>)?.dataPoints || 0),
 		0,
 	);
 	const totalAnomalies = statsData.reduce(
-		(sum: number, ts: Record<string, unknown>) => sum + ((ts._count as Record<string, number>)?.anomalies || 0),
+		(sum: number, ts: Record<string, unknown>) =>
+			sum + ((ts._count as Record<string, number>)?.anomalies || 0),
 		0,
 	);
 
@@ -185,7 +187,8 @@ export default function TimeseriesList() {
 				key: "createdAt",
 				title: "Created",
 				width: 140,
-				render: (_v: unknown, record: Record<string, unknown>) => new Date(asRow(record).createdAt).toISOString().split("T")[0],
+				render: (_v: unknown, record: Record<string, unknown>) =>
+					new Date(asRow(record).createdAt).toISOString().split("T")[0],
 			},
 			{
 				key: "actions",

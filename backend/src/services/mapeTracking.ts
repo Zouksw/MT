@@ -13,7 +13,6 @@ import { prisma } from "@/lib";
 export interface LogPredictionParams {
 	modelId: string;
 	commodityId: string;
-	timeseriesPath: string;
 	horizon: number;
 	predictedValues: number[];
 	lowerBounds?: number[];
@@ -31,7 +30,6 @@ export async function logPrediction(
 		data: {
 			modelId: params.modelId,
 			commodityId: params.commodityId,
-			timeseriesPath: params.timeseriesPath,
 			horizon: params.horizon,
 			predictedValues: params.predictedValues,
 			lowerBounds: params.lowerBounds ?? undefined,

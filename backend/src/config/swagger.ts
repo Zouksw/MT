@@ -105,8 +105,8 @@ const options: Options = {
 				description: "Commodity grouping for comparative analysis",
 			},
 			{
-				name: "IoTDB",
-				description: "Direct Apache IoTDB operations and AI services",
+				name: "Inference",
+				description: "AI inference service for predictions and signals",
 			},
 			{
 				name: "Security",

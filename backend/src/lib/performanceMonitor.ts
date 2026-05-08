@@ -209,7 +209,11 @@ export class PerformanceMonitor {
 	/**
 	 * Record HTTP request timing
 	 */
-	recordRequest(req: { path: string; method: string }, res: { statusCode: number }, duration: number): void {
+	recordRequest(
+		req: { path: string; method: string },
+		res: { statusCode: number },
+		duration: number,
+	): void {
 		const timing: RequestTiming = {
 			startTime: Date.now() - duration,
 			endTime: Date.now(),
@@ -551,7 +555,11 @@ export function initPerformanceMonitoring(): void {
 /**
  * Express middleware to track request performance
  */
-export function performanceMiddleware(req: { path: string; method: string }, res: { statusCode: number; on(event: string, callback: () => void): void }, next: () => void) {
+export function performanceMiddleware(
+	req: { path: string; method: string },
+	res: { statusCode: number; on(event: string, callback: () => void): void },
+	next: () => void,
+) {
 	const startTime = Date.now();
 
 	// Capture response finish

@@ -169,18 +169,21 @@ export default function ForecastCreate() {
 			const timeseriesPath = timeseries.slug || timeseries.name;
 
 			// Call AI Node prediction API
-			const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/iotdb/ai/predict`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({
-					timeseries: timeseriesPath,
-					horizon: Number(horizon),
-					algorithm,
-					confidenceLevel: Number(confidenceLevel),
-					hyperparameters,
-				}),
-			});
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/inference/predict`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					credentials: "include",
+					body: JSON.stringify({
+						commodityId: timeseriesPath,
+						horizon: Number(horizon),
+						algorithm,
+						confidenceLevel: Number(confidenceLevel),
+						hyperparameters,
+					}),
+				},
+			);
 
 			if (!response.ok) {
 				const errData = await response.json();
@@ -376,7 +379,8 @@ export default function ForecastCreate() {
 					{/* Hyperparameters (collapsible) */}
 					{algorithmInfo && algorithmInfo.hyperparameters.length > 0 && (
 						<div className="border border rounded-lg">
-							<button type="button"
+							<button
+								type="button"
 								className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-foreground hover:bg-accent/50 transition-colors"
 								onClick={() => setShowHyperparams(!showHyperparams)}
 							>

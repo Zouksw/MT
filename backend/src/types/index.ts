@@ -9,8 +9,6 @@
 
 // Re-export API response types
 export * from "./api";
-// Re-export IoTDB types
-export * from "./iotdb";
 // Re-export model types
 export * from "./models";
 

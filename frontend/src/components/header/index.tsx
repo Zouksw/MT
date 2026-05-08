@@ -95,7 +95,8 @@ export const Header: React.FC<{ sticky?: boolean }> = ({ sticky = true }) => {
 				</a>
 
 				{/* Locale Switcher */}
-				<button type="button"
+				<button
+					type="button"
 					onClick={toggleLocale}
 					className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
 					title={currentLocale === "en" ? "切换到中文" : "Switch to English"}

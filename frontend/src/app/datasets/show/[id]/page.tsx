@@ -47,9 +47,9 @@ function StatDisplay({
 /* ── storage format tag color mapping ──────────────────────────────────── */
 
 const STORAGE_FORMAT_COLORS: Record<string, "info" | "success" | "warning"> = {
-	TSFILE: "info",
-	IoTDB: "success",
-	PARQUET: "warning",
+	TIMESERIES: "info",
+	INFLUXDB: "success",
+	CSV: "warning",
 };
 
 /* ── page ───────────────────────────────────────────────────────────────── */
@@ -174,7 +174,9 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 			key: "unit",
 			title: "Unit",
 			render: (_v: unknown, record: TimeSeries) => (
-				<span className="text-muted-foreground">{String((record as unknown as Record<string, unknown>).unit || "-")}</span>
+				<span className="text-muted-foreground">
+					{String((record as unknown as Record<string, unknown>).unit || "-")}
+				</span>
 			),
 		},
 		{
@@ -182,7 +184,10 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 			title: "Data Points",
 			render: (_v: unknown, record: TimeSeries) => (
 				<span className="data-text text-[13px] text-foreground">
-					{Number(((record as unknown as Record<string, unknown>)._count as Record<string, unknown>)?.datapoints || 0)}
+					{Number(
+						((record as unknown as Record<string, unknown>)._count as Record<string, unknown>)
+							?.datapoints || 0,
+					)}
 				</span>
 			),
 		},

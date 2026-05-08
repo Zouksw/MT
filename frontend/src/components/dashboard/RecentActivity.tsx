@@ -64,7 +64,8 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 			<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] p-4 h-full">
 				<div className="flex items-center justify-between mb-4">
 					<h5 className="text-base font-semibold m-0">Recent Activity</h5>
-					<button type="button"
+					<button
+						type="button"
 						className="text-sm text-amber-600 hover:opacity-70 flex items-center gap-1"
 						onClick={() => router.push(activeTab === "alerts" ? "/alerts" : "/forecasts")}
 					>
@@ -73,13 +74,15 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 				</div>
 
 				<div className="flex gap-1 mb-4 border-b border">
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => setActiveTab("alerts")}
 						className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "alerts" ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700"}`}
 					>
 						Alerts
 					</button>
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => setActiveTab("forecasts")}
 						className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "forecasts" ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700"}`}
 					>
@@ -93,14 +96,16 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 					) : (
 						<div className="space-y-1">
 							{alertsItems.map((item, i) => (
-															<div
+								<div
 									key={item.id}
 									role="button"
 									tabIndex={0}
 									className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors stagger-slide-up"
 									style={{ animationDelay: `${i * 50}ms` }}
 									onClick={() => router.push(`/alerts/show/${item.id}`)}
-									onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/alerts/show/${item.id}`); }}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") router.push(`/alerts/show/${item.id}`);
+									}}
 								>
 									<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 dark:bg-gray-700/50">
 										<Bell className="size-4 text-amber-600" />
@@ -121,14 +126,16 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 				) : (
 					<div className="space-y-1">
 						{forecastsItems.map((item, i) => (
-													<div
+							<div
 								key={item.id}
 								role="button"
 								tabIndex={0}
 								className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors stagger-slide-up"
 								style={{ animationDelay: `${i * 50}ms` }}
 								onClick={() => router.push("/forecasts")}
-								onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push("/forecasts"); }}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") router.push("/forecasts");
+								}}
 							>
 								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30">
 									<Zap className="size-4 text-purple-500" />

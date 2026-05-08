@@ -61,7 +61,9 @@ export class RedisPool {
 	/**
 	 * Get or create a Redis client
 	 */
-	async getClient(name: string = "default"): Promise<ReturnType<typeof createClient>> {
+	async getClient(
+		name: string = "default",
+	): Promise<ReturnType<typeof createClient>> {
 		if (this.isShuttingDown) {
 			throw new Error("Redis pool is shutting down");
 		}
@@ -261,7 +263,9 @@ export async function withRedis<T>(
 /**
  * Get Redis client
  */
-export async function getRedisClient(): Promise<ReturnType<typeof createClient>> {
+export async function getRedisClient(): Promise<
+	ReturnType<typeof createClient>
+> {
 	const pool = getRedisPool();
 	return pool.getClient("default");
 }

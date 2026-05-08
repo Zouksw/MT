@@ -13,23 +13,23 @@ import type { PredictionLog } from "@/types/accuracy";
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <div className="h-[300px] bg-muted animate-pulse rounded" /> },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const ComposedChart = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
@@ -57,7 +57,15 @@ interface BacktestDetailChartProps {
 	prediction: PredictionLog;
 }
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number | undefined; color: string }>; label?: string | number }) {
+function CustomTooltip({
+	active,
+	payload,
+	label,
+}: {
+	active?: boolean;
+	payload?: Array<{ name: string; value: number | undefined; color: string }>;
+	label?: string | number;
+}) {
 	if (!active || !payload?.length) return null;
 	return (
 		<div

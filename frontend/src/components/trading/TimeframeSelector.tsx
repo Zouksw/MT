@@ -23,7 +23,8 @@ export default function TimeframeSelector({ value, onChange }: TimeframeSelector
 			{options.map((opt) => {
 				const isActive = value === opt.key;
 				return (
-					<button type="button"
+					<button
+						type="button"
 						key={opt.key}
 						onClick={() => onChange(opt.key)}
 						className={`

@@ -97,7 +97,10 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 				router.push("/apikeys");
 			}, 1000);
 		} catch (error: unknown) {
-			toast.showError("Failed to Update API Key", error instanceof Error ? error.message : String(error));
+			toast.showError(
+				"Failed to Update API Key",
+				error instanceof Error ? error.message : String(error),
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -138,7 +141,9 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 					<div>
 						<h1 className="text-2xl font-semibold text-foreground">Edit API Key</h1>
-						<p className="text-sm text-muted-foreground mt-1">Update API key: {apiKey.name as string}</p>
+						<p className="text-sm text-muted-foreground mt-1">
+							Update API key: {apiKey.name as string}
+						</p>
 					</div>
 					<Button
 						variant="ghost"
@@ -190,7 +195,10 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 										</span>
 										<div className="font-mono text-sm text-gray-900 dark:text-gray-100">
 											...
-											{(apiKey.lastCharacters as number)?.toString(16).toUpperCase().padStart(8, "0") || "N/A"}
+											{(apiKey.lastCharacters as number)
+												?.toString(16)
+												.toUpperCase()
+												.padStart(8, "0") || "N/A"}
 										</div>
 									</div>
 								</div>
@@ -199,7 +207,8 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 								<div>
 									{/* biome-ignore lint/a11y/noLabelWithoutControl: section heading */}
 									<label className="block text-sm font-medium text-foreground mb-2">Status</label>
-									<button type="button"
+									<button
+										type="button"
 										onClick={() => setIsActive(!isActive)}
 										className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 											isActive ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
@@ -223,7 +232,8 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 											Usage Statistics
 										</span>
 										<div className="text-sm text-gray-900 dark:text-gray-100">
-											Total requests: <span className="font-semibold">{String(apiKey.usageCount)}</span>
+											Total requests:{" "}
+											<span className="font-semibold">{String(apiKey.usageCount)}</span>
 										</div>
 										{!!apiKey.lastUsedAt && (
 											<div className="text-sm text-muted-foreground mt-1">

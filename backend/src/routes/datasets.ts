@@ -266,20 +266,16 @@ router.post(
 
 		// Get or create default organization for the user
 		const defaultOrgId = "default-org-id";
-		let organization = await prisma.organizations.findFirst({
-			where: { name: "Default" },
+		const organization = await prisma.organizations.upsert({
+			where: { id: defaultOrgId },
+			update: {},
+			create: {
+				id: defaultOrgId,
+				owner_id: userId,
+				name: "Default",
+				slug: "default",
+			},
 		});
-
-		if (!organization) {
-			organization = await prisma.organizations.create({
-				data: {
-					id: defaultOrgId,
-					owner_id: userId,
-					name: "Default",
-					slug: "default",
-				},
-			});
-		}
 
 		const dataset = await prisma.dataset.create({
 			data: {
@@ -296,7 +292,7 @@ router.post(
 		});
 
 		// Invalidate cache after creating a dataset
-		invalidateCache("datasets:*").catch((err) =>
+		await invalidateCache("datasets:*").catch((err) =>
 			logger.error("Failed to invalidate cache:", err),
 		);
 
@@ -372,8 +368,8 @@ router.patch(
 		});
 
 		// Invalidate cache after updating a dataset
-		invalidateCache("datasets:*").catch((err) =>
-			console.error("Failed to invalidate cache:", err),
+		await invalidateCache("datasets:*").catch((err) =>
+			logger.error("Failed to invalidate cache:", err),
 		);
 
 		success(res, serializeDataset(updatedDataset));
@@ -430,8 +426,8 @@ router.delete(
 		});
 
 		// Invalidate cache after deleting a dataset
-		invalidateCache("datasets:*").catch((err) =>
-			console.error("Failed to invalidate cache:", err),
+		await invalidateCache("datasets:*").catch((err) =>
+			logger.error("Failed to invalidate cache:", err),
 		);
 
 		success(res, null);

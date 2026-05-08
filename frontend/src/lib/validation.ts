@@ -86,8 +86,11 @@ class ValidationRules {
 	};
 
 	/**
-	 * IoTDB time series path validation
-	 * Must start with "root." and use valid characters
+		 * Commodity ID validation
+		 * Must be a non-empty string with valid characters
+
+
+
 	 */
 	timeseriesPath: ValidationRule = {
 		validate: (value: unknown) => {

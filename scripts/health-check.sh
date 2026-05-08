@@ -24,9 +24,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Health check endpoints
-BACKEND_URL="${BACKEND_URL:-http://localhost:3001/api/health}"
+BACKEND_URL="${BACKEND_URL:-http://localhost:8000/health}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
-API_BASE="${API_BASE:-http://localhost:3001/api}"
+API_BASE="${API_BASE:-http://localhost:8000/api}"
 
 # Timeout configuration
 TIMEOUT=60

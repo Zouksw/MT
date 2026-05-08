@@ -174,7 +174,7 @@ Key routing rules:
 - typecheck: bash -c 'cd backend && npx tsc --noEmit' && bash -c 'cd frontend && npx tsc --noEmit --project tsconfig.json'
 - lint: bash -c 'cd backend && npx @biomejs/biome lint src/' && bash -c 'cd frontend && npx @biomejs/biome lint src/'
 - test: bash -c 'cd backend && npx vitest run' && bash -c 'cd frontend && npx jest --forceExit'
-- deadcode: (requires Node 20+) bash -c 'cd backend && npx knip' && bash -c 'cd frontend && npx knip'
+- deadcode: bash -c 'cd backend && npx ts-prune 2>&1 | grep -v "used in module" | grep -v "__tests__" | grep -v "test-helpers"'
 - security: bash -c 'cd backend && pnpm audit' && bash -c 'cd frontend && pnpm audit'
 - bundle: bash -c 'cd frontend && ANALYZE=true npx next build'
 

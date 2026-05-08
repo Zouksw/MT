@@ -90,14 +90,15 @@ export default function AIAnomaliesPage() {
 
 		try {
 			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-			const response = await fetch("/api/iotdb/ai/anomalies/visualize", {
+			const response = await fetch("/api/inference/anomalies/visualize", {
 				method: "POST",
 				headers: {
+					credentials: "include",
 					"Content-Type": "application/json",
 					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
 				body: JSON.stringify({
-					timeseries: formTimeseries,
+					commodityId: formTimeseries,
 					threshold: parseFloat(formThreshold),
 					method: formMethod || "statistical",
 					historyPoints: parseInt(formHistoryPoints, 10) || 100,
@@ -161,8 +162,7 @@ export default function AIAnomaliesPage() {
 					<span
 						className="font-semibold data-text"
 						style={{
-							color:
-								s > 4 ? "#EF4444" : s > 3 ? "#F59E0B" : s > 2 ? "#B8860B" : "#10B981",
+							color: s > 4 ? "#EF4444" : s > 3 ? "#F59E0B" : s > 2 ? "#B8860B" : "#10B981",
 						}}
 					>
 						{s.toFixed(4)}

@@ -2,17 +2,18 @@
  * Prediction Cache Layer
  *
  * Caches AI prediction results in Redis so the dashboard loads in <2s
- * instead of waiting 30-60s for subprocess predictions.
+ * instead of waiting for inference service predictions.
  *
  * Key pattern: prediction:{commodityId}:{modelId}:{horizon}
  * TTL: 45 minutes (expires before next scheduled refresh)
  * Background refresh: every 30 minutes per commodity
  */
 
+import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
-import { logger } from "../lib";
 import { cacheKeys } from "./cache";
-import { iotdbAIService } from "./iotdb/ai";
+import { predict } from "./inference/client";
+import { getCommodityPriceValues } from "./inference/data-fetcher";
 
 const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
@@ -30,7 +31,6 @@ interface CachedPrediction {
 
 interface CommoditySubscription {
 	commodityId: string;
-	timeseriesPath: string;
 	models: string[];
 	horizon: number;
 }
@@ -90,7 +90,6 @@ export async function getAllCachedPredictions(
  */
 export async function runAndCachePrediction(
 	commodityId: string,
-	timeseriesPath: string,
 	modelId: string,
 	horizon: number,
 	confidenceLevel: number = 0.95,
@@ -98,25 +97,24 @@ export async function runAndCachePrediction(
 	const key = cacheKeys.prediction(commodityId, modelId, horizon);
 
 	try {
-		const result = await iotdbAIService.predict({
-			timeseries: timeseriesPath,
+		const { values, timestamps } = await getCommodityPriceValues(
+			commodityId,
+			200,
+		);
+
+		const result = await predict({
+			values,
+			timestamps,
+			model_id: modelId,
 			horizon,
-			algorithm: modelId as
-				| "arima"
-				| "timer_xl"
-				| "sundial"
-				| "holtwinters"
-				| "exponential_smoothing"
-				| "naive_forecaster"
-				| "stl_forecaster",
-			confidenceLevel,
+			confidence_level: confidenceLevel,
 		});
 
 		const cached: CachedPrediction = {
 			timestamps: result.timestamps,
 			values: result.values,
-			lowerBound: result.lowerBound,
-			upperBound: result.upperBound,
+			lowerBound: result.lower_bound ?? undefined,
+			upperBound: result.upper_bound ?? undefined,
 			algorithm: modelId,
 			cachedAt: Date.now(),
 			commodityId,
@@ -134,11 +132,10 @@ export async function runAndCachePrediction(
 				logPrediction({
 					modelId,
 					commodityId,
-					timeseriesPath,
 					horizon,
 					predictedValues: result.values,
-					lowerBounds: result.lowerBound,
-					upperBounds: result.upperBound,
+					lowerBounds: result.lower_bound ?? undefined,
+					upperBounds: result.upper_bound ?? undefined,
 				}).catch(() => {
 					/* non-blocking */
 				});
@@ -167,12 +164,7 @@ async function refreshCommodityPredictions(
 	await Promise.allSettled(
 		sub.models.map(async (modelId) => {
 			try {
-				await runAndCachePrediction(
-					sub.commodityId,
-					sub.timeseriesPath,
-					modelId,
-					sub.horizon,
-				);
+				await runAndCachePrediction(sub.commodityId, modelId, sub.horizon);
 			} catch (error) {
 				logger.error(
 					`Failed to refresh ${modelId} for ${sub.commodityId}: ${error}`,
@@ -187,13 +179,11 @@ async function refreshCommodityPredictions(
  */
 export function subscribeCommodity(
 	commodityId: string,
-	timeseriesPath: string,
 	models: string[],
 	horizon: number,
 ): void {
 	subscriptions.set(commodityId, {
 		commodityId,
-		timeseriesPath,
 		models,
 		horizon,
 	});
@@ -249,4 +239,30 @@ export async function invalidateCommodityCache(
 			await client.del(key);
 		}),
 	);
+}
+
+/**
+ * Schedule predictions for all active commodities
+ */
+export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
+	const commodities = await prisma.commodity.findMany({
+		where: { isActive: true },
+		select: { id: true },
+	});
+
+	const MODELS = [
+		"arima",
+		"holtwinters",
+		"exponential_smoothing",
+		"naive_forecaster",
+		"stl_forecaster",
+		"timer_xl",
+		"sundial",
+	];
+
+	for (const commodity of commodities) {
+		subscribeCommodity(commodity.id, MODELS, 10);
+	}
+
+	return commodities.length;
 }

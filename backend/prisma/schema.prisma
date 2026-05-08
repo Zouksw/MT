@@ -365,7 +365,7 @@ model PredictionLog {
   id              String    @id @default(uuid())
   modelId         String    @map("model_id")
   commodityId     String    @map("commodity_id")
-  timeseriesPath  String    @map("timeseries_path")
+  timeseriesPath  String    @default("deprecated") @map("timeseries_path")
   horizon         Int
   predictedValues Json      @map("predicted_values")
   actualValues    Json?     @map("actual_values")
@@ -390,7 +390,7 @@ enum UserRole {
 }
 
 enum StorageFormat {
-  IOTDB_CACHE
+  TIMESERIES
   INFLUXDB
   OPENML
   CSV

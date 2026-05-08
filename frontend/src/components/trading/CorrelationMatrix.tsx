@@ -96,8 +96,8 @@ export default function CorrelationMatrixChart({
 						{row.map((value, j) => (
 							// biome-ignore lint/a11y/noStaticElementInteractions: interactive tooltip cell
 							<div
-							// biome-ignore lint/suspicious/noArrayIndexKey: matrix cell position is the key
-							key={`${i}-${j}`}
+								// biome-ignore lint/suspicious/noArrayIndexKey: matrix cell position is the key
+								key={`${i}-${j}`}
 								style={{
 									width: cellSize,
 									height: cellSize,

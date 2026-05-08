@@ -341,7 +341,8 @@ export default function TradingPage() {
 				description="AI-powered commodity price forecasting and market analysis"
 				actions={
 					<div className="flex items-center gap-2">
-						<button type="button"
+						<button
+							type="button"
 							onClick={() => {
 								setBeefMode(!beefMode);
 								setSelectedCut("");
@@ -430,7 +431,8 @@ export default function TradingPage() {
 					onIndicatorsChange={setIndicators}
 				/>
 				{!beefMode && sourceCount > 1 && (
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => setShowMultiSource(!showMultiSource)}
 						className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
 							showMultiSource
@@ -456,7 +458,8 @@ export default function TradingPage() {
 					</select>
 				)}
 				{beefMode && Object.keys(beefMultiSources).length > 1 && (
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => setShowMultiSource(!showMultiSource)}
 						className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
 							showMultiSource

@@ -3,7 +3,7 @@
  *
  * Creates a fully wired Express app for integration tests.
  * Uses real PostgreSQL, real Redis, real middleware chain.
- * Only external services (IoTDB, AI Node, email) are mocked.
+ * Only external services (inference, email) are mocked.
  *
  * Usage:
  *   const { app, prisma, authToken, userId, cleanup } = await createAuthenticatedTestApp({

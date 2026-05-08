@@ -229,7 +229,9 @@ export default function ForecastList() {
 			dataIndex: "timeseries",
 			width: 180,
 			render: (ts: unknown) => (
-				<span className="font-semibold text-foreground">{(ts as ForecastRecord["timeseries"])?.name || "-"}</span>
+				<span className="font-semibold text-foreground">
+					{(ts as ForecastRecord["timeseries"])?.name || "-"}
+				</span>
 			),
 		},
 		{

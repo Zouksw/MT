@@ -17,7 +17,7 @@ export const createDatasetSchema = z.object({
 		.max(100)
 		.regex(/^[a-z0-9-]+$/),
 	description: z.string().optional(),
-	storageFormat: z.enum(["IOTDB_CACHE", "INFLUXDB", "OPENML", "CSV"]),
+	storageFormat: z.enum(["TIMESERIES", "INFLUXDB", "OPENML", "CSV"]),
 	filePath: z.string().optional(),
 	isPublic: z.boolean().default(false),
 });

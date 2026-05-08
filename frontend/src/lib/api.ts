@@ -46,7 +46,10 @@ interface ListResult<T> {
 }
 
 /** Replace Refine's useList */
-export function useList<T = Record<string, unknown>>(resource: string, params?: ListParams): ListResult<T> {
+export function useList<T = Record<string, unknown>>(
+	resource: string,
+	params?: ListParams,
+): ListResult<T> {
 	const searchParams = new URLSearchParams();
 	if (params?.page) searchParams.set("page", String(params.page));
 	if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
@@ -109,7 +112,10 @@ export function useOne<T = Record<string, unknown>>(
 
 // ── Mutation helpers (replace Refine dataProvider mutations) ────────────────
 
-export async function createRecord<T = Record<string, unknown>>(resource: string, payload: Partial<T>): Promise<T> {
+export async function createRecord<T = Record<string, unknown>>(
+	resource: string,
+	payload: Partial<T>,
+): Promise<T> {
 	const res = await authFetch(`/api/${resource}`, {
 		method: "POST",
 		body: JSON.stringify(payload),

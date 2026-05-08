@@ -60,7 +60,15 @@ interface AccuracyTrendChartProps {
 	models: ModelWithBacktest[];
 }
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number | null; color: string }>; label?: string }) {
+function CustomTooltip({
+	active,
+	payload,
+	label,
+}: {
+	active?: boolean;
+	payload?: Array<{ name: string; value: number | null; color: string }>;
+	label?: string;
+}) {
 	if (!active || !payload?.length) return null;
 	return (
 		<div
@@ -123,7 +131,8 @@ export function AccuracyTrendChart({ models }: AccuracyTrendChartProps) {
 				<CardTitle className="text-sm font-medium">Accuracy Trend</CardTitle>
 				<div className="flex gap-1">
 					{WINDOW_OPTIONS.map((opt) => (
-						<button type="button"
+						<button
+							type="button"
 							key={opt.value}
 							onClick={() => setActiveWindow(opt.value)}
 							className={`px-3 py-1 text-xs rounded-full transition-colors ${

@@ -121,7 +121,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
 			{/* CTA */}
 			{actionText && onAction && (
-				<button type="button"
+				<button
+					type="button"
 					onClick={onAction}
 					className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white outline outline-black/5 dark:outline-white/10 transition-all duration-200 hover:bg-primary-hover active:translate-y-0"
 				>

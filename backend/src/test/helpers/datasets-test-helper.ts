@@ -63,12 +63,17 @@ export function setupDatasetsMocks() {
 	}));
 
 	jest.mock("@/middleware/cacheDecorator", () => ({
-		cacheRoute: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+		cacheRoute: () => (_req: unknown, _res: unknown, next: () => void) =>
+			next(),
 		invalidateCache: jest.fn((): Promise<number> => Promise.resolve(0)),
 	}));
 
 	jest.mock("@/middleware/auth", () => ({
-		authenticate: (req: Record<string, unknown>, _res: unknown, next: () => void) => {
+		authenticate: (
+			req: Record<string, unknown>,
+			_res: unknown,
+			next: () => void,
+		) => {
 			req.user = {
 				id: "test-user-id",
 				role: "admin",
@@ -151,5 +156,7 @@ export function setDefaultMockReturns(prisma: {
 		name: "Default",
 		slug: "default",
 	});
-	prisma.$transaction.mockImplementation(async (cb: (p: unknown) => unknown) => cb(prisma));
+	prisma.$transaction.mockImplementation(async (cb: (p: unknown) => unknown) =>
+		cb(prisma),
+	);
 }

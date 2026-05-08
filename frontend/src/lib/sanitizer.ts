@@ -58,7 +58,11 @@ class InputSanitizer {
 		if (typeof window !== "undefined") {
 			try {
 				// Try to use DOMPurify from window if available (loaded by CDN or client-side)
-				const purify = (window as unknown as { DOMPurify?: { sanitize: (dirty: string, config: Record<string, unknown>) => string } }).DOMPurify;
+				const purify = (
+					window as unknown as {
+						DOMPurify?: { sanitize: (dirty: string, config: Record<string, unknown>) => string };
+					}
+				).DOMPurify;
 				if (purify) {
 					return purify.sanitize(dirty, this.DOMPURIFY_CONFIG);
 				}

@@ -1,5 +1,6 @@
 {
 	"devDependencies": {
+		"@biomejs/biome": "^2.4.14",
 		"@types/bcrypt": "^6.0.0",
 		"@types/supertest": "^7.2.0",
 		"husky": "^9.1.7",

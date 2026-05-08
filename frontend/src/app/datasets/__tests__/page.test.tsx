@@ -25,7 +25,7 @@ jest.mock("@/lib/api", () => ({
 				id: "ds-2",
 				name: "Pressure Data",
 				description: "Pressure sensor",
-				storageFormat: "IOTDB",
+				storageFormat: "TIMESERIES",
 				rowsCount: 500,
 				_count: { timeseries: 1 },
 				createdAt: "2024-01-02T00:00:00Z",

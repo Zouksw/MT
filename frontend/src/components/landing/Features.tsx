@@ -1,13 +1,5 @@
 "use client";
 
-import {
-	ChartBar,
-	ChartLineUp,
-	Flask,
-	Lightning,
-	Users,
-	WarningCircle,
-} from "@phosphor-icons/react";
 import type React from "react";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 
@@ -27,7 +19,6 @@ const correlationData = [
 
 const features = [
 	{
-		icon: <ChartLineUp size={28} weight="duotone" />,
 		title: "Multi-Factor Analysis",
 		description:
 			"131 market factors — weather, FX, tariffs, freight indices — correlated with commodity prices via Pearson coefficient.",
@@ -36,7 +27,6 @@ const features = [
 		visual: "factors",
 	},
 	{
-		icon: <Lightning size={28} weight="duotone" />,
 		title: "AI Signal Engine",
 		description:
 			"Seven independent models — ARIMA, Holt-Winters, STL, Timer-XL — each producing buy/sell signals with confidence intervals and MAPE verification.",
@@ -46,7 +36,6 @@ const features = [
 		goldAccent: true,
 	},
 	{
-		icon: <Flask size={28} weight="duotone" />,
 		title: "55+ Commodities",
 		description:
 			"108 commodities across 13 categories — beef cuts to brent crude. OHLCV candlestick data with multi-source overlay.",
@@ -55,7 +44,6 @@ const features = [
 		visual: "commodities",
 	},
 	{
-		icon: <WarningCircle size={28} weight="duotone" />,
 		title: "Price Alerts",
 		description:
 			"Custom price thresholds with breakout and reversal detection. WebSocket-powered alerts avg 47ms latency.",
@@ -64,15 +52,14 @@ const features = [
 		visual: null,
 	},
 	{
-		icon: <ChartBar size={28} weight="duotone" />,
 		title: "Seasonality & Correlation",
-		description: "Monthly seasonality decomposition and Pearson cross-commodity correlation matrix with interactive heatmap.",
+		description:
+			"Monthly seasonality decomposition and Pearson cross-commodity correlation matrix with interactive heatmap.",
 		details: ["Monthly patterns", "Correlation matrix", "Trend analysis"],
 		span: "",
 		visual: null,
 	},
 	{
-		icon: <Users size={28} weight="duotone" />,
 		title: "Backtest & Accuracy",
 		description:
 			"Backtest AI model accuracy with rolling MAPE windows. Compare model performance across 30/60/90-day horizons.",
@@ -83,10 +70,10 @@ const features = [
 ];
 
 const metrics = [
-	{ value: "108", label: "Commodities", icon: <Flask size={22} weight="duotone" /> },
-	{ value: "7", label: "AI Models", icon: <Lightning size={22} weight="duotone" /> },
-	{ value: "18", label: "Data Sources", icon: <ChartLineUp size={22} weight="duotone" /> },
-	{ value: "131", label: "Market Factors", icon: <ChartBar size={22} weight="duotone" /> },
+	{ value: "108", label: "Commodities" },
+	{ value: "7", label: "AI Models" },
+	{ value: "18", label: "Data Sources" },
+	{ value: "131", label: "Market Factors" },
 ];
 
 function FactorVisual() {
@@ -171,7 +158,8 @@ export const Features: React.FC = () => {
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
 						<p className="mt-4 text-lg text-muted-foreground">
-							Multi-factor correlation, 7 independent signal models, 131 market factors — not a dashboard, a signal engine.
+							Multi-factor correlation, 7 independent signal models, 131 market factors — not a
+							dashboard, a signal engine.
 						</p>
 					</MotionReveal>
 				</div>
@@ -184,9 +172,6 @@ export const Features: React.FC = () => {
 							<div
 								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-7 text-center transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] ${index === 0 ? "md:py-9" : ""}`}
 							>
-								<div className="mx-auto mb-3 text-[#B8860B] md:h-12 md:w-12">
-									{metric.icon}
-								</div>
 								<div className="font-mono text-2xl font-semibold text-[#B8860B] md:text-3xl tabular-nums">
 									{metric.value}
 								</div>
@@ -204,9 +189,6 @@ export const Features: React.FC = () => {
 							<div
 								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
 							>
-								<div className="mb-4 text-[#B8860B] transition-transform duration-200 group-hover:scale-105">
-									{feature.icon}
-								</div>
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 									{feature.title}
 								</h3>

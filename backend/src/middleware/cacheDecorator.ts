@@ -89,13 +89,17 @@ function generateCacheKey(req: Request, options: CacheRouteOptions): string {
 
 	// Add query string
 	if (Object.keys(req.query).length > 0) {
-		const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+		const queryString = new URLSearchParams(
+			req.query as Record<string, string>,
+		).toString();
 		parts.push(queryString);
 	}
 
 	// Add user context if varyByUser is enabled
 	if (varyByUser) {
-		const user = (req as unknown as Record<string, unknown>).user as Record<string, unknown> | undefined;
+		const user = (req as unknown as Record<string, unknown>).user as
+			| Record<string, unknown>
+			| undefined;
 		if (user?.id) {
 			parts.push(`user:${user.id}`);
 		}
@@ -245,7 +249,9 @@ export function cacheRoute(
 			} else {
 				Object.assign(headers, header);
 			}
-			return originalSet.apply(res, [header, value] as unknown as Parameters<typeof originalSet>);
+			return originalSet.apply(res, [header, value] as unknown as Parameters<
+				typeof originalSet
+			>);
 		};
 
 		// Intercept res.status()
@@ -284,7 +290,8 @@ export function cacheRoute(
 			const result = originalJson(body);
 
 			// Attach cache promise for testing purposes
-			(result as unknown as Record<string, unknown>).cachePromise = cachePromise;
+			(result as unknown as Record<string, unknown>).cachePromise =
+				cachePromise;
 
 			return result;
 		};

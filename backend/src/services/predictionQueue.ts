@@ -26,7 +26,6 @@ let correlationWorker: Worker | null = null;
 
 interface PredictionJobData {
 	commodityId: string;
-	timeseriesPath: string;
 	models: string[];
 	horizon: number;
 }
@@ -57,7 +56,7 @@ export async function initPredictionQueue(): Promise<void> {
 	predictionWorker = new Worker<PredictionJobData>(
 		QUEUE_NAME,
 		async (job: Job<PredictionJobData>) => {
-			const { commodityId, timeseriesPath, models, horizon } = job.data;
+			const { commodityId, models, horizon } = job.data;
 
 			logger.info(
 				`Processing prediction job for ${commodityId} (${models.length} models)`,
@@ -68,7 +67,6 @@ export async function initPredictionQueue(): Promise<void> {
 					try {
 						const prediction = await runAndCachePrediction(
 							commodityId,
-							timeseriesPath,
 							modelId,
 							horizon,
 						);
@@ -77,7 +75,6 @@ export async function initPredictionQueue(): Promise<void> {
 						await logPrediction({
 							modelId,
 							commodityId,
-							timeseriesPath,
 							horizon,
 							predictedValues: prediction.values,
 							lowerBounds: prediction.lowerBound,
@@ -134,7 +131,6 @@ export async function initPredictionQueue(): Promise<void> {
  */
 export async function schedulePrediction(
 	commodityId: string,
-	timeseriesPath: string,
 	horizon: number = 10,
 ): Promise<string | null> {
 	if (!predictionQueue) return null;
@@ -142,7 +138,7 @@ export async function schedulePrediction(
 	const models = getAllModels();
 	const job = await predictionQueue.add(
 		`predict-${commodityId}`,
-		{ commodityId, timeseriesPath, models, horizon },
+		{ commodityId, models, horizon },
 		{
 			attempts: 2,
 			backoff: { type: "exponential", delay: 5000 },
@@ -182,7 +178,6 @@ export async function scheduleCorrelation(
  */
 export async function scheduleRecurringPredictions(
 	commodityId: string,
-	timeseriesPath: string,
 	horizon: number = 10,
 ): Promise<void> {
 	if (!predictionQueue) return;
@@ -190,7 +185,7 @@ export async function scheduleRecurringPredictions(
 	const models = getAllModels();
 	await predictionQueue.add(
 		`recurring-predict-${commodityId}`,
-		{ commodityId, timeseriesPath, models, horizon },
+		{ commodityId, models, horizon },
 		{
 			repeat: { every: 30 * 60 * 1000 }, // every 30 minutes
 			attempts: 2,

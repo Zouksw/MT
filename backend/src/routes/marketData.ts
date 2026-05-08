@@ -472,10 +472,14 @@ router.post(
 
 		await new Promise<void>((resolve, reject) => {
 			// biome-ignore lint/suspicious/noExplicitAny: multer expects Express.Multer.Request which extends Request
-			upload.single("file")(req as unknown as any, res as unknown as any, (err) => {
-				if (err) reject(new BadRequestError(err.message));
-				else resolve();
-			});
+			upload.single("file")(
+				req as unknown as any,
+				res as unknown as any,
+				(err) => {
+					if (err) reject(new BadRequestError(err.message));
+					else resolve();
+				},
+			);
 		});
 
 		const file = (req as unknown as { file?: { buffer: Buffer } }).file;
@@ -518,10 +522,14 @@ router.post(
 
 		await new Promise<void>((resolve, reject) => {
 			// biome-ignore lint/suspicious/noExplicitAny: multer expects Express.Multer.Request which extends Request
-			upload.single("file")(req as unknown as any, res as unknown as any, (err) => {
-				if (err) reject(new BadRequestError(err.message));
-				else resolve();
-			});
+			upload.single("file")(
+				req as unknown as any,
+				res as unknown as any,
+				(err) => {
+					if (err) reject(new BadRequestError(err.message));
+					else resolve();
+				},
+			);
 		});
 
 		const file = (req as unknown as { file?: { buffer: Buffer } }).file;

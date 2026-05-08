@@ -301,8 +301,6 @@ describe("authorize middleware", () => {
 			error: {
 				message: "Insufficient permissions",
 				code: "FORBIDDEN",
-				required: ["admin"],
-				userRole: "user",
 			},
 		});
 	});

@@ -26,56 +26,56 @@ const Spinner = () => (
 // Dynamic imports for Recharts components to reduce initial bundle size
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false, loading: () => <Spinner /> },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const ComposedChart = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), {
 	ssr: false,
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 }) as React.ComponentType<any>;
 
 const ReferenceLine = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ReferenceLine })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 interface DataPoint {
@@ -220,7 +220,13 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 	};
 
 	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-	const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: any }> }) => {
+	const CustomTooltip = ({
+		active,
+		payload,
+	}: {
+		active?: boolean;
+		payload?: Array<{ payload: any }>;
+	}) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;
 			return (

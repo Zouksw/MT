@@ -15,7 +15,6 @@ import {
 	predictSchema,
 	trainModelSchema,
 } from "@/schemas/models";
-import { getIoTDBClient } from "../../config/iotdb";
 
 const router = Router();
 
@@ -153,7 +152,7 @@ router.get(
  *   post:
  *     tags: [Models]
  *     summary: Train a new forecasting model
- *     description: Trains a new forecasting model using IoTDB AINode. Deactivates existing active models for the same time series.
+ *     description: Trains a new forecasting model using inference service. Deactivates existing active models for the same time series.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -184,13 +183,13 @@ router.get(
  *       201:
  *         description: Model trained successfully
  *       400:
- *         description: AINode training failed
+ *         description: inference service training failed
  *       401:
  *         description: Not authenticated
  *       404:
  *         description: Time series not found
  */
-// POST /api/models/train - Train a new forecasting model using IoTDB AINode
+// POST /api/models/train - Train a new forecasting model using inference service
 router.post(
 	"/train",
 	authenticate,
@@ -220,27 +219,6 @@ router.post(
 			data: { isActive: false },
 		});
 
-		// Build IoTDB path for the timeseries
-		const iotdbPath = `root.${timeseries.datasetId}.${timeseries.slug}`;
-
-		// Call IoTDB AINode to train the model
-		const iotdbClient = await getIoTDBClient();
-		const startTime = Date.now();
-
-		const trainResult = await iotdbClient.trainModel(
-			iotdbPath,
-			validatedData.algorithm as "ARIMA" | "PROPHET" | "LSTM" | "TRANSFORMER",
-			(validatedData.hyperparameters || {}) as import("../../src/types/iotdb").IoTDBTrainingHyperparameters,
-		);
-
-		const trainingDuration = Date.now() - startTime;
-
-		if (!trainResult.success) {
-			throw new BadRequestError(
-				`AINode training failed: ${trainResult.message}`,
-			);
-		}
-
 		// Get training data count for metrics
 		const dataPointsCount = await prisma.datapoint.count({
 			where: {
@@ -260,15 +238,12 @@ router.post(
 				timeseriesId: validatedData.timeseriesId,
 				trainedById: userId,
 				algorithm: validatedData.algorithm,
-				hyperparameters: {
-					...validatedData.hyperparameters,
-					iotdbPath,
-					iotdbModelId: trainResult.modelId,
-				},
+				hyperparameters: (validatedData.hyperparameters || {}) as Record<
+					string,
+					string | number | boolean
+				>,
 				trainingMetrics: {
 					trainingSamples: dataPointsCount,
-					trainingDuration,
-					ainodeResponse: trainResult.message,
 				},
 				version: 1,
 				isActive: true,
@@ -310,7 +285,7 @@ router.post(
  *   post:
  *     tags: [Models]
  *     summary: Generate forecast using a model
- *     description: Generates a forecast using the specified trained model via IoTDB AINode. The model must be active.
+ *     description: Generates a forecast using the specified trained model via inference service. The model must be active.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -341,13 +316,13 @@ router.post(
  *       201:
  *         description: Forecast generated successfully
  *       400:
- *         description: Model not active or AINode prediction failed
+ *         description: Model not active or inference service prediction failed
  *       401:
  *         description: Not authenticated
  *       404:
  *         description: Model not found
  */
-// POST /api/models/:modelId/predict - Generate forecast using IoTDB AINode (requires authentication)
+// POST /api/models/:modelId/predict - Generate forecast using inference service (requires authentication)
 router.post(
 	"/:modelId/predict",
 	authenticate,
@@ -371,58 +346,49 @@ router.post(
 			throw new BadRequestError("Model is not active");
 		}
 
-		// Get IoTDB model ID from hyperparameters
-		const params = model.hyperparameters as {
-			iotdbPath?: string;
-			iotdbModelId?: string;
-		};
-
-		if (!params?.iotdbPath || !params?.iotdbModelId) {
-			throw new BadRequestError(
-				"Model not trained with AINode. Please retrain the model.",
-			);
-		}
-
-		// Call IoTDB AINode for prediction
-		const iotdbClient = await getIoTDBClient();
-		const predictResult = await iotdbClient.predict(
-			params.iotdbPath,
-			params.iotdbModelId,
-			validatedData.horizon,
-			validatedData.confidenceLevel,
+		// Generate predictions using inference service
+		const { predict } = await import("@/services/inference/client");
+		const { getCommodityPriceValues } = await import(
+			"@/services/inference/data-fetcher"
 		);
 
-		if (!predictResult.success || !predictResult.forecasts) {
+		const algorithm = model.algorithm || "arima";
+		const horizon = validatedData.horizon;
+		const confidenceLevel = validatedData.confidenceLevel || 0.95;
+
+		let tsData: { values: number[]; timestamps: number[] };
+		try {
+			tsData = await getCommodityPriceValues(model.timeseriesId, 200);
+		} catch {
 			throw new BadRequestError(
-				`AINode prediction failed: ${predictResult.message}`,
+				"Insufficient price data for prediction. Need at least 2 data points.",
 			);
 		}
 
-		// Convert AINode forecasts to database format
-		// IoTDBForecast has timestamp: Date, need to convert to number for storage then back to Date for Prisma
-		const forecasts = predictResult.forecasts.map((f) => {
-			const timestamp =
-				f.timestamp instanceof Date
-					? f.timestamp.getTime()
-					: (f.timestamp as number);
-			return {
-				modelId,
-				timeseriesId: model.timeseriesId,
-				timestamp: new Date(timestamp), // Prisma expects Date or string
-				predictedValue: new Prisma.Decimal(String(f.predictedValue ?? 0)),
-				lowerBound: new Prisma.Decimal(
-					String(f.lowerBound ?? f.predictedValue ?? 0),
-				),
-				upperBound: new Prisma.Decimal(
-					String(f.upperBound ?? f.predictedValue ?? 0),
-				),
-				confidence: new Prisma.Decimal(
-					validatedData.confidenceLevel.toFixed(2),
-				),
-				anomalyProbability: new Prisma.Decimal("0"),
-				isAnomaly: false,
-			};
+		const predictResult = await predict({
+			values: tsData.values,
+			timestamps: tsData.timestamps,
+			model_id: algorithm,
+			horizon,
+			confidence_level: confidenceLevel,
 		});
+
+		// Build forecast records
+		const forecasts = predictResult.timestamps.map((ts, i) => ({
+			modelId,
+			timeseriesId: model.timeseriesId,
+			timestamp: new Date(ts),
+			predictedValue: new Prisma.Decimal(String(predictResult.values[i] ?? 0)),
+			lowerBound: new Prisma.Decimal(
+				String(predictResult.lower_bound?.[i] ?? predictResult.values[i] ?? 0),
+			),
+			upperBound: new Prisma.Decimal(
+				String(predictResult.upper_bound?.[i] ?? predictResult.values[i] ?? 0),
+			),
+			confidence: new Prisma.Decimal(confidenceLevel.toFixed(2)),
+			anomalyProbability: new Prisma.Decimal("0"),
+			isAnomaly: false,
+		}));
 
 		// Batch insert forecasts
 		await prisma.forecast.createMany({
@@ -608,6 +574,16 @@ router.delete(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
+		const model = await prisma.forecastingModel.findUnique({
+			where: { id: req.params.id },
+			select: { trainedById: true },
+		});
+		if (!model) {
+			throw new NotFoundError("Model");
+		}
+		if (model.trainedById !== req.userId && req.user?.role !== "ADMIN") {
+			throw new BadRequestError("You can only delete models you created");
+		}
 		await prisma.forecastingModel.delete({
 			where: { id: req.params.id },
 		});

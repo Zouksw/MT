@@ -135,7 +135,7 @@ export const StatCard = React.memo<StatCardProps>(
 		}
 
 		return (
-					<div
+			<div
 				className={`bg-card rounded-lg shadow-card dark:shadow-card-dark p-5 transition-all duration-200 ${onClick ? "cursor-pointer hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-card-hover-dark" : ""}`}
 				onClick={onClick}
 			>

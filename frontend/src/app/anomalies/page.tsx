@@ -47,7 +47,7 @@ export default function AnomalyList() {
 		data: anomalies,
 		loading,
 		mutate,
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	} = useList<any>("anomalies", {
 		pageSize: 1000,
 		sort: "detectedAt",
@@ -141,7 +141,7 @@ export default function AnomalyList() {
 			title: "Time Series",
 			dataIndex: "timeseries",
 			width: 180,
-			render: (ts: unknown) => (ts as Record<string, unknown>)?.name as string || "-",
+			render: (ts: unknown) => ((ts as Record<string, unknown>)?.name as string) || "-",
 		},
 		{
 			key: "value",

@@ -79,7 +79,7 @@ export interface Dataset {
 	name: string;
 	slug: string;
 	description?: string;
-	storageFormat: "TSFILE" | "IoTDB" | "PARQUET";
+	storageFormat: "TIMESERIES" | "INFLUXDB" | "CSV";
 	isPublic: boolean;
 	isImported: boolean;
 	organizationId?: string;
@@ -212,7 +212,7 @@ export interface DashboardStats {
 	recentForecasts: Forecast[];
 	systemHealth: {
 		database: boolean;
-		iotdb: boolean;
+		inference: boolean;
 		redis: boolean;
 	};
 }
@@ -239,7 +239,7 @@ export interface RecentActivity {
 export interface CreateDatasetRequest {
 	name: string;
 	description?: string;
-	storageFormat: "TSFILE" | "IoTDB" | "PARQUET";
+	storageFormat: "TIMESERIES" | "INFLUXDB" | "CSV";
 	isPublic: boolean;
 }
 

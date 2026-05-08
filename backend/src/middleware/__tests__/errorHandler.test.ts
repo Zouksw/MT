@@ -83,10 +83,11 @@ describe("Error Handler Middleware", () => {
 		});
 
 		it("should handle Prisma unique constraint violations", () => {
-			const prismaError = Object.assign(
-				new Error("Unique constraint failed"),
-				{ constructor: { name: "PrismaClientKnownRequestError" }, code: "P2002", meta: { target: ["email"] } },
-			);
+			const prismaError = Object.assign(new Error("Unique constraint failed"), {
+				constructor: { name: "PrismaClientKnownRequestError" },
+				code: "P2002",
+				meta: { target: ["email"] },
+			});
 
 			errorHandler(
 				prismaError,
@@ -107,10 +108,10 @@ describe("Error Handler Middleware", () => {
 		});
 
 		it("should handle Prisma record not found errors", () => {
-			const prismaError = Object.assign(
-				new Error("Record not found"),
-				{ constructor: { name: "PrismaClientKnownRequestError" }, code: "P2025" },
-			);
+			const prismaError = Object.assign(new Error("Record not found"), {
+				constructor: { name: "PrismaClientKnownRequestError" },
+				code: "P2025",
+			});
 
 			errorHandler(
 				prismaError,
@@ -132,7 +133,10 @@ describe("Error Handler Middleware", () => {
 		it("should handle Prisma foreign key constraint errors", () => {
 			const prismaError = Object.assign(
 				new Error("Foreign key constraint failed"),
-				{ constructor: { name: "PrismaClientKnownRequestError" }, code: "P2003" },
+				{
+					constructor: { name: "PrismaClientKnownRequestError" },
+					code: "P2003",
+				},
 			);
 
 			errorHandler(
@@ -154,10 +158,9 @@ describe("Error Handler Middleware", () => {
 		});
 
 		it("should handle JWT invalid token errors", () => {
-			const jwtError = Object.assign(
-				new Error("Invalid token"),
-				{ name: "JsonWebTokenError" },
-			);
+			const jwtError = Object.assign(new Error("Invalid token"), {
+				name: "JsonWebTokenError",
+			});
 
 			errorHandler(jwtError, mockReq as Request, mockRes as Response, mockNext);
 
@@ -172,10 +175,9 @@ describe("Error Handler Middleware", () => {
 		});
 
 		it("should handle JWT token expired errors", () => {
-			const jwtError = Object.assign(
-				new Error("Token expired"),
-				{ name: "TokenExpiredError" },
-			);
+			const jwtError = Object.assign(new Error("Token expired"), {
+				name: "TokenExpiredError",
+			});
 
 			errorHandler(jwtError, mockReq as Request, mockRes as Response, mockNext);
 

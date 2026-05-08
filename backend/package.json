@@ -84,7 +84,9 @@
       "path-to-regexp": "^0.1.13",
       "picomatch": "^2.3.2",
       "minimatch": "^3.1.4",
-      "brace-expansion": "^1.1.13"
+      "brace-expansion": "^1.1.13",
+      "uuid": "^11.1.1",
+      "ip-address": "^10.1.1"
     }
   }
 }

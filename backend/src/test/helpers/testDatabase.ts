@@ -173,7 +173,10 @@ export async function createDatabaseDataset(
 					.toLowerCase()
 					.replace(/\s+/g, "-")
 					.replace(/[^a-z0-9-]/g, ""),
-			storageFormat: (overrides.storageFormat || "IOTDB_CACHE") as "IOTDB_CACHE" | "INFLUXDB" | "OPENML",
+			storageFormat: (overrides.storageFormat || "TIMESERIES") as
+				| "TIMESERIES"
+				| "INFLUXDB"
+				| "OPENML",
 			ownerId: userId,
 			organization_id: org.id,
 		},

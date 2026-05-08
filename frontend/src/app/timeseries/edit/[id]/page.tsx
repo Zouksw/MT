@@ -167,8 +167,14 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 							/>
 
 							<div className="w-full">
-															<label htmlFor="ts-color" className="block text-sm font-medium text-foreground mb-1">Color</label>
-																<input id="ts-color"
+								<label
+									htmlFor="ts-color"
+									className="block text-sm font-medium text-foreground mb-1"
+								>
+									Color
+								</label>
+								<input
+									id="ts-color"
 									type="color"
 									value={form.colorHex}
 									onChange={(e) => handleChange("colorHex", e.target.value)}
@@ -184,7 +190,8 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 							/>
 
 							<label className="flex items-center gap-3 cursor-pointer">
-								<button type="button"
+								<button
+									type="button"
 									role="switch"
 									aria-checked={form.isAnomalyDetectionEnabled}
 									onClick={() =>

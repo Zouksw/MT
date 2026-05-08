@@ -83,7 +83,7 @@ export function checkAIAccess(
 
 /**
  * Middleware to check if AI features are enabled
- * (for informational endpoints like /api/iotdb/ai/models)
+ * (for informational endpoints like /api/inference/models)
  */
 export function checkAIEnabled(
 	_req: Request,

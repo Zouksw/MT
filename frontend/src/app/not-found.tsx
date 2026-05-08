@@ -39,14 +39,16 @@ export default function NotFound() {
 
 				{/* Action Buttons */}
 				<div className="flex gap-4 justify-center flex-wrap">
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => router.push("/")}
 						className="inline-flex items-center gap-2 h-12 px-8 py-3 text-base font-semibold rounded-full bg-black text-white hover:bg-gray-800 transition-colors"
 					>
 						<House size={18} weight="duotone" />
 						Go Home
 					</button>
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => router.back()}
 						className="inline-flex items-center gap-2 h-12 px-8 py-3 text-base font-semibold rounded-full border border-black/20 text-black hover:bg-black/5 dark:border-white/20 dark:text-white dark:hover:bg-white/5 transition-colors"
 					>

@@ -1,23 +1,14 @@
 "use client";
 
-import {
-	ArrowRight,
-	Brain,
-	ChartLineUp,
-	CheckCircle,
-	GearSix,
-	Lightning,
-	RocketLaunch,
-} from "@phosphor-icons/react";
+import { ArrowRight, Brain, CheckCircle } from "@phosphor-icons/react";
+
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 
 const steps = [
 	{
 		number: 1,
 		title: "Create Your Account",
-		description:
-			"Free account. Pick from 108 commodities. No credit card.",
-		icon: <RocketLaunch size={24} weight="duotone" />,
+		description: "Free account. Pick from 108 commodities. No credit card.",
 		preview: null,
 	},
 	{
@@ -25,7 +16,6 @@ const steps = [
 		title: "Explore Market Data",
 		description:
 			"108 commodities with OHLCV candlestick data, multi-source price overlay, and 30-day history.",
-		icon: <ChartLineUp size={24} weight="duotone" />,
 		preview: (
 			<div className="space-y-2 mt-3">
 				{[
@@ -35,7 +25,7 @@ const steps = [
 				].map((c) => (
 					<div
 						key={c.name}
-						className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800/60"
+						className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-white/[0.05]"
 					>
 						<span className="text-xs text-muted-foreground">{c.name}</span>
 						<div className="flex items-center gap-2">
@@ -58,7 +48,6 @@ const steps = [
 		title: "Set Up AI Signals",
 		description:
 			"Enable ARIMA, Holt-Winters, STL — see consensus signals with confidence intervals and MAPE scores.",
-		icon: <GearSix size={24} weight="duotone" />,
 		preview: (
 			<div className="mt-3 space-y-2">
 				{[
@@ -68,11 +57,14 @@ const steps = [
 				].map((s) => (
 					<div
 						key={s.model}
-						className="flex items-center gap-3 px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800/60"
+						className="flex items-center gap-3 px-3 py-2 rounded-md bg-gray-50 dark:bg-white/[0.05]"
 					>
 						<span className="text-xs font-medium text-muted-foreground w-24">{s.model}</span>
 						<div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-							<div className="h-full rounded-full bg-[#B8860B]/50" style={{ width: `${s.conf}%` }} />
+							<div
+								className="h-full rounded-full bg-[#B8860B]/50"
+								style={{ width: `${s.conf}%` }}
+							/>
 						</div>
 						<span
 							className={`text-xs font-mono tabular-nums ${s.signal === "Buy" ? "text-green-600 dark:text-green-400" : "text-amber-500"}`}
@@ -89,9 +81,8 @@ const steps = [
 		title: "Track & Decide",
 		description:
 			"7 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
-		icon: <Lightning size={24} weight="duotone" />,
 		preview: (
-			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-gray-800/60">
+			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-white/[0.05]">
 				<Brain size={20} weight="duotone" className="text-[#B8860B] shrink-0" />
 				<div className="flex-1">
 					<div className="text-xs font-medium text-foreground">AI Consensus</div>
@@ -114,7 +105,7 @@ const features = [
 
 export default function GettingStarted() {
 	return (
-		<section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-24 md:py-36 lg:py-48">
+		<section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-20 md:py-28 lg:py-36">
 			{/* Dot grid pattern */}
 			<div
 				className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
@@ -163,10 +154,7 @@ export default function GettingStarted() {
 									</div>
 
 									<div className="flex-1 rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-[#111] p-5 md:p-6 transition-all duration-300 hover:outline-black/10 dark:hover:outline-white/15">
-										<div className="flex items-center gap-3 mb-2">
-											<div className="flex h-8 w-8 items-center justify-center rounded-md text-[#B8860B]">
-												{step.icon}
-											</div>
+										<div className="flex items-center mb-2">
 											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 												{step.title}
 											</h3>

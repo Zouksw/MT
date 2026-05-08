@@ -35,7 +35,8 @@ export default function GlobalError({
 						)}
 
 						<div className="flex gap-4 justify-center flex-wrap">
-							<button type="button"
+							<button
+								type="button"
 								onClick={() => reset()}
 								className="h-12 px-8 text-base font-semibold rounded-lg bg-primary text-primary-foreground border-none cursor-pointer hover:bg-primary-hover transition-colors"
 							>

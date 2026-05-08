@@ -27,6 +27,10 @@ const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar }
 	ssr: false,
 }) as React.ComponentType<Record<string, unknown>>;
 
+const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), {
+	ssr: false,
+}) as React.ComponentType<Record<string, unknown>>;
+
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
 }) as React.ComponentType<Record<string, unknown>>;
@@ -53,7 +57,13 @@ interface ModelPerformanceBarChartProps {
 	models: ModelWithBacktest[];
 }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; mape: number | null; predictions: number } }> }) {
+function CustomTooltip({
+	active,
+	payload,
+}: {
+	active?: boolean;
+	payload?: Array<{ payload: { name: string; mape: number | null; predictions: number } }>;
+}) {
 	if (!active || !payload?.length) return null;
 	const data = payload[0].payload;
 	return (
@@ -165,7 +175,7 @@ export function ModelPerformanceBarChart({ models }: ModelPerformanceBarChartPro
 						>
 							{chartData.map((entry, index) => (
 								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-								<rect key={index} fill={entry.fill} />
+								<Cell key={index} fill={entry.fill} />
 							))}
 						</Bar>
 					</BarChart>

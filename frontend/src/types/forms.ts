@@ -228,7 +228,7 @@ export interface PredictionFormData {
 /**
  * Storage format
  */
-export type StorageFormat = "IOTDB_CACHE" | "INFLUXDB" | "OPENML" | "CSV";
+export type StorageFormat = "TIMESERIES" | "INFLUXDB" | "OPENML" | "CSV";
 
 /**
  * Create dataset form data

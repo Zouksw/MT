@@ -99,9 +99,9 @@ describe("AuthPage", () => {
 	it("should render feature highlights on left panel", () => {
 		render(<AuthPage type="login" />);
 
-		expect(screen.getByText("55+ Commodities")).toBeInTheDocument();
-		expect(screen.getByText("7 AI Models")).toBeInTheDocument();
-		expect(screen.getByText("Multi-Factor Analysis")).toBeInTheDocument();
+		expect(screen.getByText(/108 commodities/)).toBeInTheDocument();
+		expect(screen.getByText(/7 AI models/)).toBeInTheDocument();
+		expect(screen.getByText("One signal.")).toBeInTheDocument();
 	});
 
 	it("should navigate to register when Sign up clicked", () => {

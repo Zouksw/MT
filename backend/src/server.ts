@@ -22,7 +22,7 @@ import { communityRouter } from "@/routes/community";
 import { datasetsRouter } from "@/routes/datasets";
 import docsRouter from "@/routes/docs";
 import healthRouter from "@/routes/health";
-import { iotdbRouter } from "@/routes/iotdb";
+import { inferenceRouter } from "@/routes/inference";
 import { marketDataRouter } from "@/routes/marketData";
 import { metricsRouter } from "@/routes/metrics";
 import { modelsRouter } from "@/routes/models";
@@ -34,10 +34,7 @@ import { socialRouter } from "@/routes/social";
 import { timeseriesRouter } from "@/routes/timeseries";
 import { watchlistRouter } from "@/routes/watchlist";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
-import {
-	scheduleAllCommodityPredictions,
-	syncCommoditiesToIoTDB,
-} from "@/services/dataIngestion/iotdbSync";
+import { schedulePredictionsFromPostgreSQL } from "@/services/predictionCache";
 import { initPredictionQueue } from "@/services/predictionQueue";
 import { checkLimitOrders } from "@/services/simulationEngine";
 import { config } from "./lib";
@@ -160,7 +157,7 @@ app.use("/api/datasets", datasetsRouter);
 app.use("/api/timeseries", timeseriesRouter);
 app.use("/api/models", modelsRouter);
 app.use("/api/anomalies", anomaliesRouter);
-app.use("/api/iotdb", iotdbRouter);
+app.use("/api/inference", inferenceRouter);
 app.use("/api/api-keys", apiKeysRouter);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/signals", signalsRouter);
@@ -323,24 +320,17 @@ httpServer.listen(config.server.port, () => {
 		);
 	}
 
-	// Sync commodity prices to IoTDB and schedule AI predictions (async, non-blocking)
+	// Schedule AI predictions from PostgreSQL (async, non-blocking)
 	setTimeout(async () => {
 		try {
-			const syncResult = await syncCommoditiesToIoTDB();
-			logger.info(`📊 IoTDB sync: ${syncResult.synced} commodities synced`);
-		} catch (err) {
-			logger.warn(`📊 IoTDB sync skipped: ${err}`);
-		}
-
-		try {
-			const count = await scheduleAllCommodityPredictions();
+			const count = await schedulePredictionsFromPostgreSQL();
 			logger.info(
 				`🤖 Scheduled predictions for ${count} commodities (every 30 min)`,
 			);
 		} catch (err) {
 			logger.warn(`🤖 Prediction scheduling skipped: ${err}`);
 		}
-	}, 5000); // Delay 5s to let scrapers finish first run
+	}, 5000);
 });
 
 // Check pending backtest prediction orders every 30 seconds

@@ -122,10 +122,7 @@ export default function DatasetsList() {
 				render: (_v: unknown, record: Record<string, unknown>) => {
 					const r = asRow(record);
 					return (
-						<span
-							className="truncate block max-w-60 text-muted-foreground"
-							title={r.description}
-						>
+						<span className="truncate block max-w-60 text-muted-foreground" title={r.description}>
 							{r.description || "-"}
 						</span>
 					);
@@ -136,7 +133,7 @@ export default function DatasetsList() {
 				title: "Storage",
 				width: 130,
 				render: (_v: unknown, record: Record<string, unknown>) => (
-					<Tag color="info">{asRow(record).storageFormat || "IOTDB_CACHE"}</Tag>
+					<Tag color="info">{asRow(record).storageFormat || "TIMESERIES"}</Tag>
 				),
 			},
 			{
@@ -168,7 +165,8 @@ export default function DatasetsList() {
 				key: "createdAt",
 				title: "Created",
 				width: 140,
-				render: (_v: unknown, record: Record<string, unknown>) => new Date(asRow(record).createdAt).toISOString().split("T")[0],
+				render: (_v: unknown, record: Record<string, unknown>) =>
+					new Date(asRow(record).createdAt).toISOString().split("T")[0],
 			},
 			{
 				key: "actions",

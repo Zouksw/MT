@@ -100,7 +100,7 @@ export default function LandingPage() {
 	return (
 		<div className="overflow-x-hidden w-full max-w-full">
 			{/* Navigation — clean top border bar */}
-			<header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white dark:bg-gray-950">
+			<header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
 				<div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-[1200px] mx-auto">
 					{/* Logo */}
 					<a href="/" className="flex items-center gap-2.5">
@@ -132,7 +132,8 @@ export default function LandingPage() {
 					</div>
 
 					{/* Mobile hamburger */}
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 						className="flex md:hidden items-center justify-center min-w-[44px] min-h-[44px] text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
 					>
@@ -142,7 +143,7 @@ export default function LandingPage() {
 
 				{/* Mobile slide-down menu */}
 				{mobileMenuOpen && (
-					<div className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-gray-950 px-4 py-4 space-y-1">
+					<div className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-[#0a0a0a] px-4 py-4 space-y-1">
 						{NAV_LINKS.map((link) => (
 							<a
 								key={link.href}
@@ -246,7 +247,8 @@ export default function LandingPage() {
 
 					<div className="border-t border-black/5 dark:border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
 						<p className="text-xs text-gray-400">&copy; 2026 MT. All rights reserved.</p>
-						<button type="button"
+						<button
+							type="button"
 							onClick={scrollToTop}
 							className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 						>

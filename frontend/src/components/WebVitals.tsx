@@ -26,7 +26,10 @@ export function WebVitals() {
 		sendToAnalytics(metric);
 
 		// Send to Google Analytics if available
-		if (typeof window !== "undefined" && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
+		if (
+			typeof window !== "undefined" &&
+			(window as unknown as { gtag?: (...args: unknown[]) => void }).gtag
+		) {
 			// biome-ignore lint/style/noNonNullAssertion: value guaranteed by middleware
 			(window as unknown as { gtag?: (...args: unknown[]) => void }).gtag!("event", metric.name, {
 				value: Math.round(metric.name === "CLS" ? metric.value * 1000 : metric.value),
@@ -108,7 +111,11 @@ export function useWebVitals() {
 		}
 
 		const observeMetric = (name: string, _threshold: number) => {
-			const observer = new (PerformanceObserver as unknown as new (cb: (list: PerformanceObserverEntryList) => void) => PerformanceObserver)((list: PerformanceObserverEntryList) => {
+			const observer = new (
+				PerformanceObserver as unknown as new (
+					cb: (list: PerformanceObserverEntryList) => void,
+				) => PerformanceObserver
+			)((list: PerformanceObserverEntryList) => {
 				const entries = list.getEntries();
 				entries.forEach((entry: PerformanceEntry) => {
 					const metricValue = (entry as unknown as { value: number }).value;

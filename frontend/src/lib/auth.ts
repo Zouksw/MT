@@ -46,7 +46,7 @@ export interface UserData {
 
 function _persistUser(user: UserData, remember?: boolean) {
 	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-	tokenManager.setToken((user as any).token as string || "", remember);
+	tokenManager.setToken(((user as any).token as string) || "", remember);
 	Cookies.set("auth", JSON.stringify(user), {
 		expires: remember ? 30 : 7,
 		path: "/",

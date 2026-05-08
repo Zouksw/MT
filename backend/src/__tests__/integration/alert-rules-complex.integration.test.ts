@@ -16,16 +16,19 @@ vi.mock("@/lib", () => {
 	return {
 		prisma: {
 			alertRule: {
-				create: vi.fn<unknown[], Record<string, unknown>>((data: Record<string, unknown>) =>
-					Promise.resolve({
-						id: "test-rule-id",
-						...data.data,
-						lastTriggeredAt: null,
-						createdAt: new Date(),
-						updatedAt: new Date(),
-					}),
+				create: vi.fn<unknown[], Record<string, unknown>>(
+					(data: Record<string, unknown>) =>
+						Promise.resolve({
+							id: "test-rule-id",
+							...data.data,
+							lastTriggeredAt: null,
+							createdAt: new Date(),
+							updatedAt: new Date(),
+						}),
 				),
-				update: vi.fn<unknown[], Record<string, unknown>>().mockResolvedValue({}),
+				update: vi
+					.fn<unknown[], Record<string, unknown>>()
+					.mockResolvedValue({}),
 			},
 		},
 		logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },

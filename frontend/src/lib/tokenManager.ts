@@ -113,7 +113,13 @@ class SecureTokenManager implements TokenStorage {
 	 * Parse JWT payload without verification (for client-side metadata only)
 	 * @private
 	 */
-	private parseJwt(token: string): { exp?: number; sub?: string; userId?: string; id?: string; role?: string } {
+	private parseJwt(token: string): {
+		exp?: number;
+		sub?: string;
+		userId?: string;
+		id?: string;
+		role?: string;
+	} {
 		const parts = token.split(".");
 		if (parts.length !== 3) {
 			throw new Error("Invalid token format");

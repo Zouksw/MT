@@ -45,7 +45,7 @@ async function main() {
 			name: "Demo IoT Sensor Data",
 			slug: "demo-iot-sensor-data",
 			description: "Sample IoT sensor readings for demonstration",
-			storageFormat: "IOTDB_CACHE",
+			storageFormat: "TIMESERIES",
 			isPublic: true,
 			isImported: true,
 			sizeBytes: BigInt(1024000),
@@ -180,7 +180,8 @@ async function main() {
 			data: batch.map((dp) => ({
 				timeseriesId: dp.timeseriesId,
 				timestamp: dp.timestamp,
-				valueJson: dp.valueJson as unknown as import("@prisma/client").Prisma.InputJsonValue,
+				valueJson:
+					dp.valueJson as unknown as import("@prisma/client").Prisma.InputJsonValue,
 				qualityScore: dp.qualityScore,
 				isOutlier: dp.isOutlier,
 				isAnomaly: dp.isAnomaly,

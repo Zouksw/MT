@@ -44,7 +44,11 @@ vi.mock("@/middleware/cacheDecorator", () => ({
 }));
 
 vi.mock("@/middleware/auth", () => ({
-	authenticate: (req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
+	authenticate: (
+		req: Record<string, unknown>,
+		_res: Record<string, unknown>,
+		next: () => void,
+	) => {
 		if (req.headers.authorization === "Bearer valid-admin-token") {
 			req.user = { id: "admin-user-id", role: "admin" };
 			req.userId = "admin-user-id";

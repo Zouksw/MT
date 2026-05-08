@@ -46,7 +46,8 @@ export default function ChartToolbar({
 				{chartTypeOptions.map((opt) => {
 					const isActive = chartType === opt.key;
 					return (
-						<button type="button"
+						<button
+							type="button"
 							key={opt.key}
 							onClick={() => onChartTypeChange(opt.key)}
 							className={`
@@ -92,7 +93,8 @@ export default function ChartToolbar({
 
 			{/* Fullscreen toggle */}
 			{onFullscreenToggle && (
-				<button type="button"
+				<button
+					type="button"
 					onClick={onFullscreenToggle}
 					className="
             p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50

@@ -90,7 +90,10 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 	}
 
 	const severityConfig = SEVERITY_CONFIG[alert.severity as string] || SEVERITY_CONFIG.INFO;
-	const typeConfig = ALERT_TYPE_CONFIG[alert.type as string] || { label: alert.type as string, icon: "\u{1F4E2}" };
+	const typeConfig = ALERT_TYPE_CONFIG[alert.type as string] || {
+		label: alert.type as string,
+		icon: "\u{1F4E2}",
+	};
 
 	return (
 		<div className="min-h-screen bg-muted p-4 md:p-6">

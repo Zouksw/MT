@@ -86,13 +86,13 @@ describe("AlertList", () => {
 				return Promise.resolve({
 					ok: true,
 					json: () => Promise.resolve(sampleStats),
-				// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+					// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 				} as any);
 			}
 			return Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ alerts: sampleAlerts }),
-			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+				// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			} as any);
 		});
 	});
@@ -169,13 +169,13 @@ describe("AlertList", () => {
 				return Promise.resolve({
 					ok: true,
 					json: () => Promise.resolve({ total: 0, unread: 0, bySeverity: {}, byType: {} }),
-				// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+					// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 				} as any);
 			}
 			return Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ alerts: [] }),
-			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+				// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 			} as any);
 		});
 

@@ -101,7 +101,8 @@ export default function ApiKeyCreate() {
 									<label className="block text-sm font-medium text-foreground mb-2">Scopes</label>
 									<div className="flex flex-wrap gap-2 mb-2">
 										{SCOPE_OPTIONS.map((opt) => (
-											<button type="button"
+											<button
+												type="button"
 												key={opt.value}
 												onClick={() => toggleScope(opt.value)}
 												className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
@@ -122,7 +123,8 @@ export default function ApiKeyCreate() {
 													className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 dark:bg-primary/15 text-primary border border-primary/20 dark:border-primary/20"
 												>
 													{s}
-													<button type="button"
+													<button
+														type="button"
 														onClick={() => removeScope(s)}
 														className="ml-1 hover:opacity-70"
 													>

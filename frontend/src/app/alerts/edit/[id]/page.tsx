@@ -79,8 +79,14 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 			setTimeseriesId(String(alert.timeseriesId ?? ""));
 			setDescription(String(alert.description ?? ""));
 			setEnabled(alert.isRead !== false);
-			setConditionOperator((alert.condition as Record<string, unknown>)?.operator as string || ">");
-			setConditionValue((alert.condition as Record<string, unknown>)?.value != null ? String((alert.condition as Record<string, unknown>).value) : "");
+			setConditionOperator(
+				((alert.condition as Record<string, unknown>)?.operator as string) || ">",
+			);
+			setConditionValue(
+				(alert.condition as Record<string, unknown>)?.value != null
+					? String((alert.condition as Record<string, unknown>).value)
+					: "",
+			);
 			setCooldownMinutes(alert.cooldownMinutes != null ? String(alert.cooldownMinutes) : "5");
 			setInitialized(true);
 		}
@@ -151,7 +157,10 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 				router.push("/alerts");
 			}, 1000);
 		} catch (error: unknown) {
-			toast.showError("Failed to Update Alert", error instanceof Error ? error.message : String(error));
+			toast.showError(
+				"Failed to Update Alert",
+				error instanceof Error ? error.message : String(error),
+			);
 		} finally {
 			setLoading(false);
 		}
@@ -295,7 +304,8 @@ export default function AlertEditPage({ params }: AlertEditPageProps) {
 
 							{/* Enable/Disable */}
 							<div className="flex items-center gap-3">
-								<button type="button"
+								<button
+									type="button"
 									role="switch"
 									aria-checked={enabled}
 									onClick={() => setEnabled(!enabled)}

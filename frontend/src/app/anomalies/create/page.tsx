@@ -56,7 +56,9 @@ export default function AnomalyCreate() {
 		setLoading(true);
 		try {
 			// Get timeseries path
-			const timeseries = (timeseriesList || []).find((ts: Record<string, unknown>) => ts.id === timeseriesId);
+			const timeseries = (timeseriesList || []).find(
+				(ts: Record<string, unknown>) => ts.id === timeseriesId,
+			);
 			if (!timeseries) {
 				throw new Error("Time series not found");
 			}
@@ -83,7 +85,10 @@ export default function AnomalyCreate() {
 				router.push("/anomalies");
 			}, 1000);
 		} catch (error: unknown) {
-			toast.showError("Failed to Create Anomaly", error instanceof Error ? error.message : String(error));
+			toast.showError(
+				"Failed to Create Anomaly",
+				error instanceof Error ? error.message : String(error),
+			);
 		} finally {
 			setLoading(false);
 		}

@@ -158,7 +158,8 @@ export default function SettingsPage() {
 						</div>
 						<div className="space-y-2">
 							{settingsSections.map((section, index) => (
-								<button type="button"
+								<button
+									type="button"
 									// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 									key={index}
 									onClick={() => router.push(section.path)}
@@ -314,7 +315,8 @@ export default function SettingsPage() {
 								icon: <User className="size-4" />,
 							},
 						].map((action, idx) => (
-							<button type="button"
+							<button
+								type="button"
 								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								key={idx}
 								onClick={() => router.push(action.path)}

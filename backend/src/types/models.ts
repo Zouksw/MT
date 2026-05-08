@@ -18,7 +18,7 @@ export type UserRole = "ADMIN" | "EDITOR" | "VIEWER";
 /**
  * Storage format types
  */
-export type StorageFormat = "IOTDB_CACHE" | "INFLUXDB" | "OPENML" | "CSV";
+export type StorageFormat = "TIMESERIES" | "INFLUXDB" | "OPENML" | "CSV";
 
 /**
  * ML algorithm types

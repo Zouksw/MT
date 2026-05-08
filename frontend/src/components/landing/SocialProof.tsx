@@ -1,6 +1,5 @@
 "use client";
 
-import { ChartLineUp, Flask, Globe, Lightning } from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
@@ -46,25 +45,21 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
 
 const stats = [
 	{
-		icon: <Flask size={22} weight="duotone" />,
 		numericValue: 108,
 		suffix: "",
 		label: "Commodities",
 	},
 	{
-		icon: <Lightning size={22} weight="duotone" />,
 		numericValue: 7,
 		suffix: "",
 		label: "AI signal models",
 	},
 	{
-		icon: <ChartLineUp size={22} weight="duotone" />,
 		numericValue: 18,
 		suffix: "",
 		label: "Data ingestion modules",
 	},
 	{
-		icon: <Globe size={22} weight="duotone" />,
 		numericValue: 131,
 		suffix: "",
 		label: "Market factors tracked",
@@ -79,8 +74,7 @@ export const SocialProof: React.FC = () => {
 					{stats.map((stat, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={i} className="text-center">
-							<div className="flex items-center justify-center gap-2 mb-1">
-								<span className="text-muted-foreground">{stat.icon}</span>
+							<div className="mb-1">
 								<AnimatedNumber target={stat.numericValue} suffix={stat.suffix} />
 							</div>
 							<p className="text-sm text-muted-foreground">{stat.label}</p>

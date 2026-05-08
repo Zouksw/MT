@@ -290,7 +290,8 @@ export default function AlertCreate() {
 
 							{/* Enable/Disable */}
 							<div className="flex items-center gap-3">
-								<button type="button"
+								<button
+									type="button"
 									role="switch"
 									aria-checked={enabled}
 									onClick={() => setEnabled(!enabled)}

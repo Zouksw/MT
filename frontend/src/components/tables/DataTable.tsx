@@ -100,14 +100,16 @@ export function DataTable<T>({
 						Page {pagination.page} of {Math.ceil(pagination.total / pagination.pageSize)}
 					</span>
 					<div className="flex gap-2">
-						<button type="button"
+						<button
+							type="button"
 							disabled={pagination.page <= 1}
 							onClick={() => pagination.onChange(pagination.page - 1)}
 							className="px-2 py-1 rounded border border disabled:opacity-50"
 						>
 							Prev
 						</button>
-						<button type="button"
+						<button
+							type="button"
 							disabled={pagination.page >= Math.ceil(pagination.total / pagination.pageSize)}
 							onClick={() => pagination.onChange(pagination.page + 1)}
 							className="px-2 py-1 rounded border border disabled:opacity-50"

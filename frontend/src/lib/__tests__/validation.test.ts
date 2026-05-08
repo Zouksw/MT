@@ -112,7 +112,7 @@ describe("validationRules", () => {
 	});
 
 	describe("timeseriesPath validation", () => {
-		it("should accept valid IoTDB paths", () => {
+		it("should accept valid commodity paths", () => {
 			expect(validationRules.timeseriesPath.validate("root.device.sensor")).toBe(true);
 			expect(validationRules.timeseriesPath.validate("root.sg.device1.sensor")).toBe(true);
 			expect(validationRules.timeseriesPath.validate("root.a_b.c_123")).toBe(true);

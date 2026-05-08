@@ -230,19 +230,19 @@ START_TIME=$(date +%s)
 log_info "Terminating existing database connections..."
 PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
   "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DB_NAME}' AND pid <> pg_backend_pid();" \
-  2>/dev/null || log_warn "Could not terminate connections (may need superuser)"
+ || log_warn "Could not terminate connections (may need superuser)"
 
 # Step 2: Drop and recreate database
 log_info "Dropping database ${DB_NAME}..."
 PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
-  "DROP DATABASE IF EXISTS \"${DB_NAME}\";" 2>/dev/null || {
+  "DROP DATABASE IF EXISTS \"${DB_NAME}\";"|| {
   log_error "Failed to drop database. Ensure no active connections exist."
   exit 1
 }
 
 log_info "Creating database ${DB_NAME}..."
 PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
-  "CREATE DATABASE \"${DB_NAME}\";" 2>/dev/null || {
+  "CREATE DATABASE \"${DB_NAME}\";"|| {
   log_error "Failed to create database."
   exit 1
 }
@@ -256,7 +256,7 @@ if [ "$COMPRESSED" = true ]; then
     -p "$DB_PORT" \
     -U "$DB_USER" \
     -d "$DB_NAME" \
-    -v ON_ERROR_STOP=0 \
+    -v ON_ERROR_STOP=1 \
     2>/dev/null; then
     log_error "Restore failed. Check the backup file integrity."
     exit 1
@@ -267,7 +267,7 @@ else
     -p "$DB_PORT" \
     -U "$DB_USER" \
     -d "$DB_NAME" \
-    -v ON_ERROR_STOP=0 \
+    -v ON_ERROR_STOP=1 \
     -f "$BACKUP_FILE" 2>/dev/null; then
     log_error "Restore failed. Check the backup file integrity."
     exit 1

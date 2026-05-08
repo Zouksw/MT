@@ -19,7 +19,8 @@ export function AuthPage(props: AuthPageProps) {
 				return (
 					<p className="mt-6 text-center text-sm text-gray-500">
 						Don&apos;t have an account?{" "}
-						<button type="button"
+						<button
+							type="button"
 							onClick={() => router.push("/register")}
 							className="font-semibold text-primary hover:text-primary-hover"
 						>
@@ -31,7 +32,8 @@ export function AuthPage(props: AuthPageProps) {
 				return (
 					<p className="mt-6 text-center text-sm text-gray-500">
 						Already have an account?{" "}
-						<button type="button"
+						<button
+							type="button"
 							onClick={() => router.push("/login")}
 							className="font-semibold text-primary hover:text-primary-hover"
 						>
@@ -43,7 +45,8 @@ export function AuthPage(props: AuthPageProps) {
 			case "updatePassword":
 				return (
 					<div className="mt-6 text-center">
-						<button type="button"
+						<button
+							type="button"
 							onClick={() => router.push("/login")}
 							className="text-sm text-gray-500 hover:text-gray-700"
 						>
@@ -144,14 +147,11 @@ export function AuthPage(props: AuthPageProps) {
 					</h1>
 					<p className="mt-6 max-w-xs text-xl font-medium leading-relaxed text-white/80">
 						108 commodities.
-						<br />
-						7 AI models.
+						<br />7 AI models.
 						<br />
 						<span className="text-[#B8860B]">One signal.</span>
 					</p>
-					<p className="mt-4 text-sm text-white/40">
-						AI-powered commodity market analytics
-					</p>
+					<p className="mt-4 text-sm text-white/40">AI-powered commodity market analytics</p>
 				</motion.div>
 
 				{/* Footer */}

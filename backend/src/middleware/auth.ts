@@ -160,8 +160,6 @@ export const authorize = (...roles: string[]) => {
 					error: {
 						message: "Insufficient permissions",
 						code: "FORBIDDEN",
-						required: roles,
-						userRole: req.user.role,
 					},
 				});
 			}

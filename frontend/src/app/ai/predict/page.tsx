@@ -133,14 +133,15 @@ export default function AIPredictPage() {
 
 		try {
 			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-			const response = await fetch("/api/iotdb/ai/predict/visualize", {
+			const response = await fetch("/api/inference/predict/visualize", {
 				method: "POST",
 				headers: {
+					credentials: "include",
 					"Content-Type": "application/json",
 					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
 				body: JSON.stringify({
-					timeseries: formTimeseries,
+					commodityId: formTimeseries,
 					algorithm: formModel,
 					horizon: parseInt(formHorizon, 10) || 10,
 					...(formStartTime ? { startTime: parseInt(formStartTime, 10) } : {}),
@@ -314,7 +315,7 @@ export default function AIPredictPage() {
 						<div className="text-[13px] text-muted-foreground leading-relaxed">
 							<p className="mb-2">
 								AI prediction uses machine learning models to forecast future values based on
-								historical time series data from IoTDB.
+								historical time series data from PostgreSQL.
 							</p>
 							<p className="mb-2">
 								<strong className="text-foreground">AI Node Built-in Algorithms:</strong>

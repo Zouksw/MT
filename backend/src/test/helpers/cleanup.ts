@@ -2,7 +2,7 @@
  * Test cleanup helpers
  *
  * Provides utility functions for cleaning up test data
- * from databases and IoTDB after tests run.
+ * from databases after tests run.
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -21,7 +21,6 @@ export interface CleanupOptions {
 	auditLogs?: boolean;
 	authLockouts?: boolean;
 	tokenBlacklist?: boolean; // Redis
-	iotdb?: boolean; // IoTDB time series
 }
 
 /**
@@ -51,7 +50,6 @@ export async function cleanupTestData(
 		auditLogs: true,
 		authLockouts: true,
 		tokenBlacklist: true,
-		iotdb: true,
 		...options,
 	};
 
@@ -139,7 +137,7 @@ export async function cleanupRedisTestData(): Promise<void> {
 }
 
 /**
- * Cleans up test time series from IoTDB
+ * Cleans up test time series
  *
  * @param timeseries - Array of time series to delete (default: all root.test.*)
  * @returns Promise that resolves when cleanup is complete
@@ -158,17 +156,17 @@ export async function cleanupTestTimeseries(
 ): Promise<void> {
 	try {
 		// Note: This is a placeholder. In actual implementation, you would:
-		// 1. Get IoTDB client
+		// 1. Get database client
 		// 2. If timeseries provided, delete those specific series
 		// 3. If no timeseries, delete all matching root.test.*
-		// 4. Use deleteTimeseries() from IoTDB service
+		// 4. Use database queries to delete
 		//
-		// For now, this is a no-op to avoid IoTDB dependency in helper
+		// For now, this is a no-op placeholder
 		console.warn(
-			"IoTDB cleanup not implemented in helper (use test setup/teardown)",
+			"Timeseries cleanup not implemented in helper (use test setup/teardown)",
 		);
 	} catch (error) {
-		console.error("Error cleaning up IoTDB test data:", error);
+		console.error("Error cleaning up test timeseries data:", error);
 		throw error;
 	}
 }
@@ -192,7 +190,7 @@ export async function cleanupTestTimeseries(
  */
 export async function cleanupByTestId(
 	testId: string,
-	options: CleanupOptions = {},
+	_options: CleanupOptions = {},
 ): Promise<void> {
 	try {
 		// Clean up users with this test ID
@@ -208,12 +206,6 @@ export async function cleanupByTestId(
 		await prisma.alert.deleteMany({
 			where: { userId: { contains: testId } },
 		});
-
-		// Additional cleanup based on options
-		if (options.iotdb) {
-			// Clean up IoTDB time series with this test ID
-			// Implementation depends on your IoTDB setup
-		}
 	} catch (error) {
 		console.error(`Error cleaning up test data for ${testId}:`, error);
 		throw error;
@@ -246,7 +238,7 @@ export async function cleanupAllTestData(): Promise<void> {
 			where: { email: { contains: "test-" } },
 		});
 
-		// Note: Redis and IoTDB cleanup would be done separately
+		// Note: Redis cleanup would be done separately
 		// with their respective clients
 	} catch (error) {
 		console.error("Error in comprehensive cleanup:", error);

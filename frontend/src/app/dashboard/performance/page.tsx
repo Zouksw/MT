@@ -481,7 +481,8 @@ export default function PerformancePage() {
 					<div className="flex items-center gap-3">
 						<div className="flex items-center gap-2">
 							<span className="text-sm text-muted-foreground">Auto-refresh</span>
-							<button type="button"
+							<button
+								type="button"
 								role="switch"
 								aria-checked={autoRefresh}
 								onClick={() => setAutoRefresh(!autoRefresh)}

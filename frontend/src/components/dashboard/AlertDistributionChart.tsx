@@ -33,7 +33,7 @@ const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.T
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), {
@@ -73,7 +73,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 
 		return SEVERITY_CONFIG.map((s) => ({
 			name: s.name,
-			value: (data as Record<string, unknown>)[s.key] as number || 0,
+			value: ((data as Record<string, unknown>)[s.key] as number) || 0,
 			color: s.color,
 			mutedColor: s.mutedColor,
 		})).filter((item) => item.value > 0);

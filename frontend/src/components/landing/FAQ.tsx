@@ -1,8 +1,6 @@
 "use client";
 
-import { Bell, Cloud, Lightning, Plugs, ShieldCheck, Users } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
-import type React from "react";
 import { useState } from "react";
 import { MotionReveal } from "@/components/ui/MotionReveal";
 import { SPRING_DEFAULTS } from "@/lib/motion";
@@ -10,7 +8,6 @@ import { SPRING_DEFAULTS } from "@/lib/motion";
 interface FAQItem {
 	question: string;
 	answer: string;
-	icon: React.ReactNode;
 }
 
 const faqs: FAQItem[] = [
@@ -18,37 +15,31 @@ const faqs: FAQItem[] = [
 		question: "What is MT?",
 		answer:
 			"MT is a commodity market analytics platform. 108 commodities across 13 categories. 131 market factors — weather, FX, tariffs, freight — correlated with price movements. 7 independent AI models generate buy/sell signals with confidence intervals.",
-		icon: <Cloud size={20} weight="duotone" />,
 	},
 	{
 		question: "How does the AI signal engine work?",
 		answer:
 			"Seven models run independently on each commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL decomposition, Timer-XL, and Sundial. Each produces a price forecast, a directional signal (buy/sell/hold), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.",
-		icon: <Lightning size={20} weight="duotone" />,
 	},
 	{
 		question: "What commodities are covered?",
 		answer:
 			"108 commodities across 13 categories: beef cuts (34,960 cut-level prices from 21 factories), grains & oilseeds (corn, soybeans, wheat), energy (WTI, Brent, natural gas), metals (gold, silver, copper), soft commodities (coffee, sugar, cotton), and forex pairs. 18 data ingestion modules feed 229,000+ data points.",
-		icon: <ShieldCheck size={20} weight="duotone" />,
 	},
 	{
 		question: "What market factors do you analyze?",
 		answer:
 			"131 market factors across 5 categories: weather (temperature, rainfall, growing conditions), FX (12 currency pairs vs USD), tariffs (China/US/AU trade data), freight (Baltic Dry Index, container rates), and supply/demand (USDA, ABARES, FAO reports). Each factor's Pearson correlation with commodity prices is calculated and displayed.",
-		icon: <Plugs size={20} weight="duotone" />,
 	},
 	{
 		question: "Is this a trading platform?",
 		answer:
 			"No. MT is an information and analytics platform. We provide data, analysis, and AI-generated signals to inform your decisions. We do not execute trades, manage accounts, or handle funds.",
-		icon: <Users size={20} weight="duotone" />,
 	},
 	{
 		question: "Can I set up price alerts?",
 		answer:
 			"Yes. Custom price thresholds on any of the 108 commodities. Breakout and trend reversal detection via WebSocket — alerts arrive in under 50ms. Severity levels (info/warning/critical) with factor attribution so you see what triggered the move.",
-		icon: <Bell size={20} weight="duotone" />,
 	},
 ];
 
@@ -56,7 +47,7 @@ export default function FAQ() {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 
 	return (
-		<section id="faq" className="bg-white dark:bg-[#0a0a0a] px-6 py-24 md:py-36 lg:py-48">
+		<section id="faq" className="bg-white dark:bg-[#0a0a0a] px-6 py-20 md:py-28 lg:py-36">
 			<div className="mx-auto max-w-5xl">
 				{/* Header */}
 				<div className="mb-12 md:mb-16">
@@ -74,9 +65,7 @@ export default function FAQ() {
 						</h2>
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
-						<p className="mt-4 text-lg text-muted-foreground">
-							Technical and product details
-						</p>
+						<p className="mt-4 text-lg text-muted-foreground">Technical and product details</p>
 					</MotionReveal>
 				</div>
 
@@ -86,27 +75,19 @@ export default function FAQ() {
 					<MotionReveal>
 						<div className="space-y-1" role="tablist" aria-label="FAQ questions">
 							{faqs.map((faq, index) => (
-								<button type="button"
+								<button
+									type="button"
 									// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 									key={index}
 									role="tab"
 									aria-selected={selectedIndex === index}
 									onClick={() => setSelectedIndex(index)}
-									className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-all duration-200 border-l-2 ${
+									className={`flex w-full items-center rounded-lg px-4 py-3 text-left transition-all duration-200 border-l-2 ${
 										selectedIndex === index
 											? "bg-[#B8860B]/5 border-l-[#B8860B] text-[#B8860B]"
 											: "border-l-transparent text-foreground hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-l-gray-300"
 									}`}
 								>
-									<div
-										className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
-											selectedIndex === index
-												? "bg-[#B8860B]/15 text-[#B8860B]"
-												: "bg-muted text-gray-400"
-										}`}
-									>
-										{faq.icon}
-									</div>
 									<span
 										className={`text-sm font-medium ${selectedIndex === index ? "text-[#B8860B]" : ""}`}
 									>
@@ -128,10 +109,7 @@ export default function FAQ() {
 								transition={SPRING_DEFAULTS}
 								className="rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-[#111] p-6 md:p-8"
 							>
-								<div className="flex items-center gap-3 mb-4">
-									<div className="flex h-10 w-10 items-center justify-center rounded-lg text-[#B8860B]">
-										{faqs[selectedIndex].icon}
-									</div>
+								<div className="flex items-center mb-4">
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 										{faqs[selectedIndex].question}
 									</h3>

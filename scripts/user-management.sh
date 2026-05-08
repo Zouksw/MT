@@ -187,7 +187,7 @@ async function listUsers() {
             id: true,
             email: true,
             name: true,
-            isAdmin: true,
+            role: true,
             createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -195,7 +195,7 @@ async function listUsers() {
 
     console.log('\\nUsers:');
     users.forEach((user, i) => {
-        console.log(\`\${i + 1}. \${user.email} (\${user.name}) - \${user.isAdmin ? 'Admin' : 'User'}\`);
+        console.log(\`\${i + 1}. \${user.email} (\${user.name}) - \${user.role}\`);
     });
 
     await prisma.\$disconnect();

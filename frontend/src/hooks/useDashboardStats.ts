@@ -44,6 +44,7 @@ const fetcher = async (url: string) => {
 	}
 
 	const response = await fetch(url, {
+		credentials: "include",
 		headers: { Authorization: `Bearer ${token}` },
 	});
 
@@ -55,7 +56,9 @@ const fetcher = async (url: string) => {
 };
 
 export const useDashboardStats = () => {
-	const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+	const API_BASE = process.env.NEXT_PUBLIC_API_URL
+		? `${process.env.NEXT_PUBLIC_API_URL}/api`
+		: "http://localhost:8000/api";
 	const isAuth = !!getAuthToken();
 
 	const retryOpts = { maxRetries: 3, retryDelay: 1000, backoffMultiplier: 2 };
@@ -109,11 +112,17 @@ export const useDashboardStats = () => {
 	);
 
 	// Combine loading states - using useRetryableFetch's isLoading
-	const loading = !isAuth ? false : datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
+	const loading = !isAuth
+		? false
+		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
 
 	// Derive error from individual errors - no setState needed
 	const errors = [datasetsError, timeseriesError, forecastsError].filter(Boolean);
-	const error = !isAuth ? new Error("Not authenticated") : errors.length > 0 ? (errors[0] as Error) : null;
+	const error = !isAuth
+		? new Error("Not authenticated")
+		: errors.length > 0
+			? (errors[0] as Error)
+			: null;
 
 	// Calculate trends (mock data for now) - use useMemo to avoid impure function calls during render
 	const mockTrends = useMemo(

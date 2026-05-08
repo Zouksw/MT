@@ -30,31 +30,6 @@ function validateSecret(secret: string | undefined, name: string): void {
 	}
 }
 
-// Default IoTDB credentials that should NOT be used in production
-const DEFAULT_IOTDB_CREDENTIALS = ["root", "admin", "password"];
-
-// Validate IoTDB credentials and warn if using defaults
-function validateIoTDBCredentials(
-	username: string | undefined,
-	password: string | undefined,
-): void {
-	if (!username || !password) {
-		throw new Error("IoTDB credentials not set in environment variables");
-	}
-
-	const normalizedUsername = username.toLowerCase();
-	const normalizedPassword = password.toLowerCase();
-
-	if (
-		DEFAULT_IOTDB_CREDENTIALS.includes(normalizedUsername) &&
-		DEFAULT_IOTDB_CREDENTIALS.includes(normalizedPassword)
-	) {
-		logger.warn(
-			"SECURITY WARNING: Using default IoTDB credentials. Please change IOTDB_USERNAME and IOTDB_PASSWORD in production.",
-		);
-	}
-}
-
 // Initialize and validate configuration
 export const config = {
 	jwt: {
@@ -92,23 +67,9 @@ export const config = {
 			process.env.NODE_ENV !== "production",
 	},
 
-	iotdb: {
-		host: process.env.IOTDB_HOST || "localhost",
-		port: parseInt(process.env.IOTDB_PORT || "6667", 10),
-		username: (() => {
-			const username = process.env.IOTDB_USERNAME || "root";
-			const password = process.env.IOTDB_PASSWORD || "root";
-			validateIoTDBCredentials(username, password);
-			return username;
-		})(),
-		password: process.env.IOTDB_PASSWORD || "root",
-		database: process.env.IOTDB_DATABASE || "root",
-		restUrl: process.env.IOTDB_REST_URL || "http://localhost:18080",
-		restTimeout: parseInt(process.env.IOTDB_REST_TIMEOUT || "30000", 10),
-		aiEnabled: process.env.IOTDB_AI_ENABLED === "true",
-		modelPath: process.env.IOTDB_MODEL_PATH || "/var/lib/iotdb/models",
-		maxConnections: parseInt(process.env.IOTDB_MAX_CONNECTIONS || "100", 10),
-		requestTimeout: parseInt(process.env.IOTDB_REQUEST_TIMEOUT || "60000", 10),
+	inference: {
+		url: process.env.INFERENCE_URL || "http://localhost:10810",
+		timeout: parseInt(process.env.INFERENCE_TIMEOUT || "120000", 10),
 	},
 
 	redis: {
@@ -147,10 +108,9 @@ logger.info("Configuration loaded", {
 		expiresDays: config.session.expiresDays,
 	},
 	server: { port: config.server.port, nodeEnv: config.server.nodeEnv },
-	iotdb: {
-		host: config.iotdb.host,
-		port: config.iotdb.port,
-		aiEnabled: config.iotdb.aiEnabled,
+	inference: {
+		url: config.inference.url,
+		timeout: config.inference.timeout,
 	},
 	redis: { enabled: config.redis.enabled },
 	email: { configured: !!config.email.smtpHost },

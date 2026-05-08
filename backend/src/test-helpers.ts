@@ -65,7 +65,11 @@ export function createConfigMock() {
 }
 
 /** Mock authenticate middleware that sets a test user */
-export const mockAuthenticate = (req: Request, _res: Response, next: NextFunction) => {
+export const mockAuthenticate = (
+	req: Request,
+	_res: Response,
+	next: NextFunction,
+) => {
 	req.userId = "test-user-id";
 	(req as unknown as Record<string, unknown>).user = {
 		id: "test-user-id",
@@ -77,15 +81,23 @@ export const mockAuthenticate = (req: Request, _res: Response, next: NextFunctio
 };
 
 /** Mock cacheRoute middleware — passes through */
-export const mockCacheRoute = () => (_req: Request, _res: Response, next: NextFunction) => next();
+export const mockCacheRoute =
+	() => (_req: Request, _res: Response, next: NextFunction) =>
+		next();
 
 /** Mock asyncHandler — catches errors and forwards to error handler */
-export const mockAsyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => unknown) =>
+export const mockAsyncHandler =
+	(fn: (req: Request, res: Response, next: NextFunction) => unknown) =>
 	(req: Request, res: Response, next: NextFunction) =>
 		Promise.resolve(fn(req, res, next)).catch(next);
 
 /** Mock errorHandler — returns JSON error responses */
-export const mockErrorHandler = (err: Error & { statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
+export const mockErrorHandler = (
+	err: Error & { statusCode?: number },
+	_req: Request,
+	res: Response,
+	_next: NextFunction,
+) => {
 	res
 		.status(err.statusCode || 500)
 		.json({ success: false, error: { message: err.message } });
@@ -109,4 +121,8 @@ export const MockConflictError = class extends Error {
 };
 
 /** Pass-through rate limiter */
-export const passThrough = (_req: Request, _res: Response, next: NextFunction) => next();
+export const passThrough = (
+	_req: Request,
+	_res: Response,
+	next: NextFunction,
+) => next();

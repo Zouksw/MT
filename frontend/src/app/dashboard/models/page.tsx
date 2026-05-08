@@ -82,7 +82,10 @@ export default function ModelsComparisonPage() {
 	}, [days]);
 
 	const bestModel = accuracy.reduce(
-		(best, m) => (m.avgMape !== null && (best === null || (best.avgMape !== null && m.avgMape < best.avgMape)) ? m : best),
+		(best, m) =>
+			m.avgMape !== null && (best === null || (best.avgMape !== null && m.avgMape < best.avgMape))
+				? m
+				: best,
 		null as ModelAccuracy | null,
 	);
 

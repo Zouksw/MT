@@ -148,7 +148,8 @@ export const cacheConfigs = {
 	userData: cacheResponse({
 		ttl: 600,
 		keyGenerator: (req) => {
-			const userId = req.params.userId || (req as unknown as Record<string, unknown>).userId;
+			const userId =
+				req.params.userId || (req as unknown as Record<string, unknown>).userId;
 			return cacheKeys.userSession(userId as string);
 		},
 	}),

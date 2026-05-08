@@ -8,7 +8,7 @@ import { prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
 import { error, success } from "@/lib/response";
 import { asyncHandler } from "@/middleware/errorHandler";
-import { iotdbClient } from "@/services/iotdb";
+import { healthCheck as inferenceHealth } from "@/services/inference";
 
 const router = Router();
 
@@ -65,7 +65,7 @@ router.get("/", (_req: Request, res: Response) => {
  *   get:
  *     tags: [Health]
  *     summary: Readiness check
- *     description: Verifies all dependent services (database, Redis, IoTDB) are connected and ready.
+ *     description: Verifies all dependent services (database, Redis, inference) are connected and ready.
  *     responses:
  *       200:
  *         description: All services are ready
@@ -87,7 +87,7 @@ router.get("/", (_req: Request, res: Response) => {
  *                       properties:
  *                         database: { type: boolean }
  *                         redis: { type: boolean }
- *                         iotdb: { type: boolean }
+ *                         inference: { type: boolean }
  *                     timestamp:
  *                       type: string
  *                       format: date-time
@@ -104,7 +104,7 @@ router.get(
 		const checks = {
 			database: false,
 			redis: false,
-			iotdb: false,
+			inference: false,
 		};
 
 		let allHealthy = true;
@@ -130,11 +130,11 @@ router.get(
 			checks.redis = false;
 		}
 
-		// Check IoTDB connection
+		// Check inference service
 		try {
-			checks.iotdb = await iotdbClient.healthCheck();
+			checks.inference = await inferenceHealth();
 		} catch {
-			checks.iotdb = false;
+			checks.inference = false;
 		}
 
 		if (allHealthy) {

@@ -40,7 +40,8 @@ export const LanguageSwitcher: React.FC = () => {
 
 	return (
 		<div className="relative" ref={ref}>
-			<button type="button"
+			<button
+				type="button"
 				className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm text-gray-600 dark:text-gray-300 hover:bg-accent transition-colors"
 				aria-label={currentLocale.label}
 				onClick={() => setOpen(!open)}
@@ -53,7 +54,8 @@ export const LanguageSwitcher: React.FC = () => {
 				<div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-card border border z-50">
 					<div className="py-1">
 						{Object.entries(localeLabels).map(([key, { label, flag }]) => (
-							<button type="button"
+							<button
+								type="button"
 								key={key}
 								onClick={() => handleSelect(key)}
 								className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-accent transition-colors ${

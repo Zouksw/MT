@@ -219,9 +219,7 @@ export default function AboutPage() {
 										{value.number}
 									</div>
 									<div className="relative z-10">
-										<div
-											className="mb-4 text-[#B8860B] transition-transform duration-200 group-hover:scale-110"
-										>
+										<div className="mb-4 text-[#B8860B] transition-transform duration-200 group-hover:scale-110">
 											<value.Icon size={24} weight="duotone" />
 										</div>
 										<h3 className="text-h4 font-display font-semibold text-foreground mb-3">

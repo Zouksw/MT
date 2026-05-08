@@ -43,7 +43,9 @@ export function errorHandler(
 				error: {
 					message: "Resource already exists",
 					code: "CONFLICT",
-					details: (prismaError.meta as Record<string, unknown>)?.target || "Unique constraint violated",
+					details:
+						(prismaError.meta as Record<string, unknown>)?.target ||
+						"Unique constraint violated",
 				},
 			});
 		}

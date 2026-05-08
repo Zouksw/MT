@@ -376,11 +376,27 @@ router.post(
 			await blacklistToken(token, "logout");
 		}
 
-		// Invalidate all sessions for this user
-		await prisma.session.updateMany({
-			where: { userId, isActive: true },
-			data: { isActive: false },
-		});
+		// Invalidate only the current session
+		const { refreshToken: bodyRefreshToken } = req.body || {};
+		if (bodyRefreshToken) {
+			const sessions = await prisma.session.findMany({
+				where: { userId, isActive: true },
+			});
+			for (const s of sessions) {
+				if (await bcrypt.compare(bodyRefreshToken, s.tokenHash)) {
+					await prisma.session.update({
+						where: { id: s.id },
+						data: { isActive: false },
+					});
+					break;
+				}
+			}
+		} else {
+			await prisma.session.updateMany({
+				where: { userId, isActive: true },
+				data: { isActive: false },
+			});
+		}
 
 		// Clear auth cookie
 		res.clearCookie("auth_token", {
@@ -449,6 +465,7 @@ router.post(
 // POST /api/auth/refresh - Refresh access token
 router.post(
 	"/refresh",
+	authRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { refreshToken } = req.body;
 
@@ -464,23 +481,45 @@ router.post(
 			throw new UnauthorizedError("Invalid refresh token");
 		}
 
-		// Verify session exists and is active
+		// Find the matching session
 		const sessions = await prisma.session.findMany({
 			where: { userId, isActive: true },
 		});
 
-		const isValidSession = await Promise.all(
-			sessions.map((s) => bcrypt.compare(refreshToken, s.tokenHash)),
-		).then((results) => results.some((r) => r));
+		let matchedSession: { id: string } | null = null;
+		for (const s of sessions) {
+			if (await bcrypt.compare(refreshToken, s.tokenHash)) {
+				matchedSession = s;
+				break;
+			}
+		}
 
-		if (!isValidSession) {
+		if (!matchedSession) {
 			throw new UnauthorizedError("Invalid session");
 		}
 
-		// Generate new access token
-		const newToken = jwtUtils.generateToken(userId);
+		// Invalidate the old session
+		await prisma.session.update({
+			where: { id: matchedSession.id },
+			data: { isActive: false },
+		});
 
-		return success(res, { token: newToken });
+		// Generate new tokens
+		const newToken = jwtUtils.generateToken(userId);
+		const newRefreshToken = jwtUtils.generateRefreshToken(userId);
+		const newTokenHash = await bcrypt.hash(newRefreshToken, 10);
+
+		// Create new session
+		await prisma.session.create({
+			data: {
+				userId,
+				tokenHash: newTokenHash,
+				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+				userAgent: req.headers["user-agent"] || null,
+			},
+		});
+
+		return success(res, { token: newToken, refreshToken: newRefreshToken });
 	}),
 );
 
@@ -616,14 +655,22 @@ router.put(
 		const validatedData = updateSchema.parse(req.body);
 
 		// Build Prisma update data with proper types
-		const updateData: { name?: string; avatarUrl?: string; preferences?: Record<string, unknown> } = {};
+		const updateData: {
+			name?: string;
+			avatarUrl?: string;
+			preferences?: Record<string, unknown>;
+		} = {};
 		if (validatedData.name !== undefined) updateData.name = validatedData.name;
-		if (validatedData.avatarUrl !== undefined) updateData.avatarUrl = validatedData.avatarUrl;
-		if (validatedData.preferences !== undefined) updateData.preferences = validatedData.preferences;
+		if (validatedData.avatarUrl !== undefined)
+			updateData.avatarUrl = validatedData.avatarUrl;
+		if (validatedData.preferences !== undefined)
+			updateData.preferences = validatedData.preferences;
 
 		const user = await prisma.user.update({
 			where: { id: userId },
-			data: updateData as unknown as Parameters<typeof prisma.user.update>[0]["data"],
+			data: updateData as unknown as Parameters<
+				typeof prisma.user.update
+			>[0]["data"],
 			select: {
 				id: true,
 				email: true,
@@ -683,7 +730,7 @@ router.post(
 
 		const schema = z.object({
 			currentPassword: z.string().min(1),
-			newPassword: z.string().min(8),
+			newPassword: validationSchemas.password,
 		});
 
 		const validatedData = schema.parse(req.body);

@@ -198,28 +198,6 @@ export const dbLogger = (
 	);
 };
 
-// IoTDB operation logger
-export const iotdbLogger = (
-	operation: string,
-	device?: string,
-	duration?: number,
-	success: boolean = true,
-	details?: Record<string, unknown>,
-) => {
-	const level = success ? "info" : "error";
-	logger[level](
-		`IOTDB_OPERATION_${operation.toUpperCase()}`,
-		`${operation} ${device || ""}`,
-		{
-			operation,
-			device,
-			duration: duration ? `${duration}ms` : undefined,
-			status: success ? "success" : "error",
-			...details,
-		},
-	);
-};
-
 // AI model operation logger
 export const aiLogger = (
 	operation: string,

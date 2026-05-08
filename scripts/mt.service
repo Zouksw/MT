@@ -27,17 +27,17 @@ Wants=postgresql.service redis.service
 Type=forking
 User=root
 Group=root
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/.local/share/pnpm:/root/.nvm/versions/node/v18.*/bin
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/.local/share/pnpm
 Environment=PM2_HOME=/root/.pm2
 Environment=PROJECT_ROOT=/root
 PIDFile=/root/.pm2/pm2.pid
 
 # Start: resurrect PM2 saved process list
-ExecStart=/usr/local/bin/pm2 resurrect
+ExecStart=/usr/bin/pm2 resurrect
 # Reload: graceful reload of all processes
-ExecReload=/usr/local/bin/pm2 reload all
+ExecReload=/usr/bin/pm2 reload all
 # Stop: graceful shutdown of all processes
-ExecStop=/usr/local/bin/pm2 kill
+ExecStop=/usr/bin/pm2 kill
 
 # Restart on failure
 Restart=on-failure

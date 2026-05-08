@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	ArrowRight,
-	ChartLineUp,
-	Gauge,
-	Lightning,
-	TrendUp,
-	WarningCircle,
-} from "@phosphor-icons/react";
+import { ArrowRight, Gauge, TrendUp } from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { HexGrid } from "@/components/ui/GeometricArt";
@@ -107,23 +100,21 @@ function MiniSparkline() {
 
 const features = [
 	{
-		icon: <ChartLineUp size={24} weight="duotone" />,
 		title: "Multi-Factor Analysis",
 		description:
 			"131 market factors correlated with price movements — weather, FX, tariffs, freight indices",
 		span: "md:col-span-2",
 	},
 	{
-		icon: <Lightning size={24} weight="duotone" />,
 		title: "7 AI Signal Models",
 		description:
 			"ARIMA, Holt-Winters, STL decomposition, Timer-XL — each model produces independent buy/sell signals with MAPE scores",
 		span: "",
 	},
 	{
-		icon: <WarningCircle size={24} weight="duotone" />,
 		title: "Real-Time Alerts",
-		description: "Custom price thresholds, breakout detection, and anomaly alerts via WebSocket — avg latency 47ms",
+		description:
+			"Custom price thresholds, breakout detection, and anomaly alerts via WebSocket — avg latency 47ms",
 		span: "",
 	},
 ];
@@ -162,8 +153,8 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.2}>
 							<p className="mt-6 max-w-xl text-lg font-medium text-muted-foreground leading-relaxed">
 								Seven independent models — ARIMA, Holt-Winters, STL, Timer-XL — run price forecasts
-								on <span className="font-mono text-[#B8860B]">108 commodities</span> across 13 categories.
-								Multi-factor correlation: weather, FX, tariffs, freight.
+								on <span className="font-mono text-[#B8860B]">108 commodities</span> across 13
+								categories. Multi-factor correlation: weather, FX, tariffs, freight.
 							</p>
 						</MotionReveal>
 
@@ -189,9 +180,7 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.4}>
 							<div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-mono tabular-nums">
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">
-										55+
-									</span>
+									<span className="text-[#B8860B] font-semibold text-base">55+</span>
 									<span>Commodities Tracked</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
@@ -201,9 +190,7 @@ export const Hero: React.FC = () => {
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">
-										Real-time
-									</span>
+									<span className="text-[#B8860B] font-semibold text-base">Real-time</span>
 									<span>Market Data</span>
 								</div>
 							</div>
@@ -275,14 +262,8 @@ export const Hero: React.FC = () => {
 					{features.map((feature, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={i} className={`${feature.span}`}>
-							<div className="group relative rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-card-dark bg-white dark:bg-gray-950 p-6 transition-all duration-300 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.08),_0_2px_8px_rgba(0,0,0,0.06)] dark:hover:shadow-card-hover-dark">
-								<div className="absolute top-2 right-4 text-7xl font-display font-semibold text-gray-100 dark:text-gray-800/60 select-none leading-none">
-									0{i + 1}
-								</div>
+							<div className="group relative rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14]">
 								<div className="relative z-10">
-									<div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 transition-transform duration-200 group-hover:scale-105">
-										{feature.icon}
-									</div>
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 										{feature.title}
 									</h3>

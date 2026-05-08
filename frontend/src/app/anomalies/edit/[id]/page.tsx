@@ -68,7 +68,9 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 
 	// Find timeseries name for display
 	const timeseriesName =
-		(timeseriesList || []).find((ts: Record<string, unknown>) => ts.id === (anomaly as Record<string, unknown>)?.timeseriesId)?.name ||
+		(timeseriesList || []).find(
+			(ts: Record<string, unknown>) => ts.id === (anomaly as Record<string, unknown>)?.timeseriesId,
+		)?.name ||
 		(anomaly as Record<string, unknown>)?.timeseriesId ||
 		"-";
 
@@ -87,7 +89,10 @@ export default function AnomalyEditPage({ params }: AnomalyEditPageProps) {
 				router.push("/anomalies");
 			}, 1000);
 		} catch (error: unknown) {
-			toast.showError("Failed to Update Anomaly", error instanceof Error ? error.message : String(error));
+			toast.showError(
+				"Failed to Update Anomaly",
+				error instanceof Error ? error.message : String(error),
+			);
 		} finally {
 			setLoading(false);
 		}

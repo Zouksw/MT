@@ -148,7 +148,7 @@ export default function ProfileSettingsPage() {
 							<div className="w-24 h-24 rounded-full border-3 border-primary flex items-center justify-center bg-muted overflow-hidden">
 								{user?.avatarUrl ? (
 									// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
-										<img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+									<img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
 								) : (
 									<User className="size-10 text-gray-400" />
 								)}

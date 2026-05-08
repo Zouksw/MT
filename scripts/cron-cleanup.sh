@@ -4,11 +4,7 @@ set -euo pipefail
 
 NOW=$(date '+%Y-%m-%d %H:%M:%S')
 
-# 1. Clean npm cache
-npm cache clean --force 2>/dev/null
-echo "[$NOW] npm cache cleaned"
-
-# 2. Clean pnpm store (prune unreferenced packages)
+# 1. Clean pnpm store (prune unreferenced packages)
 pnpm store prune 2>/dev/null
 echo "[$NOW] pnpm store pruned"
 

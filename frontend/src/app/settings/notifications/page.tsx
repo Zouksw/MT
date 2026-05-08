@@ -26,7 +26,8 @@ function Toggle({
 	label: string;
 }) {
 	return (
-		<button type="button"
+		<button
+			type="button"
 			role="switch"
 			aria-checked={checked}
 			aria-label={label}

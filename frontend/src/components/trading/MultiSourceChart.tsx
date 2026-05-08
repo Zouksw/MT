@@ -149,7 +149,8 @@ export default function MultiSourceChart({ sources, height = 400 }: MultiSourceC
 					const color = SOURCE_COLORS[key] || "#64748B";
 					const isHidden = hiddenSources.has(key);
 					return (
-						<button type="button"
+						<button
+							type="button"
 							key={key}
 							onClick={() => {
 								const next = new Set(hiddenSources);

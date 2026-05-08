@@ -51,7 +51,7 @@ const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Le
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false },
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 ) as React.ComponentType<any>;
 
 const ReferenceLine = dynamic(
@@ -129,7 +129,7 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 
 		try {
 			const response = await fetch(
-				`/api/iotdb/query/latest?timeseries=${encodeURIComponent(timeseries)}&limit=1`,
+				`/api/inference/query/latest?commodityId=${encodeURIComponent(timeseries)}&limit=1`,
 			);
 
 			if (!response.ok) {
@@ -232,7 +232,13 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 	}, [isConnected, isPaused]);
 
 	// Custom tooltip
-	const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: { timestamp: number; value: number } }> }) => {
+	const CustomTooltip = ({
+		active,
+		payload,
+	}: {
+		active?: boolean;
+		payload?: Array<{ value: number; payload: { timestamp: number; value: number } }>;
+	}) => {
 		if (active && payload?.length) {
 			return (
 				<div
@@ -295,7 +301,8 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 
 				<div className="flex gap-2">
 					{!isConnected ? (
-						<button type="button"
+						<button
+							type="button"
 							onClick={startUpdates}
 							disabled={loading}
 							className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
@@ -306,7 +313,8 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 						</button>
 					) : (
 						<>
-							<button type="button"
+							<button
+								type="button"
 								onClick={togglePause}
 								className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
 								aria-label={isPaused ? "Resume real-time updates" : "Pause real-time updates"}
@@ -318,7 +326,8 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 								)}
 								{isPaused ? "Resume" : "Pause"}
 							</button>
-							<button type="button"
+							<button
+								type="button"
 								onClick={clearData}
 								className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
 								aria-label="Clear all chart data"
@@ -326,7 +335,8 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 								<RefreshCw className="size-4" />
 								Clear
 							</button>
-							<button type="button"
+							<button
+								type="button"
 								onClick={() => {
 									stopUpdates();
 									onDisconnect?.();
@@ -350,7 +360,8 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 						<p className="text-sm font-medium text-red-800 dark:text-red-300">Connection Error</p>
 						<p className="text-sm text-red-600 dark:text-red-400">{error}</p>
 					</div>
-					<button type="button"
+					<button
+						type="button"
 						onClick={() => setError(null)}
 						className="text-red-400 hover:text-red-600 dark:hover:text-red-300"
 					>

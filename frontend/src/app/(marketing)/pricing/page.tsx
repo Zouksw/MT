@@ -110,14 +110,16 @@ export default function PricingPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-muted-foreground mb-10">
-							Free tier includes all 108 commodity prices. Paid tiers unlock AI signals and advanced analytics.
+							Free tier includes all 108 commodity prices. Paid tiers unlock AI signals and advanced
+							analytics.
 						</p>
 					</MotionReveal>
 
 					{/* Billing Toggle */}
 					<MotionReveal delay={0.15}>
 						<div className="inline-flex items-center gap-3 bg-muted rounded-full p-1">
-							<button type="button"
+							<button
+								type="button"
 								onClick={() => setBillingCycle("monthly")}
 								className={`px-6 py-2 rounded-full text-body font-medium transition-all ${
 									billingCycle === "monthly" ? "bg-black text-white" : "text-muted-foreground"
@@ -125,7 +127,8 @@ export default function PricingPage() {
 							>
 								Monthly
 							</button>
-							<button type="button"
+							<button
+								type="button"
 								onClick={() => setBillingCycle("yearly")}
 								className={`px-6 py-2 rounded-full text-body font-medium transition-all relative ${
 									billingCycle === "yearly" ? "bg-black text-white" : "text-muted-foreground"

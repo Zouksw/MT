@@ -85,7 +85,7 @@ export interface DatasetResponse {
 	name: string;
 	slug: string;
 	description: string | null;
-	storageFormat: "IOTDB_CACHE" | "INFLUXDB" | "OPENML" | "CSV";
+	storageFormat: "TIMESERIES" | "INFLUXDB" | "OPENML" | "CSV";
 	isPublic: boolean;
 	isImported: boolean;
 	organizationId: string;
@@ -265,42 +265,6 @@ export interface AuditLogResponse {
 	user?: UserResponse;
 }
 
-// ============================================================================
-// IoTDB Specific Types
-// ============================================================================
-
-/**
- * IoTDB query result
- */
-export interface IoTDBQueryResult {
-	timeseries: string;
-	dataPoints: Array<{
-		timestamp: number;
-		value: unknown;
-	}>;
-	count: number;
-}
-
-/**
- * IoTDB batch insert result
- */
-export interface BatchResult {
-	success: boolean;
-	count: number;
-	errors?: Array<{
-		index: number;
-		error: string;
-	}>;
-}
-
-/**
- * IoTDB data point
- */
-export interface IoTDBDataPoint {
-	timestamp: number;
-	value: unknown;
-}
-
 /**
  * AI prediction result
  */
@@ -340,7 +304,7 @@ export interface DashboardStats {
 	recentForecasts: ForecastResponse[];
 	systemHealth: {
 		database: boolean;
-		iotdb: boolean;
+		inference: boolean;
 		redis: boolean;
 	};
 }
