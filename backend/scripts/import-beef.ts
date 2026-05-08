@@ -197,10 +197,10 @@ async function main() {
   console.log(`  牛腩整合 (brisket combined): ${brisketCombinedCount} entries\n`);
 
   // 2. System user & org
-  let systemUser = await prisma.user.findFirst({ where: { email: 'system@iotdb.local' } });
+  let systemUser = await prisma.user.findFirst({ where: { email: 'system@mt.local' } });
   if (!systemUser) {
     systemUser = await prisma.user.create({
-      data: { email: 'system@iotdb.local', passwordHash: null, name: 'System', role: 'ADMIN' },
+      data: { email: 'system@mt.local', passwordHash: null, name: 'System', role: 'ADMIN' },
     });
   }
 

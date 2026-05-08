@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # MT — Development Server Restart
-# Usage: ./scripts/restart.sh [--backend|--frontend|--iotdb|--all|--quick]
+# Usage: ./scripts/restart.sh [--backend|--frontend|--inference|--all|--quick]
 # Default: --all
-# --quick: skip IoTDB, shorter waits (backend 10s, frontend 20s)
+# --quick: shorter waits (backend 10s, frontend 20s)
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
@@ -13,12 +13,9 @@ FRONTEND_DIR="$ROOT_DIR/frontend"
 BACKEND_PORT=8000
 FRONTEND_PORT=3000
 DEVTOOLS_PORT=5001
+INFERENCE_PORT=10810
 
-IOTDB_HOME="/opt/iotdb/apache-iotdb-2.0.8-all-bin"
-IOTDB_CN_PORT=10710
-IOTDB_DN_PORT=6667
-IOTDB_REST_PORT=18080
-IOTDB_AI_PORT=10810
+INFERENCE_VENV="/root/inference-service/venv"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -36,8 +33,8 @@ MODE="${1:---all}"
 QUICK=false
 case "$MODE" in
   --quick) MODE="--all"; QUICK=true ;;
-  --backend|--frontend|--iotdb|--all) ;;
-  *) err "Unknown option: $MODE"; echo "Usage: $0 [--backend|--frontend|--iotdb|--all|--quick]"; exit 1 ;;
+  --backend|--frontend|--inference|--all) ;;
+  *) err "Unknown option: $MODE"; echo "Usage: $0 [--backend|--frontend|--inference|--all|--quick]"; exit 1 ;;
 esac
 
 # ── Kill and verify ─────────────────────────────────────
@@ -65,7 +62,7 @@ kill_and_wait() {
     done
 
     # Also kill anything on our ports
-    for port in $BACKEND_PORT $FRONTEND_PORT $DEVTOOLS_PORT $IOTDB_CN_PORT $IOTDB_DN_PORT $IOTDB_REST_PORT $IOTDB_AI_PORT; do
+    for port in $BACKEND_PORT $FRONTEND_PORT $DEVTOOLS_PORT $INFERENCE_PORT; do
       local port_pids
       port_pids=$(timeout 3 lsof -ti:"$port" 2>/dev/null || true)
       if [ -n "$port_pids" ]; then
@@ -102,9 +99,9 @@ case "$MODE" in
 esac
 
 case "$MODE" in
-  --iotdb|--all)
-    kill_and_wait "iotdb" "iotdb.*ConfigNode" "iotdb.*DataNode" "ainode.*MainProcess"
-    ok "IoTDB processes killed"
+  --inference|--all)
+    kill_and_wait "inference" "uvicorn.*inference"
+    ok "Inference service processes killed"
     ;;
 esac
 
@@ -123,7 +120,7 @@ for port in $BACKEND_PORT $FRONTEND_PORT $DEVTOOLS_PORT; do
   done
 done
 
-ok "All ports free ($BACKEND_PORT, $FRONTEND_PORT, $DEVTOOLS_PORT, IoTDB)"
+ok "All ports free ($BACKEND_PORT, $FRONTEND_PORT, $DEVTOOLS_PORT, $INFERENCE_PORT)"
 
 # ── Start servers ───────────────────────────────────────
 wait_for_http() {
@@ -153,37 +150,22 @@ fi
 mkdir -p "$ROOT_DIR/.logs"
 BACKEND_PID=""
 FRONTEND_PID=""
+INFERENCE_PID=""
 
-# ── Start IoTDB ──────────────────────────────────────────
+# ── Start inference service ──────────────────────────────
 case "$MODE" in
-  --iotdb|--all)
-    if [ "$QUICK" = true ]; then
-      warn "Quick mode — skipping IoTDB"
-    elif [ -d "$IOTDB_HOME/sbin" ]; then
-      log "Starting IoTDB ConfigNode on :$IOTDB_CN_PORT..."
-      (cd "$IOTDB_HOME" && MEMORY_SIZE=1G exec sbin/start-confignode.sh) > "$ROOT_DIR/.logs/iotdb-cn.log" 2>&1
-      if wait_for_http "$IOTDB_CN_PORT" "ConfigNode" 30; then
-        ok "ConfigNode running on port $IOTDB_CN_PORT"
+  --inference|--all)
+    if [ -f "$INFERENCE_VENV/bin/uvicorn" ]; then
+      log "Starting inference service on :$INFERENCE_PORT..."
+      ($INFERENCE_VENV/bin/uvicorn main:app --host 0.0.0.0 --port "$INFERENCE_PORT") > "$ROOT_DIR/.logs/inference.log" 2>&1 &
+      INFERENCE_PID=$!
+      if wait_for_http "$INFERENCE_PORT" "Inference" 20; then
+        ok "Inference service running on http://localhost:$INFERENCE_PORT (PID: $INFERENCE_PID)"
       else
-        warn "ConfigNode may still be starting. Check .logs/iotdb-cn.log"
-      fi
-
-      log "Starting IoTDB DataNode on :$IOTDB_DN_PORT..."
-      (cd "$IOTDB_HOME" && MEMORY_SIZE=1G exec sbin/start-datanode.sh) > "$ROOT_DIR/.logs/iotdb-dn.log" 2>&1
-      if wait_for_http "$IOTDB_DN_PORT" "DataNode" 40; then
-        ok "DataNode running on port $IOTDB_DN_PORT (REST: $IOTDB_REST_PORT)"
-      else
-        warn "DataNode may still be starting. Check .logs/iotdb-dn.log"
-      fi
-
-      log "Verifying AINode Python environment..."
-      if [ -f "$IOTDB_HOME/venv/bin/python3" ]; then
-        ok "AINode venv ready at $IOTDB_HOME/venv"
-      else
-        warn "AINode venv not found at $IOTDB_HOME/venv"
+        warn "Inference service may still be starting. Check .logs/inference.log"
       fi
     else
-      warn "IoTDB not found at $IOTDB_HOME, skipping"
+      warn "Inference service venv not found at $INFERENCE_VENV, skipping"
     fi
     ;;
 esac
@@ -222,20 +204,12 @@ echo -e "${CYAN}═════════════════════�
 
 [ -n "$BACKEND_PID" ]  && printf "  %-12s %-30s PID %s\n" "Backend"  "http://localhost:$BACKEND_PORT"  "$BACKEND_PID"
 [ -n "$FRONTEND_PID" ] && printf "  %-12s %-30s PID %s\n" "Frontend" "http://localhost:$FRONTEND_PORT" "$FRONTEND_PID"
-
-if [ "$MODE" = "--iotdb" ] || [ "$MODE" = "--all" ]; then
-  if [ -d "$IOTDB_HOME/sbin" ]; then
-    echo ""
-    echo "  IoTDB:"
-    echo "    ConfigNode  port $IOTDB_CN_PORT"
-    echo "    DataNode    port $IOTDB_DN_PORT (REST: $IOTDB_REST_PORT)"
-    echo "    AINode      venv $IOTDB_HOME/venv"
-  fi
-fi
+[ -n "$INFERENCE_PID" ] && printf "  %-12s %-30s PID %s\n" "Inference" "http://localhost:$INFERENCE_PORT" "$INFERENCE_PID"
 
 echo ""
 echo "  Logs:"
 [ -n "$BACKEND_PID" ]  && echo "    tail -f .logs/backend.log"
 [ -n "$FRONTEND_PID" ] && echo "    tail -f .logs/frontend.log"
+[ -n "$INFERENCE_PID" ] && echo "    tail -f .logs/inference.log"
 echo "  Or:    pnpm stop"
 echo -e "${CYAN}═══════════════════════════════════════${NC}"

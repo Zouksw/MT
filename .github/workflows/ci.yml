@@ -129,7 +129,7 @@ jobs:
           sudo systemctl start postgresql
           sudo systemctl start redis-server
           sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" || true
-          sudo -u postgres createdb iotdb_enhanced_test || true
+          sudo -u postgres createdb mt_test || true
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -149,13 +149,13 @@ jobs:
       - name: Run database migrations
         run: cd backend && npx prisma migrate deploy
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iotdb_enhanced_test?schema=public
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
 
       - name: Run tests
         run: cd backend && pnpm test
         env:
           NODE_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iotdb_enhanced_test?schema=public
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
           REDIS_URL: redis://localhost:6379
 
       - name: Generate coverage report

@@ -3,7 +3,7 @@
  *
  * Tests correlation endpoints against running backend with real commodity data.
  * Cannot test service functions directly because they use the global prisma
- * singleton (pointed at iotdb_test by test-setup, which has no commodity data).
+ * singleton (pointed at mt_test by test-setup, which has no commodity data).
  */
 
 import request from "supertest";

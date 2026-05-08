@@ -4,7 +4,7 @@
  * Tests prediction lifecycle: log → verify → accuracy.
  * Uses createTestContext to get a prisma connected to the real DB.
  * Note: mapeTracking service functions import the global prisma singleton,
- * which in test env points to iotdb_test. This test verifies the service
+ * which in test env points to mt_test. This test verifies the service
  * logic works end-to-end against the test DB.
  */
 

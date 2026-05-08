@@ -25,7 +25,6 @@ backend:
   env:
     NODE_ENV: production
     PORT: "3001"
-    AI_NODE_HOST: "iotdb-ainode"
     AI_NODE_PORT: "10810"
   envSecrets:
     - DATABASE_URL
@@ -51,8 +50,8 @@ frontend:
 postgresql:
   enabled: true
   auth:
-    username: iotdb_user
-    database: iotdb_enhanced
+    username: mt_user
+    database: mt_db
   primary:
     persistence:
       size: 20Gi
@@ -73,12 +72,6 @@ redis:
       requests:
         cpu: 250m
         memory: 256Mi
-
-# IoTDB
-iotdb:
-  enabled: true
-  restPort: 18080
-  rpcPort: 6667
 
 # Ingress
 ingress:

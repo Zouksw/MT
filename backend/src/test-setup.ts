@@ -1,7 +1,7 @@
 process.env.NODE_ENV = "test";
 process.env.DATABASE_URL =
 	process.env.DATABASE_URL ||
-	"postgresql://test:test@localhost:5432/iotdb_test";
+	"postgresql://test:test@localhost:5432/mt_test";
 process.env.JWT_SECRET =
 	process.env.JWT_SECRET ||
 	"test-secret-key-for-jwt-testing-purposes-only-32chars";

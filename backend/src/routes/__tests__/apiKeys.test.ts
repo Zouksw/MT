@@ -8,7 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const TEST_PREFIX = `ak-${Date.now()}`;
 const REAL_DB_URL =
-	"postgresql://iotdb_user:iotdb_password@localhost:5432/iotdb_enhanced";
+	"postgresql://mt_user:mt_password@localhost:5432/mt_db";
 const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
 let prisma: PrismaClient;

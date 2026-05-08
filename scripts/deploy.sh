@@ -195,7 +195,7 @@ post_deploy() {
 
     # Reload PM2 services
     log_info "Reloading PM2 services..."
-    if pm2 list 2>/dev/null | grep -q "iotdb"; then
+    if pm2 list 2>/dev/null | grep -q "online"; then
         log_cmd "pm2 reload ${ECOSYSTEM_FILE} --env production"
         pm2 reload "$ECOSYSTEM_FILE" --env production
     else

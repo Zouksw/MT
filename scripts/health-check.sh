@@ -193,19 +193,19 @@ check_redis() {
   fi
 }
 
-check_iotdb() {
+check_inference() {
   increment_total
-  local check_name="IoTDB Connection"
+  local check_name="Inference Service"
 
   log_info "Checking $check_name..."
 
-  local health_data=$(curl -s "$BACKEND_URL" 2>/dev/null || echo '{}')
+  local response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:10810/health" 2>/dev/null || echo "000")
 
-  if echo "$health_data" | grep -q '"iotdb":"ok"' || echo "$health_data" | grep -q '"iotdb":true'; then
-    log_success "$check_name: Connected"
+  if [ "$response" = "200" ]; then
+    log_success "$check_name: HTTP $response"
     return 0
   else
-    log_error "$check_name: Failed"
+    log_error "$check_name: HTTP $response"
     return 1
   fi
 }
@@ -325,7 +325,7 @@ main() {
     check_frontend || true
     check_database || true
     check_redis || true
-    check_iotdb || true
+    check_inference || true
     check_pm2_services || true
 
     # System resource checks

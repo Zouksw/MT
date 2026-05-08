@@ -73,13 +73,33 @@ else
 	warn "Redis not found (optional for dev, required for production)"
 fi
 
-# --- IoTDB ---
-step "Checking IoTDB"
-IOTDB_HOME="/opt/iotdb/apache-iotdb-2.0.8-all-bin"
-if [ -d "$IOTDB_HOME/sbin" ]; then
-	ok "IoTDB found at $IOTDB_HOME"
+# --- Python (inference service) ---
+step "Checking Python"
+if command -v python3 &>/dev/null; then
+	PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+	if python3 -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)"; then
+		ok "Python $PY_VERSION"
+	else
+		fail "Python $PY_VERSION (need 3.10+)"
+		((ERRORS++))
+	fi
 else
-	warn "IoTDB not found at $IOTDB_HOME (optional for basic dev)"
+	fail "Python3 not found (need 3.10+ for inference service)"
+	((ERRORS++))
+fi
+
+# --- Inference service ---
+step "Checking inference service"
+INFERENCE_VENV="/root/inference-service/venv"
+if [ -f "$INFERENCE_VENV/bin/uvicorn" ]; then
+	ok "Inference service venv ready at $INFERENCE_VENV"
+else
+	warn "Inference service venv not found at $INFERENCE_VENV"
+	if [ "$CHECK_ONLY" = false ] && [ -d "/root/inference-service" ]; then
+		python3 -m venv "$INFERENCE_VENV"
+		"$INFERENCE_VENV/bin/pip" install -r /root/inference-service/requirements.txt
+		ok "Inference service venv created and dependencies installed"
+	fi
 fi
 
 # --- Environment files ---

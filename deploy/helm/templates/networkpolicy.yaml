@@ -61,16 +61,6 @@ spec:
       ports:
         - port: 6379
           protocol: TCP
-    # Allow IoTDB RPC + REST
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/component: iotdb
-      ports:
-        - port: {{ .Values.iotdb.rpcPort }}
-          protocol: TCP
-        - port: {{ .Values.iotdb.restPort }}
-          protocol: TCP
     # Allow SMTP and Slack webhooks (external)
     - to: []
       ports:

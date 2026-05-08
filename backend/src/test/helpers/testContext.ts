@@ -24,12 +24,12 @@ export interface TestContext {
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
 function resolveDbUrl(): string {
-	// CI sets DATABASE_URL to iotdb_enhanced_test
-	// test-setup.ts sets it to iotdb_test
+	// CI sets DATABASE_URL to mt_test
+	// test-setup.ts sets it to mt_test
 	// Fallback for direct runs: try the real DB (integration tests need seed data)
 	return (
 		process.env.DATABASE_URL ||
-		"postgresql://iotdb_user:iotdb_password@localhost:5432/iotdb_enhanced"
+		"postgresql://mt_user:mt_password@localhost:5432/mt_db"
 	);
 }
 

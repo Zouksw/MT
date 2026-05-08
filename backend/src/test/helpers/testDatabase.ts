@@ -25,7 +25,7 @@ export async function setupTestDatabase(): Promise<{ prisma: PrismaClient }> {
 			db: {
 				url:
 					process.env.DATABASE_URL ||
-					"postgresql://postgres:postgres@localhost:5432/iotdb_enhanced_test",
+					"postgresql://postgres:postgres@localhost:5432/mt_test",
 			},
 		},
 		log: ["error"],
