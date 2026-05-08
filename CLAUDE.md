@@ -88,38 +88,32 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Backend: **8000** (`cd backend && pnpm dev`)
 - Frontend: **3000** (`cd frontend && pnpm dev`)
 - Devtools: **5001** (Refine devtools, auto-started by frontend)
-- IoTDB ConfigNode: **10710**
-- IoTDB DataNode: **6667** (RPC), **18080** (REST)
-- IoTDB AINode: **10810**
+- Inference Service: **10810** (`cd inference-service && source venv/bin/activate && uvicorn main:app`)
 
 ### Restart
 Always use the project restart script. It kills all zombie processes (by command pattern + port) before starting fresh.
 
 ```bash
-# Full restart (backend + frontend + IoTDB)
+# Full restart (backend + frontend)
 pnpm restart
 
 # Restart only one
 pnpm restart:backend
 pnpm restart:frontend
 
-# Restart IoTDB only (ConfigNode + DataNode + AINode)
-./scripts/restart.sh --iotdb
-
 # Stop all without restarting
 pnpm stop
 ```
 
 The script (`scripts/restart.sh`) does:
-1. Kill by command pattern: `tsx watch`, `next-server`, `next dev`, `refine dev`, `postcss.js`, `iotdb`
-2. Kill by port: 8000, 3000, 5001, 6667, 10710, 18080, 10810
+1. Kill by command pattern: `tsx watch`, `next-server`, `next dev`, `refine dev`, `postcss.js`
+2. Kill by port: 8000, 3000, 5001, 10810
 3. Retry with wait until all ports are confirmed free
-4. Start IoTDB (ConfigNode → DataNode → AINode), wait for ports
-5. Start backend, wait for port 8000 to respond
-6. Start frontend, wait for port 3000 to respond
-7. Print summary with PIDs and log paths
+4. Start backend, wait for port 8000 to respond
+5. Start frontend, wait for port 3000 to respond
+6. Print summary with PIDs and log paths
 
-Logs go to `.logs/backend.log`, `.logs/frontend.log`, `.logs/iotdb-*.log`.
+Logs go to `.logs/backend.log`, `.logs/frontend.log`.
 
 ### Manual startup (if script unavailable)
 ```bash
