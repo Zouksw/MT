@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.0
+pydantic-settings>=2.0
+numpy
+pandas
+statsmodels>=0.14
+scikit-learn
+sktime>=0.29
+chronos-forecasting
+torch>=2.0
