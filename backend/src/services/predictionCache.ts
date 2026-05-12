@@ -14,6 +14,7 @@ import { getRedisClient } from "@/lib/redis";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
+import { getAllModels } from "./tradingSignals";
 
 const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
@@ -97,10 +98,7 @@ export async function runAndCachePrediction(
 	const key = cacheKeys.prediction(commodityId, modelId, horizon);
 
 	try {
-		const { values, timestamps } = await getCommodityPriceValues(
-			commodityId,
-			200,
-		);
+		const { values, timestamps } = await getCommodityPriceValues(commodityId, 200);
 
 		const result = await predict({
 			values,
@@ -154,21 +152,15 @@ export async function runAndCachePrediction(
 /**
  * Refresh all predictions for a subscribed commodity
  */
-async function refreshCommodityPredictions(
-	sub: CommoditySubscription,
-): Promise<void> {
-	logger.info(
-		`Refreshing predictions for ${sub.commodityId} (${sub.models.length} models)`,
-	);
+async function refreshCommodityPredictions(sub: CommoditySubscription): Promise<void> {
+	logger.info(`Refreshing predictions for ${sub.commodityId} (${sub.models.length} models)`);
 
 	await Promise.allSettled(
 		sub.models.map(async (modelId) => {
 			try {
 				await runAndCachePrediction(sub.commodityId, modelId, sub.horizon);
 			} catch (error) {
-				logger.error(
-					`Failed to refresh ${modelId} for ${sub.commodityId}: ${error}`,
-				);
+				logger.error(`Failed to refresh ${modelId} for ${sub.commodityId}: ${error}`);
 			}
 		}),
 	);
@@ -177,11 +169,7 @@ async function refreshCommodityPredictions(
 /**
  * Subscribe a commodity to background prediction refresh
  */
-export function subscribeCommodity(
-	commodityId: string,
-	models: string[],
-	horizon: number,
-): void {
+export function subscribeCommodity(commodityId: string, models: string[], horizon: number): void {
 	subscriptions.set(commodityId, {
 		commodityId,
 		models,
@@ -250,15 +238,7 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 		select: { id: true },
 	});
 
-	const MODELS = [
-		"arima",
-		"holtwinters",
-		"exponential_smoothing",
-		"naive_forecaster",
-		"stl_forecaster",
-		"timer_xl",
-		"sundial",
-	];
+	const MODELS = getAllModels();
 
 	for (const commodity of commodities) {
 		subscribeCommodity(commodity.id, MODELS, 10);

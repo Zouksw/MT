@@ -10,12 +10,10 @@ import {
 	NotFoundError,
 	UnauthorizedError,
 } from "@/middleware/errorHandler";
-import {
-	authRateLimiter,
-	registrationRateLimiter,
-} from "@/middleware/rateLimiter";
+import { authRateLimiter, registrationRateLimiter } from "@/middleware/rateLimiter";
 import { validate, validationSchemas } from "@/middleware/security";
 import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
+import type { AuditAction } from "@/types/models";
 
 const router = Router();
 
@@ -32,22 +30,60 @@ const loginSchema = z.object({
 });
 
 // Helper: Get user ID from token
-async function getUserIdFromToken(
-	authHeader: string | undefined,
-): Promise<string | null> {
+async function getUserIdFromToken(authHeader: string | undefined): Promise<string | null> {
 	if (!authHeader?.startsWith("Bearer ")) return null;
 	const token = authHeader.substring(7);
 	try {
-		// Check if token is blacklisted (e.g. after logout)
-		const { isTokenBlacklisted } = await import("@/services/tokenBlacklist");
-		if (await isTokenBlacklisted(token)) {
-			return null;
-		}
+		if (await isTokenBlacklisted(token)) return null;
 		const payload = jwtUtils.verifyToken(token);
 		return payload.userId;
 	} catch {
 		return null;
 	}
+}
+
+// Helper: Build auth cookie options
+function authCookieOptions(req: Request) {
+	return {
+		httpOnly: true,
+		secure: req.secure,
+		sameSite: "strict" as const,
+		maxAge: config.session.expiresDays * 24 * 60 * 60 * 1000,
+		path: "/",
+	};
+}
+
+// Helper: Generate tokens + create session
+async function createAuthSession(req: Request, userId: string) {
+	const token = jwtUtils.generateToken(userId);
+	const refreshToken = jwtUtils.generateRefreshToken(userId);
+	await prisma.session.create({
+		data: {
+			userId,
+			tokenHash: await bcrypt.hash(refreshToken, 12),
+			expiresAt: new Date(Date.now() + config.session.expiresDays * 24 * 60 * 60 * 1000),
+			ipAddress: req.ip,
+			userAgent: req.get("user-agent"),
+		},
+	});
+	return { token, refreshToken };
+}
+
+// Helper: Write audit log
+async function auditLog(req: Request, userId: string, resourceType: string, action: AuditAction) {
+	await prisma.auditLog
+		.create({
+			data: {
+				userId,
+				resourceType,
+				resourceId: userId,
+				action,
+				ipAddress: req.ip,
+				userAgent: req.get("user-agent"),
+				success: true,
+			},
+		})
+		.catch(() => {});
 }
 
 /**
@@ -118,19 +154,12 @@ router.post(
 	asyncHandler(async (req: Request, res: Response) => {
 		const validatedData = registerSchema.parse(req.body);
 
-		// Check if user already exists
 		const existingUser = await prisma.user.findUnique({
 			where: { email: validatedData.email },
 		});
+		if (existingUser) throw new ConflictError("Email already registered");
 
-		if (existingUser) {
-			throw new ConflictError("Email already registered");
-		}
-
-		// Hash password with 12 rounds for better security (OWASP recommendation)
 		const passwordHash = await bcrypt.hash(validatedData.password, 12);
-
-		// Create user
 		const user = await prisma.user.create({
 			data: {
 				email: validatedData.email,
@@ -138,67 +167,14 @@ router.post(
 				name: validatedData.name || validatedData.email.split("@")[0],
 				role: "EDITOR",
 			},
-			select: {
-				id: true,
-				email: true,
-				name: true,
-				role: true,
-				avatarUrl: true,
-				createdAt: true,
-			},
+			select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true },
 		});
 
-		// Generate tokens
-		const token = jwtUtils.generateToken(user.id);
-		const refreshToken = jwtUtils.generateRefreshToken(user.id);
+		const { token, refreshToken } = await createAuthSession(req, user.id);
+		await auditLog(req, user.id, "User", "CREATE");
 
-		// Create session
-		await prisma.session.create({
-			data: {
-				userId: user.id,
-				tokenHash: await bcrypt.hash(refreshToken, 12),
-				expiresAt: new Date(
-					Date.now() + config.session.expiresDays * 24 * 60 * 60 * 1000,
-				),
-				ipAddress: req.ip,
-				userAgent: req.get("user-agent"),
-			},
-		});
-
-		// Log the registration
-		await prisma.auditLog.create({
-			data: {
-				userId: user.id,
-				resourceType: "User",
-				resourceId: user.id,
-				action: "CREATE",
-				ipAddress: req.ip,
-				userAgent: req.get("user-agent"),
-				success: true,
-			},
-		});
-
-		// Set HttpOnly auth cookie for enhanced security
-		const cookieOptions = {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict" as const,
-			maxAge: config.session.expiresDays * 24 * 60 * 60 * 1000,
-			path: "/",
-		};
-
-		// Set the auth token as HttpOnly cookie
-		res.cookie("auth_token", token, cookieOptions);
-
-		return success(
-			res,
-			{
-				user,
-				token,
-				refreshToken,
-			},
-			201,
-		);
+		res.cookie("auth_token", token, authCookieOptions(req));
+		return success(res, { user, token, refreshToken }, 201);
 	}),
 );
 
@@ -263,72 +239,23 @@ router.post(
 	asyncHandler(async (req: Request, res: Response) => {
 		const validatedData = loginSchema.parse(req.body);
 
-		// Find user
-		const user = await prisma.user.findUnique({
-			where: { email: validatedData.email },
+		const user = await prisma.user.findUnique({ where: { email: validatedData.email } });
+		if (!user) throw new UnauthorizedError("Invalid email or password");
+
+		const isValidPassword = await bcrypt.compare(validatedData.password, user.passwordHash);
+		if (!isValidPassword) throw new UnauthorizedError("Invalid email or password");
+
+		const { token, refreshToken } = await createAuthSession(req, user.id);
+		const session = await prisma.session.findFirst({
+			where: { userId: user.id, isActive: true },
+			orderBy: { createdAt: "desc" },
+			take: 1,
 		});
 
-		if (!user) {
-			throw new UnauthorizedError("Invalid email or password");
-		}
+		await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+		await auditLog(req, user.id, "User", "LOGIN");
 
-		// Verify password
-		const isValidPassword = await bcrypt.compare(
-			validatedData.password,
-			user.passwordHash,
-		);
-
-		if (!isValidPassword) {
-			throw new UnauthorizedError("Invalid email or password");
-		}
-
-		// Generate tokens
-		const token = jwtUtils.generateToken(user.id);
-		const refreshToken = jwtUtils.generateRefreshToken(user.id);
-
-		// Create session
-		const session = await prisma.session.create({
-			data: {
-				userId: user.id,
-				tokenHash: await bcrypt.hash(refreshToken, 12),
-				expiresAt: new Date(
-					Date.now() + config.session.expiresDays * 24 * 60 * 60 * 1000,
-				),
-				ipAddress: req.ip,
-				userAgent: req.get("user-agent"),
-			},
-		});
-
-		// Update last login
-		await prisma.user.update({
-			where: { id: user.id },
-			data: { lastLoginAt: new Date() },
-		});
-
-		// Log successful login
-		await prisma.auditLog.create({
-			data: {
-				userId: user.id,
-				resourceType: "User",
-				resourceId: user.id,
-				action: "LOGIN",
-				ipAddress: req.ip,
-				userAgent: req.get("user-agent"),
-				success: true,
-			},
-		});
-
-		// Set HttpOnly auth cookie
-		const cookieOptions = {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict" as const,
-			maxAge: config.session.expiresDays * 24 * 60 * 60 * 1000,
-			path: "/",
-		};
-
-		res.cookie("auth_token", token, cookieOptions);
-
+		res.cookie("auth_token", token, authCookieOptions(req));
 		return success(res, {
 			user: {
 				id: user.id,
@@ -339,7 +266,7 @@ router.post(
 			},
 			token,
 			refreshToken,
-			sessionId: session.id,
+			sessionId: session?.id,
 		});
 	}),
 );
@@ -406,19 +333,7 @@ router.post(
 			sameSite: "strict",
 		});
 
-		// Log logout
-		await prisma.auditLog
-			.create({
-				data: {
-					userId,
-					resourceType: "Session",
-					action: "DELETE",
-					ipAddress: req.ip,
-					userAgent: req.get("user-agent"),
-					success: true,
-				},
-			})
-			.catch(() => {});
+		await auditLog(req, userId, "Session", "DELETE");
 
 		return successWithMessage(res, {}, "Logged out successfully");
 	}),
@@ -661,16 +576,12 @@ router.put(
 			preferences?: Record<string, unknown>;
 		} = {};
 		if (validatedData.name !== undefined) updateData.name = validatedData.name;
-		if (validatedData.avatarUrl !== undefined)
-			updateData.avatarUrl = validatedData.avatarUrl;
-		if (validatedData.preferences !== undefined)
-			updateData.preferences = validatedData.preferences;
+		if (validatedData.avatarUrl !== undefined) updateData.avatarUrl = validatedData.avatarUrl;
+		if (validatedData.preferences !== undefined) updateData.preferences = validatedData.preferences;
 
 		const user = await prisma.user.update({
 			where: { id: userId },
-			data: updateData as unknown as Parameters<
-				typeof prisma.user.update
-			>[0]["data"],
+			data: updateData as unknown as Parameters<typeof prisma.user.update>[0]["data"],
 			select: {
 				id: true,
 				email: true,
@@ -745,10 +656,7 @@ router.post(
 		}
 
 		// Verify current password
-		const isValidPassword = await bcrypt.compare(
-			validatedData.currentPassword,
-			user.passwordHash,
-		);
+		const isValidPassword = await bcrypt.compare(validatedData.currentPassword, user.passwordHash);
 
 		if (!isValidPassword) {
 			throw new UnauthorizedError("Current password is incorrect");
@@ -775,24 +683,9 @@ router.post(
 			data: { isActive: false },
 		});
 
-		// Log password change
-		await prisma.auditLog.create({
-			data: {
-				userId,
-				resourceType: "User",
-				resourceId: userId,
-				action: "UPDATE",
-				ipAddress: req.ip,
-				userAgent: req.get("user-agent"),
-				success: true,
-			},
-		});
+		await auditLog(req, userId, "User", "UPDATE");
 
-		return successWithMessage(
-			res,
-			{},
-			"Password changed successfully. Please login again.",
-		);
+		return successWithMessage(res, {}, "Password changed successfully. Please login again.");
 	}),
 );
 
@@ -839,9 +732,7 @@ router.get(
 		const authHeader = req.headers.authorization;
 		const cookieToken = req.cookies?.auth_token;
 
-		const token = authHeader?.startsWith("Bearer ")
-			? authHeader.substring(7)
-			: cookieToken;
+		const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : cookieToken;
 
 		if (!token) {
 			throw new UnauthorizedError("No token provided");

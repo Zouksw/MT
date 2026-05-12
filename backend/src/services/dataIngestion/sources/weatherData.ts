@@ -3,7 +3,7 @@
  *
  * Fetches weather data for major beef-producing regions.
  * Uses OpenWeatherMap free tier (60 calls/min).
- * Falls back to realistic model if API key is missing.
+ * Only stores real API data — no estimates.
  */
 
 import { logger, prisma } from "@/lib";
@@ -37,25 +37,10 @@ interface OpenWeatherMapResponse {
 	};
 }
 
-function generateRealisticWeather(station: WeatherStation, month: number) {
-	const isNorthern = station.lat > 0;
-	const adjustedMonth = isNorthern ? month : ((month + 5) % 12) + 1;
-
-	const baseTemp = station.lat > 30 ? 15 : station.lat > 0 ? 10 : 20;
-	const seasonal = Math.sin(((adjustedMonth - 1) / 12) * 2 * Math.PI) * 15;
-	const temp = baseTemp + seasonal + (Math.random() - 0.5) * 5;
-
-	const baseHumidity = 60 + Math.random() * 20;
-	const rainfall = Math.random() < 0.3 ? Math.random() * 20 : 0;
-
-	return {
-		temp: parseFloat(temp.toFixed(1)),
-		humidity: parseFloat(baseHumidity.toFixed(1)),
-		rainfall: parseFloat(rainfall.toFixed(1)),
-	};
-}
-
-async function fetchFromAPI(apiKey: string, station: WeatherStation) {
+async function fetchFromAPI(
+	apiKey: string,
+	station: WeatherStation,
+): Promise<{ temp: number; humidity: number; rainfall: number } | null> {
 	const url = `https://api.openweathermap.org/data/2.5/weather?lat=${station.lat}&lon=${station.lon}&appid=${apiKey}&units=metric`;
 	const res = await fetch(url);
 	if (!res.ok) return null;
@@ -73,28 +58,26 @@ export async function ingestWeatherData(): Promise<ScraperResult> {
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
-	const month = today.getMonth() + 1;
 	const apiKey = process.env.OPENWEATHER_API_KEY || "";
 
+	if (!apiKey) {
+		logger.warn("[Weather] OPENWEATHER_API_KEY not set, skipping");
+		return { inserted: 0, updated: 0 };
+	}
+
 	for (const station of WEATHER_STATIONS) {
-		let weather: Awaited<ReturnType<typeof generateRealisticWeather>> | null =
-			null;
+		let weather: Awaited<ReturnType<typeof fetchFromAPI>> = null;
 
-		if (apiKey) {
-			try {
-				weather = await fetchFromAPI(apiKey, station);
-			} catch {
-				logger.warn(`[Weather] API failed for ${station.name}, using model`);
-			}
+		try {
+			weather = await fetchFromAPI(apiKey, station);
+		} catch {
+			logger.warn(`[Weather] API failed for ${station.name}`);
 		}
 
-		if (!weather) {
-			weather = generateRealisticWeather(station, month);
-		}
+		if (!weather) continue;
 
 		const region = `${station.name}_${station.country}`;
 
-		// Store temperature
 		for (const [metric, value] of [
 			["temperature", weather.temp],
 			["humidity", weather.humidity],
@@ -108,13 +91,8 @@ export async function ingestWeatherData(): Promise<ScraperResult> {
 
 			const data = {
 				value,
-				unit:
-					metric === "temperature"
-						? "celsius"
-						: metric === "humidity"
-							? "percent"
-							: "mm",
-				source: apiKey ? "openweathermap" : "model",
+				unit: metric === "temperature" ? "celsius" : metric === "humidity" ? "percent" : "mm",
+				source: "openweathermap",
 			};
 
 			if (existing) {

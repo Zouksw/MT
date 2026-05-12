@@ -14,10 +14,7 @@ import { logger, prisma } from "@/lib";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // World Bank commodity code → our slug mapping
-const WB_COMMODITIES: Record<
-	string,
-	{ slug: string; name: string; unit: string }
-> = {
+const WB_COMMODITIES: Record<string, { slug: string; name: string; unit: string }> = {
 	// Energy
 	CRUDE_WTI: {
 		slug: "crude_oil_wti",
@@ -162,29 +159,33 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 	let inserted = 0;
 	let updated = 0;
 
-	// Fetch all commodity prices in a single call
-	const url =
-		"https://api.worldbank.org/v2/commodity?format=json&per_page=5000&date=2020:2026";
-
-	const res = await fetch(url, {
-		headers: { Accept: "application/json" },
-		signal: AbortSignal.timeout(30000),
-	});
-
-	if (!res.ok) {
-		logger.warn(`[WORLD_BANK] API returned ${res.status}`);
-		return { inserted: 0, updated: 0 };
-	}
-
-	const data = (await res.json()) as [
-		WBCommodityResponse,
-		WBCommodityResponse["records"],
+	// Try the original commodity endpoint
+	const urls = [
+		"https://api.worldbank.org/v2/commodity?format=json&per_page=5000&date=2020:2026",
+		"https://api.worldbank.org/v2/sources/40/data?format=json&per_page=5000&date=2020:2026",
 	];
 
-	// The API returns [{pagination}, [records]]
-	const records = Array.isArray(data[1]) ? data[1] : [];
+	let records: WBCommodityResponse["records"] = [];
+
+	for (const url of urls) {
+		try {
+			const res = await fetch(url, {
+				headers: { Accept: "application/json" },
+				signal: AbortSignal.timeout(30000),
+			});
+
+			if (!res.ok) continue;
+
+			const data = (await res.json()) as [WBCommodityResponse, WBCommodityResponse["records"]];
+			if (Array.isArray(data?.[1]) && data[1].length > 0) {
+				records = data[1];
+				break;
+			}
+		} catch {}
+	}
+
 	if (records.length === 0) {
-		logger.warn("[WORLD_BANK] No records returned");
+		logger.warn("[WORLD_BANK] All API endpoints failed — data unavailable");
 		return { inserted: 0, updated: 0 };
 	}
 
@@ -288,11 +289,7 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 }
 
 function categorizeSlug(slug: string): string {
-	if (
-		slug.includes("crude") ||
-		slug.includes("natural_gas") ||
-		slug.includes("coal")
-	)
+	if (slug.includes("crude") || slug.includes("natural_gas") || slug.includes("coal"))
 		return "energy";
 	if (
 		slug.includes("copper") ||
@@ -377,9 +374,7 @@ function parseWBDate(dateStr: string): Date | null {
 	if (monthMatch) {
 		const monthIdx = monthNames.indexOf(monthMatch[2]);
 		if (monthIdx >= 0) {
-			return new Date(
-				`${monthMatch[1]}-${String(monthIdx + 1).padStart(2, "0")}-01T00:00:00Z`,
-			);
+			return new Date(`${monthMatch[1]}-${String(monthIdx + 1).padStart(2, "0")}-01T00:00:00Z`);
 		}
 	}
 	return null;

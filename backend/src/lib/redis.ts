@@ -59,10 +59,7 @@ export async function initRedis(): Promise<void> {
 		await Promise.race([
 			connectPromise,
 			new Promise<never>((_, rej) =>
-				setTimeout(
-					() => rej(new Error("Redis connection timeout (10s)")),
-					10000,
-				),
+				setTimeout(() => rej(new Error("Redis connection timeout (10s)")), 10000),
 			),
 		]);
 		redisClient = client;
@@ -120,8 +117,4 @@ export async function redis(): Promise<RedisClientType> {
 	return getRedisClient();
 }
 
-/**
- * Re-export for direct usage
- */
-export { initRedis as initCache };
 export default redis;

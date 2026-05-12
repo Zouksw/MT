@@ -1,106 +1,112 @@
 /**
- * CME Group Futures Data
+ * Commodity Futures via Stooq (Free CSV API)
  *
- * Fetches delayed futures settlement prices from CME Group.
- * Covers: Live Cattle, Feeder Cattle, Lean Hogs, Corn, Soybeans, Wheat, etc.
- *
- * Uses CME's public delayed data endpoint (no API key required).
- * Data is delayed ~10 minutes, updated daily after market close.
+ * Uses stooq.com free CSV endpoint — no API key required.
+ * Covers: Live Cattle, Feeder Cattle, Lean Hogs, Corn, Soybeans, Wheat,
+ * Soybean Meal, Soybean Oil, Coffee, Sugar, Cotton, Crude Oil, Natural Gas, Gold.
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { ensureCommodity, formatDateYMD, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
-// CME product symbols → our commodity slugs
-const CME_PRODUCTS: Record<
+const FUTURES: Record<
 	string,
-	{
-		slug: string;
-		name: string;
-		category: string;
-		unit: string;
-	}
+	{ ticker: string; slug: string; name: string; category: string; unit: string }
 > = {
 	LE: {
+		ticker: "le.f",
 		slug: "live_cattle_cme",
 		name: "Live Cattle Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
 	},
 	GF: {
+		ticker: "gf.f",
 		slug: "feeder_cattle_cme",
 		name: "Feeder Cattle Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
 	},
 	HE: {
+		ticker: "he.f",
 		slug: "lean_hogs_cme",
 		name: "Lean Hogs Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
 	},
 	ZC: {
+		ticker: "zc.f",
 		slug: "corn_cme",
 		name: "Corn Futures (CME)",
 		category: "futures",
 		unit: "USD/bu",
 	},
 	ZS: {
+		ticker: "zs.f",
 		slug: "soybeans_cme",
 		name: "Soybean Futures (CME)",
 		category: "futures",
 		unit: "USD/bu",
 	},
 	ZW: {
+		ticker: "zw.f",
 		slug: "wheat_cme",
 		name: "Wheat Futures (CME)",
 		category: "futures",
 		unit: "USD/bu",
 	},
 	ZM: {
+		ticker: "zm.f",
 		slug: "soybean_meal_cme",
 		name: "Soybean Meal Futures (CME)",
 		category: "futures",
 		unit: "USD/ton",
 	},
 	ZL: {
+		ticker: "zl.f",
 		slug: "soybean_oil_cme",
 		name: "Soybean Oil Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
 	},
 	KC: {
+		ticker: "kc.f",
 		slug: "coffee_cme",
 		name: "Coffee Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
 	},
 	SB: {
+		ticker: "sb.f",
 		slug: "sugar11_cme",
 		name: "Sugar #11 Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
 	},
 	CT: {
+		ticker: "ct.f",
 		slug: "cotton2_cme",
 		name: "Cotton #2 Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
 	},
 	CL: {
+		ticker: "cl.f",
 		slug: "crude_oil_cme",
 		name: "Crude Oil Futures (CME)",
 		category: "futures",
 		unit: "USD/bbl",
 	},
 	NG: {
+		ticker: "ng.f",
 		slug: "natural_gas_cme",
 		name: "Natural Gas Futures (CME)",
 		category: "futures",
 		unit: "USD/MMBtu",
 	},
 	GC: {
+		ticker: "gc.f",
 		slug: "gold_cme",
 		name: "Gold Futures (CME)",
 		category: "futures",
@@ -108,141 +114,92 @@ const CME_PRODUCTS: Record<
 	},
 };
 
-interface CMESettlement {
-	tradeDate: string;
-	symbol: string;
-	month: string;
-	open: string;
-	high: string;
-	low: string;
-	last: string;
-	settle: string;
-	volume: string;
-	openInterest: string;
+async function fetchStooqBar(ticker: string): Promise<{
+	date: Date;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	volume: number | null;
+} | null> {
+	const end = new Date();
+	const start = new Date();
+	start.setDate(start.getDate() - 7);
+
+	const url = `https://stooq.com/q/l/?s=${encodeURIComponent(ticker)}&d1=${formatDateYMD(start)}&d2=${formatDateYMD(end)}&i=d`;
+	const res = await fetch(url, {
+		headers: {
+			Accept: "text/csv",
+			"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+		},
+		signal: AbortSignal.timeout(10000),
+	});
+	if (!res.ok) return null;
+
+	const lines = (await res.text()).trim().split("\n");
+	if (lines.length < 2) return null;
+
+	const cols = lines[lines.length - 1].split(",");
+	if (cols.length < 7) return null;
+
+	const close = parseFloat(cols[6]?.trim() ?? "");
+	if (Number.isNaN(close)) return null;
+
+	const ds = cols[1]?.trim() ?? "";
+	const date = new Date(
+		`${ds.substring(0, 4)}-${ds.substring(4, 6)}-${ds.substring(6, 8)}T00:00:00Z`,
+	);
+	const open = parseFloat(cols[3]?.trim() ?? "");
+	const high = parseFloat(cols[4]?.trim() ?? "");
+	const low = parseFloat(cols[5]?.trim() ?? "");
+	const vol = parseFloat(cols[7]?.trim() ?? "");
+
+	return {
+		date,
+		open: Number.isNaN(open) ? close : open,
+		high: Number.isNaN(high) ? close : high,
+		low: Number.isNaN(low) ? close : low,
+		close,
+		volume: Number.isNaN(vol) ? null : vol,
+	};
 }
 
 async function fetchCMEFutures(): Promise<ScraperResult> {
 	let inserted = 0;
 	let updated = 0;
 
-	for (const [productSymbol, config] of Object.entries(CME_PRODUCTS)) {
+	for (const [symbol, cfg] of Object.entries(FUTURES)) {
 		try {
-			// CME delayed settlement data endpoint
-			const url = `https://www.cmegroup.com/CmeWS/mds/v1/Futures/Settlements/${productSymbol}/G?pageSize=6`;
-
-			const res = await fetch(url, {
-				headers: {
-					Accept: "application/json",
-					"User-Agent": "MT/1.0",
-				},
-				signal: AbortSignal.timeout(15000),
-			});
-
-			if (!res.ok) {
-				logger.warn(`[CME] ${productSymbol} returned ${res.status}`);
+			const bar = await fetchStooqBar(cfg.ticker);
+			if (!bar) {
+				logger.warn(`[CME] ${cfg.ticker}: no data`);
 				continue;
 			}
 
-			const data = (await res.json()) as { settlements: CMESettlement[] };
-			const settlements = data.settlements ?? [];
-			if (settlements.length === 0) continue;
-
-			// Use the front-month contract (first in list)
-			const frontMonth = settlements[0];
-			if (!frontMonth.settle || frontMonth.settle === "-") continue;
-
-			const settle = parseFloat(frontMonth.settle);
-			if (Number.isNaN(settle)) continue;
-
-			const date = new Date(`${frontMonth.tradeDate}T00:00:00Z`);
-			if (Number.isNaN(date.getTime())) continue;
-
-			// Find or create commodity
-			let commodity = await prisma.commodity.findUnique({
-				where: { slug: config.slug },
-			});
-			if (!commodity) {
-				commodity = await prisma.commodity.create({
-					data: {
-						slug: config.slug,
-						name: config.name,
-						category: config.category,
-						unit: config.unit,
-						currency: "USD",
-						isActive: true,
-						metadata: {
-							source: "cme",
-							productSymbol,
-							contractMonth: frontMonth.month,
-						},
-					},
-				});
-			}
-
-			const open =
-				frontMonth.open && frontMonth.open !== "-"
-					? parseFloat(frontMonth.open)
-					: null;
-			const high =
-				frontMonth.high && frontMonth.high !== "-"
-					? parseFloat(frontMonth.high)
-					: null;
-			const low =
-				frontMonth.low && frontMonth.low !== "-"
-					? parseFloat(frontMonth.low)
-					: null;
-			const volume =
-				frontMonth.volume && frontMonth.volume !== "-"
-					? parseFloat(frontMonth.volume)
-					: null;
-
-			const existing = await prisma.commodityPrice.findUnique({
-				where: {
-					commodityId_interval_date_source: {
-						commodityId: commodity.id,
-						interval: "daily",
-						date,
-						source: "cme",
-					},
-				},
+			bar.date.setHours(0, 0, 0, 0);
+			const commodity = await ensureCommodity({
+				slug: cfg.slug,
+				name: cfg.name,
+				category: cfg.category,
+				unit: cfg.unit,
+				metadata: { source: "cme", productSymbol: symbol },
 			});
 
-			const priceData = {
-				open: open ?? settle * 0.998,
-				high: high ?? settle * 1.005,
-				low: low ?? settle * 0.995,
-				close: settle,
-				volume,
+			const r = await upsertPrice({
+				commodityId: commodity.id,
+				date: bar.date,
 				source: "cme",
-				metadata: {
-					productSymbol,
-					contractMonth: frontMonth.month,
-					tradeDate: frontMonth.tradeDate,
-					openInterest: frontMonth.openInterest,
-				} as unknown as Prisma.InputJsonValue,
-			};
-
-			if (existing) {
-				await prisma.commodityPrice.update({
-					where: { id: existing.id },
-					data: priceData,
-				});
-				updated++;
-			} else {
-				await prisma.commodityPrice.create({
-					data: {
-						commodityId: commodity.id,
-						date,
-						interval: "daily",
-						...priceData,
-					},
-				});
-				inserted++;
-			}
+				open: bar.open,
+				high: bar.high,
+				low: bar.low,
+				close: bar.close,
+				volume: bar.volume,
+				metadata: { productSymbol: symbol, stooqTicker: cfg.ticker },
+			});
+			inserted += r.inserted;
+			updated += r.updated;
 		} catch (err) {
-			logger.warn(
-				`[CME] ${productSymbol} failed: ${err instanceof Error ? err.message : err}`,
-			);
+			logger.warn(`[CME] ${cfg.ticker} failed: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 
@@ -250,7 +207,4 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 	return { inserted, updated };
 }
 
-export const cmeFuturesScraper: Scraper = {
-	name: "cme_futures",
-	fetch: fetchCMEFutures,
-};
+export const cmeFuturesScraper: Scraper = { name: "cme_futures", fetch: fetchCMEFutures };

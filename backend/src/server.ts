@@ -6,10 +6,7 @@ import { Server as SocketIOServer } from "socket.io";
 
 import { jwtUtils, logger, prisma } from "@/lib";
 import { errorHandler } from "@/middleware/errorHandler";
-import {
-	errorLoggingMiddleware,
-	loggingMiddleware,
-} from "@/middleware/logging";
+import { errorLoggingMiddleware, loggingMiddleware } from "@/middleware/logging";
 import { securityHeaders } from "@/middleware/security";
 import alertsRouter from "@/routes/alerts";
 import { analyticsRouter } from "@/routes/analytics";
@@ -76,9 +73,7 @@ const corsOptions: cors.CorsOptions = {
 				"SECURITY: Default localhost origins detected in production CORS configuration. " +
 					"Please set CORS_ORIGIN environment variable with your production domains.",
 			);
-			return callback(
-				new Error("CORS: localhost origins not allowed in production"),
-			);
+			return callback(new Error("CORS: localhost origins not allowed in production"));
 		}
 
 		// Check if origin is exactly in allowed list
@@ -90,10 +85,7 @@ const corsOptions: cors.CorsOptions = {
 				config.server.nodeEnv !== "production" &&
 				allowedOrigins.some((allowed) =>
 					origin?.startsWith(
-						allowed
-							.replace(":3000", "")
-							.replace(":3001", "")
-							.replace(":3002", ""),
+						allowed.replace(":3000", "").replace(":3001", "").replace(":3002", ""),
 					),
 				)
 			) {
@@ -220,8 +212,7 @@ io.on("connection", (socket) => {
 			return;
 		}
 
-		const validRoom =
-			/^(commodity:|portfolio:|signals:|orders:)([a-zA-Z0-9_-]+)$/;
+		const validRoom = /^(commodity:|portfolio:|signals:|orders:)([a-zA-Z0-9_-]+)$/;
 		const match = validRoom.exec(room);
 		if (!match) {
 			socket.emit("error", { message: "Invalid room name" });
@@ -231,10 +222,7 @@ io.on("connection", (socket) => {
 		const [, prefix, roomId] = match;
 
 		// Private rooms require ownership verification
-		if (
-			(prefix === "portfolio:" || prefix === "orders:") &&
-			roomId !== socketUserId
-		) {
+		if ((prefix === "portfolio:" || prefix === "orders:") && roomId !== socketUserId) {
 			socket.emit("error", { message: "Access denied" });
 			return;
 		}
@@ -315,18 +303,14 @@ httpServer.listen(config.server.port, () => {
 		initPredictionQueue();
 		logger.info("🤖 Prediction queue initialized");
 	} catch (err) {
-		logger.warn(
-			`🤖 Prediction queue skipped (Redis may not be available): ${err}`,
-		);
+		logger.warn(`🤖 Prediction queue skipped (Redis may not be available): ${err}`);
 	}
 
 	// Schedule AI predictions from PostgreSQL (async, non-blocking)
 	setTimeout(async () => {
 		try {
 			const count = await schedulePredictionsFromPostgreSQL();
-			logger.info(
-				`🤖 Scheduled predictions for ${count} commodities (every 30 min)`,
-			);
+			logger.info(`🤖 Scheduled predictions for ${count} commodities (every 30 min)`);
 		} catch (err) {
 			logger.warn(`🤖 Prediction scheduling skipped: ${err}`);
 		}
@@ -345,38 +329,71 @@ setInterval(async () => {
 	}
 }, 30_000);
 
-// Daily data refresh at 8:00 AM server time (every 24 hours)
-const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-setInterval(async () => {
+// Tiered data refresh scheduling
+const HOURLY = 60 * 60 * 1000;
+const SIX_HOURS = 6 * HOURLY;
+const DAILY = 24 * HOURLY;
+
+async function runSourcesAndLog(sourceNames: string[], label: string) {
 	try {
-		const results = await scraperManager.runAll();
+		const results: Record<string, { inserted: number; updated: number }> = {};
+		for (const name of sourceNames) {
+			try {
+				results[name] = await scraperManager.runSource(name);
+			} catch (err) {
+				results[name] = { inserted: 0, updated: 0 };
+				logger.error(`📊 [${label}] ${name} failed: ${err}`);
+			}
+		}
 		const summary = Object.entries(results)
-			.map(
-				([name, r]) =>
-					`${name}: ${"error" in r ? "error" : `${r.inserted}+${r.updated}`}`,
-			)
+			.map(([name, r]) => `${name}: ${r.inserted}+${r.updated}`)
 			.join("; ");
-		logger.info(`📊 Daily data refresh: ${summary}`);
+		logger.info(`📊 ${label}: ${summary}`);
 
 		for (const [source, result] of Object.entries(results)) {
 			try {
-				if ("error" in result) {
-					await prisma.ingestionLog.create({
-						data: { source, status: "error", errorMessage: result.error },
-					});
-				} else {
-					await prisma.ingestionLog.create({
-						data: {
-							source,
-							status: "success",
-							inserted: result.inserted,
-							updated: result.updated,
-						},
-					});
-				}
+				await prisma.ingestionLog.create({
+					data: {
+						source,
+						status: "success",
+						inserted: result.inserted,
+						updated: result.updated,
+					},
+				});
 			} catch {}
 		}
 	} catch (err) {
-		logger.error(`📊 Daily data refresh failed: ${err}`);
+		logger.error(`📊 ${label} failed: ${err}`);
 	}
-}, TWENTY_FOUR_HOURS);
+}
+
+// Hourly: exchange rates, China wholesale
+const HOURLY_SOURCES = ["commodity_prices", "china_wholesale"];
+setInterval(() => runSourcesAndLog(HOURLY_SOURCES, "Hourly refresh"), HOURLY);
+
+// Every 6 hours: futures, shipping, FRED, FAO, Baltic Dry, weather
+const SIX_HOUR_SOURCES = [
+	"cme_futures",
+	"dce_futures",
+	"fred",
+	"fao_prices",
+	"baltic_dry",
+	"shipping_index",
+	"weather",
+];
+setInterval(() => runSourcesAndLog(SIX_HOUR_SOURCES, "6-hour refresh"), SIX_HOURS);
+
+// Daily: trade statistics, beef supply chain, official reports
+const DAILY_SOURCES = [
+	"world_bank",
+	"usda_psd",
+	"mla_nlrs",
+	"cepea",
+	"inac",
+	"abares",
+	"china_customs_stats",
+	"secex",
+	"argentina",
+	"usda_ams",
+];
+setInterval(() => runSourcesAndLog(DAILY_SOURCES, "Daily refresh"), DAILY);
