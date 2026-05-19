@@ -77,7 +77,6 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 	}
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: card wrapper with optional click handler
 		<svg
 			width={W}
 			height={H}
@@ -128,7 +127,6 @@ export const StatCard = React.memo<StatCardProps>(
 
 		if (loading) {
 			return (
-				// biome-ignore lint/a11y/noStaticElementInteractions: card wrapper with optional click handler
 				<div className="bg-card rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] p-5 animate-pulse">
 					<div className="h-4 bg-muted rounded w-20 mb-3" />
 					<div className="h-7 bg-muted rounded w-16" />
