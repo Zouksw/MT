@@ -7,8 +7,8 @@
  * Frequency: Daily
  */
 
-import type { Prisma } from "@prisma/client";
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
+import { ensureCommodity, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const CEPEA_URL = "https://www.cepea.esalq.usp.br/br/indicador/boi-gordo.aspx";
@@ -34,53 +34,34 @@ async function fetchCepeaData(): Promise<ScraperResult> {
 				if (!Number.isNaN(brlPerArroba)) {
 					const usdPerKg = (brlPerArroba / 14.688) * 0.18;
 
-					let commodity = await prisma.commodity.findUnique({
-						where: { slug: "boi_gordo_br" },
+					const commodity = await ensureCommodity({
+						slug: "boi_gordo_br",
+						name: "Boi Gordo (Brazil Fat Ox)",
+						nameCn: "巴西肥牛指数",
+						category: "live_cattle",
+						unit: "BRL/arroba",
+						currency: "BRL",
+						metadata: { source: "cepea" },
 					});
-					if (!commodity) {
-						commodity = await prisma.commodity.create({
-							data: {
-								slug: "boi_gordo_br",
-								name: "Boi Gordo (Brazil Fat Ox)",
-								nameCn: "巴西肥牛指数",
-								category: "live_cattle",
-								unit: "BRL/arroba",
-								currency: "BRL",
-								isActive: true,
-								metadata: { source: "cepea" },
-							},
-						});
-					}
 
 					const date = new Date();
 					date.setHours(0, 0, 0, 0);
 
-					await prisma.commodityPrice.upsert({
-						where: {
-							commodityId_interval_date_source: {
-								commodityId: commodity.id,
-								interval: "daily",
-								date,
-								source: "cepea",
-							},
-						},
-						update: { close: brlPerArroba },
-						create: {
-							commodityId: commodity.id,
-							date,
-							interval: "daily",
-							open: brlPerArroba * 0.998,
-							high: brlPerArroba * 1.005,
-							low: brlPerArroba * 0.995,
-							close: brlPerArroba,
-							source: "cepea",
-							metadata: {
-								brlPerArroba,
-								usdPerKg: parseFloat(usdPerKg.toFixed(2)),
-							} as unknown as Prisma.InputJsonValue,
+					const priceResult = await upsertPrice({
+						commodityId: commodity.id,
+						date,
+						interval: "daily",
+						open: brlPerArroba * 0.998,
+						high: brlPerArroba * 1.005,
+						low: brlPerArroba * 0.995,
+						close: brlPerArroba,
+						source: "cepea",
+						metadata: {
+							brlPerArroba,
+							usdPerKg: parseFloat(usdPerKg.toFixed(2)),
 						},
 					});
-					inserted++;
+					inserted += priceResult.inserted;
 				}
 			}
 		}

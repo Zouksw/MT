@@ -181,7 +181,9 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 				records = data[1];
 				break;
 			}
-		} catch {}
+		} catch {
+			// intentionally ignored — try next URL fallback
+		}
 	}
 
 	if (records.length === 0) {

@@ -105,5 +105,13 @@ export default function ModelConsensusTable({
 		);
 	}
 
+	if (tableData.length === 0) {
+		return (
+			<div className="text-center py-8 text-gray-400 text-sm">
+				No model signals available for this commodity
+			</div>
+		);
+	}
+
 	return <Table columns={columns} dataSource={tableData} />;
 }

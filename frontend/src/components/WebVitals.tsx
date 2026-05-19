@@ -16,12 +16,6 @@ import React from "react";
 
 export function WebVitals() {
 	useReportWebVitals((metric) => {
-		// Log to console in development
-		if (process.env.NODE_ENV === "development") {
-			// eslint-disable-next-line no-console
-			console.log("Web Vital:", metric);
-		}
-
 		// Send to backend metrics API for dashboard (both dev and prod)
 		sendToAnalytics(metric);
 

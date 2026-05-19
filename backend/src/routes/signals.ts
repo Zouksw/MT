@@ -44,10 +44,7 @@ router.get(
 	authenticate,
 	asyncHandler(async (_req, res) => {
 		const models = getAllModels();
-		res.json({
-			success: true,
-			data: { models, count: models.length },
-		});
+		success(res, { models, count: models.length });
 	}),
 );
 
@@ -66,10 +63,7 @@ router.get(
 
 		const accuracy = await getAllModelAccuracy(commodityId, days);
 
-		res.json({
-			success: true,
-			data: { accuracy, days },
-		});
+		success(res, { accuracy, days });
 	}),
 );
 
@@ -187,15 +181,13 @@ router.get(
 		};
 
 		if (!a || !b) {
-			throw new BadRequestError(
-				'Query params "a" and "b" (commodity slugs) are required',
-			);
+			throw new BadRequestError('Query params "a" and "b" (commodity slugs) are required');
 		}
 
 		const windowDays = parseInt(window || "30", 10);
 		const result = await computeCorrelation(a, b, windowDays);
 
-		res.json({ success: true, data: result });
+		success(res, result);
 	}),
 );
 
@@ -226,14 +218,12 @@ router.get(
 		}
 
 		if (commodityIds.length < 2) {
-			throw new BadRequestError(
-				"At least 2 commodities required for correlation",
-			);
+			throw new BadRequestError("At least 2 commodities required for correlation");
 		}
 
 		const matrix = await computeCorrelationMatrix(commodityIds, windowDays);
 
-		res.json({ success: true, data: matrix });
+		success(res, matrix);
 	}),
 );
 
@@ -247,7 +237,7 @@ router.get(
 	authenticate,
 	asyncHandler(async (_req, res) => {
 		const commodities = await getAvailableCommodities();
-		res.json({ success: true, data: commodities });
+		success(res, commodities);
 	}),
 );
 
@@ -267,13 +257,10 @@ router.get(
 		const { commodityId } = req.params;
 		const params = signalQuerySchema.parse(req.query);
 
-		const isUuid =
-			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-				commodityId,
-			);
-		const priceWhere = isUuid
-			? { commodityId }
-			: { commodity: { slug: commodityId } };
+		const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+			commodityId,
+		);
+		const priceWhere = isUuid ? { commodityId } : { commodity: { slug: commodityId } };
 
 		const commodity = isUuid
 			? await prisma.commodity.findUnique({ where: { id: commodityId } })
@@ -294,9 +281,7 @@ router.get(
 			currentPrice = latest?.close ? Number(latest.close) : 0;
 		}
 
-		const models = params.models
-			? params.models.split(",").filter((m) => m)
-			: undefined;
+		const models = params.models ? params.models.split(",").filter((m) => m) : undefined;
 
 		const signal = await generateSignal({
 			commodityId: commodity.id,
@@ -307,17 +292,12 @@ router.get(
 
 		// Check for signal changes and send notifications (non-blocking)
 		const io = req.app.get("io");
-		checkSignalChange(commodityId, signal.type, signal.confidence, io).catch(
-			() => {},
-		);
+		checkSignalChange(commodityId, signal.type, signal.confidence, io).catch(() => {});
 
-		res.json({
-			success: true,
-			data: {
-				commodityId,
-				...signal,
-				timestamp: new Date().toISOString(),
-			},
+		success(res, {
+			commodityId,
+			...signal,
+			timestamp: new Date().toISOString(),
 		});
 	}),
 );
@@ -336,20 +316,13 @@ router.get(
 		const horizon = parseInt(req.query.horizon as string, 10) || 10;
 		const models = getAllModels();
 
-		const predictions = await getAllCachedPredictions(
+		const predictions = await getAllCachedPredictions(commodityId, horizon, models);
+
+		success(res, {
 			commodityId,
 			horizon,
-			models,
-		);
-
-		res.json({
-			success: true,
-			data: {
-				commodityId,
-				horizon,
-				predictions: Object.fromEntries(predictions),
-				cachedAt: new Date().toISOString(),
-			},
+			predictions: Object.fromEntries(predictions),
+			cachedAt: new Date().toISOString(),
 		});
 	}),
 );

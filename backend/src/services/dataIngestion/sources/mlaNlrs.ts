@@ -40,6 +40,7 @@ async function fetchOTHGridPrices(): Promise<MLAOTHPrice[]> {
 		const data = (await res.json()) as { data: MLAOTHPrice[] };
 		return data.data ?? [];
 	} catch {
+		// intentionally ignored — MLA API unavailable, skip this data source
 		return [];
 	}
 }
@@ -56,6 +57,7 @@ async function fetchExportCutPrices(): Promise<MLAExportPrice[]> {
 		const data = (await res.json()) as { data: MLAExportPrice[] };
 		return data.data ?? [];
 	} catch {
+		// intentionally ignored — MLA API unavailable, skip this data source
 		return [];
 	}
 }
@@ -114,6 +116,7 @@ async function fetchMLAData(): Promise<ScraperResult> {
 				});
 				inserted++;
 			} catch {
+				// intentionally ignored — upsert conflict counted as update
 				updated++;
 			}
 		}
@@ -158,6 +161,7 @@ async function fetchMLAData(): Promise<ScraperResult> {
 			});
 			inserted++;
 		} catch {
+			// intentionally ignored — upsert conflict counted as update
 			updated++;
 		}
 	}

@@ -8,8 +8,8 @@
  * Covers: CPI, PPI, interest rates, commodity indices, USD index
  */
 
-import type { Prisma } from "@prisma/client";
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
+import { upsertFactor } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // FRED series IDs mapped to our system
@@ -128,8 +128,7 @@ async function fetchFREDData(): Promise<ScraperResult> {
 			}
 
 			const data = (await res.json()) as { observations: FREDObservation[] };
-			const observations =
-				data.observations?.filter((o) => o.value !== ".") ?? [];
+			const observations = data.observations?.filter((o) => o.value !== ".") ?? [];
 			if (observations.length === 0) continue;
 
 			// Store last 12 observations per series
@@ -142,22 +141,12 @@ async function fetchFREDData(): Promise<ScraperResult> {
 				const date = new Date(`${obs.date}T00:00:00Z`);
 				if (Number.isNaN(date.getTime())) continue;
 
-				const region =
-					seriesId.includes("DEX") || seriesId.includes("BALTIC")
-						? "global"
-						: "US";
+				const region = seriesId.includes("DEX") || seriesId.includes("BALTIC") ? "global" : "US";
 
-				const existing = await prisma.marketFactor.findFirst({
-					where: {
-						type: "economic",
-						region,
-						date,
-						source: "fred",
-						metadata: { path: ["seriesId"], equals: seriesId },
-					},
-				});
-
-				const factorData = {
+				const result = await upsertFactor({
+					type: "economic",
+					region,
+					date,
 					value,
 					unit: config.unit,
 					source: "fred",
@@ -166,26 +155,13 @@ async function fetchFREDData(): Promise<ScraperResult> {
 						name: config.name,
 						frequency: config.frequency,
 						observationDate: obs.date,
-					} as unknown as Prisma.InputJsonValue,
-				};
-
-				if (existing) {
-					await prisma.marketFactor.update({
-						where: { id: existing.id },
-						data: factorData,
-					});
-					updated++;
-				} else {
-					await prisma.marketFactor.create({
-						data: { type: "economic", region, date, ...factorData },
-					});
-					inserted++;
-				}
+					},
+				});
+				inserted += result.inserted;
+				updated += result.updated;
 			}
 		} catch (err) {
-			logger.warn(
-				`[FRED] ${seriesId} failed: ${err instanceof Error ? err.message : err}`,
-			);
+			logger.warn(`[FRED] ${seriesId} failed: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 

@@ -6,7 +6,8 @@
  * Only stores real API data — no estimates.
  */
 
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
+import { upsertFactor } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 interface WeatherStation {
@@ -83,27 +84,16 @@ export async function ingestWeatherData(): Promise<ScraperResult> {
 			["humidity", weather.humidity],
 			["rainfall", weather.rainfall],
 		] as const) {
-			const existing = await prisma.marketFactor.findUnique({
-				where: {
-					type_region_date: { type: `weather_${metric}`, region, date: today },
-				},
-			});
-
-			const data = {
+			const result = await upsertFactor({
+				type: `weather_${metric}`,
+				region,
+				date: today,
 				value,
 				unit: metric === "temperature" ? "celsius" : metric === "humidity" ? "percent" : "mm",
 				source: "openweathermap",
-			};
-
-			if (existing) {
-				await prisma.marketFactor.update({ where: { id: existing.id }, data });
-				updated++;
-			} else {
-				await prisma.marketFactor.create({
-					data: { type: `weather_${metric}`, region, date: today, ...data },
-				});
-				inserted++;
-			}
+			});
+			inserted += result.inserted;
+			updated += result.updated;
 		}
 	}
 

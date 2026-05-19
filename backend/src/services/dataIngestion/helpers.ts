@@ -42,7 +42,7 @@ export async function ensureCommodity(data: {
 	return commodity;
 }
 
-/** Upsert a CommodityPrice row. Returns 1 inserted or 1 updated. */
+/** Upsert a CommodityPrice row. Uses findUnique + upsert to track insert vs update counts. */
 export async function upsertPrice(data: {
 	commodityId: string;
 	date: Date;
@@ -56,7 +56,7 @@ export async function upsertPrice(data: {
 	metadata?: Record<string, unknown>;
 }) {
 	const interval = data.interval ?? "daily";
-	const existing = await prisma.commodityPrice.findUnique({
+	const existed = await prisma.commodityPrice.findUnique({
 		where: {
 			commodityId_interval_date_source: {
 				commodityId: data.commodityId,
@@ -65,32 +65,42 @@ export async function upsertPrice(data: {
 				source: data.source,
 			},
 		},
+		select: { id: true },
 	});
-
-	const priceData = {
-		open: data.open,
-		high: data.high,
-		low: data.low,
-		close: data.close,
-		volume: data.volume ?? null,
-		source: data.source,
-		metadata: data.metadata ? json(data.metadata) : undefined,
-	};
-
-	if (existing) {
-		await prisma.commodityPrice.update({
-			where: { id: existing.id },
-			data: priceData,
-		});
-		return { inserted: 0, updated: 1 };
-	}
-	await prisma.commodityPrice.create({
-		data: { commodityId: data.commodityId, date: data.date, interval, ...priceData },
+	await prisma.commodityPrice.upsert({
+		where: {
+			commodityId_interval_date_source: {
+				commodityId: data.commodityId,
+				interval,
+				date: data.date,
+				source: data.source,
+			},
+		},
+		update: {
+			open: data.open,
+			high: data.high,
+			low: data.low,
+			close: data.close,
+			volume: data.volume ?? null,
+			metadata: data.metadata ? json(data.metadata) : undefined,
+		},
+		create: {
+			commodityId: data.commodityId,
+			date: data.date,
+			interval,
+			open: data.open,
+			high: data.high,
+			low: data.low,
+			close: data.close,
+			volume: data.volume ?? null,
+			source: data.source,
+			metadata: data.metadata ? json(data.metadata) : undefined,
+		},
 	});
-	return { inserted: 1, updated: 0 };
+	return existed ? { inserted: 0, updated: 1 } : { inserted: 1, updated: 0 };
 }
 
-/** Upsert a MarketFactor row. Returns 1 inserted or 1 updated. */
+/** Upsert a MarketFactor row. Uses findUnique + upsert to track insert vs update counts. */
 export async function upsertFactor(data: {
 	type: string;
 	region: string;
@@ -100,28 +110,29 @@ export async function upsertFactor(data: {
 	source: string;
 	metadata?: Record<string, unknown>;
 }) {
-	const existing = await prisma.marketFactor.findUnique({
+	const existed = await prisma.marketFactor.findUnique({
 		where: { type_region_date: { type: data.type, region: data.region, date: data.date } },
+		select: { id: true },
 	});
-
-	const factorData = {
-		value: data.value,
-		unit: data.unit,
-		source: data.source,
-		metadata: data.metadata ? json(data.metadata) : undefined,
-	};
-
-	if (existing) {
-		await prisma.marketFactor.update({
-			where: { id: existing.id },
-			data: factorData,
-		});
-		return { inserted: 0, updated: 1 };
-	}
-	await prisma.marketFactor.create({
-		data: { type: data.type, region: data.region, date: data.date, ...factorData },
+	await prisma.marketFactor.upsert({
+		where: { type_region_date: { type: data.type, region: data.region, date: data.date } },
+		update: {
+			value: data.value,
+			unit: data.unit,
+			source: data.source,
+			metadata: data.metadata ? json(data.metadata) : undefined,
+		},
+		create: {
+			type: data.type,
+			region: data.region,
+			date: data.date,
+			value: data.value,
+			unit: data.unit,
+			source: data.source,
+			metadata: data.metadata ? json(data.metadata) : undefined,
+		},
 	});
-	return { inserted: 1, updated: 0 };
+	return existed ? { inserted: 0, updated: 1 } : { inserted: 1, updated: 0 };
 }
 
 /** Date to YYYYMMDD for Stooq-style APIs. */

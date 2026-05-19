@@ -23,11 +23,19 @@ import {
 type AlertType = "ANOMALY" | "FORECAST_READY" | "SYSTEM";
 type AlertSeverity = "INFO" | "WARNING" | "ERROR";
 
-type PrismaAlertRule = Awaited<
-	ReturnType<typeof prisma.alertRule.findUnique>
-> & {
+type PrismaAlertRule = Awaited<ReturnType<typeof prisma.alertRule.findUnique>> & {
 	id: string;
 };
+
+/** Type-safe helper to read a Prisma Json field as a typed object. */
+function parseJsonField<T>(value: Prisma.JsonValue): T {
+	return value as unknown as T;
+}
+
+/** Type-safe helper to write a typed object into a Prisma Json column. */
+function toJsonInput(value: unknown): Prisma.InputJsonValue {
+	return value as unknown as Prisma.InputJsonValue;
+}
 
 function mapRule(rule: PrismaAlertRule): AlertRule {
 	return {
@@ -37,10 +45,10 @@ function mapRule(rule: PrismaAlertRule): AlertRule {
 		name: rule.name,
 		description: rule.description || undefined,
 		type: rule.type as AlertType,
-		condition: rule.conditions as unknown as AlertCondition,
+		condition: parseJsonField<AlertCondition>(rule.conditions),
 		severity: rule.severity as AlertSeverity,
 		enabled: rule.enabled,
-		notificationChannels: rule.channels as unknown as NotificationChannel[],
+		notificationChannels: parseJsonField<NotificationChannel[]>(rule.channels),
 		cooldownMinutes: rule.cooldownMinutes,
 		lastTriggeredAt: rule.lastTriggeredAt || undefined,
 		createdAt: rule.createdAt,
@@ -71,9 +79,7 @@ async function sendNotification(
 
 	const channels: ChannelType[] = [channel.type as ChannelType];
 	const emailRecipients: string[] =
-		channel.type === "email" && channel.config?.email
-			? [channel.config.email as string]
-			: [];
+		channel.type === "email" && channel.config?.email ? [channel.config.email as string] : [];
 
 	await dispatchNotification(payload, channels, emailRecipients);
 }
@@ -112,9 +118,9 @@ export async function createAlertRule(params: {
 			description,
 			type,
 			enabled: true,
-			conditions: condition as unknown as Prisma.InputJsonValue,
+			conditions: toJsonInput(condition),
 			severity,
-			channels: notificationChannels as unknown as Prisma.InputJsonValue,
+			channels: toJsonInput(notificationChannels),
 			cooldownMinutes,
 		},
 	});
@@ -171,26 +177,20 @@ export async function listAlertRules(
  */
 export async function updateAlertRule(
 	id: string,
-	updates: Partial<
-		Omit<AlertRule, "id" | "userId" | "timeseriesId" | "createdAt">
-	>,
+	updates: Partial<Omit<AlertRule, "id" | "userId" | "timeseriesId" | "createdAt">>,
 ): Promise<AlertRule> {
 	const data: Prisma.AlertRuleUpdateInput = {};
 
 	if (updates.name !== undefined) data.name = updates.name;
 	if (updates.description !== undefined) data.description = updates.description;
 	if (updates.type !== undefined) data.type = updates.type;
-	if (updates.condition !== undefined)
-		data.conditions = updates.condition as unknown as Prisma.InputJsonValue;
+	if (updates.condition !== undefined) data.conditions = toJsonInput(updates.condition);
 	if (updates.severity !== undefined) data.severity = updates.severity;
 	if (updates.enabled !== undefined) data.enabled = updates.enabled;
 	if (updates.notificationChannels !== undefined)
-		data.channels =
-			updates.notificationChannels as unknown as Prisma.InputJsonValue;
-	if (updates.cooldownMinutes !== undefined)
-		data.cooldownMinutes = updates.cooldownMinutes;
-	if (updates.lastTriggeredAt !== undefined)
-		data.lastTriggeredAt = updates.lastTriggeredAt;
+		data.channels = toJsonInput(updates.notificationChannels);
+	if (updates.cooldownMinutes !== undefined) data.cooldownMinutes = updates.cooldownMinutes;
+	if (updates.lastTriggeredAt !== undefined) data.lastTriggeredAt = updates.lastTriggeredAt;
 
 	data.updatedAt = new Date();
 
@@ -226,9 +226,7 @@ export async function evaluateAlertRule(
 
 	// Check cooldown
 	if (rule.lastTriggeredAt && rule.cooldownMinutes) {
-		const cooldownEnd = new Date(
-			rule.lastTriggeredAt.getTime() + rule.cooldownMinutes * 60 * 1000,
-		);
+		const cooldownEnd = new Date(rule.lastTriggeredAt.getTime() + rule.cooldownMinutes * 60 * 1000);
 		if (new Date() < cooldownEnd) {
 			return false;
 		}
@@ -240,11 +238,7 @@ export async function evaluateAlertRule(
 	switch (condition.type) {
 		case "threshold":
 			if (condition.operator && condition.value !== undefined) {
-				shouldTrigger = evaluateThreshold(
-					data.value,
-					condition.operator,
-					condition.value,
-				);
+				shouldTrigger = evaluateThreshold(data.value, condition.operator, condition.value);
 			}
 			break;
 
@@ -271,11 +265,7 @@ export async function evaluateAlertRule(
 /**
  * Evaluate threshold condition
  */
-function evaluateThreshold(
-	value: number,
-	operator: string,
-	threshold: number,
-): boolean {
+function evaluateThreshold(value: number, operator: string, threshold: number): boolean {
 	switch (operator) {
 		case ">":
 			return value > threshold;
@@ -358,9 +348,7 @@ export async function triggerAlert(params: TriggerAlertParams): Promise<void> {
 /**
  * Get alert rules for evaluation
  */
-export async function getActiveAlertRules(
-	timeseriesId?: string,
-): Promise<AlertRule[]> {
+export async function getActiveAlertRules(timeseriesId?: string): Promise<AlertRule[]> {
 	const where: Prisma.AlertRuleWhereInput = {
 		enabled: true,
 	};

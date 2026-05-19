@@ -48,20 +48,15 @@ async function fetchWithTimeout(
 
 export async function healthCheck(): Promise<boolean> {
 	try {
-		const res = await fetchWithTimeout(
-			`${INFERENCE_URL}/health`,
-			{},
-			CONNECT_TIMEOUT,
-		);
+		const res = await fetchWithTimeout(`${INFERENCE_URL}/health`, {}, CONNECT_TIMEOUT);
 		return res.ok;
 	} catch {
+		// intentionally ignored — inference service unavailable
 		return false;
 	}
 }
 
-export async function predict(
-	request: InferencePredictRequest,
-): Promise<InferencePredictResponse> {
+export async function predict(request: InferencePredictRequest): Promise<InferencePredictResponse> {
 	const url = `${INFERENCE_URL}/predict`;
 	let lastError: Error | null = null;
 
@@ -78,7 +73,7 @@ export async function predict(
 			);
 
 			if (!res.ok) {
-				const body = await res.text().catch(() => "unknown error");
+				const body = await res.text().catch(() => "unknown error"); // intentionally ignored — fallback for error body
 				throw new Error(`Inference service ${res.status}: ${body}`);
 			}
 
@@ -94,14 +89,9 @@ export async function predict(
 	throw new Error(`Prediction failed after retries: ${lastError?.message}`);
 }
 
-export async function predictFromCache(
-	request: PredictionRequest,
-): Promise<PredictionResult> {
+export async function predictFromCache(request: PredictionRequest): Promise<PredictionResult> {
 	const { getCommodityPriceValues } = await import("./data-fetcher");
-	const { values, timestamps } = await getCommodityPriceValues(
-		request.commodityId,
-		200,
-	);
+	const { values, timestamps } = await getCommodityPriceValues(request.commodityId, 200);
 
 	const result = await predict({
 		values,

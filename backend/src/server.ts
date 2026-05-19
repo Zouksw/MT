@@ -5,6 +5,7 @@ import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 
 import { jwtUtils, logger, prisma } from "@/lib";
+import { MS_PER_HOUR } from "@/lib/constants";
 import { errorHandler } from "@/middleware/errorHandler";
 import { errorLoggingMiddleware, loggingMiddleware } from "@/middleware/logging";
 import { securityHeaders } from "@/middleware/security";
@@ -291,7 +292,9 @@ httpServer.listen(config.server.port, () => {
 							},
 						});
 					}
-				} catch {}
+				} catch (err) {
+					logger.warn(`Initial ingestion log failed: ${err}`);
+				}
 			}
 		})
 		.catch((err) => {
@@ -330,7 +333,7 @@ setInterval(async () => {
 }, 30_000);
 
 // Tiered data refresh scheduling
-const HOURLY = 60 * 60 * 1000;
+const HOURLY = MS_PER_HOUR;
 const SIX_HOURS = 6 * HOURLY;
 const DAILY = 24 * HOURLY;
 
@@ -352,15 +355,18 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
 
 		for (const [source, result] of Object.entries(results)) {
 			try {
+				const status = result.inserted === 0 && result.updated === 0 ? "warning" : "success";
 				await prisma.ingestionLog.create({
 					data: {
 						source,
-						status: "success",
+						status,
 						inserted: result.inserted,
 						updated: result.updated,
 					},
 				});
-			} catch {}
+			} catch (err) {
+				logger.warn(`Failed to log ingestion for ${source}: ${err}`);
+			}
 		}
 	} catch (err) {
 		logger.error(`📊 ${label} failed: ${err}`);

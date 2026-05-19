@@ -15,6 +15,7 @@ async function getClient(): Promise<RedisClientType | null> {
 	try {
 		return await getRedisClient();
 	} catch {
+		// intentionally ignored — Redis unavailable, all cache ops return null/false
 		return null;
 	}
 }
@@ -45,11 +46,7 @@ export async function get<T>(key: string): Promise<T | null> {
 	}
 }
 
-export async function set(
-	key: string,
-	value: unknown,
-	ttlSeconds?: number,
-): Promise<void> {
+export async function set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
 	const redis = await getClient();
 	if (!redis) return;
 
@@ -122,9 +119,7 @@ export async function expire(key: string, ttlSeconds: number): Promise<void> {
 	try {
 		await redis.expire(key, ttlSeconds);
 	} catch (error) {
-		logger.error(
-			`Cache expire error for key ${key} (${ttlSeconds}s): ${error}`,
-		);
+		logger.error(`Cache expire error for key ${key} (${ttlSeconds}s): ${error}`);
 	}
 }
 
@@ -140,6 +135,7 @@ export async function mget<T>(keys: string[]): Promise<(T | null)[]> {
 			try {
 				return JSON.parse(value) as T;
 			} catch {
+				// intentionally ignored — corrupted cache entry, treat as miss
 				return null;
 			}
 		});
@@ -149,9 +145,7 @@ export async function mget<T>(keys: string[]): Promise<(T | null)[]> {
 	}
 }
 
-export async function mset(
-	items: Array<{ key: string; value: unknown }>,
-): Promise<void> {
+export async function mset(items: Array<{ key: string; value: unknown }>): Promise<void> {
 	if (items.length === 0) return;
 	const redis = await getClient();
 	if (!redis) return;
@@ -192,11 +186,7 @@ export function cache<T extends (...args: unknown[]) => Promise<unknown>>(
 			const redis = await getClient();
 			if (redis) {
 				try {
-					await redis.setEx(
-						`${NULL_CACHE_PREFIX}${cacheKey}`,
-						NULL_CACHE_TTL,
-						"NULL",
-					);
+					await redis.setEx(`${NULL_CACHE_PREFIX}${cacheKey}`, NULL_CACHE_TTL, "NULL");
 				} catch (error) {
 					logger.error(`Failed to cache null value for ${cacheKey}: ${error}`);
 				}
@@ -258,7 +248,6 @@ export const cacheKeys = {
 	timeseriesData: (timeseriesId: string, from: Date, to: Date) =>
 		`ts:data:${timeseriesId}:${from.getTime()}:${to.getTime()}`,
 	userSession: (userId: string) => `session:user:${userId}`,
-	rateLimit: (identifier: string, endpoint: string) =>
-		`ratelimit:${identifier}:${endpoint}`,
+	rateLimit: (identifier: string, endpoint: string) => `ratelimit:${identifier}:${endpoint}`,
 	timeseriesList: (datasetId?: string) => `ts:list:${datasetId || "all"}`,
 };

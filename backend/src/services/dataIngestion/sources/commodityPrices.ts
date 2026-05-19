@@ -5,8 +5,8 @@
  * All simulated/estimated price generation has been removed.
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { upsertFactor, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 async function fetchExchangeRates(): Promise<ScraperResult> {
@@ -49,69 +49,33 @@ async function fetchExchangeRates(): Promise<ScraperResult> {
 			if (!pair.rate || Number.isNaN(pair.rate)) continue;
 
 			const region = `${pair.base}/${pair.quote}`;
-			const existing = await prisma.marketFactor.findUnique({
-				where: { type_region_date: { type: pair.type, region, date: today } },
+			const factorResult = await upsertFactor({
+				type: pair.type,
+				region,
+				date: today,
+				value: pair.rate,
+				unit: region,
+				source: "exchange_rate_api",
 			});
-
-			if (existing) {
-				await prisma.marketFactor.update({
-					where: { id: existing.id },
-					data: { value: pair.rate, source: "exchange_rate_api" },
-				});
-				updated++;
-			} else {
-				await prisma.marketFactor.create({
-					data: {
-						type: pair.type,
-						region,
-						date: today,
-						value: pair.rate,
-						unit: region,
-						source: "exchange_rate_api",
-					},
-				});
-				inserted++;
-			}
+			inserted += factorResult.inserted;
+			updated += factorResult.updated;
 
 			const commodity = await prisma.commodity.findUnique({
 				where: { slug: pair.slug },
 			});
 			if (commodity) {
-				const existingPrice = await prisma.commodityPrice.findUnique({
-					where: {
-						commodityId_interval_date_source: {
-							commodityId: commodity.id,
-							interval: "daily",
-							date: today,
-							source: "exchange_rate_api",
-						},
-					},
+				const priceResult = await upsertPrice({
+					commodityId: commodity.id,
+					date: today,
+					interval: "daily",
+					source: "exchange_rate_api",
+					open: pair.rate,
+					high: pair.rate * 1.001,
+					low: pair.rate * 0.999,
+					close: pair.rate,
 				});
-
-				if (existingPrice) {
-					await prisma.commodityPrice.update({
-						where: { id: existingPrice.id },
-						data: {
-							close: pair.rate,
-							high: pair.rate * 1.001,
-							low: pair.rate * 0.999,
-							source: "exchange_rate_api",
-						},
-					});
-				} else {
-					await prisma.commodityPrice.create({
-						data: {
-							commodityId: commodity.id,
-							date: today,
-							interval: "daily",
-							open: pair.rate,
-							high: pair.rate * 1.001,
-							low: pair.rate * 0.999,
-							close: pair.rate,
-							source: "exchange_rate_api",
-						},
-					});
-				}
+				inserted += priceResult.inserted;
+				updated += priceResult.updated;
 			}
 		}
 	} catch (err) {

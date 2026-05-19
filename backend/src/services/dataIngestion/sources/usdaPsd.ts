@@ -6,64 +6,31 @@
  * Data stored as MarketFactors (type: 'supply_demand') for fundamental analysis.
  */
 
-import type { Prisma } from "@prisma/client";
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
+import { upsertFactor } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // PSD commodity codes mapped to our system
-const PSD_COMMODITIES: Record<
-	string,
-	{ commodityName: string; factors: string[] }
-> = {
+const PSD_COMMODITIES: Record<string, { commodityName: string; factors: string[] }> = {
 	"0410000": {
 		commodityName: "Wheat",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 	"0420000": {
 		commodityName: "Rice",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 	"0440000": {
 		commodityName: "Corn",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 	"0450000": {
 		commodityName: "Barley",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 	"0460000": {
 		commodityName: "Sorghum",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 	"0230000": {
 		commodityName: "Beef",
@@ -79,13 +46,7 @@ const PSD_COMMODITIES: Record<
 	},
 	"0813400": {
 		commodityName: "Soybeans",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 	"0813700": {
 		commodityName: "Soybean Meal",
@@ -97,13 +58,7 @@ const PSD_COMMODITIES: Record<
 	},
 	"2220000": {
 		commodityName: "Cotton",
-		factors: [
-			"production",
-			"total_consumption",
-			"exports",
-			"imports",
-			"ending_stocks",
-		],
+		factors: ["production", "total_consumption", "exports", "imports", "ending_stocks"],
 	},
 };
 
@@ -144,9 +99,7 @@ async function fetchPSDData(): Promise<ScraperResult> {
 			});
 
 			if (!res.ok) {
-				logger.warn(
-					`[USDA_PSD] Commodity ${commodityCode} returned ${res.status}`,
-				);
+				logger.warn(`[USDA_PSD] Commodity ${commodityCode} returned ${res.status}`);
 				continue;
 			}
 
@@ -154,10 +107,7 @@ async function fetchPSDData(): Promise<ScraperResult> {
 			if (!Array.isArray(records) || records.length === 0) continue;
 
 			// Filter to key countries and latest market year
-			const latestYear = records.reduce(
-				(max, r) => (r.marketYear > max ? r.marketYear : max),
-				"",
-			);
+			const latestYear = records.reduce((max, r) => (r.marketYear > max ? r.marketYear : max), "");
 
 			const filtered = records.filter(
 				(r) =>
@@ -169,28 +119,15 @@ async function fetchPSDData(): Promise<ScraperResult> {
 			for (const record of filtered) {
 				if (!record.value || Number.isNaN(record.value)) continue;
 
-				const date = new Date(
-					`${record.marketYear.substring(0, 4)}-01-01T00:00:00Z`,
-				);
+				const date = new Date(`${record.marketYear.substring(0, 4)}-01-01T00:00:00Z`);
 				if (Number.isNaN(date.getTime())) continue;
 
 				const region = record.countryName || "World";
-				const factorType = `supply_demand`;
 
-				const existing = await prisma.marketFactor.findFirst({
-					where: {
-						type: factorType,
-						region,
-						date,
-						source: "usda_psd",
-						metadata: {
-							path: ["attribute"],
-							equals: record.attribute,
-						},
-					},
-				});
-
-				const factorData = {
+				const result = await upsertFactor({
+					type: "supply_demand",
+					region,
+					date,
 					value: record.value,
 					unit: record.unit || "1000 MT",
 					source: "usda_psd",
@@ -201,21 +138,10 @@ async function fetchPSDData(): Promise<ScraperResult> {
 						marketYear: record.marketYear,
 						country: record.countryName,
 						countryCode: record.countryCode,
-					} as unknown as Prisma.InputJsonValue,
-				};
-
-				if (existing) {
-					await prisma.marketFactor.update({
-						where: { id: existing.id },
-						data: factorData,
-					});
-					updated++;
-				} else {
-					await prisma.marketFactor.create({
-						data: { type: factorType, region, date, ...factorData },
-					});
-					inserted++;
-				}
+					},
+				});
+				inserted += result.inserted;
+				updated += result.updated;
 			}
 		} catch (err) {
 			logger.warn(

@@ -50,6 +50,7 @@ async function fetchPage(path: string): Promise<string | null> {
 		});
 		return res.ok ? await res.text() : null;
 	} catch {
+		// intentionally ignored — network error, return null to skip
 		return null;
 	}
 }

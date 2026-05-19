@@ -209,6 +209,7 @@ export default function TradingPage() {
 									data={d.chartData}
 									supportLevel={d.signal?.supportLevel}
 									resistanceLevel={d.signal?.resistanceLevel}
+									predictions={d.predictionOverlays}
 									chartType={d.chartType}
 									height={480}
 								/>
@@ -290,6 +291,7 @@ export default function TradingPage() {
 							currentPrice={d.currentPrice}
 							bestModelId={d.bestModelId}
 							loading={d.signalLoading}
+							timestamp={d.signal?.timestamp}
 						/>
 					)}
 

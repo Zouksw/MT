@@ -29,6 +29,7 @@ interface TradingSignalPanelProps {
 	currentPrice?: number;
 	bestModelId?: string;
 	loading?: boolean;
+	timestamp?: string;
 }
 
 const signalSymbols: Record<string, { symbol: string; color: string; border: string }> = {
@@ -50,6 +51,7 @@ export default function TradingSignalPanel({
 	currentPrice = 0,
 	bestModelId,
 	loading = false,
+	timestamp,
 }: TradingSignalPanelProps) {
 	if (loading) {
 		return (
@@ -342,6 +344,12 @@ export default function TradingSignalPanel({
 					</div>
 				</div>
 			</div>
+
+			{timestamp && (
+				<p className="text-[10px] text-gray-400 text-right mt-2">
+					Updated {new Date(timestamp).toLocaleTimeString()}
+				</p>
+			)}
 		</div>
 	);
 }

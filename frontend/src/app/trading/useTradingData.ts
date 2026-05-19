@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import type { AnomalyAlert } from "@/components/trading/AnomalyAlertBanner";
 import type { ChartType } from "@/components/trading/ChartToolbar";
+import type { PredictionOverlay } from "@/components/trading/ProfessionalChart";
 import {
 	useCommodities,
 	useCommodityFundamentals,
@@ -41,6 +42,7 @@ export function useTradingData() {
 	>([]);
 	const [previousSignalType, setPreviousSignalType] = useState<string | null>(null);
 	const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([]);
+	const [predictionOverlays, setPredictionOverlays] = useState<PredictionOverlay[]>([]);
 
 	// Beef mode state
 	const [beefMode, setBeefMode] = useState(false);
@@ -300,6 +302,69 @@ export function useTradingData() {
 		};
 	}, [selected]);
 
+	// Fetch prediction overlays for chart
+	useEffect(() => {
+		if (!selected) {
+			setPredictionOverlays([]);
+			return;
+		}
+
+		let cancelled = false;
+		(async () => {
+			try {
+				const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
+				const headers: Record<string, string> = {};
+				if (token) headers.Authorization = `Bearer ${token}`;
+				const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+				const res = await fetch(`${apiBase}/api/signals/${selected.slug}/predictions?horizon=10`, {
+					headers,
+				});
+				if (!res.ok || cancelled) return;
+
+				const data = await res.json();
+				if (!data.success || !data.data?.predictions) return;
+
+				const modelPreds = data.data.predictions;
+				const modelIds = Object.keys(modelPreds);
+				if (modelIds.length === 0) return;
+
+				const first = modelPreds[modelIds[0]];
+				const overlays: PredictionOverlay[] = first.timestamps
+					.map((ts: number, i: number) => {
+						const values = modelIds
+							.map((id) => modelPreds[id].values[i])
+							.filter((v: number | undefined) => v !== undefined);
+						const lowers = modelIds
+							.map((id) => modelPreds[id].lowerBound?.[i] ?? modelPreds[id].values[i] * 0.95)
+							.filter((v: number | undefined) => v !== undefined);
+						const uppers = modelIds
+							.map((id) => modelPreds[id].upperBound?.[i] ?? modelPreds[id].values[i] * 1.05)
+							.filter((v: number | undefined) => v !== undefined);
+
+						if (values.length === 0) return null;
+
+						const date = new Date(ts > 1e12 ? ts : ts * 1000);
+						return {
+							time: date.toISOString().split("T")[0],
+							predicted: values.reduce((a: number, b: number) => a + b, 0) / values.length,
+							upperBound: Math.max(...uppers),
+							lowerBound: Math.min(...lowers),
+						};
+					})
+					.filter(Boolean) as PredictionOverlay[];
+
+				if (!cancelled) setPredictionOverlays(overlays);
+			} catch {
+				// Prediction overlay fetch failed — keep empty
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [selected]);
+
 	// Convert prices to chart data format
 	const chartData = useMemo(
 		() =>
@@ -363,5 +428,6 @@ export function useTradingData() {
 		loading,
 		chartData,
 		currentPrice,
+		predictionOverlays,
 	};
 }

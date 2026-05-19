@@ -137,7 +137,7 @@ async function fetchStooqBar(ticker: string): Promise<{
 	if (!res.ok) return null;
 
 	const lines = (await res.text()).trim().split("\n");
-	if (lines.length < 2) return null;
+	if (lines.length < 1) return null;
 
 	const cols = lines[lines.length - 1].split(",");
 	if (cols.length < 7) return null;

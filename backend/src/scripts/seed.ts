@@ -6,11 +6,13 @@
  * This script is a no-op placeholder to satisfy Prisma seed configuration.
  */
 
+import { logger } from "@/lib/logger";
+
 async function main() {
-	console.log("Seed: no-op (real data comes from ingestion scrapers)");
+	logger.info("Seed: no-op (real data comes from ingestion scrapers)");
 }
 
 main().catch((e) => {
-	console.error("Seed error:", e);
+	logger.error("Seed error:", e);
 	process.exit(1);
 });

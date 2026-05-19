@@ -1,25 +1,21 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
+import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate, authorize } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
-import {
-	asyncHandler,
-	BadRequestError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { scraperManager } from "@/services/dataIngestion";
-import {
-	detectFieldMapping,
-	type FieldMapping,
-} from "@/services/dataIngestion/normalizer";
-import {
-	importRows,
-	parseCSV,
-} from "@/services/dataIngestion/sources/manualImport";
+import { detectFieldMapping, type FieldMapping } from "@/services/dataIngestion/normalizer";
+import { importRows, parseCSV } from "@/services/dataIngestion/sources/manualImport";
 
 const router = Router();
+
+/** Shape of a multer-augmented request (file property added by multer). */
+interface MulterFile {
+	buffer: Buffer;
+}
 
 const priceHistorySchema = z.object({
 	interval: z.enum(["daily", "weekly", "monthly"]).default("daily"),
@@ -286,10 +282,7 @@ router.get(
 	asyncHandler(async (_req, res) => {
 		const health = scraperManager.getHealth();
 
-		const sourceLabels: Record<
-			string,
-			{ label: string; description: string; tier: string }
-		> = {
+		const sourceLabels: Record<string, { label: string; description: string; tier: string }> = {
 			commodity_prices: {
 				label: "Multi-Source Aggregator",
 				description: "Aggregated commodity prices from multiple public sources",
@@ -332,8 +325,7 @@ router.get(
 			},
 			cme_futures: {
 				label: "CME Group",
-				description:
-					"CME Group futures settlement prices — live cattle, grain, oil, metals",
+				description: "CME Group futures settlement prices — live cattle, grain, oil, metals",
 				tier: "2",
 			},
 			abares: {
@@ -350,8 +342,7 @@ router.get(
 			},
 			china_customs: {
 				label: "China Customs",
-				description:
-					"中国海关总署 — monthly import/export statistics by commodity and country",
+				description: "中国海关总署 — monthly import/export statistics by commodity and country",
 				tier: "3",
 			},
 			dce_futures: {
@@ -362,8 +353,7 @@ router.get(
 			},
 			baltic_dry: {
 				label: "Baltic Dry Index",
-				description:
-					"Baltic Exchange dry bulk shipping cost index — global freight benchmark",
+				description: "Baltic Exchange dry bulk shipping cost index — global freight benchmark",
 				tier: "3",
 			},
 		};
@@ -371,11 +361,7 @@ router.get(
 		const sources = Object.entries(sourceLabels).map(([key, info]) => ({
 			id: key,
 			...info,
-			status: health[key]?.success
-				? "healthy"
-				: health[key]?.lastRun
-					? "error"
-					: "pending",
+			status: health[key]?.success ? "healthy" : health[key]?.lastRun ? "error" : "pending",
 			lastRun: health[key]?.lastRun ?? null,
 			error: health[key]?.error ?? null,
 			lastResult: health[key]?.lastResult ?? null,
@@ -409,7 +395,7 @@ router.get(
 		const factorStats = await prisma.marketFactor.groupBy({
 			by: ["source", "type"],
 			where: {
-				date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
+				date: { gte: new Date(Date.now() - 90 * MS_PER_DAY) },
 			},
 			_count: { id: true },
 		});
@@ -471,10 +457,9 @@ router.post(
 		});
 
 		await new Promise<void>((resolve, reject) => {
-			// biome-ignore lint/suspicious/noExplicitAny: multer expects Express.Multer.Request which extends Request
 			upload.single("file")(
-				req as unknown as any,
-				res as unknown as any,
+				req as Parameters<ReturnType<typeof upload.single>>[0],
+				res as Parameters<ReturnType<typeof upload.single>>[1],
 				(err) => {
 					if (err) reject(new BadRequestError(err.message));
 					else resolve();
@@ -482,7 +467,7 @@ router.post(
 			);
 		});
 
-		const file = (req as unknown as { file?: { buffer: Buffer } }).file;
+		const file = (req as unknown as { file?: MulterFile }).file;
 		if (!file) {
 			throw new BadRequestError("No file uploaded");
 		}
@@ -521,10 +506,9 @@ router.post(
 		});
 
 		await new Promise<void>((resolve, reject) => {
-			// biome-ignore lint/suspicious/noExplicitAny: multer expects Express.Multer.Request which extends Request
 			upload.single("file")(
-				req as unknown as any,
-				res as unknown as any,
+				req as Parameters<ReturnType<typeof upload.single>>[0],
+				res as Parameters<ReturnType<typeof upload.single>>[1],
 				(err) => {
 					if (err) reject(new BadRequestError(err.message));
 					else resolve();
@@ -532,7 +516,7 @@ router.post(
 			);
 		});
 
-		const file = (req as unknown as { file?: { buffer: Buffer } }).file;
+		const file = (req as unknown as { file?: MulterFile }).file;
 		if (!file) {
 			throw new BadRequestError("No file uploaded");
 		}
@@ -567,12 +551,7 @@ router.post(
 			mapping = detectFieldMapping(headers);
 		}
 
-		const result = await importRows(
-			params.commodityId,
-			rows,
-			mapping!,
-			params.interval,
-		);
+		const result = await importRows(params.commodityId, rows, mapping!, params.interval);
 
 		success(res, {
 			imported: result.inserted + result.updated,
@@ -669,8 +648,8 @@ router.get(
 	authenticate,
 	asyncHandler(async (_req, res) => {
 		const now = new Date();
-		const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-		const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+		const oneDayAgo = new Date(now.getTime() - MS_PER_DAY);
+		const sevenDaysAgo = new Date(now.getTime() - MS_PER_WEEK);
 
 		// Get latest ingestion log per source
 		const _latestLogs = await prisma.ingestionLog.groupBy({
@@ -713,20 +692,15 @@ router.get(
 			sourceStats.set(log.source, stat);
 		}
 
-		const freshness = Array.from(sourceStats.entries()).map(
-			([source, stat]) => ({
-				source,
-				successRate:
-					stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0,
-				lastRun: stat.lastRun,
-				stale: stat.lastRun
-					? now.getTime() - stat.lastRun.getTime() > oneDayAgo.getTime()
-					: true,
-				lastInserted: stat.lastInserted,
-				lastUpdated: stat.lastUpdated,
-				totalRuns: stat.total,
-			}),
-		);
+		const freshness = Array.from(sourceStats.entries()).map(([source, stat]) => ({
+			source,
+			successRate: stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0,
+			lastRun: stat.lastRun,
+			stale: stat.lastRun ? now.getTime() - stat.lastRun.getTime() > oneDayAgo.getTime() : true,
+			lastInserted: stat.lastInserted,
+			lastUpdated: stat.lastUpdated,
+			totalRuns: stat.total,
+		}));
 
 		const staleSources = freshness.filter((f) => f.stale);
 		const healthySources = freshness.filter((f) => !f.stale);

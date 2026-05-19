@@ -28,13 +28,9 @@ export function generateToken(userId: string): string {
  * Generate a refresh token for the given user ID
  */
 export function generateRefreshToken(userId: string): string {
-	return jwt.sign(
-		{ userId, type: "refresh", jti: uuidv4() },
-		config.jwt.secret,
-		{
-			expiresIn: `${config.session.expiresDays}d`,
-		} as jwt.SignOptions,
-	);
+	return jwt.sign({ userId, type: "refresh", jti: uuidv4() }, config.jwt.secret, {
+		expiresIn: `${config.session.expiresDays}d`,
+	} as jwt.SignOptions);
 }
 
 /**
@@ -85,6 +81,7 @@ export function decodeToken(token: string): TokenPayload | null {
 	try {
 		return jwt.decode(token) as TokenPayload;
 	} catch {
+		// intentionally ignored — decode is for informational purposes only
 		return null;
 	}
 }

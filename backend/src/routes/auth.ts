@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { config, jwtUtils, prisma } from "@/lib";
+import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { success, successWithMessage } from "@/lib/response";
 import {
 	asyncHandler,
@@ -48,7 +49,7 @@ function authCookieOptions(req: Request) {
 		httpOnly: true,
 		secure: req.secure,
 		sameSite: "strict" as const,
-		maxAge: config.session.expiresDays * 24 * 60 * 60 * 1000,
+		maxAge: config.session.expiresDays * MS_PER_DAY,
 		path: "/",
 	};
 }
@@ -61,7 +62,7 @@ async function createAuthSession(req: Request, userId: string) {
 		data: {
 			userId,
 			tokenHash: await bcrypt.hash(refreshToken, 12),
-			expiresAt: new Date(Date.now() + config.session.expiresDays * 24 * 60 * 60 * 1000),
+			expiresAt: new Date(Date.now() + config.session.expiresDays * MS_PER_DAY),
 			ipAddress: req.ip,
 			userAgent: req.get("user-agent"),
 		},
@@ -429,7 +430,7 @@ router.post(
 			data: {
 				userId,
 				tokenHash: newTokenHash,
-				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+				expiresAt: new Date(Date.now() + MS_PER_WEEK),
 				userAgent: req.headers["user-agent"] || null,
 			},
 		});

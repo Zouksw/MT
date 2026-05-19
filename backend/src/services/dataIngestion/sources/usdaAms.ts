@@ -212,6 +212,7 @@ async function fetchCutLevelPrices(): Promise<ScraperResult> {
 			});
 			inserted++;
 		} catch {
+			// intentionally ignored — upsert conflict counted as update
 			updated++;
 		}
 	}

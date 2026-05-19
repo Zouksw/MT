@@ -5,6 +5,7 @@
 
 import { type Request, type Response, Router } from "express";
 import { logger } from "@/lib";
+import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { redis } from "@/lib/redis";
 import { error, success, validationError } from "@/lib/response";
 import { authenticate } from "@/middleware/auth";
@@ -101,13 +102,7 @@ function formatBytes(bytes: number): string {
 
 type WebVitalName = "LCP" | "FID" | "CLS" | "TTFB" | "INP";
 
-const VALID_WEB_VITAL_NAMES: WebVitalName[] = [
-	"LCP",
-	"FID",
-	"CLS",
-	"TTFB",
-	"INP",
-];
+const VALID_WEB_VITAL_NAMES: WebVitalName[] = ["LCP", "FID", "CLS", "TTFB", "INP"];
 
 const PERIOD_SECONDS: Record<string, number> = {
 	"1h": 3600,
@@ -176,9 +171,7 @@ router.get("/", authenticate, (_req: Request, res: Response) => {
 
 		endpoints[endpoint] = {
 			count: metrics.count,
-			avgResponseTime: parseFloat(
-				(metrics.totalDuration / metrics.count).toFixed(2),
-			),
+			avgResponseTime: parseFloat((metrics.totalDuration / metrics.count).toFixed(2)),
 			minResponseTime: len > 0 ? parseFloat(sorted[0].toFixed(2)) : 0,
 			maxResponseTime: len > 0 ? parseFloat(sorted[len - 1].toFixed(2)) : 0,
 			p50: parseFloat(p50.toFixed(2)),
@@ -190,9 +183,7 @@ router.get("/", authenticate, (_req: Request, res: Response) => {
 	}
 
 	const avgResponseTime =
-		totalRequestCount > 0
-			? parseFloat((globalTotalDuration / totalRequestCount).toFixed(2))
-			: 0;
+		totalRequestCount > 0 ? parseFloat((globalTotalDuration / totalRequestCount).toFixed(2)) : 0;
 
 	// Build response time distribution for charts
 	const buckets = [
@@ -232,9 +223,7 @@ router.get("/", authenticate, (_req: Request, res: Response) => {
 			external: mem.external,
 			externalFormatted: formatBytes(mem.external),
 			arrayBuffers: mem.arrayBuffers,
-			heapUsagePercent: parseFloat(
-				((mem.heapUsed / mem.heapTotal) * 100).toFixed(2),
-			),
+			heapUsagePercent: parseFloat(((mem.heapUsed / mem.heapTotal) * 100).toFixed(2)),
 		},
 		cpu: {
 			userMicroseconds: cpu.user,
@@ -273,17 +262,10 @@ router.get("/endpoints", (_req: Request, res: Response) => {
 
 		endpoints[endpoint] = {
 			count: metrics.count,
-			avgResponseTime: parseFloat(
-				(metrics.totalDuration / metrics.count).toFixed(2),
-			),
+			avgResponseTime: parseFloat((metrics.totalDuration / metrics.count).toFixed(2)),
 			p50: len > 0 ? parseFloat(sorted[Math.floor(len * 0.5)].toFixed(2)) : 0,
 			p95: len > 0 ? parseFloat(sorted[Math.floor(len * 0.95)].toFixed(2)) : 0,
-			p99:
-				len > 0
-					? parseFloat(
-							sorted[Math.min(Math.floor(len * 0.99), len - 1)].toFixed(2),
-						)
-					: 0,
+			p99: len > 0 ? parseFloat(sorted[Math.min(Math.floor(len * 0.99), len - 1)].toFixed(2)) : 0,
 		};
 	}
 
@@ -335,7 +317,7 @@ router.post("/web-vitals", async (req: Request, res: Response) => {
 		await client.zAdd(key, { score: ts, value: metricData });
 
 		// Trim entries older than 7 days to prevent unbounded growth
-		const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+		const sevenDaysAgo = Date.now() - MS_PER_WEEK;
 		await client.zRemRangeByScore(key, "-inf", sevenDaysAgo);
 
 		return success(res, { stored: true });
@@ -371,10 +353,7 @@ router.get("/web-vitals", async (req: Request, res: Response) => {
 		const minScore = now - periodSeconds * 1000;
 
 		const client = await redis();
-		const result: Record<
-			string,
-			{ avg: number; p50: number; p95: number; count: number }
-		> = {};
+		const result: Record<string, { avg: number; p50: number; p95: number; count: number }> = {};
 
 		for (const name of VALID_WEB_VITAL_NAMES) {
 			const key = webVitalKey(name);
@@ -393,10 +372,7 @@ router.get("/web-vitals", async (req: Request, res: Response) => {
 						return null;
 					}
 				})
-				.filter(
-					(v): v is { value: number; path: string; timestamp: number } =>
-						v !== null,
-				)
+				.filter((v): v is { value: number; path: string; timestamp: number } => v !== null)
 				.map((v) => v.value)
 				.sort((a, b) => a - b);
 
@@ -480,10 +456,7 @@ router.get("/web-vitals/history", async (req: Request, res: Response) => {
 					return null;
 				}
 			})
-			.filter(
-				(v): v is { value: number; path: string; timestamp: number } =>
-					v !== null,
-			);
+			.filter((v): v is { value: number; path: string; timestamp: number } => v !== null);
 
 		// Bucket entries into intervals
 		const buckets: { timestamp: number; values: number[] }[] = [];
@@ -494,9 +467,7 @@ router.get("/web-vitals/history", async (req: Request, res: Response) => {
 		}
 
 		for (const entry of parsed) {
-			const bucketIndex = Math.floor(
-				(entry.timestamp - bucketStart) / (intervalSeconds * 1000),
-			);
+			const bucketIndex = Math.floor((entry.timestamp - bucketStart) / (intervalSeconds * 1000));
 			if (bucketIndex >= 0 && bucketIndex < buckets.length) {
 				buckets[bucketIndex].values.push(entry.value);
 			}
@@ -550,18 +521,10 @@ router.get("/api-latency", (_req: Request, res: Response) => {
 		const len = sorted.length;
 
 		endpoints[endpoint] = {
-			avg:
-				len > 0
-					? parseFloat((metrics.totalDuration / metrics.count).toFixed(2))
-					: 0,
+			avg: len > 0 ? parseFloat((metrics.totalDuration / metrics.count).toFixed(2)) : 0,
 			p50: len > 0 ? parseFloat(sorted[Math.floor(len * 0.5)].toFixed(2)) : 0,
 			p95: len > 0 ? parseFloat(sorted[Math.floor(len * 0.95)].toFixed(2)) : 0,
-			p99:
-				len > 0
-					? parseFloat(
-							sorted[Math.min(Math.floor(len * 0.99), len - 1)].toFixed(2),
-						)
-					: 0,
+			p99: len > 0 ? parseFloat(sorted[Math.min(Math.floor(len * 0.99), len - 1)].toFixed(2)) : 0,
 			count: metrics.count,
 		};
 
@@ -572,11 +535,7 @@ router.get("/api-latency", (_req: Request, res: Response) => {
 
 	const overallAvg =
 		globalDurations.length > 0
-			? parseFloat(
-					(
-						globalDurations.reduce((s, v) => s + v, 0) / globalDurations.length
-					).toFixed(2),
-				)
+			? parseFloat((globalDurations.reduce((s, v) => s + v, 0) / globalDurations.length).toFixed(2))
 			: 0;
 
 	return success(res, {
@@ -602,7 +561,7 @@ router.get("/summary", async (_req: Request, res: Response) => {
 
 		// Get web vitals from Redis (last 24h)
 		const now = Date.now();
-		const minScore = now - 24 * 60 * 60 * 1000;
+		const minScore = now - MS_PER_DAY;
 		const client = await redis();
 
 		const webVitals: Record<string, { avg: number; count: number }> = {};
@@ -645,16 +604,11 @@ router.get("/summary", async (_req: Request, res: Response) => {
 		const apiLatencyAvg =
 			globalDurations.length > 0
 				? parseFloat(
-						(
-							globalDurations.reduce((s, v) => s + v, 0) /
-							globalDurations.length
-						).toFixed(2),
+						(globalDurations.reduce((s, v) => s + v, 0) / globalDurations.length).toFixed(2),
 					)
 				: 0;
 
-		const apiLatencyP95 = parseFloat(
-			percentile(globalDurations, 0.95).toFixed(2),
-		);
+		const apiLatencyP95 = parseFloat(percentile(globalDurations, 0.95).toFixed(2));
 
 		// Estimate active users from Redis session keys (best effort)
 		let activeUsers = 0;
@@ -673,9 +627,7 @@ router.get("/summary", async (_req: Request, res: Response) => {
 			}
 		}
 		const errorRate =
-			totalRequestCount > 0
-				? parseFloat(((errorCount / totalRequestCount) * 100).toFixed(2))
-				: 0;
+			totalRequestCount > 0 ? parseFloat(((errorCount / totalRequestCount) * 100).toFixed(2)) : 0;
 
 		return success(res, {
 			webVitals: {

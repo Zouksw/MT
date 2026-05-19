@@ -4,7 +4,7 @@ export interface Column<T> {
 	key: string;
 	title: string;
 	dataIndex?: keyof T;
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+	// biome-ignore lint/suspicious/noExplicitAny: table render callbacks are inherently dynamic
 	render?: (value: any, record: T, index: number) => React.ReactNode;
 	width?: number | string;
 	align?: "left" | "center" | "right";
