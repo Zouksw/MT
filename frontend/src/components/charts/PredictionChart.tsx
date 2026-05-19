@@ -219,13 +219,20 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 		}
 	};
 
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	const CustomTooltip = ({
 		active,
 		payload,
 	}: {
 		active?: boolean;
-		payload?: Array<{ payload: Record<string, unknown> }>;
+		payload?: Array<{
+			payload: {
+				timestamp: number;
+				value: number;
+				isPrediction: boolean;
+				lowerBound?: number;
+				upperBound?: number;
+			};
+		}>;
 	}) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;
@@ -269,7 +276,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 					)}
 					{data.lowerBound !== undefined && (
 						<p style={{ margin: "4px 0 0 0", fontSize: 11, color: chartColors.gray600 }}>
-							95% CI: [{formatValue(data.lowerBound)}, {formatValue(data.upperBound)}]
+							95% CI: [{formatValue(data.lowerBound)}, {formatValue(data.upperBound ?? 0)}]
 						</p>
 					)}
 				</div>

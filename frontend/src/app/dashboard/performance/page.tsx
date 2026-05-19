@@ -23,30 +23,38 @@ const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod
 		</div>
 	),
 	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+}) as React.ComponentType<any>;
 const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
 	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+}) as React.ComponentType<any>;
 const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
 	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+}) as React.ComponentType<any>;
 const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
 	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+}) as React.ComponentType<any>;
 const CartesianGrid = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
 	{ ssr: false },
-) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+) as React.ComponentType<any>;
 const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
 	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+}) as React.ComponentType<any>;
 const ResponsiveContainer = dynamic(
 	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
 	{ ssr: false },
-) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+) as React.ComponentType<any>;
 const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
 	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
+}) as React.ComponentType<any>;
 
 interface MemoryPoint {
 	time: string;

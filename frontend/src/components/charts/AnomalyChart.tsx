@@ -270,13 +270,20 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 		}
 	};
 
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 	const CustomTooltip = ({
 		active,
 		payload,
 	}: {
 		active?: boolean;
-		payload?: Array<{ payload: Record<string, unknown> }>;
+		payload?: Array<{
+			payload: {
+				timestamp: number;
+				value: number;
+				isAnomaly: boolean;
+				anomalySeverity: string;
+				anomalyScore: number;
+			};
+		}>;
 	}) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;
