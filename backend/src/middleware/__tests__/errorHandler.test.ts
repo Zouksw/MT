@@ -16,7 +16,6 @@ import {
 	NotFoundError,
 	ServiceUnavailableError,
 	UnauthorizedError,
-	ValidationError,
 } from "@/middleware/errorHandler";
 import { logger } from "@/utils/logger";
 
@@ -89,12 +88,7 @@ describe("Error Handler Middleware", () => {
 				meta: { target: ["email"] },
 			});
 
-			errorHandler(
-				prismaError,
-				mockReq as Request,
-				mockRes as Response,
-				mockNext,
-			);
+			errorHandler(prismaError, mockReq as Request, mockRes as Response, mockNext);
 
 			expect(mockRes.status).toHaveBeenCalledWith(409);
 			expect(mockRes.json).toHaveBeenCalledWith({
@@ -113,12 +107,7 @@ describe("Error Handler Middleware", () => {
 				code: "P2025",
 			});
 
-			errorHandler(
-				prismaError,
-				mockReq as Request,
-				mockRes as Response,
-				mockNext,
-			);
+			errorHandler(prismaError, mockReq as Request, mockRes as Response, mockNext);
 
 			expect(mockRes.status).toHaveBeenCalledWith(404);
 			expect(mockRes.json).toHaveBeenCalledWith({
@@ -131,20 +120,12 @@ describe("Error Handler Middleware", () => {
 		});
 
 		it("should handle Prisma foreign key constraint errors", () => {
-			const prismaError = Object.assign(
-				new Error("Foreign key constraint failed"),
-				{
-					constructor: { name: "PrismaClientKnownRequestError" },
-					code: "P2003",
-				},
-			);
+			const prismaError = Object.assign(new Error("Foreign key constraint failed"), {
+				constructor: { name: "PrismaClientKnownRequestError" },
+				code: "P2003",
+			});
 
-			errorHandler(
-				prismaError,
-				mockReq as Request,
-				mockRes as Response,
-				mockNext,
-			);
+			errorHandler(prismaError, mockReq as Request, mockRes as Response, mockNext);
 
 			expect(mockRes.status).toHaveBeenCalledWith(400);
 			expect(mockRes.json).toHaveBeenCalledWith({
@@ -383,18 +364,6 @@ describe("Error Handler Middleware", () => {
 
 				expect(error.statusCode).toBe(409);
 				expect(error.message).toBe("Resource already exists");
-				expect(error.isOperational).toBe(true);
-			});
-		});
-
-		describe("ValidationError", () => {
-			it("should create 400 error with details", () => {
-				const details = { field: "email", issue: "Invalid format" };
-				const error = new ValidationError(details);
-
-				expect(error.statusCode).toBe(400);
-				expect(error.message).toBe("Validation failed");
-				expect(error.details).toEqual(details);
 				expect(error.isOperational).toBe(true);
 			});
 		});

@@ -25,10 +25,7 @@ import { redis } from "@/lib/redis";
  * @param jitterPercent - Jitter percentage (default: 0.1 = 10%)
  * @returns TTL with random jitter applied
  */
-function getTTLWithJitter(
-	baseTTL: number,
-	jitterPercent: number = 0.1,
-): number {
+function getTTLWithJitter(baseTTL: number, jitterPercent: number = 0.1): number {
 	if (baseTTL <= 0) return baseTTL;
 
 	// Calculate jitter range
@@ -89,9 +86,7 @@ function generateCacheKey(req: Request, options: CacheRouteOptions): string {
 
 	// Add query string
 	if (Object.keys(req.query).length > 0) {
-		const queryString = new URLSearchParams(
-			req.query as Record<string, string>,
-		).toString();
+		const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
 		parts.push(queryString);
 	}
 
@@ -133,11 +128,7 @@ async function getCached(key: string): Promise<CachedResponse | null> {
 /**
  * Set cached response
  */
-async function setCached(
-	key: string,
-	response: CachedResponse,
-	ttl: number,
-): Promise<void> {
+async function setCached(key: string, response: CachedResponse, ttl: number): Promise<void> {
 	try {
 		const redis = await getRedis();
 		if (!redis) {
@@ -209,11 +200,7 @@ export function cacheRoute(
 		...options,
 	};
 
-	return async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
+	return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 		// Only cache GET requests
 		if (req.method !== "GET") {
 			return next();
@@ -249,9 +236,7 @@ export function cacheRoute(
 			} else {
 				Object.assign(headers, header);
 			}
-			return originalSet.apply(res, [header, value] as unknown as Parameters<
-				typeof originalSet
-			>);
+			return originalSet.apply(res, [header, value] as unknown as Parameters<typeof originalSet>);
 		};
 
 		// Intercept res.status()
@@ -276,11 +261,9 @@ export function cacheRoute(
 							const ttlWithJitter = getTTLWithJitter(config.ttl || 300);
 
 							// Set cache asynchronously (don't block response)
-							await setCached(cacheKey, cachedResponse, ttlWithJitter).catch(
-								(err) => {
-									logger.error("Failed to cache response:", err);
-								},
-							);
+							await setCached(cacheKey, cachedResponse, ttlWithJitter).catch((err) => {
+								logger.error("Failed to cache response:", err);
+							});
 						})()
 					: Promise.resolve();
 
@@ -290,8 +273,7 @@ export function cacheRoute(
 			const result = originalJson(body);
 
 			// Attach cache promise for testing purposes
-			(result as unknown as Record<string, unknown>).cachePromise =
-				cachePromise;
+			(result as unknown as Record<string, unknown>).cachePromise = cachePromise;
 
 			return result;
 		};
@@ -330,87 +312,10 @@ export async function invalidateCache(pattern: string): Promise<number> {
 		}
 
 		await redis.del(keys);
-		logger.info(
-			`Invalidated ${keys.length} cache entries matching: ${pattern}`,
-		);
+		logger.info(`Invalidated ${keys.length} cache entries matching: ${pattern}`);
 		return keys.length;
 	} catch (error) {
 		logger.error(`Cache invalidation error for pattern ${pattern}:`, error);
 		return 0;
 	}
-}
-
-/**
- * Cache decorator for service functions
- *
- * Wraps an async function with caching logic.
- *
- * @param keyPrefix - Cache key prefix
- * @param ttl - TTL in seconds
- * @param options - Additional options
- * @returns Decorated function with caching
- *
- * @example
- * ```typescript
- * // Without decorator
- * const expensive = cacheFn('expensive', 300, async (id: string) => {
- *   return await prisma.dataset.findUnique({ where: { id } });
- * });
- *
- * // With manual key generator
- * const searchResults = cacheFn('search', 60, {
- *   keyGenerator: (query) => `q:${query}`,
- *   ttl: 60
- * }, async (query: string) => {
- *   return await searchDatabase(query);
- * });
- * ```
- */
-export function cacheFn<T extends (...args: unknown[]) => Promise<unknown>>(
-	keyPrefix: string,
-	ttlOrOptions:
-		| number
-		| { ttl?: number; keyGenerator?: (...args: Parameters<T>) => string },
-	maybeOptions?: {
-		ttl?: number;
-		keyGenerator?: (...args: Parameters<T>) => string;
-	},
-): T {
-	// Parse options (support both ttl and options object)
-	let ttl: number;
-	let keyGenerator: ((...args: Parameters<T>) => string) | undefined;
-
-	if (typeof ttlOrOptions === "number") {
-		ttl = ttlOrOptions;
-		keyGenerator = maybeOptions?.keyGenerator;
-	} else {
-		ttl = ttlOrOptions.ttl || 60;
-		keyGenerator = ttlOrOptions.keyGenerator;
-	}
-
-	return (async (...args: Parameters<T>) => {
-		const cacheKey = keyGenerator
-			? `${keyPrefix}:${keyGenerator(...args)}`
-			: `${keyPrefix}:${JSON.stringify(args)}`;
-
-		// Try cache
-		const cached = await getCached(cacheKey);
-		if (cached) {
-			return cached.body;
-		}
-		// Execute function
-		const result = await (async () => {
-			// This will be replaced with the actual function when used
-			return null as unknown as ReturnType<T>;
-			// @ts-expect-error - spread argument type issue
-		})(...args);
-		// Store in cache
-		await setCached(
-			cacheKey,
-			{ statusCode: 200, body: result, headers: {} },
-			ttl,
-		);
-
-		return result;
-	}) as T;
 }

@@ -116,5 +116,3 @@ export async function getRedisClient(): Promise<RedisClientType> {
 export async function redis(): Promise<RedisClientType> {
 	return getRedisClient();
 }
-
-export default redis;

@@ -137,11 +137,7 @@ router.get(
 
 		// Convert BigInt to string for JSON serialization
 		const serializedDatasets = datasets.map(
-			(ds: {
-				sizeBytes?: bigint | null;
-				rowsCount?: number | null;
-				[key: string]: unknown;
-			}) => ({
+			(ds: { sizeBytes?: bigint | null; rowsCount?: number | null; [key: string]: unknown }) => ({
 				...ds,
 				sizeBytes: ds.sizeBytes?.toString() || null,
 				rowsCount: ds.rowsCount || null,
@@ -250,6 +246,7 @@ router.post(
 	"/",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
+		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 		const userId = req.userId!;
 		const validatedData = newCreateDatasetSchema.parse(req.body);
 
@@ -340,6 +337,7 @@ router.patch(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
+		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 		const userId = req.userId!;
 		const validatedData = newUpdateDatasetSchema.parse(req.body);
 
@@ -406,6 +404,7 @@ router.delete(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
+		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 		const userId = req.userId!;
 
 		const dataset = await prisma.dataset.findUnique({
@@ -541,9 +540,7 @@ router.post(
 			const columns = Object.keys(parsedData[0] || {});
 			timestampColumn =
 				columns.find((col) =>
-					["timestamp", "time", "datetime", "date", "ts"].includes(
-						col.toLowerCase(),
-					),
+					["timestamp", "time", "datetime", "date", "ts"].includes(col.toLowerCase()),
 				) || columns[0];
 
 			// Value columns are all columns except timestamp
@@ -553,9 +550,7 @@ router.post(
 			const columns = Object.keys(parsedData[0] || {});
 			timestampColumn =
 				columns.find((col) =>
-					["timestamp", "time", "datetime", "date", "ts"].includes(
-						col.toLowerCase(),
-					),
+					["timestamp", "time", "datetime", "date", "ts"].includes(col.toLowerCase()),
 				) || columns[0];
 			valueColumns = columns.filter((col) => col !== timestampColumn);
 		} else {
@@ -606,9 +601,7 @@ router.post(
 			}[] = [];
 
 			for (const row of batch) {
-				const timestamp = new Date(
-					row[timestampColumn] as string | number | Date,
-				);
+				const timestamp = new Date(row[timestampColumn] as string | number | Date);
 				if (Number.isNaN(timestamp.getTime())) {
 					continue;
 				}

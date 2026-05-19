@@ -3,11 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
-import {
-	asyncHandler,
-	BadRequestError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 
 const router = Router();
 
@@ -48,14 +44,10 @@ router.get(
 		});
 
 		// Batch-fetch latest prices for all commodities in one query
-		const commodityIds = watchlists.flatMap((wl) =>
-			wl.items.map((item) => item.commodityId),
-		);
+		const commodityIds = watchlists.flatMap((wl) => wl.items.map((item) => item.commodityId));
 		const latestPrices =
 			commodityIds.length > 0
-				? await prisma.$queryRaw<
-						Array<{ commodityId: string; close: number; date: Date }>
-					>`
+				? await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
           SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
           FROM commodity_prices
           WHERE commodity_id = ANY(${commodityIds}::text[]) AND interval = 'daily'
@@ -102,6 +94,7 @@ router.post(
 		const { name } = createWatchlistSchema.parse(req.body);
 
 		const existing = await prisma.watchlist.findUnique({
+			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 			where: { userId_name: { userId: req.userId!, name } },
 		});
 		if (existing) {
@@ -109,6 +102,7 @@ router.post(
 		}
 
 		const watchlist = await prisma.watchlist.create({
+			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 			data: { userId: req.userId!, name },
 			include: { items: true },
 		});
@@ -122,9 +116,7 @@ router.patch(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
-		const { name } = z
-			.object({ name: z.string().min(1).max(100) })
-			.parse(req.body);
+		const { name } = z.object({ name: z.string().min(1).max(100) }).parse(req.body);
 
 		const existing = await prisma.watchlist.findUnique({
 			where: { id: req.params.id },
@@ -293,8 +285,7 @@ router.get(
 			const prev = pair[1];
 			const close = latest ? Number(latest.close) : null;
 			const prevClose = prev ? Number(prev.close) : null;
-			const change =
-				close != null && prevClose != null ? close - prevClose : null;
+			const change = close != null && prevClose != null ? close - prevClose : null;
 
 			return {
 				commodityId: item.commodityId,
@@ -306,9 +297,7 @@ router.get(
 				previousPrice: prevClose,
 				change,
 				changePercent:
-					change != null && prevClose
-						? +((change / prevClose) * 100).toFixed(2)
-						: null,
+					change != null && prevClose ? +((change / prevClose) * 100).toFixed(2) : null,
 				date: latest?.date ?? null,
 			};
 		});

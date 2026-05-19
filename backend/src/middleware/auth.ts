@@ -12,11 +12,7 @@ export interface AuthRequest extends Request {
 	};
 }
 
-export const authenticate = async (
-	req: AuthRequest,
-	res: Response,
-	next: NextFunction,
-) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
 		const authHeader = req.headers.authorization;
 
@@ -92,46 +88,6 @@ export const authenticate = async (
 	}
 };
 
-export const optionalAuth = async (
-	req: AuthRequest,
-	_res: Response,
-	next: NextFunction,
-) => {
-	try {
-		const authHeader = req.headers.authorization;
-
-		if (authHeader?.startsWith("Bearer ")) {
-			const token = authHeader.substring(7);
-			try {
-				// Check blacklist first
-				if (await isTokenBlacklisted(token)) {
-					// Silently skip auth for optional auth
-					next();
-					return;
-				}
-
-				const payload = jwtUtils.verifyToken(token);
-				req.userId = payload.userId;
-
-				// Fetch full user object with role information
-				const user = await prisma.user.findUnique({
-					where: { id: payload.userId },
-					select: { id: true, email: true, name: true, role: true },
-				});
-
-				if (user) {
-					req.user = user;
-				}
-			} catch {
-				// Token invalid, but continue without auth
-			}
-		}
-		next();
-	} catch (_error) {
-		next();
-	}
-};
-
 // Role-based authorization middleware
 export const authorize = (...roles: string[]) => {
 	return async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -166,9 +122,7 @@ export const authorize = (...roles: string[]) => {
 
 			next();
 		} catch (error) {
-			logger.error(
-				`Authorization error for user ${req.userId} (${req.user?.role}): ${error}`,
-			);
+			logger.error(`Authorization error for user ${req.userId} (${req.user?.role}): ${error}`);
 			res.status(500).json({
 				success: false,
 				error: { message: "Authorization failed", code: "INTERNAL_ERROR" },

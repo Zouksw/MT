@@ -1,7 +1,3 @@
-/**
- * Alert validation schemas
- */
-
 import { z } from "zod";
 import { paginationSchema } from "./common";
 

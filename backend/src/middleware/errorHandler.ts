@@ -7,12 +7,7 @@ export interface AppError extends Error {
 	isOperational?: boolean;
 }
 
-export function errorHandler(
-	err: Error,
-	req: Request,
-	res: Response,
-	_next: NextFunction,
-) {
+export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
 	logger.error("Error occurred:", {
 		message: err.message,
 		stack: err.stack,
@@ -44,8 +39,7 @@ export function errorHandler(
 					message: "Resource already exists",
 					code: "CONFLICT",
 					details:
-						(prismaError.meta as Record<string, unknown>)?.target ||
-						"Unique constraint violated",
+						(prismaError.meta as Record<string, unknown>)?.target || "Unique constraint violated",
 				},
 			});
 		}
@@ -182,15 +176,6 @@ export class ConflictError extends ApiError {
 	constructor(message: string) {
 		super(409, message);
 	}
-}
-
-export class ValidationError extends ApiError {
-	constructor(details: unknown) {
-		super(400, "Validation failed");
-		this.details = details;
-	}
-
-	details?: unknown;
 }
 
 export class ServiceUnavailableError extends ApiError {

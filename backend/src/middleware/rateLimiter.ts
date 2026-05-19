@@ -18,9 +18,7 @@ export const createRateLimiter = (options: {
 	return rateLimit({
 		windowMs: options.windowMs || 15 * 60 * 1000, // 15 minutes default
 		max: options.max || 100, // Limit each IP to 100 requests per windowMs
-		message:
-			options.message ||
-			"Too many requests from this IP, please try again later.",
+		message: options.message || "Too many requests from this IP, please try again later.",
 		standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 		legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 		skipSuccessfulRequests: options.skipSuccessfulRequests || false,
@@ -28,9 +26,7 @@ export const createRateLimiter = (options: {
 		handler: (_req: Request, res: Response) => {
 			res.status(429).json({
 				error: "Too many requests",
-				message:
-					options.message ||
-					"Too many requests from this IP, please try again later.",
+				message: options.message || "Too many requests from this IP, please try again later.",
 				retryAfter: Math.ceil((options.windowMs || 900000) / 1000),
 			});
 		},
@@ -48,16 +44,6 @@ export const authRateLimiter = createRateLimiter({
 });
 
 /**
- * Moderate rate limiter for API endpoints
- * 100 requests per 15 minutes per IP
- */
-export const apiRateLimiter = createRateLimiter({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100,
-	message: "Too many API requests, please try again later.",
-});
-
-/**
  * Strict rate limiter for AI prediction endpoints
  * 20 requests per minute per IP (AI is resource-intensive)
  */
@@ -65,26 +51,6 @@ export const aiRateLimiter = createRateLimiter({
 	windowMs: 60 * 1000, // 1 minute
 	max: 20,
 	message: "Too many AI prediction requests, please try again later.",
-});
-
-/**
- * Rate limiter for data ingestion endpoints
- * 1000 requests per minute per IP
- */
-export const ingestionRateLimiter = createRateLimiter({
-	windowMs: 60 * 1000, // 1 minute
-	max: 1000,
-	message: "Too many data ingestion requests, please try again later.",
-});
-
-/**
- * Password reset rate limiter
- * 3 requests per hour per IP
- */
-export const passwordResetRateLimiter = createRateLimiter({
-	windowMs: 60 * 60 * 1000, // 1 hour
-	max: 3,
-	message: "Too many password reset attempts, please try again later.",
 });
 
 /**

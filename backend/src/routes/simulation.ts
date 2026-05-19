@@ -3,15 +3,8 @@ import { z } from "zod";
 import { logger, prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
-import {
-	asyncHandler,
-	BadRequestError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
-import {
-	executeMarketOrder,
-	getAccountSummary,
-} from "@/services/simulationEngine";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
+import { executeMarketOrder, getAccountSummary } from "@/services/simulationEngine";
 
 const router = Router();
 
@@ -67,6 +60,7 @@ router.post(
 
 		const account = await prisma.simulationAccount.create({
 			data: {
+				// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 				userId: req.userId!,
 				name,
 				initialBalance,
@@ -113,8 +107,9 @@ router.post(
 			throw new BadRequestError("Account is not active");
 		}
 
-		const { commodityId, side, type, quantity, price, stopPrice } =
-			placeOrderSchema.parse(req.body);
+		const { commodityId, side, type, quantity, price, stopPrice } = placeOrderSchema.parse(
+			req.body,
+		);
 
 		const commodity = await prisma.commodity.findUnique({
 			where: { id: commodityId },
@@ -159,9 +154,7 @@ router.post(
 				return success(res, { order: updatedOrder, execution: result }, 201);
 			} catch (err) {
 				// Order created but execution failed — return as pending
-				logger.warn(
-					`[Sim] Market order ${order.id} created but execution failed: ${err}`,
-				);
+				logger.warn(`[Sim] Market order ${order.id} created but execution failed: ${err}`);
 			}
 		}
 

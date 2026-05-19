@@ -1,19 +1,13 @@
 import type { NextFunction, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	type AuthRequest,
-	authenticate,
-	authorize,
-	optionalAuth,
-} from "@/middleware/auth";
+import { type AuthRequest, authenticate, authorize } from "@/middleware/auth";
 
 // vi.hoisted() ensures these are available inside hoisted vi.mock() factories
-const { mockVerifyToken, mockUserFindUnique, mockIsTokenBlacklisted } =
-	vi.hoisted(() => ({
-		mockVerifyToken: vi.fn(),
-		mockUserFindUnique: vi.fn(),
-		mockIsTokenBlacklisted: vi.fn(),
-	}));
+const { mockVerifyToken, mockUserFindUnique, mockIsTokenBlacklisted } = vi.hoisted(() => ({
+	mockVerifyToken: vi.fn(),
+	mockUserFindUnique: vi.fn(),
+	mockIsTokenBlacklisted: vi.fn(),
+}));
 
 vi.mock("@/lib", () => ({
 	prisma: {
@@ -156,93 +150,6 @@ describe("authenticate middleware", () => {
 	});
 });
 
-describe("optionalAuth middleware", () => {
-	let mockReq: Partial<AuthRequest>;
-	let mockRes: Partial<Response>;
-	let mockNext: NextFunction;
-
-	beforeEach(() => {
-		vi.clearAllMocks();
-		mockReq = { headers: {}, ip: "127.0.0.1" };
-		mockRes = {
-			status: vi.fn().mockReturnThis(),
-			json: vi.fn().mockReturnThis(),
-		};
-		mockNext = vi.fn();
-	});
-
-	it("should call next without auth when no authorization header", async () => {
-		await optionalAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-		expect(mockNext).toHaveBeenCalledWith();
-		expect(mockReq.userId).toBeUndefined();
-	});
-
-	it("should skip auth when token is blacklisted", async () => {
-		mockReq.headers = { authorization: "Bearer blacklisted-token" };
-		mockIsTokenBlacklisted.mockResolvedValue(true);
-
-		await optionalAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-		expect(mockNext).toHaveBeenCalledWith();
-		expect(mockReq.userId).toBeUndefined();
-	});
-
-	it("should set user when token is valid", async () => {
-		const mockUser = {
-			id: "user-123",
-			email: "test@example.com",
-			name: "Test User",
-			role: "user",
-		};
-		mockReq.headers = { authorization: "Bearer valid-token" };
-		mockIsTokenBlacklisted.mockResolvedValue(false);
-		mockVerifyToken.mockReturnValue({ userId: "user-123" });
-		mockUserFindUnique.mockResolvedValue(mockUser);
-
-		await optionalAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-		expect(mockReq.userId).toBe("user-123");
-		expect(mockReq.user).toEqual(mockUser);
-		expect(mockNext).toHaveBeenCalledWith();
-	});
-
-	it("should continue without auth when token is invalid", async () => {
-		mockReq.headers = { authorization: "Bearer invalid-token" };
-		mockIsTokenBlacklisted.mockResolvedValue(false);
-		mockVerifyToken.mockImplementation(() => {
-			throw new Error("Invalid token");
-		});
-
-		await optionalAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-		expect(mockNext).toHaveBeenCalledWith();
-		expect(mockReq.userId).toBeUndefined();
-	});
-
-	it("should continue without auth when user not found", async () => {
-		mockReq.headers = { authorization: "Bearer valid-token" };
-		mockIsTokenBlacklisted.mockResolvedValue(false);
-		mockVerifyToken.mockReturnValue({ userId: "user-123" });
-		mockUserFindUnique.mockResolvedValue(null);
-
-		await optionalAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-		expect(mockNext).toHaveBeenCalledWith();
-		expect(mockReq.userId).toBe("user-123");
-		expect(mockReq.user).toBeUndefined();
-	});
-
-	it("should handle errors and continue to next", async () => {
-		mockReq.headers = { authorization: "Bearer token" };
-		mockIsTokenBlacklisted.mockRejectedValue(new Error("Error"));
-
-		await optionalAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-		expect(mockNext).toHaveBeenCalledWith();
-	});
-});
-
 describe("authorize middleware", () => {
 	let mockReq: Partial<AuthRequest>;
 	let mockRes: Partial<Response>;
@@ -291,6 +198,7 @@ describe("authorize middleware", () => {
 	});
 
 	it("should return 403 when user role not in allowed roles", async () => {
+		// biome-ignore lint/style/noNonNullAssertion: test setup — user is defined in beforeEach
 		mockReq.user = { ...mockReq.user!, role: "user" };
 		const adminAuth = authorize("admin");
 		await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
@@ -306,6 +214,7 @@ describe("authorize middleware", () => {
 	});
 
 	it("should allow access when user role is in allowed roles", async () => {
+		// biome-ignore lint/style/noNonNullAssertion: test setup — user is defined in beforeEach
 		mockReq.user = { ...mockReq.user!, role: "admin" };
 		const adminAuth = authorize("admin");
 		await adminAuth(mockReq as AuthRequest, mockRes as Response, mockNext);
@@ -314,6 +223,7 @@ describe("authorize middleware", () => {
 	});
 
 	it("should allow access for any of multiple roles", async () => {
+		// biome-ignore lint/style/noNonNullAssertion: test setup — user is defined in beforeEach
 		mockReq.user = { ...mockReq.user!, role: "moderator" };
 		const multiAuth = authorize("admin", "moderator", "user");
 		await multiAuth(mockReq as AuthRequest, mockRes as Response, mockNext);

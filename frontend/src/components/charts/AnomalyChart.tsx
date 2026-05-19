@@ -276,7 +276,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 		payload,
 	}: {
 		active?: boolean;
-		payload?: Array<{ payload: any }>;
+		payload?: Array<{ payload: Record<string, unknown> }>;
 	}) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;

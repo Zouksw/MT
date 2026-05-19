@@ -21,7 +21,7 @@
         "useHookAtTopLevel": "warn"
       },
       "style": {
-        "noNonNullAssertion": "warn",
+        "noNonNullAssertion": "off",
         "noDescendingSpecificity": "off"
       },
       "a11y": {

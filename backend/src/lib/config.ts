@@ -24,9 +24,7 @@ function validateSecret(secret: string | undefined, name: string): void {
 		);
 	}
 	if (secret.length < 32) {
-		throw new Error(
-			`SECURITY ERROR: ${name} must be at least 32 characters long`,
-		);
+		throw new Error(`SECURITY ERROR: ${name} must be at least 32 characters long`);
 	}
 }
 
@@ -36,6 +34,7 @@ export const config = {
 		secret: (() => {
 			const secret = process.env.JWT_SECRET;
 			validateSecret(secret, "JWT_SECRET");
+			// biome-ignore lint/style/noNonNullAssertion: validateSecret throws if secret is undefined
 			return secret!;
 		})(),
 		expiresIn: process.env.JWT_EXPIRES_IN || "7d",
@@ -45,6 +44,7 @@ export const config = {
 		secret: (() => {
 			const secret = process.env.SESSION_SECRET;
 			validateSecret(secret, "SESSION_SECRET");
+			// biome-ignore lint/style/noNonNullAssertion: validateSecret throws if secret is undefined
 			return secret!;
 		})(),
 		expiresDays: 30,
@@ -56,15 +56,9 @@ export const config = {
 			? Array.isArray(process.env.CORS_ORIGIN)
 				? process.env.CORS_ORIGIN
 				: process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
-			: [
-					"http://localhost:3000",
-					"http://localhost:3001",
-					"http://localhost:3002",
-				],
+			: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
 		nodeEnv: process.env.NODE_ENV || "development",
-		swaggerEnabled:
-			process.env.SWAGGER_ENABLED === "true" ||
-			process.env.NODE_ENV !== "production",
+		swaggerEnabled: process.env.SWAGGER_ENABLED === "true" || process.env.NODE_ENV !== "production",
 	},
 
 	inference: {
@@ -87,16 +81,9 @@ export const config = {
 
 	dataIngestion: {
 		exchangeRateApiUrl:
-			process.env.EXCHANGE_RATE_API_URL ||
-			"https://open.er-api.com/v6/latest/USD",
-		scrapeIntervalMinutes: parseInt(
-			process.env.SCRAPE_INTERVAL_MINUTES || "60",
-			10,
-		),
-		importMaxFileSize: parseInt(
-			process.env.IMPORT_MAX_FILE_SIZE || "10485760",
-			10,
-		),
+			process.env.EXCHANGE_RATE_API_URL || "https://open.er-api.com/v6/latest/USD",
+		scrapeIntervalMinutes: parseInt(process.env.SCRAPE_INTERVAL_MINUTES || "60", 10),
+		importMaxFileSize: parseInt(process.env.IMPORT_MAX_FILE_SIZE || "10485760", 10),
 	},
 } as const;
 

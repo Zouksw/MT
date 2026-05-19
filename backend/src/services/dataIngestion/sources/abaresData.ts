@@ -47,7 +47,7 @@ async function fetchABARESData(): Promise<ScraperResult> {
 
 		const html = await res.text();
 		const dm = html.match(/(\d{4})[–-](\d{2,4})\s*(?:financial year|fiscal|quarter)/i);
-		const year = dm ? parseInt(dm[1]) : new Date().getFullYear();
+		const year = dm ? Number.parseInt(dm[1], 10) : new Date().getFullYear();
 		const date = new Date(`${year}-07-01T00:00:00Z`);
 
 		for (const ind of INDICATORS) {

@@ -13,7 +13,6 @@
  */
 
 import { logger } from "@/lib";
-import { parseMonth, upsertFactor } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 async function fetchArgentina(): Promise<ScraperResult> {

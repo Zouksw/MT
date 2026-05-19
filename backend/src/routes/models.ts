@@ -4,17 +4,9 @@ import { logger, prisma } from "@/lib";
 import { paginated, success, successWithMessage } from "@/lib/response";
 import { checkAIAccess } from "@/middleware/aiAccess";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
-import {
-	asyncHandler,
-	BadRequestError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { getPagination, limitSchema } from "@/schemas/common";
-import {
-	modelsQuerySchema,
-	predictSchema,
-	trainModelSchema,
-} from "@/schemas/models";
+import { modelsQuerySchema, predictSchema, trainModelSchema } from "@/schemas/models";
 
 const router = Router();
 
@@ -195,6 +187,7 @@ router.post(
 	authenticate,
 	checkAIAccess,
 	asyncHandler(async (req: AuthRequest, res) => {
+		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 		const userId = req.userId!;
 		const validatedData = trainModelSchema.parse(req.body);
 
@@ -264,10 +257,7 @@ router.post(
 		const io = req.app.get("io");
 		if (io) {
 			try {
-				io.to(`timeseries:${validatedData.timeseriesId}`).emit(
-					"model:trained",
-					model,
-				);
+				io.to(`timeseries:${validatedData.timeseriesId}`).emit("model:trained", model);
 			} catch (wsError) {
 				logger.warn("WebSocket emit failed for model:trained event", {
 					timeseriesId: validatedData.timeseriesId,
@@ -348,9 +338,7 @@ router.post(
 
 		// Generate predictions using inference service
 		const { predict } = await import("@/services/inference/client");
-		const { getCommodityPriceValues } = await import(
-			"@/services/inference/data-fetcher"
-		);
+		const { getCommodityPriceValues } = await import("@/services/inference/data-fetcher");
 
 		const algorithm = model.algorithm || "arima";
 		const horizon = validatedData.horizon;
@@ -634,11 +622,7 @@ router.delete(
 
 		const result = await prisma.forecast.deleteMany({ where });
 
-		return successWithMessage(
-			res,
-			{ count: result.count },
-			`Deleted ${result.count} forecasts`,
-		);
+		return successWithMessage(res, { count: result.count }, `Deleted ${result.count} forecasts`);
 	}),
 );
 

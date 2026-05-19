@@ -77,6 +77,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 	}
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: card wrapper with optional click handler
 		<svg
 			width={W}
 			height={H}
@@ -127,6 +128,7 @@ export const StatCard = React.memo<StatCardProps>(
 
 		if (loading) {
 			return (
+				// biome-ignore lint/a11y/noStaticElementInteractions: card wrapper with optional click handler
 				<div className="bg-card rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] p-5 animate-pulse">
 					<div className="h-4 bg-muted rounded w-20 mb-3" />
 					<div className="h-7 bg-muted rounded w-16" />
@@ -135,8 +137,18 @@ export const StatCard = React.memo<StatCardProps>(
 		}
 
 		return (
+			// biome-ignore lint/a11y/noStaticElementInteractions: card wrapper with optional click handler
 			<div
 				className={`bg-card rounded-lg shadow-card dark:shadow-card-dark p-5 transition-all duration-200 ${onClick ? "cursor-pointer hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-card-hover-dark" : ""}`}
+				role={onClick ? "button" : undefined}
+				tabIndex={onClick ? 0 : undefined}
+				onKeyDown={
+					onClick
+						? (e) => {
+								if (e.key === "Enter" || e.key === " ") onClick();
+							}
+						: undefined
+				}
 				onClick={onClick}
 			>
 				<div className="flex items-center gap-2 mb-3">

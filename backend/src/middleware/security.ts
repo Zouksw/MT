@@ -68,45 +68,6 @@ export const validate =
 	};
 
 /**
- * Request size limiter
- * Prevents large payload attacks
- */
-export const limitRequestSize = (maxSize: string = "10mb") => {
-	return (req: Request, res: Response, next: NextFunction) => {
-		const contentLength = parseInt(req.headers["content-length"] || "0", 10);
-		const maxSizeInBytes = parseSize(maxSize);
-
-		if (contentLength > maxSizeInBytes) {
-			return res.status(413).json({
-				error: "Payload too large",
-				message: `Request body exceeds maximum size of ${maxSize}`,
-			});
-		}
-		next();
-	};
-};
-
-/**
- * Parse size string (e.g., '10mb') to bytes
- */
-function parseSize(size: string): number {
-	const units: { [key: string]: number } = {
-		b: 1,
-		kb: 1024,
-		mb: 1024 * 1024,
-		gb: 1024 * 1024 * 1024,
-	};
-
-	const match = size.toLowerCase().match(/^(\d+(?:\.\d+)?)\s*([a-z]+)?$/);
-	if (!match) return 0;
-
-	const value = parseFloat(match[1]);
-	const unit = match[2] || "b";
-
-	return value * (units[unit] || 1);
-}
-
-/**
  * Validation schemas for common inputs
  */
 export const validationSchemas = {
@@ -146,15 +107,7 @@ export const validationSchemas = {
 		.string()
 		.max(10000, "Query too long")
 		.refine((query) => {
-			const forbidden = [
-				"DROP",
-				"DELETE",
-				"TRUNCATE",
-				"ALTER",
-				"CREATE",
-				"INSERT",
-				"UPDATE",
-			];
+			const forbidden = ["DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE", "INSERT", "UPDATE"];
 			const upperQuery = query.toUpperCase();
 			return !forbidden.some((word) => upperQuery.includes(word));
 		}, "Only SELECT queries are allowed"),

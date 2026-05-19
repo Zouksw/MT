@@ -3,11 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
-import {
-	asyncHandler,
-	BadRequestError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { computePortfolioPnL } from "@/services/portfolioService";
 
 const router = Router();
@@ -78,6 +74,7 @@ router.post(
 		const { name, description } = createPortfolioSchema.parse(req.body);
 
 		const existing = await prisma.portfolio.findUnique({
+			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 			where: { userId_name: { userId: req.userId!, name } },
 		});
 		if (existing) {
@@ -85,6 +82,7 @@ router.post(
 		}
 
 		const portfolio = await prisma.portfolio.create({
+			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
 			data: { userId: req.userId!, name, description },
 		});
 
@@ -155,8 +153,9 @@ router.post(
 			throw new NotFoundError("Portfolio");
 		}
 
-		const { commodityId, side, quantity, avgEntryPrice, notes } =
-			createPositionSchema.parse(req.body);
+		const { commodityId, side, quantity, avgEntryPrice, notes } = createPositionSchema.parse(
+			req.body,
+		);
 
 		const commodity = await prisma.commodity.findUnique({
 			where: { id: commodityId },

@@ -225,7 +225,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 		payload,
 	}: {
 		active?: boolean;
-		payload?: Array<{ payload: any }>;
+		payload?: Array<{ payload: Record<string, unknown> }>;
 	}) => {
 		if (active && payload?.length) {
 			const data = payload[0].payload;

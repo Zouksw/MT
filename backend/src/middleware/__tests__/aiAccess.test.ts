@@ -4,7 +4,7 @@
 
 import type { NextFunction, Request, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { checkAIAccess, checkAIEnabled } from "@/middleware/aiAccess";
+import { checkAIAccess } from "@/middleware/aiAccess";
 import type { AuthRequest } from "@/middleware/auth";
 
 // Mock logger
@@ -61,17 +61,11 @@ describe("AI Access Control Middleware", () => {
 				role: "ADMIN",
 			};
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
 			expect(logger.info).toHaveBeenCalledWith(
-				expect.stringContaining(
-					"[AI_ACCESS] AI feature accessed by admin@example.com",
-				),
+				expect.stringContaining("[AI_ACCESS] AI feature accessed by admin@example.com"),
 			);
 		});
 
@@ -84,25 +78,21 @@ describe("AI Access Control Middleware", () => {
 				role: "ADMIN",
 			};
 
-			expect(() =>
-				checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext),
-			).toThrow("AI features are currently disabled");
-
-			expect(logger.warn).toHaveBeenCalledWith(
-				"[AI_ACCESS] AI features are disabled",
+			expect(() => checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext)).toThrow(
+				"AI features are currently disabled",
 			);
+
+			expect(logger.warn).toHaveBeenCalledWith("[AI_ACCESS] AI features are disabled");
 		});
 
 		it("should deny access for unauthenticated user", async () => {
 			mockReq.user = undefined;
 
-			expect(() =>
-				checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext),
-			).toThrow("Authentication required");
-
-			expect(logger.warn).toHaveBeenCalledWith(
-				"[AI_ACCESS] Unauthenticated AI access attempt",
+			expect(() => checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext)).toThrow(
+				"Authentication required",
 			);
+
+			expect(logger.warn).toHaveBeenCalledWith("[AI_ACCESS] Unauthenticated AI access attempt");
 		});
 
 		it("should allow access for EDITOR role", async () => {
@@ -112,17 +102,11 @@ describe("AI Access Control Middleware", () => {
 				role: "EDITOR",
 			};
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
 			expect(logger.info).toHaveBeenCalledWith(
-				expect.stringContaining(
-					"[AI_ACCESS] AI feature accessed by user@example.com",
-				),
+				expect.stringContaining("[AI_ACCESS] AI feature accessed by user@example.com"),
 			);
 		});
 
@@ -138,11 +122,7 @@ describe("AI Access Control Middleware", () => {
 			};
 			mockReq.ip = "::ffff:192.168.1.100";
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
 		});
@@ -158,11 +138,7 @@ describe("AI Access Control Middleware", () => {
 			mockReq.ip = undefined;
 			mockReq.socket = { remoteAddress: "10.0.0.5" };
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
 		});
@@ -175,15 +151,9 @@ describe("AI Access Control Middleware", () => {
 			};
 			mockReq.ip = "10.0.0.50";
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-			expect(logger.info).toHaveBeenCalledWith(
-				expect.stringContaining("from 10.0.0.50"),
-			);
+			expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("from 10.0.0.50"));
 		});
 
 		it.skip("should handle multiple IPs in whitelist", async () => {
@@ -197,11 +167,7 @@ describe("AI Access Control Middleware", () => {
 				role: "MODERATOR",
 			};
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
 		});
@@ -213,50 +179,9 @@ describe("AI Access Control Middleware", () => {
 				role: "VIEWER",
 			};
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
-		});
-	});
-
-	describe("checkAIEnabled", () => {
-		it("should return enabled status when AI features are enabled", async () => {
-			await checkAIEnabled(mockReq as Request, mockRes as Response, mockNext);
-
-			expect(mockNext).toHaveBeenCalled();
-			expect(mockRes.locals.aiEnabled).toBe(true);
-		});
-
-		it("should return 503 when AI features are disabled", async () => {
-			process.env.AI_FEATURES_DISABLED = "true";
-
-			await checkAIEnabled(mockReq as Request, mockRes as Response, mockNext);
-
-			expect(mockRes.status).toHaveBeenCalledWith(503);
-			expect(mockRes.json).toHaveBeenCalledWith({
-				enabled: false,
-				message:
-					"AI features are currently disabled. Please contact your administrator.",
-			});
-			expect(mockNext).not.toHaveBeenCalled();
-		});
-
-		it("should not set aiEnabled when features are disabled", async () => {
-			process.env.AI_FEATURES_DISABLED = "true";
-
-			await checkAIEnabled(mockReq as Request, mockRes as Response, mockNext);
-
-			expect(mockRes.locals.aiEnabled).toBeUndefined();
-		});
-
-		it("should call next() when features are enabled", async () => {
-			await checkAIEnabled(mockReq as Request, mockRes as Response, mockNext);
-
-			expect(mockNext).toHaveBeenCalledWith();
 		});
 	});
 
@@ -270,16 +195,10 @@ describe("AI Access Control Middleware", () => {
 			mockReq.ip = undefined;
 			mockReq.socket = { remoteAddress: undefined };
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
-			expect(logger.info).toHaveBeenCalledWith(
-				expect.stringContaining("from unknown"),
-			);
+			expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("from unknown"));
 		});
 
 		it("should handle IP with port number", async () => {
@@ -291,11 +210,7 @@ describe("AI Access Control Middleware", () => {
 			mockReq.ip = "192.168.1.100:8080";
 			mockReq.socket = { remoteAddress: "192.168.1.100:8080" };
 
-			await checkAIAccess(
-				mockReq as AuthRequest,
-				mockRes as Response,
-				mockNext,
-			);
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
 
 			expect(mockNext).toHaveBeenCalled();
 		});

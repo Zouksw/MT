@@ -551,6 +551,7 @@ router.post(
 			mapping = detectFieldMapping(headers);
 		}
 
+		// biome-ignore lint/style/noNonNullAssertion: mapping is set in all branches above
 		const result = await importRows(params.commodityId, rows, mapping!, params.interval);
 
 		success(res, {

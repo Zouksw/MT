@@ -53,7 +53,7 @@ async function fetchAMSReport(reportId: string): Promise<AMSReportRow[]> {
 		Accept: "application/json",
 	};
 	if (apiKey) {
-		headers["Authorization"] = `Bearer ${apiKey}`;
+		headers.Authorization = `Bearer ${apiKey}`;
 	}
 
 	try {

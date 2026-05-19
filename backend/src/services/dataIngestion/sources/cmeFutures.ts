@@ -6,7 +6,7 @@
  * Soybean Meal, Soybean Oil, Coffee, Sugar, Cotton, Crude Oil, Natural Gas, Gold.
  */
 
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
 import { ensureCommodity, formatDateYMD, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
