@@ -3,7 +3,7 @@ import { Router } from "express";
 import Papa from "papaparse";
 import { logger, prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { cacheRoute, invalidateCache } from "@/middleware/cacheDecorator";
 import {
 	asyncHandler,
@@ -107,7 +107,7 @@ router.get(
 	"/",
 	authenticate,
 	cacheRoute("datasets:list", 300),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { search } = req.query;
 		const { skip, take } = getPagination(req.query);
 		const params = paginationSchema.parse(req.query);
@@ -181,7 +181,7 @@ router.get(
 router.get(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const dataset = await prisma.dataset.findUnique({
 			where: { id: req.params.id },
 			include: {
@@ -245,9 +245,8 @@ router.get(
 router.post(
 	"/",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
-		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-		const userId = req.userId!;
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const userId = req.userId;
 		const validatedData = newCreateDatasetSchema.parse(req.body);
 
 		// Check slug uniqueness
@@ -336,9 +335,8 @@ router.post(
 router.patch(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
-		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-		const userId = req.userId!;
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const userId = req.userId;
 		const validatedData = newUpdateDatasetSchema.parse(req.body);
 
 		const dataset = await prisma.dataset.findUnique({
@@ -403,9 +401,8 @@ router.patch(
 router.delete(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
-		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-		const userId = req.userId!;
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const userId = req.userId;
 
 		const dataset = await prisma.dataset.findUnique({
 			where: { id: req.params.id },
@@ -498,7 +495,7 @@ router.delete(
 router.post(
 	"/:id/import",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { format, data } = req.body;
 
 		if (!format || !data) {

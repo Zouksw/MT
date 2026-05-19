@@ -3,7 +3,7 @@ import { Router } from "express";
 import { logger, prisma } from "@/lib";
 import { paginated, success, successWithMessage } from "@/lib/response";
 import { checkAIAccess } from "@/middleware/aiAccess";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { getPagination, limitSchema } from "@/schemas/common";
 import { modelsQuerySchema, predictSchema, trainModelSchema } from "@/schemas/models";
@@ -186,9 +186,8 @@ router.post(
 	"/train",
 	authenticate,
 	checkAIAccess,
-	asyncHandler(async (req: AuthRequest, res) => {
-		// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-		const userId = req.userId!;
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const userId = req.userId;
 		const validatedData = trainModelSchema.parse(req.body);
 
 		// Check if timeseries exists
@@ -317,7 +316,7 @@ router.post(
 	"/:modelId/predict",
 	authenticate,
 	checkAIAccess,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { modelId } = req.params;
 		const validatedData = predictSchema.parse(req.body);
 
@@ -505,7 +504,7 @@ router.get(
 router.patch(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { isActive } = req.body;
 
 		if (typeof isActive !== "undefined") {
@@ -561,7 +560,7 @@ router.patch(
 router.delete(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const model = await prisma.forecastingModel.findUnique({
 			where: { id: req.params.id },
 			select: { trainedById: true },
@@ -609,7 +608,7 @@ router.delete(
 router.delete(
 	"/:modelId/forecasts",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { start, end } = req.query;
 
 		const where: Prisma.ForecastWhereInput = { modelId: req.params.modelId };

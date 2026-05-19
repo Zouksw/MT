@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
 import { getPlanLimits, getUserPlan } from "@/services/usageService";
 
@@ -54,7 +54,7 @@ const PLANS = [
 router.get(
 	"/plans",
 	authenticate,
-	asyncHandler(async (_req: AuthRequest, res) => {
+	asyncHandler(async (_req: AuthenticatedRequest, res) => {
 		success(res, { plans: PLANS });
 	}),
 );
@@ -63,8 +63,8 @@ router.get(
 router.get(
 	"/subscription",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
-		const { plan, limits } = await getUserPlan(req.userId!);
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const { plan, limits } = await getUserPlan(req.userId);
 
 		success(res, {
 			plan,
@@ -78,9 +78,9 @@ router.get(
 router.post(
 	"/cancel",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const sub = await prisma.subscription.findUnique({
-			where: { userId: req.userId! },
+			where: { userId: req.userId },
 		});
 
 		if (!sub || sub.plan === "free") {
@@ -88,7 +88,7 @@ router.post(
 		}
 
 		await prisma.subscription.update({
-			where: { userId: req.userId! },
+			where: { userId: req.userId },
 			data: { status: "canceled", plan: "free" },
 		});
 
@@ -100,9 +100,9 @@ router.post(
 router.get(
 	"/usage",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const sub = await prisma.subscription.findUnique({
-			where: { userId: req.userId! },
+			where: { userId: req.userId },
 			include: { usageRecords: true },
 		});
 

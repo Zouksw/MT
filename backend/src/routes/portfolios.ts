@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { computePortfolioPnL } from "@/services/portfolioService";
 
@@ -30,7 +30,7 @@ const updatePositionSchema = z.object({
 router.get(
 	"/",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolios = await prisma.portfolio.findMany({
 			where: { userId: req.userId },
 			include: {
@@ -70,20 +70,18 @@ router.get(
 router.post(
 	"/",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { name, description } = createPortfolioSchema.parse(req.body);
 
 		const existing = await prisma.portfolio.findUnique({
-			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-			where: { userId_name: { userId: req.userId!, name } },
+			where: { userId_name: { userId: req.userId, name } },
 		});
 		if (existing) {
 			throw new BadRequestError(`Analysis group '${name}' already exists`);
 		}
 
 		const portfolio = await prisma.portfolio.create({
-			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-			data: { userId: req.userId!, name, description },
+			data: { userId: req.userId, name, description },
 		});
 
 		success(res, { portfolio }, 201);
@@ -94,7 +92,7 @@ router.post(
 router.get(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolio = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 			include: {
@@ -127,7 +125,7 @@ router.get(
 router.get(
 	"/:id/performance",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolio = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
@@ -145,7 +143,7 @@ router.get(
 router.post(
 	"/:id/positions",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolio = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
@@ -186,7 +184,7 @@ router.post(
 router.patch(
 	"/:id/positions/:positionId",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolio = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
@@ -215,7 +213,7 @@ router.patch(
 router.delete(
 	"/:id/positions/:positionId",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolio = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
@@ -247,7 +245,7 @@ router.delete(
 router.delete(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const portfolio = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});

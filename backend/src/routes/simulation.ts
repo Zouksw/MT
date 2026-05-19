@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { logger, prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { executeMarketOrder, getAccountSummary } from "@/services/simulationEngine";
 
@@ -26,7 +26,7 @@ const placeOrderSchema = z.object({
 router.get(
 	"/accounts",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const accounts = await prisma.simulationAccount.findMany({
 			where: { userId: req.userId },
 			orderBy: { createdAt: "desc" },
@@ -55,13 +55,12 @@ router.get(
 router.post(
 	"/accounts",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { name, initialBalance } = createAccountSchema.parse(req.body);
 
 		const account = await prisma.simulationAccount.create({
 			data: {
-				// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-				userId: req.userId!,
+				userId: req.userId,
 				name,
 				initialBalance,
 				currentBalance: initialBalance,
@@ -76,7 +75,7 @@ router.post(
 router.get(
 	"/accounts/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const account = await prisma.simulationAccount.findUnique({
 			where: { id: req.params.id },
 		});
@@ -94,7 +93,7 @@ router.get(
 router.post(
 	"/accounts/:id/orders",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const account = await prisma.simulationAccount.findUnique({
 			where: { id: req.params.id },
 		});
@@ -166,7 +165,7 @@ router.post(
 router.get(
 	"/accounts/:id/orders",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const account = await prisma.simulationAccount.findUnique({
 			where: { id: req.params.id },
 		});
@@ -195,7 +194,7 @@ router.get(
 router.patch(
 	"/accounts/:id/orders/:orderId",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const account = await prisma.simulationAccount.findUnique({
 			where: { id: req.params.id },
 		});
@@ -227,7 +226,7 @@ router.patch(
 router.get(
 	"/accounts/:id/trades",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const account = await prisma.simulationAccount.findUnique({
 			where: { id: req.params.id },
 		});

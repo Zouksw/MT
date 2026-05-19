@@ -2,7 +2,7 @@
  * Tests for AI Access Control middleware
  */
 
-import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { checkAIAccess } from "@/middleware/aiAccess";
 import type { AuthRequest } from "@/middleware/auth";

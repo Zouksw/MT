@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
 
 const router = Router();
@@ -20,7 +20,7 @@ const shareSignalSchema = z.object({
 router.get(
 	"/feed",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const page = Math.max(1, Number(req.query.page) || 1);
 		const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
 		const skip = (page - 1) * limit;
@@ -60,7 +60,7 @@ router.get(
 router.get(
 	"/signals",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const page = Math.max(1, Number(req.query.page) || 1);
 		const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
 		const skip = (page - 1) * limit;
@@ -86,13 +86,12 @@ router.get(
 router.post(
 	"/signals",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const data = shareSignalSchema.parse(req.body);
 
 		const signal = await prisma.sharedSignal.create({
 			data: {
-				// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-				userId: req.userId!,
+				userId: req.userId,
 				...data,
 				confidence: data.confidence,
 				currentPrice: data.currentPrice,
@@ -111,7 +110,7 @@ router.post(
 router.post(
 	"/signals/:id/like",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const signal = await prisma.sharedSignal.findUnique({
 			where: { id: req.params.id },
 		});
@@ -119,8 +118,7 @@ router.post(
 
 		const existing = await prisma.signalLike.findUnique({
 			where: {
-				// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-				signalId_userId: { signalId: req.params.id, userId: req.userId! },
+				signalId_userId: { signalId: req.params.id, userId: req.userId },
 			},
 		});
 
@@ -136,8 +134,7 @@ router.post(
 		} else {
 			await prisma.$transaction([
 				prisma.signalLike.create({
-					// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-					data: { signalId: req.params.id, userId: req.userId! },
+					data: { signalId: req.params.id, userId: req.userId },
 				}),
 				prisma.sharedSignal.update({
 					where: { id: req.params.id },
@@ -153,7 +150,7 @@ router.post(
 router.get(
 	"/signals/:id/comments",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const comments = await prisma.signalComment.findMany({
 			where: { signalId: req.params.id },
 			orderBy: { createdAt: "asc" },
@@ -171,7 +168,7 @@ router.get(
 router.post(
 	"/signals/:id/comments",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { content } = z.object({ content: z.string().min(1).max(500) }).parse(req.body);
 
 		const signal = await prisma.sharedSignal.findUnique({
@@ -182,8 +179,7 @@ router.post(
 		const comment = await prisma.signalComment.create({
 			data: {
 				signalId: req.params.id,
-				// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-				userId: req.userId!,
+				userId: req.userId,
 				content,
 			},
 			include: {

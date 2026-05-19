@@ -137,11 +137,11 @@ export class ApiError extends Error implements AppError {
 /**
  * Async handler wrapper to catch errors in async route handlers
  */
-export const asyncHandler = (
-	fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
+export const asyncHandler = <Req extends Request = Request>(
+	fn: (req: Req, res: Response, next: NextFunction) => Promise<unknown>,
 ) => {
 	return (req: Request, res: Response, next: NextFunction) => {
-		Promise.resolve(fn(req, res, next)).catch(next);
+		Promise.resolve(fn(req as Req, res, next)).catch(next);
 	};
 };
 

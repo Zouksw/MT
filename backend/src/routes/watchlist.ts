@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 
 const router = Router();
@@ -20,7 +20,7 @@ const addItemSchema = z.object({
 router.get(
 	"/",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const watchlists = await prisma.watchlist.findMany({
 			where: { userId: req.userId },
 			include: {
@@ -90,20 +90,18 @@ router.get(
 router.post(
 	"/",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { name } = createWatchlistSchema.parse(req.body);
 
 		const existing = await prisma.watchlist.findUnique({
-			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-			where: { userId_name: { userId: req.userId!, name } },
+			where: { userId_name: { userId: req.userId, name } },
 		});
 		if (existing) {
 			throw new BadRequestError(`Watchlist '${name}' already exists`);
 		}
 
 		const watchlist = await prisma.watchlist.create({
-			// biome-ignore lint/style/noNonNullAssertion: auth middleware guarantees this value
-			data: { userId: req.userId!, name },
+			data: { userId: req.userId, name },
 			include: { items: true },
 		});
 
@@ -115,7 +113,7 @@ router.post(
 router.patch(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { name } = z.object({ name: z.string().min(1).max(100) }).parse(req.body);
 
 		const existing = await prisma.watchlist.findUnique({
@@ -138,7 +136,7 @@ router.patch(
 router.delete(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const existing = await prisma.watchlist.findUnique({
 			where: { id: req.params.id },
 		});
@@ -159,7 +157,7 @@ router.delete(
 router.post(
 	"/:id/items",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { commodityId, notes } = addItemSchema.parse(req.body);
 
 		const watchlist = await prisma.watchlist.findUnique({
@@ -197,7 +195,7 @@ router.post(
 router.delete(
 	"/:id/items/:commodityId",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const item = await prisma.watchlistItem.findUnique({
 			where: {
 				watchlistId_commodityId: {
@@ -228,7 +226,7 @@ router.delete(
 router.get(
 	"/:id/quotes",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const watchlist = await prisma.watchlist.findUnique({
 			where: { id: req.params.id },
 			include: {

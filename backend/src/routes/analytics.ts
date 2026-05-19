@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
 import { computeRiskReport } from "@/services/riskMetrics";
 
@@ -11,7 +11,7 @@ const router = Router();
 router.get(
 	"/risk/:accountId",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const account = await prisma.simulationAccount.findUnique({
 			where: { id: req.params.accountId },
 		});
@@ -53,7 +53,7 @@ router.get(
 router.get(
 	"/seasonality/:commoditySlug",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const commodity = await prisma.commodity.findUnique({
 			where: { slug: req.params.commoditySlug },
 		});
@@ -105,7 +105,7 @@ router.get(
 router.get(
 	"/correlation",
 	authenticate,
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const slugs = req.query.slugs as string;
 		if (!slugs) {
 			return success(res, { correlations: [] });
@@ -128,9 +128,7 @@ router.get(
 		const returnsMap = new Map<string, Map<string, number>>();
 		for (const c of commodities) {
 			const dailyReturns = new Map<string, number>();
-			const sorted = [...c.prices].sort(
-				(a, b) => a.date.getTime() - b.date.getTime(),
-			);
+			const sorted = [...c.prices].sort((a, b) => a.date.getTime() - b.date.getTime());
 			for (let i = 1; i < sorted.length; i++) {
 				const prev = Number(sorted[i - 1].close);
 				const curr = Number(sorted[i].close);

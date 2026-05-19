@@ -12,6 +12,17 @@ export interface AuthRequest extends Request {
 	};
 }
 
+/** Request type after authenticate middleware — userId and user are guaranteed. */
+export interface AuthenticatedRequest extends Request {
+	userId: string;
+	user: {
+		id: string;
+		email: string;
+		name: string;
+		role: string;
+	};
+}
+
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
 		const authHeader = req.headers.authorization;

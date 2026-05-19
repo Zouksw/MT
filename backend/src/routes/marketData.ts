@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { success } from "@/lib/response";
-import { type AuthRequest, authenticate, authorize } from "@/middleware/auth";
+import { type AuthenticatedRequest, authenticate, authorize } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { scraperManager } from "@/services/dataIngestion";
@@ -76,7 +76,7 @@ router.get(
 	"/commodities/:slug/latest",
 	authenticate,
 	cacheRoute("market:latest", 60),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { slug } = req.params;
 
 		const commodity = await prisma.commodity.findUnique({
@@ -122,7 +122,7 @@ router.get(
 	"/commodities/:slug/price",
 	authenticate,
 	cacheRoute("market:prices", 120),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { slug } = req.params;
 		const params = priceHistorySchema.parse(req.query);
 
@@ -167,7 +167,7 @@ router.get(
 	"/commodities/:slug/price-multi",
 	authenticate,
 	cacheRoute("market:prices-multi", 120),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { slug } = req.params;
 		const interval = (req.query.interval as string) || "daily";
 		const limit = Math.min(Number(req.query.limit) || 365, 10000);
@@ -212,7 +212,7 @@ router.get(
 	"/commodities/:slug/fundamentals",
 	authenticate,
 	cacheRoute("market:fundamentals", 600),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { slug } = req.params;
 
 		const commodity = await prisma.commodity.findUnique({ where: { slug } });
@@ -375,7 +375,7 @@ router.get(
 	"/commodities/:slug/sources",
 	authenticate,
 	cacheRoute("market:commodity-sources", 300),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { slug } = req.params;
 
 		const commodity = await prisma.commodity.findUnique({ where: { slug } });
@@ -444,7 +444,7 @@ router.post(
 	"/import/preview",
 	authenticate,
 	authorize("ADMIN"),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		if (!req.is("multipart/form-data")) {
 			throw new BadRequestError("Content-Type must be multipart/form-data");
 		}
@@ -494,7 +494,7 @@ router.post(
 	"/import",
 	authenticate,
 	authorize("ADMIN"),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		if (!req.is("multipart/form-data")) {
 			throw new BadRequestError("Content-Type must be multipart/form-data");
 		}
@@ -566,7 +566,7 @@ router.post(
 	"/sources/:sourceId/refresh",
 	authenticate,
 	authorize("ADMIN"),
-	asyncHandler(async (req: AuthRequest, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { sourceId } = req.params;
 		const health = scraperManager.getHealth();
 

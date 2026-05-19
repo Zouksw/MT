@@ -90,9 +90,9 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 		});
 
 		it("should throw for non-existent user", async () => {
-			await expect(
-				createApiKey({ userId: "nonexistent-user-id", name: "test" }),
-			).rejects.toThrow("User not found");
+			await expect(createApiKey({ userId: "nonexistent-user-id", name: "test" })).rejects.toThrow(
+				"User not found",
+			);
 		});
 
 		it("should create key with expiration", async () => {
@@ -103,6 +103,7 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 			});
 
 			expect(result.expiresAt).toBeDefined();
+			// biome-ignore lint/style/noNonNullAssertion: asserted on line above
 			expect(new Date(result.expiresAt!).getTime()).toBeGreaterThan(Date.now());
 		});
 	});
@@ -186,9 +187,9 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 		});
 
 		it("should throw for non-existent key", async () => {
-			await expect(
-				revokeApiKey(testUserId, "nonexistent-key-id"),
-			).rejects.toThrow("API key not found");
+			await expect(revokeApiKey(testUserId, "nonexistent-key-id")).rejects.toThrow(
+				"API key not found",
+			);
 		});
 	});
 
