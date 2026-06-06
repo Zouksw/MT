@@ -103,4 +103,5 @@ export async function ingestWeatherData(): Promise<ScraperResult> {
 export const weatherScraper: Scraper = {
 	name: "weather",
 	fetch: ingestWeatherData,
+	requiresKey: "OPENWEATHER_API_KEY",
 };

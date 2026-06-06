@@ -196,7 +196,7 @@ export default function LandingPage() {
 							</a>
 						</div>
 						<p className="text-sm text-gray-400 mt-5">
-							Free tier includes 108 commodity prices. Upgrade for AI signals.
+							Free tier includes beef cut pricing from 5 markets. Upgrade for AI forecasts.
 						</p>
 					</MotionReveal>
 				</div>
@@ -217,7 +217,7 @@ export default function LandingPage() {
 								</span>
 							</div>
 							<p className="text-sm text-muted-foreground leading-relaxed">
-								108 commodities. 7 signal models. 131 market factors.
+								85+ beef cuts. 8 AI price models. 5 export markets.
 							</p>
 						</div>
 

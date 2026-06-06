@@ -8,6 +8,8 @@ export interface ScraperResult {
 export interface Scraper {
 	name: string;
 	fetch(): Promise<ScraperResult>;
+	/** If set, skip this source when the env var is empty */
+	requiresKey?: string;
 }
 
 interface SourceHealth {
@@ -15,6 +17,7 @@ interface SourceHealth {
 	success: boolean;
 	error: string | null;
 	lastResult?: ScraperResult;
+	skippedNoKey?: boolean;
 }
 
 export class ScraperManager {
@@ -45,9 +48,7 @@ export class ScraperManager {
 
 		const succeeded = results.filter((r) => r.status === "fulfilled").length;
 		const failed = results.filter((r) => r.status === "rejected").length;
-		logger.info(
-			`[ScraperManager] runAll complete: ${succeeded} succeeded, ${failed} failed`,
-		);
+		logger.info(`[ScraperManager] runAll complete: ${succeeded} succeeded, ${failed} failed`);
 
 		return summary;
 	}
@@ -56,6 +57,18 @@ export class ScraperManager {
 		const scraper = this.sources.get(name);
 		if (!scraper) {
 			throw new Error(`Unknown source: ${name}`);
+		}
+
+		// Check if source requires an API key that isn't configured
+		if (scraper.requiresKey && !process.env[scraper.requiresKey]) {
+			this.health.set(name, {
+				lastRun: null,
+				success: false,
+				error: `Missing ${scraper.requiresKey}`,
+				skippedNoKey: true,
+			});
+			logger.debug(`[ScraperManager] ${name} skipped — ${scraper.requiresKey} not configured`);
+			return { inserted: 0, updated: 0 };
 		}
 
 		const start = Date.now();

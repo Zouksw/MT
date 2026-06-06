@@ -100,29 +100,29 @@ function MiniSparkline() {
 
 const features = [
 	{
-		title: "Multi-Factor Analysis",
+		title: "Cut-Level Pricing",
 		description:
-			"131 market factors correlated with price movements — weather, FX, tariffs, freight indices",
+			"85+ standardized beef cuts with factory-level pricing across US, Brazil, Australia, Uruguay, and Argentina",
 		span: "md:col-span-2",
 	},
 	{
-		title: "7 AI Signal Models",
+		title: "8 AI Price Models",
 		description:
-			"ARIMA, Holt-Winters, STL decomposition, Timer-XL — each model produces independent buy/sell signals with MAPE scores",
+			"ARIMA, Holt-Winters, STL, Timer-XL, Chronos-2 — each producing independent price forecasts with confidence intervals",
 		span: "",
 	},
 	{
-		title: "Real-Time Alerts",
+		title: "Global Trade Flows",
 		description:
-			"Custom price thresholds, breakout detection, and anomaly alerts via WebSocket — avg latency 47ms",
+			"Export volume and FOB pricing from Brazil, Uruguay, Australia — the world's largest beef exporters",
 		span: "",
 	},
 ];
 
 const priceItems = [
-	{ name: "WTI Crude Oil", price: "78.42", change: "+1.23%", up: true },
-	{ name: "Gold", price: "2,341.80", change: "+0.41%", up: true },
-	{ name: "Soybeans", price: "1,187.25", change: "-0.67%", up: false },
+	{ name: "Chuck Roll Choice", price: "389.50", change: "+2.14%", up: true },
+	{ name: "Ribeye Lip-On", price: "612.80", change: "+0.87%", up: true },
+	{ name: "Brisket Flat", price: "295.25", change: "-0.53%", up: false },
 ];
 
 export const Hero: React.FC = () => {
@@ -138,13 +138,13 @@ export const Hero: React.FC = () => {
 					<div className="lg:col-span-3">
 						<MotionReveal>
 							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-[#B8860B]">
-								108 commodities &middot; 7 models &middot; 18 data sources
+								85+ beef cuts &middot; 8 AI models &middot; 5 export markets
 							</p>
 						</MotionReveal>
 
 						<MotionReveal delay={0.1}>
 							<h1 className="text-4xl sm:text-5xl lg:text-7xl tracking-tighter font-semibold text-gray-900 dark:text-white">
-								Commodity Market
+								Global Beef Trade
 								<br />
 								<span className="text-[#B8860B]">Intelligence, Decoded</span>
 							</h1>
@@ -152,9 +152,10 @@ export const Hero: React.FC = () => {
 
 						<MotionReveal delay={0.2}>
 							<p className="mt-6 max-w-xl text-lg font-medium text-muted-foreground leading-relaxed">
-								Seven independent models — ARIMA, Holt-Winters, STL, Timer-XL — run price forecasts
-								on <span className="font-mono text-[#B8860B]">108 commodities</span> across 13
-								categories. Multi-factor correlation: weather, FX, tariffs, freight.
+								Factory-level cut pricing from{" "}
+								<span className="font-mono text-[#B8860B]">16+ export plants</span> across 5
+								countries. AI price forecasting, export flow tracking, and supply chain monitoring —
+								all in one platform.
 							</p>
 						</MotionReveal>
 
@@ -164,7 +165,7 @@ export const Hero: React.FC = () => {
 									href="/register"
 									className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
 								>
-									Get Started Free
+									Start Tracking Beef Prices
 									<ArrowRight size={16} weight="bold" />
 								</a>
 								<a
@@ -180,18 +181,18 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.4}>
 							<div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-mono tabular-nums">
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">55+</span>
-									<span>Commodities Tracked</span>
+									<span className="text-[#B8860B] font-semibold text-base">85+</span>
+									<span>Beef Cuts Tracked</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">7</span>
-									<span>AI Signal Models</span>
+									<span className="text-[#B8860B] font-semibold text-base">8</span>
+									<span>AI Price Models</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">Real-time</span>
-									<span>Market Data</span>
+									<span className="text-[#B8860B] font-semibold text-base">5</span>
+									<span>Export Markets</span>
 								</div>
 							</div>
 						</MotionReveal>
@@ -212,7 +213,9 @@ export const Hero: React.FC = () => {
 								<div className="mb-3 flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<TrendUp size={16} weight="duotone" className="text-[#B8860B]" />
-										<span className="text-sm font-medium text-gray-400">WTI Crude — 4H</span>
+										<span className="text-sm font-medium text-gray-400">
+											Chuck Roll Choice — USDA
+										</span>
 									</div>
 									<div className="flex items-center gap-2">
 										<div className="size-1.5 rounded-full bg-green-500" />
@@ -249,8 +252,8 @@ export const Hero: React.FC = () => {
 								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
 									<Gauge size={14} weight="duotone" className="text-[#B8860B]" />
 									<span className="text-xs font-medium text-gray-400">AI Consensus</span>
-									<span className="text-xs font-semibold text-green-400 ml-auto">Strong Buy</span>
-									<span className="text-xs text-gray-500 font-mono tabular-nums">73%</span>
+									<span className="text-xs font-semibold text-green-400 ml-auto">Price Up</span>
+									<span className="text-xs text-gray-500 font-mono tabular-nums">78%</span>
 								</div>
 							</div>
 						</MotionReveal>

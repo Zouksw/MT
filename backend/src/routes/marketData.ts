@@ -402,14 +402,24 @@ router.get(
 			},
 		};
 
-		const sources = Object.entries(sourceLabels).map(([key, info]) => ({
-			id: key,
-			...info,
-			status: health[key]?.success ? "healthy" : health[key]?.lastRun ? "error" : "pending",
-			lastRun: health[key]?.lastRun ?? null,
-			error: health[key]?.error ?? null,
-			lastResult: health[key]?.lastResult ?? null,
-		}));
+		const sources = Object.entries(sourceLabels).map(([key, info]) => {
+			const h = health[key];
+			const status = h?.skippedNoKey
+				? "skipped_no_key"
+				: h?.success
+					? "healthy"
+					: h?.lastRun
+						? "error"
+						: "pending";
+			return {
+				id: key,
+				...info,
+				status,
+				lastRun: h?.lastRun ?? null,
+				error: h?.error ?? null,
+				lastResult: h?.lastResult ?? null,
+			};
+		});
 
 		success(res, { sources, count: sources.length });
 	}),

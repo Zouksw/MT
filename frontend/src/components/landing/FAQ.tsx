@@ -14,32 +14,32 @@ const faqs: FAQItem[] = [
 	{
 		question: "What is MT?",
 		answer:
-			"MT is a commodity market analytics platform. 108 commodities across 13 categories. 131 market factors — weather, FX, tariffs, freight — correlated with price movements. 7 independent AI models generate buy/sell signals with confidence intervals.",
+			"MT is a beef trade analytics platform. We track 85+ standardized beef cuts across 16+ export factories in 5 major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina). 8 independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.",
 	},
 	{
-		question: "How does the AI signal engine work?",
+		question: "How does the AI price forecasting work?",
 		answer:
-			"Seven models run independently on each commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL decomposition, Timer-XL, and Sundial. Each produces a price forecast, a directional signal (buy/sell/hold), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.",
+			"Eight models run independently on each beef commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL decomposition, Timer-XL (LSTM), Sundial (Transformer), and Chronos-2. Each produces a price forecast, a directional signal (up/down/stable), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.",
 	},
 	{
-		question: "What commodities are covered?",
+		question: "What beef cuts are covered?",
 		answer:
-			"108 commodities across 13 categories: beef cuts (34,960 cut-level prices from 21 factories), grains & oilseeds (corn, soybeans, wheat), energy (WTI, Brent, natural gas), metals (gold, silver, copper), soft commodities (coffee, sugar, cotton), and forex pairs. 18 data ingestion modules feed 229,000+ data points.",
+			"85+ standardized cuts organized by primal: Chuck, Rib, Loin, Round, Brisket, Shank, Plate/Flank, and Offal. Each cut has IMPS codes, HS codes, and multilingual names (English, Chinese, Spanish, Portuguese). Pricing is tracked at factory level — you can compare the same cut across different plants and origins.",
 	},
 	{
-		question: "What market factors do you analyze?",
+		question: "What export markets do you cover?",
 		answer:
-			"131 market factors across 5 categories: weather (temperature, rainfall, growing conditions), FX (12 currency pairs vs USD), tariffs (China/US/AU trade data), freight (Baltic Dry Index, container rates), and supply/demand (USDA, ABARES, FAO reports). Each factor's Pearson correlation with commodity prices is calculated and displayed.",
+			"Brazil (SECEX data — HS 0201/0202 export volumes and FOB prices by destination), Uruguay (INAC — cut-level export pricing), Australia (MLA — EYCI index, slaughter, export cuts), Argentina (INDEC — production and export), and the US (USDA AMS — boxed beef cutout, cut-level pricing). Cold storage and weekly slaughter data are also tracked.",
 	},
 	{
 		question: "Is this a trading platform?",
 		answer:
-			"No. MT is an information and analytics platform. We provide data, analysis, and AI-generated signals to inform your decisions. We do not execute trades, manage accounts, or handle funds.",
+			"No. MT is an information and analytics platform. We provide cut-level pricing data, export flow analysis, and AI-generated price forecasts to inform your buying and sourcing decisions. We do not execute trades, manage accounts, or handle funds.",
 	},
 	{
 		question: "Can I set up price alerts?",
 		answer:
-			"Yes. Custom price thresholds on any of the 108 commodities. Breakout and trend reversal detection via WebSocket — alerts arrive in under 50ms. Severity levels (info/warning/critical) with factor attribution so you see what triggered the move.",
+			"Yes. Custom price thresholds on any of the 85+ beef cuts. Breakout and trend reversal detection via WebSocket — alerts arrive in under 50ms. Severity levels (info/warning/critical) with factor attribution so you see what's driving the price move.",
 	},
 ];
 
@@ -65,7 +65,7 @@ export default function FAQ() {
 						</h2>
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
-						<p className="mt-4 text-lg text-muted-foreground">Technical and product details</p>
+						<p className="mt-4 text-lg text-muted-foreground">Beef trade analytics, explained</p>
 					</MotionReveal>
 				</div>
 

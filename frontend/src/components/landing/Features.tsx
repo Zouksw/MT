@@ -3,116 +3,78 @@
 import type React from "react";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 
-const _signalModels = [
-	{ name: "ARIMA", signal: "Buy", confidence: 84, color: "bg-green-500" },
-	{ name: "HoltWinters", signal: "Buy", confidence: 79, color: "bg-green-500" },
-	{ name: "Exponential", signal: "Hold", confidence: 62, color: "bg-amber-500" },
-	{ name: "STL", signal: "Buy", confidence: 71, color: "bg-green-500" },
-];
-
-const correlationData = [
-	{ pair: "Oil / CAD", value: 0.87 },
-	{ pair: "Gold / USD", value: -0.72 },
-	{ pair: "Wheat / Weather", value: 0.64 },
-	{ pair: "Copper / CNY", value: 0.58 },
-];
-
 const features = [
 	{
-		title: "Multi-Factor Analysis",
+		title: "Cut-Level Pricing",
 		description:
-			"131 market factors — weather, FX, tariffs, freight indices — correlated with commodity prices via Pearson coefficient.",
-		details: ["Weather data", "Forex rates", "Shipping indices"],
+			"85+ standardized beef cuts — IMPS-coded, multilingual — priced at factory level across 16+ export plants in 5 countries.",
+		details: ["85+ cuts", "IMPS/HS codes", "Factory-level"],
 		span: "md:col-span-2",
-		visual: "factors",
+		visual: "cuts",
 	},
 	{
-		title: "AI Signal Engine",
+		title: "AI Price Forecasting",
 		description:
-			"Seven independent models — ARIMA, Holt-Winters, STL, Timer-XL — each producing buy/sell signals with confidence intervals and MAPE verification.",
-		details: ["7 AI models", "Signal confidence", "MAPE tracking"],
+			"8 independent models — ARIMA, Holt-Winters, STL, Timer-XL, Chronos-2 — each producing price forecasts with confidence intervals and MAPE verification.",
+		details: ["8 AI models", "Confidence intervals", "MAPE tracking"],
 		span: "",
 		visual: null,
 		goldAccent: true,
 	},
 	{
-		title: "55+ Commodities",
+		title: "Export Trade Flows",
 		description:
-			"108 commodities across 13 categories — beef cuts to brent crude. OHLCV candlestick data with multi-source overlay.",
-		details: ["Beef & livestock", "Grains & oilseeds", "Energy & metals"],
+			"Brazil, Uruguay, Australia, Argentina, US — export volumes, FOB prices, and destination analysis by HS code (0201/0202).",
+		details: ["Volume tracking", "FOB pricing", "5 markets"],
 		span: "md:col-span-2",
-		visual: "commodities",
+		visual: "trade",
+	},
+	{
+		title: "Supply Chain Monitor",
+		description:
+			"Weekly slaughter data, cold storage inventory, and herd statistics — the fundamentals behind price movements.",
+		details: ["Slaughter data", "Cold storage", "Herd stats"],
+		span: "",
+		visual: null,
+	},
+	{
+		title: "Correlation Analysis",
+		description:
+			"FX rates, feed costs, shipping indices, and weather — correlated with beef cut prices via Pearson coefficient.",
+		details: ["FX correlation", "Feed costs", "Shipping rates"],
+		span: "",
+		visual: null,
 	},
 	{
 		title: "Price Alerts",
 		description:
-			"Custom price thresholds with breakout and reversal detection. WebSocket-powered alerts avg 47ms latency.",
-		details: ["Price thresholds", "Trend alerts", "Severity levels"],
-		span: "",
-		visual: null,
-	},
-	{
-		title: "Seasonality & Correlation",
-		description:
-			"Monthly seasonality decomposition and Pearson cross-commodity correlation matrix with interactive heatmap.",
-		details: ["Monthly patterns", "Correlation matrix", "Trend analysis"],
-		span: "",
-		visual: null,
-	},
-	{
-		title: "Backtest & Accuracy",
-		description:
-			"Backtest AI model accuracy with rolling MAPE windows. Compare model performance across 30/60/90-day horizons.",
-		details: ["Rolling MAPE", "30/60/90 day windows", "Model comparison"],
+			"Custom thresholds on any cut or market. Breakout and reversal detection via WebSocket with factor attribution.",
+		details: ["Cut thresholds", "Trend alerts", "Factor context"],
 		span: "",
 		visual: null,
 	},
 ];
 
 const metrics = [
-	{ value: "108", label: "Commodities" },
-	{ value: "7", label: "AI Models" },
-	{ value: "18", label: "Data Sources" },
-	{ value: "131", label: "Market Factors" },
+	{ value: "85+", label: "Beef Cuts" },
+	{ value: "8", label: "AI Models" },
+	{ value: "16+", label: "Export Factories" },
+	{ value: "5", label: "Markets" },
 ];
 
-function FactorVisual() {
-	return (
-		<div className="mt-4 space-y-2">
-			{correlationData.map((item) => (
-				<div key={item.pair} className="flex items-center gap-3">
-					<span className="text-xs text-muted-foreground w-28 shrink-0">{item.pair}</span>
-					<div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-						<div
-							className="h-full rounded-full bg-[#B8860B]/50 transition-all duration-700"
-							style={{ width: `${Math.abs(item.value) * 100}%` }}
-						/>
-					</div>
-					<span
-						className={`text-xs font-mono tabular-nums w-10 text-right ${item.value > 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
-					>
-						{item.value > 0 ? "+" : ""}
-						{item.value.toFixed(2)}
-					</span>
-				</div>
-			))}
-		</div>
-	);
-}
-
-function CommoditiesVisual() {
-	const commodities = [
-		{ name: "Crude Oil WTI", price: "$78.42", change: "+1.23%", up: true },
-		{ name: "Gold", price: "$2,341", change: "+0.41%", up: true },
-		{ name: "Soybeans", price: "$1,187", change: "-0.67%", up: false },
-		{ name: "Copper", price: "$4.28", change: "+0.89%", up: true },
-		{ name: "Wheat", price: "$612.5", change: "-0.34%", up: false },
-		{ name: "Natural Gas", price: "$2.84", change: "+2.17%", up: true },
+function CutsVisual() {
+	const cuts = [
+		{ name: "Chuck Roll Choice", price: "$389", change: "+2.1%", up: true },
+		{ name: "Ribeye Lip-On", price: "$613", change: "+0.9%", up: true },
+		{ name: "Brisket Flat", price: "$295", change: "-0.5%", up: false },
+		{ name: "Strip Loin", price: "$548", change: "+1.4%", up: true },
+		{ name: "Outside Round", price: "$267", change: "-0.3%", up: false },
+		{ name: "Short Plate", price: "$198", change: "+0.7%", up: true },
 	];
 
 	return (
 		<div className="mt-4 grid grid-cols-2 gap-2">
-			{commodities.map((c) => (
+			{cuts.map((c) => (
 				<div
 					key={c.name}
 					className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700/30"
@@ -126,6 +88,37 @@ function CommoditiesVisual() {
 							className={`text-xs font-mono tabular-nums ${c.up ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
 						>
 							{c.change}
+						</span>
+					</div>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function TradeVisual() {
+	const flows = [
+		{ origin: "🇧🇷 Brazil", dest: "🇨🇳 China", volume: "1.2Mt", trend: "+8%" },
+		{ origin: "🇦🇺 Australia", dest: "🇯🇵 Japan", volume: "340kt", trend: "+3%" },
+		{ origin: "🇺🇾 Uruguay", dest: "🇪🇺 EU", volume: "180kt", trend: "-2%" },
+	];
+
+	return (
+		<div className="mt-4 space-y-2">
+			{flows.map((f) => (
+				<div
+					key={`${f.origin}-${f.dest}`}
+					className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700/30"
+				>
+					<span className="text-xs text-muted-foreground">
+						{f.origin} → {f.dest}
+					</span>
+					<div className="flex items-center gap-3">
+						<span className="text-xs font-mono text-gray-900 dark:text-white tabular-nums">
+							{f.volume}
+						</span>
+						<span className="text-xs font-mono text-green-600 dark:text-green-400 tabular-nums">
+							{f.trend}
 						</span>
 					</div>
 				</div>
@@ -153,13 +146,13 @@ export const Features: React.FC = () => {
 							className="font-display text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl lg:text-5xl"
 							style={{ letterSpacing: "-2.4px" }}
 						>
-							Data-first market analysis
+							Beef trade analytics, end to end
 						</h2>
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
 						<p className="mt-4 text-lg text-muted-foreground">
-							Multi-factor correlation, 7 independent signal models, 131 market factors — not a
-							dashboard, a signal engine.
+							Cut-level pricing, export flows, AI forecasting, supply chain monitoring —
+							purpose-built for the global beef trade.
 						</p>
 					</MotionReveal>
 				</div>
@@ -197,8 +190,8 @@ export const Features: React.FC = () => {
 								</p>
 
 								{/* Visual data inside wide cards */}
-								{feature.visual === "factors" && <FactorVisual />}
-								{feature.visual === "commodities" && <CommoditiesVisual />}
+								{feature.visual === "cuts" && <CutsVisual />}
+								{feature.visual === "trade" && <TradeVisual />}
 
 								<div className="mt-4 flex flex-wrap gap-2">
 									{feature.details.map((detail, idx) => (

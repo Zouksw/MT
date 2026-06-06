@@ -196,4 +196,5 @@ async function fetchCutLevelPrices(): Promise<ScraperResult> {
 export const usdaAmsScraper: Scraper = {
 	name: "usda_ams",
 	fetch: updateAMSPrices,
+	requiresKey: "USDA_MARS_API_KEY",
 };

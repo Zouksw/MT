@@ -173,4 +173,5 @@ async function fetchMLAData(): Promise<ScraperResult> {
 export const mlaNlrsScraper: Scraper = {
 	name: "mla_nlrs",
 	fetch: fetchMLAData,
+	requiresKey: "MLA_API_KEY",
 };

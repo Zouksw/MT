@@ -172,4 +172,5 @@ async function fetchFREDData(): Promise<ScraperResult> {
 export const fredScraper: Scraper = {
 	name: "fred",
 	fetch: fetchFREDData,
+	requiresKey: "FRED_API_KEY",
 };

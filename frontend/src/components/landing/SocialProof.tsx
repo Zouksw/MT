@@ -45,24 +45,24 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
 
 const stats = [
 	{
-		numericValue: 108,
-		suffix: "",
-		label: "Commodities",
+		numericValue: 85,
+		suffix: "+",
+		label: "Beef Cuts",
 	},
 	{
-		numericValue: 7,
+		numericValue: 8,
 		suffix: "",
-		label: "AI signal models",
+		label: "AI price models",
 	},
 	{
-		numericValue: 18,
-		suffix: "",
-		label: "Data ingestion modules",
+		numericValue: 16,
+		suffix: "+",
+		label: "Export factories",
 	},
 	{
-		numericValue: 131,
+		numericValue: 5,
 		suffix: "",
-		label: "Market factors tracked",
+		label: "Beef markets covered",
 	},
 ];
 
