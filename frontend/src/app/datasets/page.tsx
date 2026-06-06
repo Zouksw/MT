@@ -216,14 +216,6 @@ export default function DatasetsList() {
 				title="Datasets"
 				description="Manage your time series datasets"
 				breadcrumbs={[{ label: "Home", href: "/" }, { label: "Datasets" }]}
-				actions={
-					<Button
-						icon={<Plus className="size-3.5" />}
-						onClick={() => router.push("/datasets/create")}
-					>
-						{!isMobile && "Create Dataset"}
-					</Button>
-				}
 			/>
 
 			{/* Statistics */}

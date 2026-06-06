@@ -223,9 +223,18 @@ router.get(
 		const thirtyDaysAgo = new Date();
 		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+		// Filter factors relevant to the commodity's category/currency
+		const relevantRegions: string[] = [];
+		if (commodity.currency === "CNY") relevantRegions.push("USD/CNY");
+		if (commodity.currency === "AUD" || commodity.category === "beef_cuts")
+			relevantRegions.push("AUD/USD");
+		if (commodity.currency === "BRL" || commodity.category === "beef_cuts")
+			relevantRegions.push("BRL/USD");
+
 		const factors = await prisma.marketFactor.findMany({
 			where: {
 				date: { gte: thirtyDaysAgo },
+				...(relevantRegions.length > 0 ? { region: { in: relevantRegions } } : {}),
 			},
 			orderBy: { date: "desc" },
 			take: 200,
@@ -340,9 +349,44 @@ router.get(
 					"中国农业农村部批发市场价格 — daily wholesale prices for meat, vegetables, fruits",
 				tier: "2",
 			},
-			china_customs: {
+			china_customs_stats: {
 				label: "China Customs",
 				description: "中国海关总署 — monthly import/export statistics by commodity and country",
+				tier: "3",
+			},
+			cepea: {
+				label: "CEPEA/B3",
+				description:
+					"Centro de Estudos Avançados em Economia Aplicada — Brazilian beef and commodity prices",
+				tier: "2",
+			},
+			inac: {
+				label: "INAC Uruguay",
+				description: "Instituto Nacional de Carnes — Uruguayan beef export prices and volumes",
+				tier: "2",
+			},
+			mla_nlrs: {
+				label: "MLA Australia",
+				description:
+					"Meat & Livestock Australia — National Livestock Reporting Service, saleyard prices",
+				tier: "2",
+			},
+			secex: {
+				label: "SECEX Brazil",
+				description:
+					"Secretaria de Comércio Exterior — Brazilian beef export statistics by HS code",
+				tier: "2",
+			},
+			argentina: {
+				label: "INDEC Argentina",
+				description:
+					"Instituto Nacional de Estadística — Argentine agricultural production and export data",
+				tier: "3",
+			},
+			shipping_index: {
+				label: "Shipping Indices",
+				description:
+					"Shanghai Container Freight Index (SCFI/CCFI) — global container shipping rates",
 				tier: "3",
 			},
 			dce_futures: {

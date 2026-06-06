@@ -305,8 +305,8 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(result.current.stats?.aiModels.active).toBe(5);
-		expect(result.current.stats?.aiModels.total).toBe(7);
+		expect(result.current.stats?.aiModels.active).toBe(8);
+		expect(result.current.stats?.aiModels.total).toBe(8);
 	});
 
 	it("should include trend data", async () => {

@@ -124,16 +124,16 @@ export const useDashboardStats = () => {
 			? (errors[0] as Error)
 			: null;
 
-	// Calculate trends (mock data for now) - use useMemo to avoid impure function calls during render
-	const mockTrends = useMemo(
+	// No historical data to compute real trends yet — show zero until data accumulates
+	const trends = useMemo(
 		() => ({
-			datasets: 5, // Mock trend value
-			timeseries: 3, // Mock trend value
-			forecasts: -8, // Mock trend value
-			alerts: -12, // Mock trend value
+			datasets: 0,
+			timeseries: 0,
+			forecasts: 0,
+			alerts: 0,
 		}),
 		[],
-	); // Empty dependency array - calculate once
+	);
 
 	// Count alerts by severity
 	const alertsBySeverity = {
@@ -161,24 +161,24 @@ export const useDashboardStats = () => {
 			? {
 					datasets: {
 						total: datasetsData.total || datasetsData.data?.length || 0,
-						trend: mockTrends.datasets,
+						trend: trends.datasets,
 					},
 					timeseries: {
 						total: timeseriesData.total || timeseriesData.data?.length || 0,
-						trend: mockTrends.timeseries,
+						trend: trends.timeseries,
 					},
 					forecasts: {
 						total: forecastsData.total || forecastsData.data?.length || 0,
-						trend: mockTrends.forecasts,
+						trend: trends.forecasts,
 					},
 					alerts: {
 						total: alertsData.total || alertsData.data?.length || 0,
 						bySeverity: alertsBySeverity,
-						trend: mockTrends.alerts,
+						trend: trends.alerts,
 					},
 					aiModels: {
-						active: 5, // Mock data
-						total: 7,
+						active: 8,
+						total: 8,
 					},
 					recentAlerts: Array.isArray(recentAlertsData?.data)
 						? recentAlertsData.data
