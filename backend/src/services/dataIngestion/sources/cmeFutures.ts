@@ -1,7 +1,9 @@
 /**
- * Commodity Futures via Stooq (Free CSV API)
+ * Commodity Futures via FRED + Stooq
  *
- * Uses stooq.com free CSV endpoint — no API key required.
+ * Primary: FRED public CSV (no API key needed for daily crude oil & natural gas)
+ * Fallback: Stooq.com CSV for CME futures (may be blocked by Cloudflare)
+ *
  * Covers: Live Cattle, Feeder Cattle, Lean Hogs, Corn, Soybeans, Wheat,
  * Soybean Meal, Soybean Oil, Coffee, Sugar, Cotton, Crude Oil, Natural Gas, Gold.
  */
@@ -114,6 +116,90 @@ const FUTURES: Record<
 	},
 };
 
+/** FRED series IDs that provide daily data via public CSV download (no API key) */
+const FRED_DAILY: Record<
+	string,
+	{ seriesId: string; slug: string; name: string; category: string; unit: string }
+> = {
+	CL: {
+		seriesId: "DCOILWTICO",
+		slug: "crude_oil_cme",
+		name: "Crude Oil WTI (FRED)",
+		category: "energy",
+		unit: "USD/bbl",
+	},
+	NG: {
+		seriesId: "DHHNGSP",
+		slug: "natural_gas_cme",
+		name: "Natural Gas Henry Hub (FRED)",
+		category: "energy",
+		unit: "USD/MMBtu",
+	},
+};
+
+async function fetchFredDaily(
+	config: (typeof FRED_DAILY)[string],
+): Promise<{ inserted: number; updated: number }> {
+	const end = new Date();
+	const start = new Date();
+	start.setDate(start.getDate() - 7);
+
+	const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${config.seriesId}&cosd=${formatDateYMD(start)}&coed=${formatDateYMD(end)}`;
+
+	const res = await fetch(url, {
+		headers: { "User-Agent": "MT/1.0" },
+		signal: AbortSignal.timeout(10000),
+	});
+	if (!res.ok) {
+		logger.warn(`[CME/FRED] ${config.seriesId}: HTTP ${res.status}`);
+		return { inserted: 0, updated: 0 };
+	}
+
+	const text = await res.text();
+	const lines = text.trim().split("\n");
+	if (lines.length < 2) return { inserted: 0, updated: 0 };
+
+	// Skip header, parse CSV rows
+	let inserted = 0;
+	let updated = 0;
+
+	const commodity = await ensureCommodity({
+		slug: config.slug,
+		name: config.name,
+		category: config.category,
+		unit: config.unit,
+		metadata: { source: "fred", seriesId: config.seriesId },
+	});
+
+	for (let i = 1; i < lines.length; i++) {
+		const cols = lines[i].split(",");
+		if (cols.length < 2) continue;
+
+		const dateStr = cols[0].trim();
+		const value = parseFloat(cols[1].trim());
+		if (Number.isNaN(value) || !dateStr) continue;
+
+		const date = new Date(`${dateStr}T00:00:00Z`);
+		if (Number.isNaN(date.getTime())) continue;
+
+		const r = await upsertPrice({
+			commodityId: commodity.id,
+			date,
+			source: "fred",
+			open: value,
+			high: value,
+			low: value,
+			close: value,
+			volume: null,
+			metadata: { seriesId: config.seriesId, source: "fred_csv" },
+		});
+		inserted += r.inserted;
+		updated += r.updated;
+	}
+
+	return { inserted, updated };
+}
+
 async function fetchStooqBar(ticker: string): Promise<{
 	date: Date;
 	open: number;
@@ -137,7 +223,7 @@ async function fetchStooqBar(ticker: string): Promise<{
 	if (!res.ok) return null;
 
 	const lines = (await res.text()).trim().split("\n");
-	if (lines.length < 1) return null;
+	if (lines.length < 2) return null;
 
 	const cols = lines[lines.length - 1].split(",");
 	if (cols.length < 7) return null;
@@ -168,11 +254,28 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 	let inserted = 0;
 	let updated = 0;
 
+	// Phase 1: Fetch daily data from FRED (reliable, no API key)
+	for (const [, config] of Object.entries(FRED_DAILY)) {
+		try {
+			const r = await fetchFredDaily(config);
+			inserted += r.inserted;
+			updated += r.updated;
+		} catch (err) {
+			logger.warn(
+				`[CME/FRED] ${config.seriesId} failed: ${err instanceof Error ? err.message : err}`,
+			);
+		}
+	}
+
+	// Phase 2: Try Stooq for remaining CME futures (may be Cloudflare-blocked)
 	for (const [symbol, cfg] of Object.entries(FUTURES)) {
+		// Skip commodities already covered by FRED
+		if (symbol in FRED_DAILY) continue;
+
 		try {
 			const bar = await fetchStooqBar(cfg.ticker);
 			if (!bar) {
-				logger.warn(`[CME] ${cfg.ticker}: no data`);
+				logger.debug(`[CME/Stooq] ${cfg.ticker}: no data`);
 				continue;
 			}
 
@@ -199,7 +302,7 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 			inserted += r.inserted;
 			updated += r.updated;
 		} catch (err) {
-			logger.warn(`[CME] ${cfg.ticker} failed: ${err instanceof Error ? err.message : err}`);
+			logger.debug(`[CME/Stooq] ${cfg.ticker} failed: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 

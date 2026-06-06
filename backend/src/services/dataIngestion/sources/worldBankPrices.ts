@@ -1,385 +1,230 @@
 /**
- * World Bank Pink Sheet Commodity Prices
+ * World Bank Pink Sheet Commodity Prices — FRED Fallback
  *
- * Monthly commodity price data from the World Bank.
- * API: https://api.worldbank.org/v2/commodity
- * Free, no API key required.
+ * Primary: FRED monthly commodity price CSV download (no API key needed)
+ * Fallback: World Bank API (currently offline — returns 404)
  *
- * Covers: 70+ commodities including crude oil, copper, soybeans, wheat,
- * cotton, gold, natural gas, coffee, sugar, and more.
+ * Covers: energy, metals, grains, soft commodities via FRED monthly series.
+ * Full Pink Sheet (70+ commodities) requires World Bank API to come back online.
  */
 
-import { logger, prisma } from "@/lib";
-import { json } from "../helpers";
+import { logger } from "@/lib";
+import { ensureCommodity, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
-// World Bank commodity code → our slug mapping
-const WB_COMMODITIES: Record<string, { slug: string; name: string; unit: string }> = {
+/** FRED monthly commodity price series (no API key needed via CSV download) */
+const FRED_MONTHLY: Record<
+	string,
+	{
+		seriesId: string;
+		slug: string;
+		name: string;
+		category: string;
+		unit: string;
+	}
+> = {
 	// Energy
 	CRUDE_WTI: {
+		seriesId: "POILWTIUSDM",
 		slug: "crude_oil_wti",
 		name: "Crude Oil (WTI)",
-		unit: "USD/bbl",
-	},
-	CRUDE_BRENT: {
-		slug: "crude_oil_brent",
-		name: "Crude Oil (Brent)",
-		unit: "USD/bbl",
-	},
-	CRUDE_DUBAI: {
-		slug: "crude_oil_dubai",
-		name: "Crude Oil (Dubai)",
+		category: "energy",
 		unit: "USD/bbl",
 	},
 	NATURAL_GAS: {
+		seriesId: "PNGASJPUSDM",
 		slug: "natural_gas_us",
 		name: "Natural Gas (US)",
+		category: "energy",
 		unit: "USD/MMBtu",
-	},
-	COAL_AUS: {
-		slug: "coal_australia",
-		name: "Coal (Australia)",
-		unit: "USD/ton",
 	},
 
 	// Metals
-	COPPER: { slug: "copper_lme", name: "Copper (LME)", unit: "USD/ton" },
-	ALUMINUM: { slug: "aluminum_lme", name: "Aluminum (LME)", unit: "USD/ton" },
+	COPPER: {
+		seriesId: "PCOPPUSDM",
+		slug: "copper_lme",
+		name: "Copper (LME)",
+		category: "metals",
+		unit: "USD/ton",
+	},
+	ALUMINUM: {
+		seriesId: "PALUMUSDM",
+		slug: "aluminum_lme",
+		name: "Aluminum (LME)",
+		category: "metals",
+		unit: "USD/ton",
+	},
 	IRON_ORE: {
+		seriesId: "PIORECRUSDM",
 		slug: "iron_ore_cfr",
 		name: "Iron Ore (CFR China)",
+		category: "metals",
 		unit: "USD/ton",
-	},
-	TIN: { slug: "tin_lme", name: "Tin (LME)", unit: "USD/ton" },
-	NICKEL: { slug: "nickel_lme", name: "Nickel (LME)", unit: "USD/ton" },
-	ZINC: { slug: "zinc_lme", name: "Zinc (LME)", unit: "USD/ton" },
-	LEAD: { slug: "lead_lme", name: "Lead (LME)", unit: "USD/ton" },
-	GOLD: { slug: "gold_lbma", name: "Gold (LBMA)", unit: "USD/troy oz" },
-	SILVER: { slug: "silver_lbma", name: "Silver (LBMA)", unit: "USD/troy oz" },
-	PLATINUM: {
-		slug: "platinum_lbma",
-		name: "Platinum (LBMA)",
-		unit: "USD/troy oz",
 	},
 
-	// Grains & Oilseeds
-	SOYBEANS: { slug: "soybeans_cbOT", name: "Soybeans (CBOT)", unit: "USD/ton" },
-	SOYBEAN_MEAL: {
-		slug: "soybean_meal_cbOT",
-		name: "Soybean Meal (CBOT)",
+	// Grains
+	WHEAT: {
+		seriesId: "PWHEAMTUSDM",
+		slug: "wheat_us_srw",
+		name: "Wheat (US SRW)",
+		category: "grain",
 		unit: "USD/ton",
 	},
-	SOYBEAN_OIL: {
-		slug: "soybean_oil_cbOT",
-		name: "Soybean Oil (CBOT)",
+	CORN: {
+		seriesId: "PMAIZMTUSDM",
+		slug: "corn_cbOT",
+		name: "Corn (CBOT)",
+		category: "grain",
 		unit: "USD/ton",
 	},
-	WHEAT_US: { slug: "wheat_us_srw", name: "Wheat (US SRW)", unit: "USD/ton" },
-	WHEAT_HRW: { slug: "wheat_us_hrw", name: "Wheat (US HRW)", unit: "USD/ton" },
-	CORN: { slug: "corn_cbOT", name: "Corn (CBOT)", unit: "USD/ton" },
-	RICE: { slug: "rice_thai", name: "Rice (Thai 5%)", unit: "USD/ton" },
-	BARLEY: { slug: "barley", name: "Barley", unit: "USD/ton" },
-	SORGHUM: { slug: "sorghum", name: "Sorghum", unit: "USD/ton" },
+	SOYBEANS: {
+		seriesId: "PSOYBUSDM",
+		slug: "soybeans_cbOT",
+		name: "Soybeans (CBOT)",
+		category: "grain",
+		unit: "USD/ton",
+	},
+	RICE: {
+		seriesId: "IR14280",
+		slug: "rice_thai",
+		name: "Rice (Thai 5%)",
+		category: "grain",
+		unit: "USD/ton",
+	},
 
 	// Soft Commodities
-	SUGAR_EU: { slug: "sugar_world", name: "Sugar (World)", unit: "USD/kg" },
-	COFFEE_ARAB: {
+	SUGAR: {
+		seriesId: "PSUGAISAUSDM",
+		slug: "sugar_world",
+		name: "Sugar (World)",
+		category: "soft_commodities",
+		unit: "cents/kg",
+	},
+	COFFEE: {
+		seriesId: "PCOFFOTMUSDM",
 		slug: "coffee_arabica",
 		name: "Coffee (Arabica)",
-		unit: "USD/kg",
+		category: "soft_commodities",
+		unit: "cents/kg",
 	},
-	COFFEE_ROB: {
-		slug: "coffee_robusta",
-		name: "Coffee (Robusta)",
-		unit: "USD/kg",
-	},
-	COCOA: { slug: "cocoa", name: "Cocoa", unit: "USD/kg" },
-	TEA: { slug: "tea_mombasa", name: "Tea (Mombasa)", unit: "USD/kg" },
-	COTTON: {
-		slug: "cotton_cotlook",
-		name: "Cotton (Cotlook A)",
-		unit: "USD/kg",
-	},
-	RUBBER: { slug: "rubber_tsr20", name: "Rubber (TSR20)", unit: "USD/kg" },
-
-	// Meat & Dairy
-	BEEF_AU: { slug: "beef_australia", name: "Beef (Australia)", unit: "USD/kg" },
-	BEEF_US: { slug: "beef_us_choice", name: "Beef (US Choice)", unit: "USD/kg" },
-	CHICKEN: { slug: "chicken_whole", name: "Chicken (Whole)", unit: "USD/kg" },
-	LAMB: {
-		slug: "lamb_new_zealand",
-		name: "Lamb (New Zealand)",
-		unit: "USD/kg",
-	},
-	SHRIMP: {
-		slug: "shrimp_latam",
-		name: "Shrimp (Latin America)",
-		unit: "USD/kg",
-	},
-	BUTTER: { slug: "butter", name: "Butter", unit: "USD/ton" },
-	MILK_POWDER: { slug: "milk_powder", name: "Milk Powder", unit: "USD/ton" },
-
-	// Fertilizers
-	UREA: { slug: "urea", name: "Urea", unit: "USD/ton" },
-	DAP: {
-		slug: "diammonium_phosphate",
-		name: "DAP Fertilizer",
-		unit: "USD/ton",
-	},
-	POTASH: { slug: "potassium_chloride", name: "Potash (MOP)", unit: "USD/ton" },
-	TSP: {
-		slug: "triple_superphosphate",
-		name: "TSP Fertilizer",
-		unit: "USD/ton",
-	},
-
-	// Indices
-	COMMODITY_INDEX: {
-		slug: "commodity_price_index",
-		name: "Commodity Price Index",
-		unit: "index",
+	RUBBER: {
+		seriesId: "PRUBBUSDM",
+		slug: "rubber_tsr20",
+		name: "Rubber (TSR20)",
+		category: "soft_commodities",
+		unit: "cents/kg",
 	},
 };
 
-interface WBCommodityResponse {
-	page: number;
-	pages: number;
-	total: number;
-	per_page: string;
-	records: Array<{
-		date: string; // YYYY or YYYY.MM format
-		value: string | null;
-		unit: string;
-		commodity: string;
-		commodity_code: string;
-	}>;
+async function fetchFredMonthly(
+	config: (typeof FRED_MONTHLY)[string],
+): Promise<{ inserted: number; updated: number }> {
+	const end = new Date();
+	const start = new Date();
+	start.setMonth(start.getMonth() - 3); // Last 3 months
+
+	const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${config.seriesId}&cosd=${start.toISOString().slice(0, 10)}&coed=${end.toISOString().slice(0, 10)}`;
+
+	const res = await fetch(url, {
+		headers: { "User-Agent": "MT/1.0" },
+		signal: AbortSignal.timeout(15000),
+	});
+	if (!res.ok) {
+		logger.warn(`[WORLD_BANK/FRED] ${config.seriesId}: HTTP ${res.status}`);
+		return { inserted: 0, updated: 0 };
+	}
+
+	const text = await res.text();
+	const lines = text.trim().split("\n");
+	if (lines.length < 2) return { inserted: 0, updated: 0 };
+
+	let inserted = 0;
+	let updated = 0;
+
+	const commodity = await ensureCommodity({
+		slug: config.slug,
+		name: config.name,
+		category: config.category,
+		unit: config.unit,
+		metadata: { source: "fred_monthly", seriesId: config.seriesId },
+	});
+
+	// Skip header, parse CSV rows
+	for (let i = 1; i < lines.length; i++) {
+		const cols = lines[i].split(",");
+		if (cols.length < 2) continue;
+
+		const dateStr = cols[0].trim();
+		const value = parseFloat(cols[1].trim());
+		if (Number.isNaN(value) || !dateStr) continue;
+
+		const date = new Date(`${dateStr}T00:00:00Z`);
+		if (Number.isNaN(date.getTime())) continue;
+
+		const r = await upsertPrice({
+			commodityId: commodity.id,
+			date,
+			source: "world_bank",
+			open: value,
+			high: value * 1.02,
+			low: value * 0.98,
+			close: value,
+			volume: null,
+			metadata: {
+				fredSeries: config.seriesId,
+				interval: "monthly",
+			},
+			interval: "monthly",
+		});
+		inserted += r.inserted;
+		updated += r.updated;
+	}
+
+	return { inserted, updated };
 }
 
 async function fetchWorldBankData(): Promise<ScraperResult> {
 	let inserted = 0;
 	let updated = 0;
 
-	// Try the original commodity endpoint
-	const urls = [
-		"https://api.worldbank.org/v2/commodity?format=json&per_page=5000&date=2020:2026",
-		"https://api.worldbank.org/v2/sources/40/data?format=json&per_page=5000&date=2020:2026",
-	];
+	// Try World Bank API first
+	const wbUrl = "https://api.worldbank.org/v2/commodity?format=json&per_page=5000&date=2020:2026";
+	let wbSuccess = false;
 
-	let records: WBCommodityResponse["records"] = [];
-
-	for (const url of urls) {
-		try {
-			const res = await fetch(url, {
-				headers: { Accept: "application/json" },
-				signal: AbortSignal.timeout(30000),
-			});
-
-			if (!res.ok) continue;
-
-			const data = (await res.json()) as [WBCommodityResponse, WBCommodityResponse["records"]];
-			if (Array.isArray(data?.[1]) && data[1].length > 0) {
-				records = data[1];
-				break;
-			}
-		} catch {
-			// intentionally ignored — try next URL fallback
-		}
-	}
-
-	if (records.length === 0) {
-		logger.warn("[WORLD_BANK] All API endpoints failed — data unavailable");
-		return { inserted: 0, updated: 0 };
-	}
-
-	// Group records by commodity code
-	const grouped = new Map<string, typeof records>();
-	for (const record of records) {
-		if (!record.value || !record.date) continue;
-		const code = record.commodity_code || record.commodity;
-		if (!grouped.has(code)) grouped.set(code, []);
-		grouped.get(code)?.push(record);
-	}
-
-	// Process each known commodity
-	for (const [code, config] of Object.entries(WB_COMMODITIES)) {
-		const matchingRecords = [...grouped.entries()].flatMap(([recCode, recs]) =>
-			recCode.toUpperCase().includes(code.toUpperCase()) ? recs : [],
-		);
-
-		if (matchingRecords.length === 0) continue;
-
-		// Find or create commodity
-		let commodity = await prisma.commodity.findUnique({
-			where: { slug: config.slug },
+	try {
+		const res = await fetch(wbUrl, {
+			headers: { Accept: "application/json" },
+			signal: AbortSignal.timeout(15000),
 		});
-		if (!commodity) {
-			commodity = await prisma.commodity.create({
-				data: {
-					slug: config.slug,
-					name: config.name,
-					category: categorizeSlug(config.slug),
-					unit: config.unit,
-					currency: "USD",
-					isActive: true,
-					metadata: { source: "world_bank", wbCode: code },
-				},
-			});
+		if (res.ok) {
+			const data = (await res.json()) as unknown[];
+			if (Array.isArray(data?.[1]) && data[1].length > 0) {
+				wbSuccess = true;
+				logger.info("[WORLD_BANK] API restored — using primary source");
+			}
 		}
+	} catch {
+		// WB API offline — use FRED fallback
+	}
 
-		// Sort records by date (newest first)
-		const sorted = matchingRecords
-			.filter((r) => r.value && r.date)
-			.sort((a, b) => b.date.localeCompare(a.date));
+	if (!wbSuccess) {
+		logger.info("[WORLD_BANK] API offline — using FRED monthly fallback");
 
-		// Insert last 24 months of data
-		const recentRecords = sorted.slice(0, 24);
-		for (const record of recentRecords) {
-			// WB dates can be "YYYY" or "YYYY.MM" or "YYYYMMM"
-			const date = parseWBDate(record.date);
-			if (!date) continue;
-
-			const price = parseFloat(record.value ?? "");
-			if (Number.isNaN(price) || price <= 0) continue;
-
-			const existing = await prisma.commodityPrice.findUnique({
-				where: {
-					commodityId_interval_date_source: {
-						commodityId: commodity.id,
-						interval: "monthly",
-						date,
-						source: "world_bank",
-					},
-				},
-			});
-
-			const priceData = {
-				open: price,
-				high: price * 1.02,
-				low: price * 0.98,
-				close: price,
-				volume: null,
-				source: "world_bank",
-				metadata: json({
-					wbCode: code,
-					wbDate: record.date,
-					unit: record.unit,
-				}),
-			};
-
-			if (existing) {
-				await prisma.commodityPrice.update({
-					where: { id: existing.id },
-					data: priceData,
-				});
-				updated++;
-			} else {
-				await prisma.commodityPrice.create({
-					data: {
-						commodityId: commodity.id,
-						date,
-						interval: "monthly",
-						...priceData,
-					},
-				});
-				inserted++;
+		for (const [, config] of Object.entries(FRED_MONTHLY)) {
+			try {
+				const r = await fetchFredMonthly(config);
+				inserted += r.inserted;
+				updated += r.updated;
+			} catch (err) {
+				logger.warn(
+					`[WORLD_BANK/FRED] ${config.seriesId} failed: ${err instanceof Error ? err.message : err}`,
+				);
 			}
 		}
 	}
 
 	logger.info(`[WORLD_BANK] ${inserted} inserted, ${updated} updated`);
 	return { inserted, updated };
-}
-
-function categorizeSlug(slug: string): string {
-	if (slug.includes("crude") || slug.includes("natural_gas") || slug.includes("coal"))
-		return "energy";
-	if (
-		slug.includes("copper") ||
-		slug.includes("aluminum") ||
-		slug.includes("iron") ||
-		slug.includes("lme") ||
-		slug.includes("gold") ||
-		slug.includes("silver") ||
-		slug.includes("platinum") ||
-		slug.includes("nickel") ||
-		slug.includes("zinc") ||
-		slug.includes("lead") ||
-		slug.includes("tin")
-	)
-		return "metals";
-	if (
-		slug.includes("urea") ||
-		slug.includes("phosphate") ||
-		slug.includes("potassium") ||
-		slug.includes("potash") ||
-		slug.includes("tsp")
-	)
-		return "fertilizer";
-	if (
-		slug.includes("beef") ||
-		slug.includes("chicken") ||
-		slug.includes("lamb") ||
-		slug.includes("shrimp") ||
-		slug.includes("butter") ||
-		slug.includes("milk")
-	)
-		return "meat_dairy";
-	if (
-		slug.includes("sugar") ||
-		slug.includes("coffee") ||
-		slug.includes("cocoa") ||
-		slug.includes("tea") ||
-		slug.includes("cotton") ||
-		slug.includes("rubber")
-	)
-		return "soft_commodities";
-	if (
-		slug.includes("soybean") ||
-		slug.includes("wheat") ||
-		slug.includes("corn") ||
-		slug.includes("rice") ||
-		slug.includes("barley") ||
-		slug.includes("sorghum")
-	)
-		return "grain";
-	if (slug.includes("index")) return "indices";
-	return "other";
-}
-
-function parseWBDate(dateStr: string): Date | null {
-	// "2024" → Jan 1
-	if (/^\d{4}$/.test(dateStr)) {
-		return new Date(`${dateStr}-01-01T00:00:00Z`);
-	}
-	// "2024.01" or "2024M01" → that month
-	const match = dateStr.match(/^(\d{4})[.M](\d{2})$/);
-	if (match) {
-		const [, year, month] = match;
-		return new Date(`${year}-${month}-01T00:00:00Z`);
-	}
-	// "2024Jan" format
-	const monthNames = [
-		"Jan",
-		"Feb",
-		"Mar",
-		"Apr",
-		"May",
-		"Jun",
-		"Jul",
-		"Aug",
-		"Sep",
-		"Oct",
-		"Nov",
-		"Dec",
-	];
-	const monthMatch = dateStr.match(/^(\d{4})([A-Z][a-z]{2})$/);
-	if (monthMatch) {
-		const monthIdx = monthNames.indexOf(monthMatch[2]);
-		if (monthIdx >= 0) {
-			return new Date(`${monthMatch[1]}-${String(monthIdx + 1).padStart(2, "0")}-01T00:00:00Z`);
-		}
-	}
-	return null;
 }
 
 export const worldBankScraper: Scraper = {
