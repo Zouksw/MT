@@ -4,10 +4,7 @@ import { authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
 import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
-import {
-	healthCheck as inferenceHealth,
-	predictFromCache,
-} from "@/services/inference";
+import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inference";
 
 const router = Router();
 
@@ -52,9 +49,7 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
-		const modelId: ModelId = VALID_MODELS.includes(algorithm)
-			? algorithm
-			: "arima";
+		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : "arima";
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 
@@ -115,9 +110,7 @@ router.post(
 				continue;
 			}
 
-			const modelId: ModelId = VALID_MODELS.includes(r.algorithm)
-				? r.algorithm
-				: "arima";
+			const modelId: ModelId = VALID_MODELS.includes(r.algorithm) ? r.algorithm : "arima";
 			const h = Math.min(Math.max(Number(r.horizon) || 10, 1), 100);
 			const cl = Number(r.confidenceLevel) || 0.95;
 
@@ -171,16 +164,13 @@ router.post(
 	authenticate,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
-		const { commodityId, horizon, algorithm, confidenceLevel, historyPoints } =
-			req.body;
+		const { commodityId, horizon, algorithm, confidenceLevel, historyPoints } = req.body;
 
 		if (!commodityId) {
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
-		const modelId: ModelId = VALID_MODELS.includes(algorithm)
-			? algorithm
-			: "arima";
+		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : "arima";
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 		const limit = Number(historyPoints) || 50;
@@ -237,9 +227,7 @@ router.post(
 		const values = prices.map((p) => Number(p.close));
 		const timestamps = prices.map((p) => p.date.getTime());
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
-		const std = Math.sqrt(
-			values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length,
-		);
+		const std = Math.sqrt(values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length);
 
 		const anomalies: Array<{
 			timestamp: number;
@@ -252,13 +240,7 @@ router.post(
 			const zscore = std > 0 ? Math.abs((values[i] - mean) / std) : 0;
 			if (zscore > th) {
 				const severity =
-					zscore > 5
-						? "CRITICAL"
-						: zscore > 4
-							? "HIGH"
-							: zscore > 3
-								? "MEDIUM"
-								: "LOW";
+					zscore > 5 ? "CRITICAL" : zscore > 4 ? "HIGH" : zscore > 3 ? "MEDIUM" : "LOW";
 				anomalies.push({
 					timestamp: timestamps[i],
 					value: values[i],
@@ -306,9 +288,7 @@ router.post(
 		const values = prices.map((p) => Number(p.close));
 		const timestamps = prices.map((p) => p.date.getTime());
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
-		const std = Math.sqrt(
-			values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length,
-		);
+		const std = Math.sqrt(values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length);
 
 		const anomalies: Array<{
 			timestamp: number;
@@ -321,13 +301,7 @@ router.post(
 			const zscore = std > 0 ? Math.abs((values[i] - mean) / std) : 0;
 			if (zscore > th) {
 				const severity =
-					zscore > 5
-						? "CRITICAL"
-						: zscore > 4
-							? "HIGH"
-							: zscore > 3
-								? "MEDIUM"
-								: "LOW";
+					zscore > 5 ? "CRITICAL" : zscore > 4 ? "HIGH" : zscore > 3 ? "MEDIUM" : "LOW";
 				anomalies.push({
 					timestamp: timestamps[i],
 					value: values[i],
@@ -370,8 +344,11 @@ router.get(
 				res.json(data);
 				return;
 			}
-		} catch {
-			// Inference service unavailable, return static list
+		} catch (error) {
+			logger.warn(
+				"[INFERENCE] Failed to fetch models from inference service, using static list",
+				error,
+			);
 		}
 
 		res.json({
@@ -386,9 +363,7 @@ router.get(
 	asyncHandler(async (req: Request, res: Response) => {
 		const { id } = req.params;
 		if (!VALID_MODELS.includes(id as ModelId)) {
-			throw new BadRequestError(
-				`Unknown model: ${id}. Available: ${VALID_MODELS.join(", ")}`,
-			);
+			throw new BadRequestError(`Unknown model: ${id}. Available: ${VALID_MODELS.join(", ")}`);
 		}
 		res.json({ id, status: "available" });
 	}),
@@ -408,8 +383,7 @@ router.post(
 		res.json({
 			modelId: algorithm,
 			status: "ready",
-			message:
-				"Model is available for inference (statistical models need no training)",
+			message: "Model is available for inference (statistical models need no training)",
 			commodityId: commodityId || null,
 		});
 	}),

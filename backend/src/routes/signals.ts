@@ -9,6 +9,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
+import { logger } from "@/lib/logger.js";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
@@ -83,10 +84,7 @@ router.get(
 
 		const accuracy = await getModelAccuracy(modelId, commodityId, days);
 
-		res.json({
-			success: true,
-			data: accuracy,
-		});
+		success(res, accuracy);
 	}),
 );
 
@@ -292,7 +290,9 @@ router.get(
 
 		// Check for signal changes and send notifications (non-blocking)
 		const io = req.app.get("io");
-		checkSignalChange(commodityId, signal.type, signal.confidence, io).catch(() => {});
+		checkSignalChange(commodityId, signal.type, signal.confidence, io).catch((err) =>
+			logger.warn("Signal change check failed:", err),
+		);
 
 		success(res, {
 			commodityId,

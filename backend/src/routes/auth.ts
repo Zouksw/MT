@@ -3,6 +3,7 @@ import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { config, jwtUtils, prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
+import { logger } from "@/lib/logger.js";
 import { success, successWithMessage } from "@/lib/response";
 import {
 	asyncHandler,
@@ -38,7 +39,8 @@ async function getUserIdFromToken(authHeader: string | undefined): Promise<strin
 		if (await isTokenBlacklisted(token)) return null;
 		const payload = jwtUtils.verifyToken(token);
 		return payload.userId;
-	} catch {
+	} catch (error) {
+		logger.warn("[AUTH] Token verification failed in getUserIdFromToken", error);
 		return null;
 	}
 }
@@ -84,7 +86,7 @@ async function auditLog(req: Request, userId: string, resourceType: string, acti
 				success: true,
 			},
 		})
-		.catch(() => {});
+		.catch((err) => logger.warn("Audit log write failed:", err));
 }
 
 /**
@@ -393,7 +395,8 @@ router.post(
 		try {
 			const payload = jwtUtils.verifyRefreshToken(refreshToken);
 			userId = payload.userId;
-		} catch {
+		} catch (error) {
+			logger.warn("[AUTH] Refresh token verification failed", error);
 			throw new UnauthorizedError("Invalid refresh token");
 		}
 

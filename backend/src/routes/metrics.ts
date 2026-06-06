@@ -368,7 +368,8 @@ router.get("/web-vitals", async (req: Request, res: Response) => {
 				.map((entry) => {
 					try {
 						return JSON.parse(entry);
-					} catch {
+					} catch (error) {
+						logger.warn("[METRICS] Failed to parse web vital entry", error);
 						return null;
 					}
 				})
@@ -452,7 +453,8 @@ router.get("/web-vitals/history", async (req: Request, res: Response) => {
 						path: string;
 						timestamp: number;
 					};
-				} catch {
+				} catch (error) {
+					logger.warn("[METRICS] Failed to parse web vital history entry", error);
 					return null;
 				}
 			})
@@ -574,7 +576,8 @@ router.get("/summary", async (_req: Request, res: Response) => {
 				.map((entry) => {
 					try {
 						return (JSON.parse(entry) as { value: number }).value;
-					} catch {
+					} catch (error) {
+						logger.warn("[METRICS] Failed to parse web vital summary entry", error);
 						return null;
 					}
 				})
@@ -615,8 +618,8 @@ router.get("/summary", async (_req: Request, res: Response) => {
 		try {
 			const sessionKeys = await client.keys("sess:*");
 			activeUsers = sessionKeys.length;
-		} catch {
-			// Session keys not available or Redis error - fall back to 0
+		} catch (error) {
+			logger.warn("[METRICS] Failed to count active user sessions", error);
 		}
 
 		// Calculate error rate: count endpoints with p99 > 1s as a heuristic

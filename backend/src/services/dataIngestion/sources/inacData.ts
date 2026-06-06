@@ -7,8 +7,8 @@
  * Frequency: Monthly
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { json } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const INAC_EXPORT_URL = "https://www.inac.gub.uy/estadisticas/exportaciones.html";
@@ -70,9 +70,9 @@ async function fetchINACData(): Promise<ScraperResult> {
 								unit: "USD/kg FOB",
 								source: "inac",
 								date,
-								metadata: {
+								metadata: json({
 									rawName: cutName,
-								} as unknown as Prisma.InputJsonValue,
+								}),
 							},
 						});
 						inserted++;

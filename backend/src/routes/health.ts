@@ -4,7 +4,7 @@
  */
 
 import { type Request, type Response, Router } from "express";
-import { prisma } from "@/lib";
+import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
 import { error, success } from "@/lib/response";
 import { asyncHandler } from "@/middleware/errorHandler";
@@ -126,14 +126,16 @@ router.get(
 						.then(() => true)
 						.catch(() => false)
 				: false;
-		} catch {
+		} catch (error) {
+			logger.warn("[HEALTH] Redis check failed", error);
 			checks.redis = false;
 		}
 
 		// Check inference service
 		try {
 			checks.inference = await inferenceHealth();
-		} catch {
+		} catch (error) {
+			logger.warn("[HEALTH] Inference service check failed", error);
 			checks.inference = false;
 		}
 

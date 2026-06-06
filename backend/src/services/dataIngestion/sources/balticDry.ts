@@ -62,8 +62,8 @@ async function fetchBalticDry(): Promise<ScraperResult> {
 				updated += r.updated;
 			}
 		}
-	} catch {
-		logger.info("[BDI] Baltic Exchange API unavailable, trying FRED");
+	} catch (error) {
+		logger.info("[BDI] Baltic Exchange API unavailable, trying FRED", error);
 	}
 
 	// Fallback: FRED

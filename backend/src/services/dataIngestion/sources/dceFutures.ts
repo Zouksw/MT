@@ -9,8 +9,8 @@
  * Data stored as CommodityPrice with source: 'dce' / 'czce'.
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { ensureCommodity, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const DCE_PRODUCTS: Record<
@@ -140,18 +140,11 @@ async function fetchDCEFutures(): Promise<ScraperResult> {
 			const date = new Date(`${frontMonth.date}T00:00:00Z`);
 			if (Number.isNaN(date.getTime())) continue;
 
-			const result = await upsertFuturesPrice(
-				config,
-				settle,
-				frontMonth,
-				"dce",
-			);
+			const result = await upsertFuturesPrice(config, settle, frontMonth, "dce");
 			inserted += result.inserted;
 			updated += result.updated;
 		} catch (err) {
-			logger.warn(
-				`[DCE] ${symbol} failed: ${err instanceof Error ? err.message : err}`,
-			);
+			logger.warn(`[DCE] ${symbol} failed: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 
@@ -183,18 +176,11 @@ async function fetchDCEFutures(): Promise<ScraperResult> {
 			const date = new Date(`${frontMonth.date}T00:00:00Z`);
 			if (Number.isNaN(date.getTime())) continue;
 
-			const result = await upsertFuturesPrice(
-				config,
-				settle,
-				frontMonth,
-				"czce",
-			);
+			const result = await upsertFuturesPrice(config, settle, frontMonth, "czce");
 			inserted += result.inserted;
 			updated += result.updated;
 		} catch (err) {
-			logger.warn(
-				`[CZCE] ${symbol} failed: ${err instanceof Error ? err.message : err}`,
-			);
+			logger.warn(`[CZCE] ${symbol} failed: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 
@@ -214,82 +200,36 @@ async function upsertFuturesPrice(
 	raw: Record<string, string>,
 	exchange: string,
 ): Promise<{ inserted: number; updated: number }> {
-	let inserted = 0;
-	let updated = 0;
-
 	const dateStr = raw.date;
 	const date = new Date(`${dateStr}T00:00:00Z`);
-	if (Number.isNaN(date.getTime())) return { inserted, updated };
+	if (Number.isNaN(date.getTime())) return { inserted: 0, updated: 0 };
 
-	let commodity = await prisma.commodity.findUnique({
-		where: { slug: config.slug },
+	const commodity = await ensureCommodity({
+		slug: config.slug,
+		name: config.name,
+		nameCn: config.nameCn,
+		category: "futures",
+		unit: config.unit,
+		currency: "CNY",
+		metadata: { source: exchange },
 	});
-	if (!commodity) {
-		commodity = await prisma.commodity.create({
-			data: {
-				slug: config.slug,
-				name: config.name,
-				nameCn: config.nameCn,
-				category: "futures",
-				unit: config.unit,
-				currency: "CNY",
-				isActive: true,
-				metadata: { source: exchange },
-			},
-		});
-	}
 
-	const open =
-		raw.open && raw.open !== "-" ? parseFloat(raw.open) : settle * 0.998;
-	const high =
-		raw.high && raw.high !== "-" ? parseFloat(raw.high) : settle * 1.005;
+	const open = raw.open && raw.open !== "-" ? parseFloat(raw.open) : settle * 0.998;
+	const high = raw.high && raw.high !== "-" ? parseFloat(raw.high) : settle * 1.005;
 	const low = raw.low && raw.low !== "-" ? parseFloat(raw.low) : settle * 0.995;
-	const volume =
-		raw.volume && raw.volume !== "-" ? parseFloat(raw.volume) : null;
+	const volume = raw.volume && raw.volume !== "-" ? parseFloat(raw.volume) : null;
 
-	const existing = await prisma.commodityPrice.findUnique({
-		where: {
-			commodityId_interval_date_source: {
-				commodityId: commodity.id,
-				interval: "daily",
-				date,
-				source: exchange,
-			},
-		},
-	});
-
-	const priceData = {
+	return upsertPrice({
+		commodityId: commodity.id,
+		date,
+		source: exchange,
 		open,
 		high,
 		low,
 		close: settle,
 		volume,
-		source: exchange,
-		metadata: {
-			exchange,
-			rawDate: dateStr,
-		} as unknown as Prisma.InputJsonValue,
-	};
-
-	if (existing) {
-		await prisma.commodityPrice.update({
-			where: { id: existing.id },
-			data: priceData,
-		});
-		updated++;
-	} else {
-		await prisma.commodityPrice.create({
-			data: {
-				commodityId: commodity.id,
-				date,
-				interval: "daily",
-				...priceData,
-			},
-		});
-		inserted++;
-	}
-
-	return { inserted, updated };
+		metadata: { exchange, rawDate: dateStr },
+	});
 }
 
 export const dceFuturesScraper: Scraper = {

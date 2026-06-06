@@ -9,8 +9,8 @@
  * Extended: LM_XB405 National Comprehensive Boxed Beef Cutout (600+ individual cuts)
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { json, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const AMS_REPORTS: Record<string, { reportId: string; slug: string; priceField: string }> = {
@@ -98,47 +98,19 @@ async function updateAMSPrices(): Promise<ScraperResult> {
 		const price = Number(latest[config.priceField]);
 		if (!price || Number.isNaN(price)) continue;
 
-		const existing = await prisma.commodityPrice.findUnique({
-			where: {
-				commodityId_interval_date_source: {
-					commodityId: commodity.id,
-					interval: "daily",
-					date,
-					source: "usda_ams",
-				},
-			},
-		});
-
-		const priceData = {
+		const result = await upsertPrice({
+			commodityId: commodity.id,
+			date,
+			source: "usda_ams",
 			open: price,
 			high: price * 1.005,
 			low: price * 0.995,
 			close: price,
 			volume: null,
-			source: "usda_ams",
-			metadata: {
-				reportId: config.reportId,
-				reportDate: dateStr,
-			} as unknown as Prisma.InputJsonValue,
-		};
-
-		if (existing) {
-			await prisma.commodityPrice.update({
-				where: { id: existing.id },
-				data: priceData,
-			});
-			updated++;
-		} else {
-			await prisma.commodityPrice.create({
-				data: {
-					commodityId: commodity.id,
-					date,
-					interval: "daily",
-					...priceData,
-				},
-			});
-			inserted++;
-		}
+			metadata: { reportId: config.reportId, reportDate: dateStr },
+		});
+		inserted += result.inserted;
+		updated += result.updated;
 	}
 
 	const cutPrices = await fetchCutLevelPrices();
@@ -203,11 +175,11 @@ async function fetchCutLevelPrices(): Promise<ScraperResult> {
 					sourceRef: "LM_XB405",
 					date,
 					grade: String(row.quality ?? "Choice"),
-					metadata: {
+					metadata: json({
 						rawName: cutName,
 						originalUnit: "USD/cwt",
 						originalPrice: price,
-					} as unknown as Prisma.InputJsonValue,
+					}),
 				},
 			});
 			inserted++;

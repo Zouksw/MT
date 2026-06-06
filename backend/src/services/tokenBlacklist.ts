@@ -26,21 +26,14 @@ const BLACKLIST_SET = "token:blacklist:all";
  * @param reason - Reason for blacklisting
  * @returns Promise<boolean> - true if successfully added
  */
-export async function blacklistToken(
-	token: string,
-	reason: string = "logout",
-): Promise<boolean> {
+export async function blacklistToken(token: string, reason: string = "logout"): Promise<boolean> {
 	try {
 		// Decode token without verification to get expiration
 		const decoded = jwtUtils.decodeToken(token) as { exp?: number };
-		const ttl = decoded?.exp
-			? decoded.exp - Math.floor(Date.now() / 1000)
-			: 86400; // Default 24 hours if no exp
+		const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 86400; // Default 24 hours if no exp
 
 		if (ttl <= 0) {
-			logger.debug(
-				`Token ${token.slice(0, 20)}... already expired, not blacklisting`,
-			);
+			logger.debug(`Token ${token.slice(0, 20)}... already expired, not blacklisting`);
 			return false;
 		}
 
@@ -65,9 +58,7 @@ export async function blacklistToken(
 			decoded?.exp || Math.floor(Date.now() / 1000) + 86400,
 		);
 
-		logger.info(
-			`Token ${tokenId.slice(0, 20)}... added to blacklist (${reason}, ${ttl}s TTL)`,
-		);
+		logger.info(`Token ${tokenId.slice(0, 20)}... added to blacklist (${reason}, ${ttl}s TTL)`);
 
 		return true;
 	} catch (error) {
@@ -108,9 +99,7 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
 			return true;
 		} else {
 			// In development, allow token for easier debugging
-			logger.warn(
-				"[DEV] Redis unavailable - allowing token (fail-open for development)",
-			);
+			logger.warn("[DEV] Redis unavailable - allowing token (fail-open for development)");
 			return false;
 		}
 	}
@@ -237,8 +226,8 @@ function extractTokenId(token: string): string {
 			hash = hash & hash; // Convert to 32bit integer
 		}
 		return Math.abs(hash).toString(36);
-	} catch {
-		// Final fallback to first 32 chars
+	} catch (error) {
+		logger.warn("[AUTH] Token ID extraction failed, using raw token prefix", error);
 		return token.slice(0, 32);
 	}
 }

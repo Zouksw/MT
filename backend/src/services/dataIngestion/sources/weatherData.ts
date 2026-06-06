@@ -71,8 +71,8 @@ export async function ingestWeatherData(): Promise<ScraperResult> {
 
 		try {
 			weather = await fetchFromAPI(apiKey, station);
-		} catch {
-			logger.warn(`[Weather] API failed for ${station.name}`);
+		} catch (error) {
+			logger.warn(`[Weather] API failed for ${station.name}`, error);
 		}
 
 		if (!weather) continue;

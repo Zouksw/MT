@@ -7,8 +7,8 @@
  * Key for AU factory-level pricing: OTH grid prices map to factory codes
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { json } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const MLA_API_BASE = process.env.MLA_API_BASE || "https://services.mla.com.au/api";
@@ -107,11 +107,11 @@ async function fetchMLAData(): Promise<ScraperResult> {
 						unit: "USD/kg",
 						source: "mla_oth",
 						date,
-						metadata: {
+						metadata: json({
 							audPerKg,
 							category: item.category,
 							factoryCode: item.factoryCode,
-						} as unknown as Prisma.InputJsonValue,
+						}),
 					},
 				});
 				inserted++;
@@ -154,9 +154,9 @@ async function fetchMLAData(): Promise<ScraperResult> {
 					unit: "USD/kg FOB",
 					source: "mla_export",
 					date,
-					metadata: {
+					metadata: json({
 						rawName: item.cutName,
-					} as unknown as Prisma.InputJsonValue,
+					}),
 				},
 			});
 			inserted++;

@@ -187,8 +187,8 @@ io.on("connection", (socket) => {
 			const payload = jwtUtils.verifyToken(token);
 			socketUserId = payload.userId;
 			logger.info(`Socket ${socket.id} authenticated as user ${socketUserId}`);
-		} catch {
-			logger.warn(`Socket ${socket.id} provided invalid token`);
+		} catch (error) {
+			logger.warn(`Socket ${socket.id} provided invalid token`, error);
 		}
 	} else {
 		logger.warn(`Socket ${socket.id} connected without authentication`);

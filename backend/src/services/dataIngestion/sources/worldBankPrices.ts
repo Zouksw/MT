@@ -9,8 +9,8 @@
  * cotton, gold, natural gas, coffee, sugar, and more.
  */
 
-import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { json } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // World Bank commodity code → our slug mapping
@@ -259,11 +259,11 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 				close: price,
 				volume: null,
 				source: "world_bank",
-				metadata: {
+				metadata: json({
 					wbCode: code,
 					wbDate: record.date,
 					unit: record.unit,
-				} as unknown as Prisma.InputJsonValue,
+				}),
 			};
 
 			if (existing) {

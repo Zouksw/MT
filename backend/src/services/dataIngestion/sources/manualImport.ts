@@ -1,6 +1,6 @@
-import type { Prisma } from "@prisma/client";
 import Papa from "papaparse";
 import { logger, prisma } from "@/lib";
+import { json } from "../helpers";
 import type { FieldMapping, NormalizedPrice } from "../normalizer";
 import { normalizePriceEntry } from "../normalizer";
 
@@ -19,23 +19,16 @@ export function parseCSV(
 	if (result.errors.length > 0) {
 		const critical = result.errors.filter((e) => e.type !== "FieldMismatch");
 		if (critical.length > 0) {
-			throw new Error(
-				`CSV parse error: ${critical.map((e) => e.message).join("; ")}`,
-			);
+			throw new Error(`CSV parse error: ${critical.map((e) => e.message).join("; ")}`);
 		}
 	}
 
 	return result.data as Record<string, unknown>[];
 }
 
-export function parseExcel(
-	_buffer: Buffer,
-	_sheetName?: string,
-): Record<string, unknown>[] {
+export function parseExcel(_buffer: Buffer, _sheetName?: string): Record<string, unknown>[] {
 	// xlsx is an optional dependency — throw a clear error if missing
-	throw new Error(
-		"Excel import requires the xlsx package. Install with: pnpm add xlsx",
-	);
+	throw new Error("Excel import requires the xlsx package. Install with: pnpm add xlsx");
 }
 
 export async function importRows(
@@ -91,8 +84,7 @@ export async function importRows(
 				close: normalized.close,
 				volume: normalized.volume,
 				source,
-				metadata: (normalized.metadata ??
-					undefined) as unknown as Prisma.InputJsonValue,
+				metadata: json(normalized.metadata ?? {}),
 			};
 
 			if (existing) {
@@ -114,9 +106,7 @@ export async function importRows(
 			}
 		} catch (err) {
 			errors++;
-			logger.debug(
-				`[ManualImport] DB error for row: ${err instanceof Error ? err.message : err}`,
-			);
+			logger.debug(`[ManualImport] DB error for row: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 

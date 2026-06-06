@@ -346,7 +346,8 @@ router.post(
 		let tsData: { values: number[]; timestamps: number[] };
 		try {
 			tsData = await getCommodityPriceValues(model.timeseriesId, 200);
-		} catch {
+		} catch (error) {
+			logger.warn("[MODELS] Failed to fetch price data for prediction", error);
 			throw new BadRequestError(
 				"Insufficient price data for prediction. Need at least 2 data points.",
 			);
