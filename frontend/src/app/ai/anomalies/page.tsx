@@ -261,7 +261,7 @@ export default function AIAnomaliesPage() {
 					/>
 
 					{/* Statistics Cards */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6 mb-6">
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 mt-6 mb-6">
 						<StatCard
 							title="Total Anomalies"
 							value={result.statistics.total}

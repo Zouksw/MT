@@ -313,7 +313,7 @@ export default function PricingPage() {
 						].map((faq, idx) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
-								<div className="bg-card rounded-lg p-6 outline outline-black/5 dark:outline-white/10 border-l-4 border-l-[#B8860B]">
+								<div className="bg-card rounded-lg p-6 outline outline-black/5 dark:outline-white/10">
 									<h3 className="text-h4 font-display font-semibold text-foreground mb-2">
 										{faq.q}
 									</h3>

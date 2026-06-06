@@ -301,7 +301,7 @@ export default function AlertRules() {
 			/>
 
 			{/* Statistics Cards */}
-			<div className={`grid grid-cols-3 gap-${isMobile ? 2 : 4} mb-${isMobile ? 4 : 6}`}>
+			<div className={`grid grid-cols-2 gap-${isMobile ? 2 : 4} mb-${isMobile ? 4 : 6}`}>
 				<StatCard
 					title="Total Rules"
 					value={totalRules}

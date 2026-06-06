@@ -193,7 +193,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 			</div>
 
 			{/* Main grid */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
 				{/* Anomaly Status Card */}
 				<div className="bg-card rounded-lg shadow-sm border border p-6">
 					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">

@@ -249,7 +249,7 @@ export default function AlertCreate() {
 
 							{/* Threshold Configuration (for THRESHOLD type) */}
 							{type === "THRESHOLD" && (
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<Select
 										label="Operator"
 										value={conditionOperator}

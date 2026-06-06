@@ -1,42 +1,51 @@
 /**
  * Unified Chart Configuration for MT
- * Provides consistent styling for all Recharts components
+ * DESIGN.md: Gold = AI intelligence, green/red = market direction ONLY
  */
 
-// Chart color palette - professional and accessible
+// Chart color palette — gold-centric per DESIGN.md "Refined Industrial" spec
 export const chartColors = {
-	// Primary colors - matching design system
+	// Gold accent — THE signature color
 	primary: "#B8860B",
 	primaryLight: "#D4A030",
 	primaryDark: "#9A7209",
 
-	// Semantic colors
-	success: "#10B981",
-	warning: "#F59E0B",
-	error: "#EF4444",
-	info: "#0EA5E9",
+	// Semantic — market direction per spec rules
+	bullish: "#22c55e",
+	bearish: "#ef4444",
+	warning: "#D4A030",
+	info: "#B8860B",
 
-	// Data visualization colors (colorblind-friendly palette)
+	// Legacy aliases (semantic names used elsewhere)
+	success: "#22c55e",
+	error: "#ef4444",
+
+	// Series palette — gold variants for multi-model/AI charts
+	gold: "#B8860B",
+	goldLight: "#D4A030",
+	goldPale: "#DAB84A",
+	goldWarm: "#C4960E",
+	goldDark: "#9A7209",
+	goldDeep: "#8B6914",
+	goldMuted: "#A07B0A",
+	goldBright: "#E8C560",
+
+	// Legacy aliases for chart components still referencing old names
+	purple: "#8B6914",
+	pink: "#D4A030",
 	blue: "#B8860B",
-	purple: "#8B5CF6",
-	pink: "#EC4899",
-	orange: "#F97316",
-	teal: "#14B8A6",
-	cyan: "#06B6D4",
-	indigo: "#6366F1",
-	rose: "#F43F5E",
 
-	// Neutral grays
-	gray50: "#F9FAFB",
-	gray100: "#F3F4F6",
-	gray200: "#E5E7EB",
-	gray300: "#D1D5DB",
-	gray400: "#9CA3AF",
-	gray500: "#6B7280",
-	gray600: "#4B5563",
-	gray700: "#374151",
-	gray800: "#1F2937",
-	gray900: "#111827",
+	// Design system neutrals (zinc scale matching #fafafa/#a1a1aa/#71717a)
+	gray50: "#fafafa",
+	gray100: "#f4f4f5",
+	gray200: "#e4e4e7",
+	gray300: "#d4d4d8",
+	gray400: "#a1a1aa",
+	gray500: "#71717a",
+	gray600: "#52525b",
+	gray700: "#3f3f46",
+	gray800: "#27272a",
+	gray900: "#18181b",
 };
 
 // Chart dimensions
@@ -117,20 +126,15 @@ export const chartAxisStyles = {
 	},
 };
 
-// Tooltip styles - professional and clean
+// Tooltip styles — dark-first per DESIGN.md
 export const chartTooltipStyles = {
-	backgroundColor: "rgba(255, 255, 255, 0.98)",
-	border: "1px solid #E5E7EB",
+	backgroundColor: "rgba(31, 31, 31, 0.98)",
+	border: "1px solid rgba(255, 255, 255, 0.08)",
 	borderRadius: 4,
 	padding: "12px",
-	boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+	boxShadow: "rgba(255, 255, 255, 0.08) 0px 0px 0px 1px, 0px 2px 8px rgba(0, 0, 0, 0.4)",
 	fontSize: 12,
-	color: chartColors.gray600,
-
-	// Dark mode
-	darkBackgroundColor: "rgba(31, 41, 55, 0.98)",
-	darkBorder: "1px solid #374151",
-	darkBoxShadow: "0 2px 8px rgba(0, 0, 0, 0.4)",
+	color: chartColors.gray400,
 };
 
 // Line chart specific
@@ -160,7 +164,7 @@ export const areaChartStyles = {
 // Bar chart styles
 export const barChartStyles = {
 	fill: chartColors.primary,
-	radius: [2, 2, 0, 0], // top-left, top-right, bottom-right, bottom-left
+	radius: [4, 4, 0, 0],
 	hoverFill: chartColors.primaryLight,
 };
 
@@ -193,16 +197,16 @@ export const getCommonChartProps = (_darkMode = false) => ({
 	margin: chartDimensions.margin,
 });
 
-// Line colors for multiple series (colorblind-safe palette)
+// Series colors — gold variants for multi-model/AI overlays
 export const seriesColors = [
-	chartColors.blue,
-	chartColors.purple,
-	chartColors.teal,
-	chartColors.orange,
-	chartColors.rose,
-	chartColors.cyan,
-	chartColors.indigo,
-	chartColors.pink,
+	chartColors.gold,
+	chartColors.goldLight,
+	chartColors.goldDark,
+	chartColors.goldPale,
+	chartColors.goldDeep,
+	chartColors.goldWarm,
+	chartColors.goldMuted,
+	chartColors.goldBright,
 ];
 
 // Utility function to generate chart colors

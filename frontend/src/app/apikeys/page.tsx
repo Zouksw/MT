@@ -275,7 +275,7 @@ export default function ApiKeyList() {
 			</Alert>
 
 			{/* Statistics Cards */}
-			<div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+			<div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mb-6">
 				<StatBlock
 					title="Total Keys"
 					value={totalKeys}

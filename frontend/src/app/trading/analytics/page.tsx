@@ -76,7 +76,7 @@ function RiskDashboard({ accounts }: { accounts: Array<{ id: string; name: strin
 					<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
 				</div>
 			) : risk ? (
-				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+				<div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
 					<StatCard
 						title="Sharpe Ratio"
 						value={risk.sharpe.toFixed(2)}

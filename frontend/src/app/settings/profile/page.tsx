@@ -140,7 +140,7 @@ export default function ProfileSettingsPage() {
 				description="Manage your personal information and preferences"
 			/>
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* Profile Overview */}
 				<div>
 					<div className="bg-card border rounded-xl p-6">
@@ -162,7 +162,7 @@ export default function ProfileSettingsPage() {
 
 						<hr className="my-4 border" />
 
-						<div className="grid grid-cols-3 gap-4 text-center">
+						<div className="grid grid-cols-2 gap-4 text-center">
 							<div>
 								<div className="text-xl font-semibold text-primary">
 									{user?._count.datasets || 0}

@@ -72,7 +72,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
 				className="flex items-start gap-3 px-4 py-3 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200"
 				role="alert"
 			>
-				<span className="text-sm font-bold mt-0.5">⚠</span>
+				<span className="text-sm font-semibold mt-0.5">⚠</span>
 				<div className="flex-1">
 					<p className="font-semibold text-sm">Request Taking Longer Than Expected</p>
 					<div className="mt-2 text-sm">

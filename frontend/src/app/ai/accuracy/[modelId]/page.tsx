@@ -155,7 +155,7 @@ export default function ModelDetailPage() {
 							</div>
 						</CardHeader>
 						<CardBody>
-							<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 								{backtest.windows.map((w) => (
 									<div key={w.days} className="bg-muted/50 rounded-lg p-4 text-center">
 										<p className="text-xs text-muted-foreground mb-1">{w.days}-Day Window</p>

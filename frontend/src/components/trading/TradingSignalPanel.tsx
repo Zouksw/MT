@@ -262,10 +262,10 @@ export default function TradingSignalPanel({
 											<span className="text-xs font-mono text-muted-foreground w-24 shrink-0">
 												{MODEL_NAME_MAP[signal.modelId] || signal.modelId}
 											</span>
-											<div className="flex-1 h-4 relative bg-muted rounded-sm">
+											<div className="flex-1 h-4 relative bg-muted rounded">
 												{/* Range bar */}
 												<div
-													className="absolute top-0.5 bottom-0.5 rounded-sm opacity-60"
+													className="absolute top-0.5 bottom-0.5 rounded opacity-60"
 													style={{
 														left: `${lowerPct}%`,
 														width: `${upperPct - lowerPct}%`,

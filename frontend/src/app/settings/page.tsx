@@ -106,7 +106,7 @@ export default function SettingsPage() {
 		<PageContainer>
 			<PageHeader title="Settings" description="Manage your account settings and preferences" />
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* User Profile Card */}
 				<div>
 					<div className="rounded-xl overflow-hidden bg-card border">
@@ -185,7 +185,7 @@ export default function SettingsPage() {
 			</div>
 
 			{/* Security Score Section */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
 				<div>
 					<div className="bg-card border rounded-xl p-6 text-center">
 						<div className="flex items-center gap-2 mb-4 justify-center">

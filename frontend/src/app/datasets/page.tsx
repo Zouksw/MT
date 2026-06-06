@@ -227,7 +227,7 @@ export default function DatasetsList() {
 			/>
 
 			{/* Statistics */}
-			<div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+			<div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
 				<StatCard label="Total Datasets" value={totalDatasets} />
 				<StatCard label="Public" value={publicDatasets} />
 				<StatCard label="Imported" value={importedDatasets} />

@@ -77,7 +77,7 @@ export default function BeefOverview() {
 				/>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
 				{/* Latest Prices by Cut */}
 				<Card className="lg:col-span-2">
 					<CardHeader>

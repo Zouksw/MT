@@ -143,7 +143,7 @@ export default function DashboardPage() {
 						))}
 					</div>
 
-					<div className={`grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6`}>
+					<div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6`}>
 						<div className="lg:col-span-2">
 							<ForecastTrendChart loading={loading} />
 						</div>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
 						</div>
 					</div>
 
-					<div className={`grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4`}>
+					<div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4`}>
 						<div className="lg:col-span-2">
 							<RecentActivity
 								recentAlerts={stats?.recentAlerts}

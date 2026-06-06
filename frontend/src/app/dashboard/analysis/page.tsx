@@ -126,7 +126,7 @@ export default function AnalysisPage() {
 					<CardTitle>Reading the Matrix</CardTitle>
 				</CardHeader>
 				<CardBody>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<p className="text-sm">
 							<strong>+1.0</strong> — Perfect positive correlation (prices move together)
 						</p>

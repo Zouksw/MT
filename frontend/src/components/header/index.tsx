@@ -88,7 +88,7 @@ export const Header: React.FC<{ sticky?: boolean }> = ({ sticky = true }) => {
 				>
 					<Bell className="size-[18px]" />
 					{unreadCount > 0 && (
-						<span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+						<span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
 							{unreadCount > 9 ? "9+" : unreadCount}
 						</span>
 					)}

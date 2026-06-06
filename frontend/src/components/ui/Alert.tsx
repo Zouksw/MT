@@ -58,7 +58,7 @@ export const Alert: React.FC<AlertProps> = ({
 			className={`flex items-start gap-3 px-4 py-3 rounded-lg border ${bg} ${border} ${text} ${className}`}
 			role="alert"
 		>
-			<span className="text-sm font-bold mt-0.5">{icon}</span>
+			<span className="text-sm font-semibold mt-0.5">{icon}</span>
 			<div className="flex-1 min-w-0">
 				{title && <p className="font-semibold text-sm mb-0.5">{title}</p>}
 				<div className="text-sm">{children}</div>

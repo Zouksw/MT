@@ -262,7 +262,7 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 				</div>
 
 				{/* Content grid */}
-				<div className={`grid gap-6 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
+				<div className={`grid gap-6 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
 					{/* Dataset Summary */}
 					<Card className={isMobile ? "" : "col-span-1"}>
 						<CardHeader>

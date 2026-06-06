@@ -64,7 +64,7 @@ export default function BillingPage() {
 				title="AI Plan"
 				description="Choose the right AI features for your analysis needs"
 			/>
-			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6">
 				{plans.map((plan) => {
 					const isActive = currentPlan === plan.id;
 					const icon = PLAN_ICONS[plan.id] || <Sparkles className="size-5" />;
@@ -80,7 +80,7 @@ export default function BillingPage() {
 									{plan.id === "pro" && !isActive && <Tag color="warning">Popular</Tag>}
 								</div>
 								<div className="text-center mb-4">
-									<span className="text-3xl font-bold">${plan.price}</span>
+									<span className="text-3xl font-semibold">${plan.price}</span>
 									<span className="text-muted-foreground">/month</span>
 								</div>
 								<ul className="space-y-2 mb-6">

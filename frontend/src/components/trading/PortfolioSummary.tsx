@@ -90,7 +90,7 @@ function GroupCard({
 					</div>
 				) : performance ? (
 					<>
-						<div className="grid grid-cols-3 gap-4 mb-4">
+						<div className="grid grid-cols-2 gap-4 mb-4">
 							<div>
 								<span className="text-xs text-muted-foreground block mb-1">Avg. Price Change</span>
 								<PriceChangeIndicator value={performance.totalPnl} />

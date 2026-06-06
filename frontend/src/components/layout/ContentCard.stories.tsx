@@ -85,7 +85,7 @@ export const FullFeatured: Story = {
 			</div>
 		),
 		children: (
-			<div className="grid grid-cols-3 gap-4">
+			<div className="grid grid-cols-2 gap-4">
 				<div>
 					<span className="text-xs text-gray-500">Total Points</span>
 					<div className="text-2xl font-semibold">1.2M</div>

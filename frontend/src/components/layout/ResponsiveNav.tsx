@@ -234,7 +234,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 									<>
 										<span className="flex-1">{item.label}</span>
 										{item.badge && item.badge > 0 && (
-											<span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+											<span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
 												{item.badge}
 											</span>
 										)}
@@ -342,7 +342,7 @@ export const MobileTabBar: React.FC = () => {
 						<span className="mobile-tab-item-icon">{item.icon}</span>
 						<span>{item.label}</span>
 						{item.badge && item.badge > 0 && (
-							<span className="absolute top-1 right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold">
+							<span className="absolute top-1 right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-semibold">
 								{item.badge}
 							</span>
 						)}

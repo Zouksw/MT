@@ -10,12 +10,13 @@ import {
 	getAuthHeader,
 	getAuthToken,
 	getCachedUser,
-	isAuthenticated,
 	removeAuthToken,
 	setAuthToken,
 	setCachedUser,
 	verifyAuthentication,
 } from "../auth";
+
+// isAuthenticated was removed — no longer imported
 
 // Mock dependencies
 jest.mock("@/lib/tokenManager", () => ({
@@ -23,7 +24,6 @@ jest.mock("@/lib/tokenManager", () => ({
 		getToken: jest.fn(),
 		setToken: jest.fn(),
 		removeToken: jest.fn(),
-		isTokenValid: jest.fn(),
 	},
 }));
 
@@ -199,43 +199,6 @@ describe("auth utilities", () => {
 					}),
 				}),
 			);
-		});
-	});
-
-	describe("isAuthenticated", () => {
-		it("should return true when token exists and is valid", () => {
-			tokenManager.getToken.mockReturnValue("valid-token");
-			tokenManager.isTokenValid.mockReturnValue(true);
-			expect(isAuthenticated()).toBe(true);
-		});
-
-		it("should return false when token does not exist", () => {
-			tokenManager.getToken.mockReturnValue(null);
-			expect(isAuthenticated()).toBe(false);
-		});
-
-		it("should return false when token is invalid", () => {
-			tokenManager.getToken.mockReturnValue("invalid-token");
-			tokenManager.isTokenValid.mockReturnValue(false);
-			expect(isAuthenticated()).toBe(false);
-		});
-
-		it("should warn in development when not authenticated", () => {
-			const originalEnv = process.env.NODE_ENV;
-			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-			(process.env as any).NODE_ENV = "development";
-			const warnSpy = jest.spyOn(console, "warn").mockImplementation();
-
-			tokenManager.getToken.mockReturnValue(null);
-			isAuthenticated();
-
-			expect(warnSpy).toHaveBeenCalledWith(
-				"[DEPRECATED] isAuthenticated() only checks memory. Use verifyAuthentication() instead.",
-			);
-
-			warnSpy.mockRestore();
-			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-			(process.env as any).NODE_ENV = originalEnv;
 		});
 	});
 

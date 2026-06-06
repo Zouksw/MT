@@ -331,34 +331,30 @@ export default function AlertList() {
 			{/* Statistics */}
 			{stats && (
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-					<Card className="border-l-4 border-l-primary">
+					<Card>
 						<CardBody>
 							<p className="text-sm text-muted-foreground">Total Alerts</p>
-							<p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
+							<p className="text-2xl font-semibold text-foreground mt-1">{stats.total}</p>
 						</CardBody>
 					</Card>
-					<Card
-						className={
-							stats.unread > 0 ? "border-l-4 border-l-red-500" : "border-l-4 border-l-gray-300"
-						}
-					>
+					<Card>
 						<CardBody>
 							<p className="text-sm text-muted-foreground">Unread</p>
-							<p className="text-2xl font-bold text-foreground mt-1">{stats.unread}</p>
+							<p className="text-2xl font-semibold text-foreground mt-1">{stats.unread}</p>
 						</CardBody>
 					</Card>
-					<Card className="border-l-4 border-l-red-500">
+					<Card>
 						<CardBody>
 							<p className="text-sm text-muted-foreground">Errors</p>
-							<p className="text-2xl font-bold text-foreground mt-1">
+							<p className="text-2xl font-semibold text-foreground mt-1">
 								{stats.bySeverity.ERROR || 0}
 							</p>
 						</CardBody>
 					</Card>
-					<Card className="border-l-4 border-l-amber-500">
+					<Card>
 						<CardBody>
 							<p className="text-sm text-muted-foreground">Warnings</p>
-							<p className="text-2xl font-bold text-foreground mt-1">
+							<p className="text-2xl font-semibold text-foreground mt-1">
 								{stats.bySeverity.WARNING || 0}
 							</p>
 						</CardBody>

@@ -238,7 +238,7 @@ export default function ForecastDetailPage() {
 			/>
 
 			{/* Main grid */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
 				{/* Summary Card */}
 				<div className="bg-card rounded-lg shadow-sm border border p-6">
 					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -308,7 +308,7 @@ export default function ForecastDetailPage() {
 				<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
 					Forecast Parameters
 				</h3>
-				<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					{/* Time Range */}
 					<div className="border border rounded-lg p-4">
 						<h4 className="text-sm font-semibold text-foreground mb-2">Time Range</h4>

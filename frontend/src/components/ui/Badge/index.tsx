@@ -34,7 +34,7 @@ export const Badge: React.FC<BadgeProps> = ({
 			{(count !== undefined || dot) && (
 				<span
 					className={`absolute -top-1 -right-1 ${VARIANT_MAP[variant]} text-white rounded-full flex items-center justify-center ${
-						dot ? "w-2 h-2" : "min-w-[18px] h-[18px] px-1 text-[10px] font-bold"
+						dot ? "w-2 h-2" : "min-w-[18px] h-[18px] px-1 text-[10px] font-semibold"
 					}`}
 				>
 					{!dot && count}
