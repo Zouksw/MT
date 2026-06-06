@@ -199,15 +199,15 @@ Before deploying to production:
 If you discover a security issue:
 
 1. **Don't panic** - We're here to help
-2. **Report it privately** - security@trademind-ai.com
+2. **Report it privately** - security@mt-platform.dev
 3. **Include details** - Steps to reproduce, impact assessment
 4. **We'll respond** - Within 24 hours with a plan
 
 ## 📚 Learn More
 
-- [Security Documentation](https://github.com/Zouksw/trademind-ai/blob/main/docs/SECURITY.md)
-- [API Security Best Practices](https://github.com/Zouksw/trademind-ai/blob/main/docs/API.md#security)
-- [Deployment Security](https://github.com/Zouksw/trademind-ai/blob/main/docs/deployment/DEPLOYMENT-CHECKLIST.md)
+- [Security Documentation](https://github.com/Zouksw/MT/blob/main/docs/SECURITY.md)
+- [API Security Best Practices](https://github.com/Zouksw/MT/blob/main/docs/API.md#security)
+- [Deployment Security](https://github.com/Zouksw/MT/blob/main/docs/deployment/DEPLOYMENT-CHECKLIST.md)
 
 ---
 
@@ -215,4 +215,4 @@ If you discover a security issue:
 
 ---
 
-*Found a security issue? Please report it responsibly to security@trademind-ai.com*
+*Found a security issue? Please report it responsibly to security@mt-platform.dev*

@@ -30,8 +30,8 @@ Thank you for your interest in contributing to MT! We welcome contributions from
    ```bash
    # Fork the repository on GitHub
    # Then clone your fork
-   git clone https://github.com/YOUR-USERNAME/trademind-ai.git
-   cd trademind-ai
+   git clone https://github.com/Zouksw/MT.git
+   cd MT
    ```
 
 2. **Install dependencies**

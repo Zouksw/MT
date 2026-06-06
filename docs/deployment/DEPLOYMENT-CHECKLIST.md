@@ -1,4 +1,6 @@
-# TradeMind AI - 上线前检查清单
+# MT - 上线前检查清单
+
+> **Note**: MT no longer uses IoTDB. IoTDB-specific deployment steps are historical and can be skipped.
 
 **创建日期**: 2026-03-26
 **项目状态**: 准备上线
@@ -311,7 +313,7 @@ nc -z localhost 10810 && echo "AI Node OK" || echo "AI Node FAILED"
   配置 cron 任务：
   ```bash
   # 每天凌晨 2 点备份
-  0 2 * * * /path/to/trademind-ai/scripts/backup-db.sh
+  0 2 * * * /path/to/MT/scripts/backup-db.sh
   ```
 
 ### Phase 8: 文档和部署 (MEDIUM)

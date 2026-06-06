@@ -1,17 +1,16 @@
 ---
 layout: default
-title: TradeMind AI Blog
+title: MT Blog
 ---
-
 <!-- Hero Section -->
 <div class="hero">
   <div class="hero-content">
-    <h1 class="hero-title">TradeMind AI Blog</h1>
+    <h1 class="hero-title">MT Blog</h1>
     <p class="hero-subtitle">
       Enterprise time series database platform with AI-powered forecasting and real-time analytics
     </p>
     <div class="hero-buttons">
-      <a href="https://github.com/Zouksw/trademind-ai" class="btn btn-primary">
+      <a href="https://github.com/Zouksw/MT" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-1.664-1.653-2.729-2.756-1.604-1.656-1.604-1.656 3.006 3.006 7.668 3.006 10.337 0 6.037-2.463 10.937-6.557 10.937-1.921 0-3.732-.565-5.252-1.537-.139.25-.293.511-.293.828 0 1.516 3.006 2.729 3.006 2.729 1.729 0 3.231-1.089 3.754-2.619.107-.651.196-1.453.196-2.231 0-1.607-.577-3.194-1.777-4.489-2.026-3.618-3.006-7.668-3.006-10.337 0-6.627 5.373-12 12-12z"/>
         </svg>

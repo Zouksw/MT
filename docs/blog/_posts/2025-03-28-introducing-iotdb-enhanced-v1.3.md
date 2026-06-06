@@ -111,8 +111,8 @@ TradeMind AI v1.3 is perfect for:
 Installation is simpler than ever:
 
 ```bash
-git clone https://github.com/Zouksw/trademind-ai.git
-cd trademind-ai
+git clone https://github.com/Zouksw/MT.git
+cd MT
 ./start.sh
 ```
 
@@ -134,14 +134,14 @@ Upgrading from v1.2? Here's what you need to know:
 1. Database migrations run automatically
 2. New configuration options in `.env` (optional)
 3. AI features are disabled by default - enable with `IOTDB_AI_ENABLED=true`
-4. Review the [CHANGELOG](https://github.com/Zouksw/trademind-ai/blob/main/docs/CHANGELOG.md) for full details
+4. Review the [CHANGELOG](https://github.com/Zouksw/MT/blob/main/docs/CHANGELOG.md) for full details
 
 ## 🙏 Thank You
 
 This release wouldn't be possible without our amazing community of contributors and users. Thank you for your feedback, bug reports, and feature requests!
 
-**Ready to get started?** Visit [GitHub](https://github.com/Zouksw/trademind-ai) to download v1.3 today.
+**Ready to get started?** Visit [GitHub](https://github.com/Zouksw/MT) to download v1.3 today.
 
 ---
 
-*Have questions or feedback? Join our [Discussions](https://github.com/Zouksw/trademind-ai/discussions) or open an [Issue](https://github.com/Zouksw/trademind-ai/issues).*
+*Have questions or feedback? Join our [Discussions](https://github.com/Zouksw/MT/discussions) or open an [Issue](https://github.com/Zouksw/MT/issues).*

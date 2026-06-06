@@ -28,8 +28,8 @@ A beautiful, responsive blog for TradeMind AI with:
 Edit `/docs/blog/_config.yml`:
 
 ```yaml
-url: "https://YOUR_USERNAME.github.io/trademind-ai"
-baseurl: "/trademind-ai"
+url: "https://zouksw.github.io/MT"
+baseurl: "/MT"
 ```
 
 ### 3. Push to GitHub
@@ -49,7 +49,7 @@ git push origin main
 ### 5. Visit Your Blog
 
 ```
-https://YOUR_USERNAME.github.io/trademind-ai/blog/
+https://zouksw.github.io/MT/blog/
 ```
 
 ---
@@ -261,5 +261,5 @@ All share the same navigation and branding.
 
 **Need Help?**
 - Check the [blog README](docs/blog/README.md)
-- Open a [GitHub Issue](https://github.com/Zouksw/trademind-ai/issues)
-- Start a [Discussion](https://github.com/Zouksw/trademind-ai/discussions)
+- Open a [GitHub Issue](https://github.com/Zouksw/MT/issues)
+- Start a [Discussion](https://github.com/Zouksw/MT/discussions)

@@ -130,7 +130,7 @@ git push origin main
 3. GitHub Actions will build and deploy automatically
 4. Your blog will be available at:
 ```
-https://your-username.github.io/trademind-ai/blog/
+https://zouksw.github.io/MT/blog/
 ```
 
 ### Manual Deployment
@@ -164,9 +164,9 @@ google_analytics: UA-XXXXXXXXX-X
 
 The blog is part of the main project documentation:
 
-- **Main Site**: https://your-username.github.io/trademind-ai/
-- **Blog**: https://your-username.github.io/trademind-ai/blog/
-- **Docs**: https://your-username.github.io/trademind-ai/docs/
+- **Main Site**: https://zouksw.github.io/MT/
+- **Blog**: https://zouksw.github.io/MT/blog/
+- **Docs**: https://zouksw.github.io/MT/docs/
 
 ## 📝 Content Guidelines
 
@@ -207,9 +207,9 @@ We welcome blog post contributions! Please:
 ## 📧 Contact
 
 Questions about the blog? Contact us at:
-- **Email**: blog@trademind-ai.com
-- **GitHub Discussions**: https://github.com/Zouksw/trademind-ai/discussions
-- **Issues**: https://github.com/Zouksw/trademind-ai/issues
+- **Email**: blog@mt-platform.dev
+- **GitHub Discussions**: https://github.com/Zouksw/MT/discussions
+- **Issues**: https://github.com/Zouksw/MT/issues
 
 ---
 

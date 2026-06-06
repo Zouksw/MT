@@ -1,8 +1,8 @@
 ---
 title: "MT 安全配置指南"
 en_title: "MT Security Configuration Guide"
-version: "1.1.0"
-last_updated: "2026-03-04"
+version: "1.2.0"
+last_updated: "2026-06-06"
 status: "stable"
 maintainer: "MT Team"
 reviewers:
@@ -666,6 +666,8 @@ sudo tail -f /var/log/syslog
 
 ---
 
-**文档版本**: 1.0.0
-**最后更新**: 2026-03-03
-**下次审查**: 2026-09-03
+**文档版本**: 1.2.0
+**最后更新**: 2026-06-06
+**下次审查**: 2026-12-06
+
+> **Note**: MT no longer uses IoTDB. The IoTDB-specific security references (password management, port rules, etc.) are historical. The current stack uses PostgreSQL + Redis + FastAPI (inference service on port 10810).

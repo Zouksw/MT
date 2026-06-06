@@ -194,12 +194,12 @@ POST /api/forecasts/batch
 
 Now that you understand the basics:
 
-1. Explore the [API documentation](https://github.com/Zouksw/trademind-ai/blob/main/docs/API.md)
-2. Learn about [anomaly detection](https://github.com/Zouksw/trademind-ai/blob/main/docs/blog/)
-3. Set up [automated alerts](https://github.com/Zouksw/trademind-ai/blob/main/docs/blog/)
+1. Explore the [API documentation](https://github.com/Zouksw/MT/blob/main/docs/API.md)
+2. Learn about [anomaly detection](https://github.com/Zouksw/MT/blob/main/docs/blog/)
+3. Set up [automated alerts](https://github.com/Zouksw/MT/blob/main/docs/blog/)
 
 Happy forecasting! 🚀
 
 ---
 
-*Questions? Join our [community discussions](https://github.com/Zouksw/trademind-ai/discussions)*
+*Questions? Join our [community discussions](https://github.com/Zouksw/MT/discussions)*

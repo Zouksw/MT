@@ -315,8 +315,8 @@ For full interactive API documentation with try-it-out functionality:
 
 ## Support
 
-- **Issues**: https://github.com/Zouksw/trademind-ai/issues
-- **Discussions**: https://github.com/Zouksw/trademind-ai/discussions
+- **Issues**: https://github.com/Zouksw/MT/issues
+- **Discussions**: https://github.com/Zouksw/MT/discussions
 - **Email**: support@mt.com
 
 ---
