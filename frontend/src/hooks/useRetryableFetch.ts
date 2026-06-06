@@ -24,26 +24,6 @@ export interface UseRetryableFetchResult<T> {
 
 /**
  * useRetryableFetch - SWR with automatic retry and exponential backoff
- *
- * Features:
- * - Automatic retry for recoverable errors (network errors, 5xx, etc.)
- * - Exponential backoff: delay * (multiplier ^ retryCount)
- * - Manual retry capability
- * - Integration with security-first error handler
- * - Retry count and status tracking
- *
- * @example
- * ```tsx
- * const { data, error, isRetrying, manualRetry } = useRetryableFetch(
- *   '/api/data',
- *   fetcher,
- *   {
- *     maxRetries: 3,
- *     retryDelay: 1000,
- *     backoffMultiplier: 2,
- *   }
- * );
- * ```
  */
 export function useRetryableFetch<T = unknown>(
 	key: Key | null,
@@ -61,7 +41,6 @@ export function useRetryableFetch<T = unknown>(
 	const [isRetrying, setIsRetrying] = useState(false);
 	const [lastError, setLastError] = useState<Error | undefined>(undefined);
 
-	// Calculate delay with exponential backoff
 	const getDelay = useCallback(
 		(attempts: number): number => {
 			return retryDelay * backoffMultiplier ** attempts;
@@ -69,60 +48,50 @@ export function useRetryableFetch<T = unknown>(
 		[retryDelay, backoffMultiplier],
 	);
 
-	// Manual retry function
 	const manualRetry = useCallback(() => {
-		setRetryCount(0); // Reset retry count
+		setRetryCount(0);
 		setLastError(undefined);
 	}, []);
 
-	// SWR hook with retry logic
 	const swrResponse = useSWR<T>(key, fetcher, {
 		revalidateOnFocus: false,
 		dedupingInterval: 30000,
-		shouldRetryOnError: false, // We handle retries ourselves
+		shouldRetryOnError: false,
 		onError: (error, key) => {
 			const safeError = errorHandler.createSafeError(error);
-
-			// Check if error is recoverable
 			const isRecoverable = errorHandler.isRecoverable(safeError);
 
-			// Only retry if:
-			// 1. Error is recoverable
-			// 2. We haven't exceeded max retries
-			// 3. Retry is enabled
 			if (shouldRetryOnError && isRecoverable && retryCount < maxRetries) {
-				// Calculate delay with exponential backoff
 				const delay = getDelay(retryCount);
 
-				// eslint-disable-next-line no-console
-				console.log(
-					`[useRetryableFetch] Retry ${retryCount + 1}/${maxRetries} after ${delay}ms for ${key}:`,
-					safeError.message,
-				);
+				if (process.env.NODE_ENV === "development") {
+					console.log(
+						`[useRetryableFetch] Retry ${retryCount + 1}/${maxRetries} after ${delay}ms for ${key}:`,
+						safeError.message,
+					);
+				}
 
-				// Increment retry count
 				setRetryCount((prev) => prev + 1);
 				setIsRetrying(true);
 				setLastError(error as Error);
 
-				// Schedule retry
 				setTimeout(() => {
 					swrResponse.mutate();
 				}, delay);
 			} else {
-				// Max retries exceeded or error not recoverable
 				if (retryCount >= maxRetries) {
-					// eslint-disable-next-line no-console
-					console.error(`[useRetryableFetch] Max retries (${maxRetries}) exceeded for ${key}`);
+					if (process.env.NODE_ENV === "development") {
+						console.error(`[useRetryableFetch] Max retries (${maxRetries}) exceeded for ${key}`);
+					}
 					setIsRetrying(false);
 				}
 			}
 		},
 		onSuccess: () => {
-			// Reset retry state on success
 			if (retryCount > 0) {
-				// eslint-disable-next-line no-console
-				console.log(`[useRetryableFetch] Success after ${retryCount} retries for ${key}`);
+				if (process.env.NODE_ENV === "development") {
+					console.log(`[useRetryableFetch] Success after ${retryCount} retries for ${key}`);
+				}
 				setRetryCount(0);
 				setIsRetrying(false);
 				setLastError(undefined);
@@ -142,14 +111,6 @@ export function useRetryableFetch<T = unknown>(
 	};
 }
 
-/**
- * Simplified version for quick use
- *
- * @example
- * ```tsx
- * const { data, error } = useRetryableFetchSimple('/api/data', fetcher);
- * ```
- */
 export function useRetryableFetchSimple<T = unknown>(
 	key: Key | null,
 	fetcher: (url: string) => Promise<T>,
