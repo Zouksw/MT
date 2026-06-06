@@ -15,7 +15,8 @@ import {
 import { authRateLimiter, registrationRateLimiter } from "@/middleware/rateLimiter";
 import { validate, validationSchemas } from "@/middleware/security";
 import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
-import type { AuditAction } from "@/types/models";
+
+type AuditAction = "CREATE" | "READ" | "UPDATE" | "DELETE" | "EXPORT" | "LOGIN";
 
 const router = Router();
 

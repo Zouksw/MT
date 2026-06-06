@@ -4,7 +4,7 @@
 
 大宗商品市场信息与分析平台. **不是交易平台.**
 
-核心功能: 商品价格展示 + 多因素分析(天气/汇率/关税/运费) + AI自动预测(7模型信号引擎).
+核心功能: 商品价格展示 + 多因素分析(天气/汇率/关税/运费) + AI自动预测(8模型信号引擎).
 不涉及: 下单交易, 账户余额, 订单执行, 实际支付.
 
 已有但需重新定位的功能:
@@ -156,7 +156,7 @@ Key routing rules:
 - Resume, restore, "where was I" → invoke /context-restore
 - Security audit, OWASP, "is this secure" → invoke /cso
 - Make a PDF, document, publication → invoke /make-pdf
-- Launch real browser for QA → invoke /open-gstack-browser
+- Launch real browser for QA → invoke /gstack
 - Import cookies for authenticated testing → invoke /setup-browser-cookies
 - Performance regression, page speed, benchmarks → invoke /benchmark
 - Review what gstack has learned → invoke /learn

@@ -4,7 +4,13 @@
  */
 
 import type { Response } from "express";
-import type { ErrorDetail } from "@/types/api";
+
+interface ErrorDetail {
+	field?: string;
+	issue?: string;
+	context?: Record<string, unknown>;
+	checks?: Record<string, boolean | string>;
+}
 
 /**
  * Standard success response structure
@@ -111,10 +117,7 @@ export function notFound(res: Response, resource: string = "Resource"): void {
 /**
  * Send an unauthorized error response
  */
-export function unauthorized(
-	res: Response,
-	message: string = "Unauthorized",
-): void {
+export function unauthorized(res: Response, message: string = "Unauthorized"): void {
 	res.status(401).json({
 		success: false,
 		error: {
