@@ -9,7 +9,7 @@
  * Data stored as CommodityPrice with source: 'dce' / 'czce'.
  */
 
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
 import { ensureCommodity, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
