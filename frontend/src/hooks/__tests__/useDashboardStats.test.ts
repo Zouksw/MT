@@ -6,6 +6,12 @@ jest.mock("@/utils/auth", () => ({
 	getAuthToken: jest.fn(() => "mock-token"),
 }));
 
+// Mock useSWR for beef public endpoints
+jest.mock("swr", () => ({
+	__esModule: true,
+	default: jest.fn(() => ({ data: undefined })),
+}));
+
 // Mock useRetryableFetch to control data flow
 jest.mock("@/hooks/useRetryableFetch", () => ({
 	useRetryableFetch: jest.fn(),
@@ -157,7 +163,9 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(result.current.stats).toBeNull();
+		expect(result.current.stats).not.toBeNull();
+		expect(result.current.stats?.beef).toBeDefined();
+		expect(result.current.stats?.beef.cuts).toBe(0);
 	});
 
 	it("should count alerts by severity correctly", async () => {

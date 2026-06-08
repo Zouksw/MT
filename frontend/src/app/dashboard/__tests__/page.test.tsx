@@ -81,6 +81,7 @@ const defaultStats = {
 	forecasts: { total: 8, trend: -8 },
 	alerts: { total: 3, bySeverity: { critical: 0, high: 1, medium: 2, low: 0 }, trend: -12 },
 	aiModels: { active: 5, total: 7 },
+	beef: { cuts: 85, factories: 16, prices: 2400 },
 	recentAlerts: [],
 	recentForecasts: [],
 };
@@ -104,8 +105,8 @@ describe("DashboardPage", () => {
 	it("should render stat cards with correct values", () => {
 		render(<DashboardPage />);
 
-		expect(screen.getByTestId("stat-card-Datasets")).toHaveTextContent("12");
-		expect(screen.getByTestId("stat-card-Time Series")).toHaveTextContent("48");
+		expect(screen.getByTestId("stat-card-Beef Cuts")).toHaveTextContent("85");
+		expect(screen.getByTestId("stat-card-Factories")).toHaveTextContent("16");
 	});
 
 	it("should show loading state when stats are loading", () => {
@@ -151,8 +152,8 @@ describe("DashboardPage", () => {
 	it("should render AI Models status when stats include aiModels", () => {
 		render(<DashboardPage />);
 
-		expect(screen.getByText("AI Models Status")).toBeInTheDocument();
-		expect(screen.getByText(/models active/)).toHaveTextContent(/5/);
+		expect(screen.getByText("AI Price Models")).toBeInTheDocument();
+		expect(screen.getByText(/models.*generating/)).toHaveTextContent(/5/);
 	});
 
 	it("should show healthy system indicator", () => {

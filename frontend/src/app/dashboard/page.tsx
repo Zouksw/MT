@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bell, Database, Lock, Star, TrendingUp, User } from "lucide-react";
+import { Beef, Bell, Lock, Star, TrendingUp, User, Warehouse } from "lucide-react";
 import dynamic from "next/dynamic";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -36,30 +36,21 @@ export default function DashboardPage() {
 
 	const statCards = [
 		{
-			title: "Datasets",
-			value: stats?.datasets.total || 0,
-			icon: <Database className="size-5" />,
-			trend: stats?.datasets.trend
-				? { value: Math.abs(stats.datasets.trend), isPositive: stats.datasets.trend > 0 }
-				: undefined,
+			title: "Beef Cuts",
+			value: stats?.beef?.cuts ?? 85,
+			icon: <Beef className="size-5" />,
 			variant: "primary" as const,
 		},
 		{
-			title: "Time Series",
-			value: stats?.timeseries.total || 0,
-			icon: <Activity className="size-5" />,
-			trend: stats?.timeseries.trend
-				? { value: Math.abs(stats.timeseries.trend), isPositive: stats.timeseries.trend > 0 }
-				: undefined,
+			title: "Factories",
+			value: stats?.beef?.factories ?? 0,
+			icon: <Warehouse className="size-5" />,
 			variant: "success" as const,
 		},
 		{
-			title: "Forecasts",
-			value: stats?.forecasts.total || 0,
+			title: "Price Records",
+			value: stats?.beef?.prices ?? 0,
 			icon: <TrendingUp className="size-5" />,
-			trend: stats?.forecasts.trend
-				? { value: Math.abs(stats.forecasts.trend), isPositive: stats.forecasts.trend > 0 }
-				: undefined,
 			variant: "warning" as const,
 		},
 		{
@@ -86,7 +77,7 @@ export default function DashboardPage() {
 						Sign in to your dashboard
 					</h2>
 					<p className="text-body text-muted-foreground mb-6 max-w-md">
-						Access your commodity watchlist, AI signals, and market analysis.
+						Track beef cut prices across global markets, AI price forecasts, and export trade flows.
 					</p>
 					<a href="/login">
 						<Button variant="primary" size="lg">
@@ -112,7 +103,7 @@ export default function DashboardPage() {
 								</div>
 							</div>
 							<p className="text-body text-muted-foreground">
-								Here&apos;s what&apos;s happening with your MT account.
+								Beef trade analytics at a glance — prices, AI signals, and market movements.
 							</p>
 						</div>
 						<div
@@ -186,13 +177,13 @@ export default function DashboardPage() {
 										<div className="flex items-center gap-2 mb-1">
 											<Star width={18} height={18} fill="white" fillOpacity={0.8} stroke="none" />
 											<h3 className="text-h4 font-display font-semibold text-white mb-0">
-												AI Models Status
+												AI Price Models
 											</h3>
 										</div>
 										<p className="text-body text-white/85">
 											<span className="font-mono tabular-nums">{stats.aiModels.active}</span> of{" "}
 											<span className="font-mono tabular-nums">{stats.aiModels.total}</span> models
-											active
+											generating beef price forecasts
 										</p>
 									</div>
 									<div className="text-right flex items-center gap-4">

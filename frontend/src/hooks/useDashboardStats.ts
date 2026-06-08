@@ -1,9 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
+import useSWR from "swr";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import type { Alert, Forecast } from "@/types/api";
 import { getAuthToken } from "@/utils/auth";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL
+	? `${process.env.NEXT_PUBLIC_API_URL}/api`
+	: "http://localhost:8000/api";
 
 export interface DashboardStats {
 	datasets: {
@@ -32,44 +37,59 @@ export interface DashboardStats {
 		active: number;
 		total: number;
 	};
+	beef: {
+		cuts: number;
+		factories: number;
+		prices: number;
+	};
 	recentAlerts: Alert[];
 	recentForecasts: Forecast[];
 }
 
-// SWR fetcher function
-const fetcher = async (url: string) => {
+// SWR fetcher for unauthenticated beef stats (public data)
+const publicFetcher = async (url: string) => {
+	const response = await fetch(url, { credentials: "include" });
+	if (!response.ok) throw new Error(`HTTP ${response.status}`);
+	return response.json();
+};
+
+// Authenticated fetcher
+const authFetcher = async (url: string) => {
 	const token = getAuthToken();
-	if (!token) {
-		throw new Error("Not authenticated");
-	}
+	if (!token) throw new Error("Not authenticated");
 
 	const response = await fetch(url, {
 		credentials: "include",
 		headers: { Authorization: `Bearer ${token}` },
 	});
 
-	if (!response.ok) {
-		throw new Error(`HTTP error! status: ${response.status}`);
-	}
-
+	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 	return response.json();
 };
 
 export const useDashboardStats = () => {
-	const API_BASE = process.env.NEXT_PUBLIC_API_URL
-		? `${process.env.NEXT_PUBLIC_API_URL}/api`
-		: "http://localhost:8000/api";
 	const isAuth = !!getAuthToken();
-
 	const retryOpts = { maxRetries: 3, retryDelay: 1000, backoffMultiplier: 2 };
 
+	// Beef stats — public endpoints, always fetched
+	const { data: cutsData } = useSWR(`${API_BASE}/beef/cuts`, publicFetcher, {
+		revalidateOnFocus: false,
+	});
+	const { data: factoriesData } = useSWR(`${API_BASE}/beef/factories`, publicFetcher, {
+		revalidateOnFocus: false,
+	});
+	const { data: pricesData } = useSWR(`${API_BASE}/beef/prices/latest`, publicFetcher, {
+		revalidateOnFocus: false,
+	});
+
+	// Authenticated stats
 	const {
 		data: datasetsData,
 		error: datasetsError,
 		isLoading: datasetsLoading,
 	} = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/datasets?page=1&limit=1` : null),
-		fetcher,
+		authFetcher,
 		retryOpts,
 	);
 
@@ -79,7 +99,7 @@ export const useDashboardStats = () => {
 		isLoading: timeseriesLoading,
 	} = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/timeseries?page=1&limit=1` : null),
-		fetcher,
+		authFetcher,
 		retryOpts,
 	);
 
@@ -89,34 +109,32 @@ export const useDashboardStats = () => {
 		isLoading: forecastsLoading,
 	} = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/models?page=1&limit=1` : null),
-		fetcher,
+		authFetcher,
 		retryOpts,
 	);
 
 	const { data: alertsData, isLoading: alertsLoading } = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/alerts?page=1&limit=100` : null),
-		fetcher,
+		authFetcher,
 		retryOpts,
 	);
 
 	const { data: recentAlertsData } = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/alerts?limit=5` : null),
-		fetcher,
+		authFetcher,
 		retryOpts,
 	);
 
 	const { data: recentForecastsData } = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/models?limit=5` : null),
-		fetcher,
+		authFetcher,
 		retryOpts,
 	);
 
-	// Combine loading states - using useRetryableFetch's isLoading
 	const loading = !isAuth
 		? false
 		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
 
-	// Derive error from individual errors - no setState needed
 	const errors = [datasetsError, timeseriesError, forecastsError].filter(Boolean);
 	const error = !isAuth
 		? new Error("Not authenticated")
@@ -124,7 +142,6 @@ export const useDashboardStats = () => {
 			? (errors[0] as Error)
 			: null;
 
-	// No historical data to compute real trends yet — show zero until data accumulates
 	const trends = useMemo(
 		() => ({
 			datasets: 0,
@@ -135,7 +152,6 @@ export const useDashboardStats = () => {
 		[],
 	);
 
-	// Count alerts by severity
 	const alertsBySeverity = {
 		critical: 0,
 		high: 0,
@@ -156,8 +172,13 @@ export const useDashboardStats = () => {
 		}
 	});
 
-	const stats: DashboardStats | null =
-		datasetsData && timeseriesData && alertsData
+	// Extract beef stats from public endpoints
+	const beefCuts = cutsData?.data?.cuts ?? cutsData?.cuts ?? [];
+	const beefFactories = factoriesData?.data?.factories ?? factoriesData?.factories ?? [];
+	const beefPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
+
+	const stats: DashboardStats | null = isAuth
+		? datasetsData && timeseriesData && alertsData
 			? {
 					datasets: {
 						total: datasetsData.total || datasetsData.data?.length || 0,
@@ -180,6 +201,11 @@ export const useDashboardStats = () => {
 						active: 8,
 						total: 8,
 					},
+					beef: {
+						cuts: beefCuts.length,
+						factories: beefFactories.length,
+						prices: beefPrices.length,
+					},
 					recentAlerts: Array.isArray(recentAlertsData?.data)
 						? recentAlertsData.data
 						: recentAlertsData?.data?.alerts || recentAlertsData?.items || [],
@@ -187,12 +213,23 @@ export const useDashboardStats = () => {
 						? recentForecastsData.data
 						: recentForecastsData?.data?.models || recentForecastsData?.items || [],
 				}
-			: null;
+			: null
+		: {
+				datasets: { total: 0, trend: 0 },
+				timeseries: { total: 0, trend: 0 },
+				forecasts: { total: 0, trend: 0 },
+				alerts: { total: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0 }, trend: 0 },
+				aiModels: { active: 8, total: 8 },
+				beef: {
+					cuts: beefCuts.length,
+					factories: beefFactories.length,
+					prices: beefPrices.length,
+				},
+				recentAlerts: [],
+				recentForecasts: [],
+			};
 
-	// Create a manual retry function that retries all requests
 	const manualRetry = () => {
-		// The useRetryableFetch hooks will handle their own retries
-		// This is a placeholder for a coordinated retry if needed
 		window.location.reload();
 	};
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, Eye, FlaskConical, Zap } from "lucide-react";
+import { Beef, BrainCircuit, Eye, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 
@@ -15,33 +15,33 @@ interface QuickAction {
 
 const quickActions: QuickAction[] = [
 	{
-		key: "create-timeseries",
-		title: "New Time Series",
-		description: "Create a new time series",
-		icon: <Database className="size-5" />,
-		path: "/timeseries",
+		key: "beef-overview",
+		title: "Beef Overview",
+		description: "Cut prices & factories",
+		icon: <Beef className="size-5" />,
+		path: "/beef",
 		primary: true,
 	},
 	{
-		key: "create-forecast",
-		title: "New Forecast",
-		description: "Generate AI predictions",
-		icon: <Zap className="size-5" />,
-		path: "/forecasts/create",
+		key: "ai-signals",
+		title: "AI Price Signals",
+		description: "8 models forecasting beef",
+		icon: <BrainCircuit className="size-5" />,
+		path: "/ai",
+	},
+	{
+		key: "market-charts",
+		title: "Market Charts",
+		description: "Live cattle futures",
+		icon: <TrendingUp className="size-5" />,
+		path: "/trading",
 	},
 	{
 		key: "view-alerts",
-		title: "View Alerts",
-		description: "Check active alerts",
+		title: "Price Alerts",
+		description: "Beef price notifications",
 		icon: <Eye className="size-5" />,
 		path: "/alerts",
-	},
-	{
-		key: "detect-anomalies",
-		title: "Detect Anomalies",
-		description: "Run anomaly detection",
-		icon: <FlaskConical className="size-5" />,
-		path: "/ai/anomalies",
 	},
 ];
 

@@ -271,13 +271,13 @@ export default function TradingPage() {
 						)
 					)}
 
-					{d.signalLoading && !d.beefMode && (
+					{d.signalLoading && (
 						<div className="flex items-center justify-center py-8">
 							<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
 							<span className="ml-3 text-sm text-gray-500">Loading AI signals...</span>
 						</div>
 					)}
-					{!d.beefMode && (
+					{
 						<TradingSignalPanel
 							consensusType={d.signal?.type || "HOLD"}
 							confidence={d.signal?.confidence || 0}
@@ -293,7 +293,7 @@ export default function TradingPage() {
 							loading={d.signalLoading}
 							timestamp={d.signal?.timestamp}
 						/>
-					)}
+					}
 
 					{/* Beef mode: factory price comparison table */}
 					{d.beefMode && d.beefPrices.length > 0 && (
@@ -344,7 +344,7 @@ export default function TradingPage() {
 			</div>
 
 			{/* Model consensus table — only in normal mode */}
-			{!d.beefMode && (
+			{
 				<div className="mt-4">
 					<Card>
 						<CardHeader>
@@ -369,10 +369,10 @@ export default function TradingPage() {
 						</CardBody>
 					</Card>
 				</div>
-			)}
+			}
 
 			{/* Prediction History — only in normal mode */}
-			{!d.beefMode && d.predictionHistory.length > 0 && (
+			{d.predictionHistory.length > 0 && (
 				<div className="mt-4">
 					<Card>
 						<CardHeader>
@@ -461,11 +461,11 @@ export default function TradingPage() {
 			)}
 
 			{/* Market factors panorama — only in normal mode */}
-			{!d.beefMode && (
+			{
 				<div className="mt-4">
 					<MarketFactorsPanel factors={d.factors} loading={d.factorsLoading} />
 				</div>
-			)}
+			}
 
 			{/* Data provenance panel */}
 			<div className="mt-4">

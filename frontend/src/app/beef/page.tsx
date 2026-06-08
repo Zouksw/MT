@@ -20,10 +20,20 @@ async function beefFetcher(url: string) {
 }
 
 export default function BeefOverview() {
-	const { data: pricesData, error: pricesErr } = useSWR("/api/beef/prices/latest", beefFetcher);
-	const { data: killData } = useSWR("/api/beef/weekly-kill?weeks=4", beefFetcher);
-	const { data: storageData } = useSWR("/api/beef/cold-storage?months=3", beefFetcher);
-	const { data: cutsData } = useSWR("/api/beef/cuts", beefFetcher);
+	const {
+		data: pricesData,
+		error: pricesErr,
+		isLoading: pricesLoading,
+	} = useSWR("/api/beef/prices/latest", beefFetcher);
+	const { data: killData, isLoading: killLoading } = useSWR(
+		"/api/beef/weekly-kill?weeks=4",
+		beefFetcher,
+	);
+	const { data: storageData, isLoading: storageLoading } = useSWR(
+		"/api/beef/cold-storage?months=3",
+		beefFetcher,
+	);
+	const { data: cutsData, isLoading: cutsLoading } = useSWR("/api/beef/cuts", beefFetcher);
 
 	const latestPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
 	const weeklyKills = killData?.data?.kills ?? killData?.kills ?? [];
@@ -51,6 +61,46 @@ export default function BeefOverview() {
 		0,
 	);
 	const usStorage = coldStorage.find((s: { country: string }) => s.country === "US");
+
+	const isLoading = pricesLoading && killLoading && storageLoading && cutsLoading;
+	const hasNoData =
+		!isLoading && latestPrices.length === 0 && weeklyKills.length === 0 && coldStorage.length === 0;
+
+	if (isLoading) {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Beef Market Intelligence"
+					description="Factory-level and cut-level beef trading data across global markets"
+				/>
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+					{[1, 2, 3, 4].map((i) => (
+						<div key={i} className="h-24 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+					))}
+				</div>
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+					<div className="lg:col-span-2 h-64 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+					<div className="h-48 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+				</div>
+			</PageContainer>
+		);
+	}
+
+	if (hasNoData) {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Beef Market Intelligence"
+					description="Factory-level and cut-level beef trading data across global markets"
+				/>
+				<EmptyState
+					type="data"
+					title="No Beef Price Data Available"
+					description="Beef data sources require API key configuration. USDA MARS API provides US cut prices, MLA provides Australian livestock data. Contact your administrator to activate these sources."
+				/>
+			</PageContainer>
+		);
+	}
 
 	return (
 		<PageContainer>

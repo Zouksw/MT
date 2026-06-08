@@ -53,6 +53,32 @@ const NAV_ITEMS: NavItem[] = [
 		path: "/",
 	},
 	{
+		key: "beef",
+		label: "Beef",
+		icon: <Beef className="w-[18px] h-[18px]" />,
+		path: "/beef",
+		children: [
+			{
+				key: "beef-overview",
+				label: "Overview",
+				icon: <LayoutGrid className="w-[18px] h-[18px]" />,
+				path: "/beef",
+			},
+			{
+				key: "beef-cuts",
+				label: "Cut Prices",
+				icon: <Activity className="w-[18px] h-[18px]" />,
+				path: "/beef/cuts",
+			},
+			{
+				key: "beef-factories",
+				label: "Factories",
+				icon: <Database className="w-[18px] h-[18px]" />,
+				path: "/beef/factories",
+			},
+		],
+	},
+	{
 		key: "trading",
 		label: "Market",
 		icon: <TrendingUp className="w-[18px] h-[18px]" />,
@@ -82,43 +108,7 @@ const NAV_ITEMS: NavItem[] = [
 				icon: <FlaskConical className="w-[18px] h-[18px]" />,
 				path: "/trading/sim",
 			},
-			{
-				key: "trading-analytics",
-				label: "Analytics",
-				icon: <Activity className="w-[18px] h-[18px]" />,
-				path: "/trading/analytics",
-			},
-			{
-				key: "trading-community",
-				label: "Community",
-				icon: <User className="w-[18px] h-[18px]" />,
-				path: "/trading/community",
-			},
 		],
-	},
-	{
-		key: "datasets",
-		label: "Datasets",
-		icon: <Database className="w-[18px] h-[18px]" />,
-		path: "/datasets",
-	},
-	{
-		key: "timeseries",
-		label: "Time Series",
-		icon: <Activity className="w-[18px] h-[18px]" />,
-		path: "/timeseries",
-	},
-	{
-		key: "alerts",
-		label: "Alerts",
-		icon: <Bell className="w-[18px] h-[18px]" />,
-		path: "/alerts",
-	},
-	{
-		key: "beef",
-		label: "Beef Data",
-		icon: <Beef className="w-[18px] h-[18px]" />,
-		path: "/beef",
 	},
 	{
 		key: "ai",
@@ -145,6 +135,24 @@ const NAV_ITEMS: NavItem[] = [
 				path: "/ai/backtest",
 			},
 		],
+	},
+	{
+		key: "datasets",
+		label: "Datasets",
+		icon: <Database className="w-[18px] h-[18px]" />,
+		path: "/datasets",
+	},
+	{
+		key: "timeseries",
+		label: "Time Series",
+		icon: <Activity className="w-[18px] h-[18px]" />,
+		path: "/timeseries",
+	},
+	{
+		key: "alerts",
+		label: "Alerts",
+		icon: <Bell className="w-[18px] h-[18px]" />,
+		path: "/alerts",
 	},
 ];
 
@@ -318,9 +326,9 @@ export const MobileTabBar: React.FC = () => {
 
 	const mobileNavItems = [
 		NAV_ITEMS[0], // Dashboard
-		NAV_ITEMS[1], // Market
-		NAV_ITEMS[5], // Beef Data
-		NAV_ITEMS[6], // AI Signals
+		NAV_ITEMS[1], // Beef
+		NAV_ITEMS[2], // Market
+		NAV_ITEMS[3], // AI Signals
 	];
 
 	return (

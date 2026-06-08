@@ -77,9 +77,12 @@ export function useTradingData() {
 	// Fetch commodity list
 	const { commodities, loading: commoditiesLoading } = useCommodities();
 
-	// Auto-select first commodity
+	// Auto-select first commodity (or beef commodity in beef mode for AI signals)
 	useEffect(() => {
-		if (!beefMode && !selectedSlug && commodities.length > 0) {
+		if (beefMode && !selectedSlug) {
+			// Select beef_cutout_us for AI signal context while showing cut prices
+			setSelectedSlug("beef_cutout_us");
+		} else if (!beefMode && !selectedSlug && commodities.length > 0) {
 			setSelectedSlug(commodities[0].slug);
 		}
 	}, [selectedSlug, commodities, beefMode]);
