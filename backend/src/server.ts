@@ -8,6 +8,7 @@ import { jwtUtils, logger, prisma } from "@/lib";
 import { MS_PER_HOUR } from "@/lib/constants";
 import { errorHandler } from "@/middleware/errorHandler";
 import { errorLoggingMiddleware, loggingMiddleware } from "@/middleware/logging";
+import { globalRateLimiter } from "@/middleware/rateLimiter";
 import { securityHeaders } from "@/middleware/security";
 import alertsRouter from "@/routes/alerts";
 import { analyticsRouter } from "@/routes/analytics";
@@ -147,6 +148,10 @@ if (config.server.nodeEnv !== "production") {
 
 // Health check routes
 app.use("/health", healthRouter);
+
+// Global rate limiter — baseline abuse cap across all API routes. Stricter
+// per-route limiters (auth, registration, AI) apply on top of this.
+app.use("/api", globalRateLimiter);
 
 // API routes
 app.use("/api/auth", authRouter);

@@ -46,11 +46,23 @@ export const authFetch = async (url: string, options: RequestInit = {}): Promise
 		(headers as Record<string, string>).Authorization = `Bearer ${token}`;
 	}
 
-	return fetch(`${API_BASE}${url}`, {
+	const response = await fetch(`${API_BASE}${url}`, {
 		...options,
 		credentials: "include",
 		headers,
 	});
+
+	// A 401 here means the token is expired or revoked (tokenManager has no
+	// refresh flow). Clear the stale auth state so the next route navigation
+	// bounces to /login instead of looping with a dead token. We deliberately
+	// do NOT redirect here — callers (SWR, useEffect) may be mid-render and a
+	// hard navigation from inside fetch would abort their cleanup.
+	if (response.status === 401 && token) {
+		tokenManager.removeToken();
+		clearCachedUser();
+	}
+
+	return response;
 };
 
 export async function verifyAuthentication(): Promise<boolean> {

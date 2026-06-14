@@ -177,8 +177,9 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 		const values = chartData.map((d) => d.value);
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
 		const std = Math.sqrt(values.reduce((sum, val) => sum + (val - mean) ** 2, 0) / values.length);
-		const min = Math.min(...values);
-		const max = Math.max(...values);
+		// Reduce instead of Math.min/max(...values) — spread throws on large arrays.
+		const min = values.reduce((a, b) => (b < a ? b : a), values[0]);
+		const max = values.reduce((a, b) => (b > a ? b : a), values[0]);
 
 		return { mean, std, min, max, count: values.length };
 	}, [chartData]);

@@ -289,8 +289,9 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 	const historicalStats = React.useMemo(() => {
 		if (historicalData.length === 0) return null;
 		const values = historicalData.map((d) => d.value);
-		const min = Math.min(...values);
-		const max = Math.max(...values);
+		// Reduce instead of Math.min/max(...values) — spread throws on large arrays.
+		const min = values.reduce((a, b) => (b < a ? b : a), values[0]);
+		const max = values.reduce((a, b) => (b > a ? b : a), values[0]);
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
 		return { min, max, mean, count: values.length };
 	}, [historicalData]);
@@ -298,8 +299,8 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 	const predictionStats = React.useMemo(() => {
 		if (predictionData.values.length === 0) return null;
 		const values = predictionData.values;
-		const min = Math.min(...values);
-		const max = Math.max(...values);
+		const min = values.reduce((a, b) => (b < a ? b : a), values[0]);
+		const max = values.reduce((a, b) => (b > a ? b : a), values[0]);
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
 		return { min, max, mean, count: values.length };
 	}, [predictionData.values]);

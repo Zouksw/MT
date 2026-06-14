@@ -89,7 +89,13 @@ export async function initPredictionQueue(): Promise<void> {
 				}),
 			);
 
-			const succeeded = results.filter((r) => r.status === "fulfilled").length;
+			// Every result is "fulfilled" (errors are caught inside the mapper and
+			// returned as { status: "failed" }), so filter by the inner status, not
+			// allSettled's outer status — otherwise succeeded always == models.length
+			// and real failures are masked.
+			const succeeded = results.filter(
+				(r) => r.status === "fulfilled" && r.value.status === "success",
+			).length;
 			logger.info(
 				`Prediction job complete: ${succeeded}/${models.length} models succeeded`,
 			);

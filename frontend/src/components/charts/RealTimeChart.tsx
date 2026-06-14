@@ -95,8 +95,10 @@ export const RealTimeChart: React.FC<RealTimeChartProps> = ({
 	const statistics = React.useMemo(() => {
 		if (data.length === 0) return null;
 		const values = data.map((d) => d.value);
-		const min = Math.min(...values);
-		const max = Math.max(...values);
+		// Avoid Math.min(...values) — the spread throws RangeError on large arrays
+		// (arg limit ~65536/125k). Reduce iterates safely regardless of size.
+		const min = values.reduce((a, b) => (b < a ? b : a), values[0]);
+		const max = values.reduce((a, b) => (b > a ? b : a), values[0]);
 		const sum = values.reduce((a, b) => a + b, 0);
 		const mean = sum / values.length;
 		const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;

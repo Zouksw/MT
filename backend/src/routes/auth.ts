@@ -459,7 +459,10 @@ router.post(
 			data: {
 				userId,
 				tokenHash: newTokenHash,
-				expiresAt: new Date(Date.now() + MS_PER_WEEK),
+				// Match the TTL used by createAuthSession (login/register), which is
+				// config.session.expiresDays — not a hardcoded 7 days. Using MS_PER_WEEK
+				// here desynced the DB session from the refresh-token JWT's actual TTL.
+				expiresAt: new Date(Date.now() + config.session.expiresDays * MS_PER_DAY),
 				userAgent: req.headers["user-agent"] || null,
 			},
 		});

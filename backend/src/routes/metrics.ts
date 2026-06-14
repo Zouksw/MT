@@ -244,7 +244,7 @@ router.get("/", authenticate, (_req: Request, res: Response) => {
  * GET /api/metrics/endpoints
  * Returns per-endpoint breakdown
  */
-router.get("/endpoints", (_req: Request, res: Response) => {
+router.get("/endpoints", authenticate, (_req: Request, res: Response) => {
 	const endpoints: Record<
 		string,
 		{
@@ -280,7 +280,7 @@ router.get("/endpoints", (_req: Request, res: Response) => {
  *
  * Body: { name: 'LCP'|'FID'|'CLS'|'TTFB'|'INP', value: number, path: string, timestamp?: number }
  */
-router.post("/web-vitals", async (req: Request, res: Response) => {
+router.post("/web-vitals", authenticate, async (req: Request, res: Response) => {
 	try {
 		const { name, value, path, timestamp } = req.body;
 
@@ -336,7 +336,7 @@ router.post("/web-vitals", async (req: Request, res: Response) => {
  * Query params: period (1h|6h|24h|7d, default 24h)
  * Returns: { lcp: { avg, p50, p95, count }, fid: {...}, cls: {...}, ttfb: {...}, inp: {...} }
  */
-router.get("/web-vitals", async (req: Request, res: Response) => {
+router.get("/web-vitals", authenticate, async (req: Request, res: Response) => {
 	try {
 		const period = (req.query.period as string) || "24h";
 		const periodSeconds = PERIOD_SECONDS[period];
@@ -404,7 +404,7 @@ router.get("/web-vitals", async (req: Request, res: Response) => {
  * Query params: metric (LCP|FID|CLS), period (1h|6h|24h|7d), interval (1m|5m|15m|1h)
  * Returns array of { timestamp, avg, p95, count }
  */
-router.get("/web-vitals/history", async (req: Request, res: Response) => {
+router.get("/web-vitals/history", authenticate, async (req: Request, res: Response) => {
 	try {
 		const metric = (req.query.metric as string) || "LCP";
 		const period = (req.query.period as string) || "24h";
@@ -504,7 +504,7 @@ router.get("/web-vitals/history", async (req: Request, res: Response) => {
  *
  * Returns: { overall: { avg, p50, p95, p99 }, endpoints: { [path]: { avg, p50, p95, p99, count } } }
  */
-router.get("/api-latency", (_req: Request, res: Response) => {
+router.get("/api-latency", authenticate, (_req: Request, res: Response) => {
 	const endpoints: Record<
 		string,
 		{
@@ -557,7 +557,7 @@ router.get("/api-latency", (_req: Request, res: Response) => {
  *
  * Returns: { webVitals: { lcp, fid, cls }, apiLatency: { avg, p95 }, errorRate, uptime, activeUsers }
  */
-router.get("/summary", async (_req: Request, res: Response) => {
+router.get("/summary", authenticate, async (_req: Request, res: Response) => {
 	try {
 		const uptimeSeconds = process.uptime();
 

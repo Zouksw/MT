@@ -701,10 +701,9 @@ router.post(
 router.get(
 	"/sources/freshness",
 	authenticate,
-	asyncHandler(async (_req, res) => {
-		const now = new Date();
-		const oneDayAgo = new Date(now.getTime() - MS_PER_DAY);
-		const sevenDaysAgo = new Date(now.getTime() - MS_PER_WEEK);
+		asyncHandler(async (_req, res) => {
+			const now = new Date();
+			const sevenDaysAgo = new Date(now.getTime() - MS_PER_WEEK);
 
 		// Get latest ingestion log per source
 		const _latestLogs = await prisma.ingestionLog.groupBy({
@@ -751,7 +750,7 @@ router.get(
 			source,
 			successRate: stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0,
 			lastRun: stat.lastRun,
-			stale: stat.lastRun ? now.getTime() - stat.lastRun.getTime() > oneDayAgo.getTime() : true,
+			stale: stat.lastRun ? now.getTime() - stat.lastRun.getTime() > MS_PER_DAY : true,
 			lastInserted: stat.lastInserted,
 			lastUpdated: stat.lastUpdated,
 			totalRuns: stat.total,

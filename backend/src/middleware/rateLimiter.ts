@@ -72,3 +72,15 @@ export const apiKeyCreationLimiter = createRateLimiter({
 	max: 5,
 	message: "Too many API key creation attempts, please try again later.",
 });
+
+/**
+ * Global rate limiter — applied to every API route as a baseline abuse cap.
+ * Permissive enough for normal interactive use (300 req/min/IP ≈ 5 req/s)
+ * while preventing unbounded volume abuse on otherwise-unlimited routes.
+ * Stricter per-route limiters (auth, registration, AI) still apply on top.
+ */
+export const globalRateLimiter = createRateLimiter({
+	windowMs: 60 * 1000, // 1 minute
+	max: 300,
+	message: "Too many requests from this IP, please try again later.",
+});

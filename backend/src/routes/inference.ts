@@ -27,11 +27,13 @@ router.get(
 	"/status",
 	asyncHandler(async (_req: Request, res: Response) => {
 		const isHealthy = await inferenceHealth();
+		// Intentionally do NOT echo process.env.INFERENCE_URL — that leaked an
+		// internal service address to unauthenticated callers. Health probes need
+		// only the status, not the backend URL.
 		res.json({
 			status: isHealthy ? "healthy" : "unhealthy",
 			timestamp: new Date().toISOString(),
 			service: "inference",
-			url: process.env.INFERENCE_URL || "http://localhost:10810",
 		});
 	}),
 );

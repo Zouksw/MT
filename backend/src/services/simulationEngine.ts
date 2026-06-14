@@ -79,22 +79,64 @@ export async function executeMarketOrder(
 			}
 		}
 
-		// For SELL: verify user holds an open position for this commodity
+		// For SELL: verify the account holds enough of this commodity across all
+		// open BUY positions, then close (proportionally) the corresponding BUY
+		// trades with realized PnL. Previously this only checked that *some* open
+		// BUY existed, never bounded the SELL quantity, and never closed anything —
+		// which let a single BUY position be sold repeatedly, printing balance.
 		if (order.side === "SELL") {
-			const openTrade = await tx.simulationTrade.findFirst({
+			const openTrades = await tx.simulationTrade.findMany({
 				where: {
 					accountId: order.accountId,
 					commodityId: order.commodityId,
 					side: "BUY",
 					closedAt: null,
 				},
+				orderBy: { openedAt: "asc" },
 			});
-			if (!openTrade) {
+			const openQuantity = openTrades.reduce(
+				(sum, t) => sum + Number(t.quantity),
+				0,
+			);
+			if (openQuantity <= 0) {
 				await tx.simulationOrder.update({
 					where: { id: orderId },
 					data: { status: "REJECTED" },
 				});
 				throw new Error("No open position to sell");
+			}
+			if (quantity > openQuantity) {
+				await tx.simulationOrder.update({
+					where: { id: orderId },
+					data: { status: "REJECTED" },
+				});
+				throw new Error(
+					`Insufficient position: trying to sell ${quantity} but only ${openQuantity} held`,
+				);
+			}
+			// Close open BUY trades FIFO, reducing each until the SELL quantity is
+			// fully covered. A trade is fully closed when its remaining qty hits 0.
+			let remainingToSell = quantity;
+			const now = new Date();
+			for (const buy of openTrades) {
+				if (remainingToSell <= 0) break;
+				const buyQty = Number(buy.quantity);
+				const closeQty = Math.min(buyQty, remainingToSell);
+				remainingToSell -= closeQty;
+				const realizedPnl =
+					(filledPrice - Number(buy.entryPrice)) * closeQty;
+				const fullyClosed = closeQty >= buyQty;
+				await tx.simulationTrade.update({
+					where: { id: buy.id },
+					data: {
+						// Reduce the position; fully-close if exhausted.
+						quantity: buyQty - closeQty,
+						exitPrice: filledPrice,
+						realizedPnl:
+							(Number(buy.realizedPnl ?? 0) + realizedPnl),
+						closedAt: fullyClosed ? now : buy.closedAt,
+					},
+				});
 			}
 		}
 
