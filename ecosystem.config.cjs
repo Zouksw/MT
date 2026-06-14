@@ -16,8 +16,12 @@ module.exports = {
     {
       name: 'mt-backend',
       script: 'node',
-      args: 'dist/src/server.js',
+      // Load backend/.env (real secrets) before entry, mirroring the dev script
+      // which runs `tsx watch -r dotenv/config`. dotenv is a backend dependency.
+      args: '-r dotenv/config dist/server.js',
+      // dotenv/config reads cwd/.env, so cwd must be the backend dir
       cwd: path.join(ROOT, 'backend'),
+      dotenv_config_path: path.join(ROOT, 'backend/.env'),
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,

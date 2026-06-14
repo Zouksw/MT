@@ -83,6 +83,9 @@ debug-*.js
 .claude/
 .claude.json
 
+# ZCode CLI state (never commit)
+.zcode/
+
 # Codex CLI state (never commit)
 .codex/
 
