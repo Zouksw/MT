@@ -104,6 +104,9 @@ test-results/
 # Taste skill (embedded repo)
 taste-skill/
 
+# Archived / deprecated artifacts (kept locally, never commit)
+archive/
+
 # System files (never commit)
 .dotnet/
 .ssh/
