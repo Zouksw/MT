@@ -38,6 +38,10 @@ import { checkLimitOrders } from "@/services/simulationEngine";
 import { config } from "./lib";
 
 const app = express();
+// Trust the first proxy hop so req.secure / req.ip are correct behind TLS
+// terminators (nginx, load balancers). Required for the secure cookie flag and
+// correct rate-limit keying in production.
+app.set("trust proxy", 1);
 const httpServer = createServer(app);
 
 // Socket.IO setup

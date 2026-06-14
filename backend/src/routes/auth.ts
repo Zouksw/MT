@@ -10,10 +10,17 @@ import {
 	BadRequestError,
 	ConflictError,
 	NotFoundError,
+	TooManyRequestsError,
 	UnauthorizedError,
 } from "@/middleware/errorHandler";
 import { authRateLimiter, registrationRateLimiter } from "@/middleware/rateLimiter";
 import { validate, validationSchemas } from "@/middleware/security";
+import {
+	checkAccountLockout,
+	clearFailedLoginAttempts,
+	formatLockoutTime,
+	recordFailedLogin,
+} from "@/services/authLockout";
 import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
 
 type AuditAction = "CREATE" | "READ" | "UPDATE" | "DELETE" | "EXPORT" | "LOGIN";
@@ -240,14 +247,32 @@ router.post(
 	"/login",
 	authRateLimiter,
 	validate(loginSchema),
-	asyncHandler(async (req: Request, res: Response) => {
-		const validatedData = loginSchema.parse(req.body);
+		asyncHandler(async (req: Request, res: Response) => {
+			const validatedData = loginSchema.parse(req.body);
 
-		const user = await prisma.user.findUnique({ where: { email: validatedData.email } });
-		if (!user) throw new UnauthorizedError("Invalid email or password");
+			// Brute-force protection: check account lockout before verifying credentials.
+			// authLockout fails closed in prod (Redis down → locked) per its own design.
+			const lockout = await checkAccountLockout(validatedData.email);
+			if (lockout.isLocked) {
+				throw new TooManyRequestsError(
+					`Account temporarily locked. Try again in ${formatLockoutTime(lockout.lockoutUntil ?? new Date())}.`,
+				);
+			}
 
-		const isValidPassword = await bcrypt.compare(validatedData.password, user.passwordHash);
-		if (!isValidPassword) throw new UnauthorizedError("Invalid email or password");
+			const user = await prisma.user.findUnique({ where: { email: validatedData.email } });
+			if (!user) {
+				await recordFailedLogin(validatedData.email, req.ip ?? "unknown");
+				throw new UnauthorizedError("Invalid email or password");
+			}
+
+			const isValidPassword = await bcrypt.compare(validatedData.password, user.passwordHash);
+			if (!isValidPassword) {
+				await recordFailedLogin(validatedData.email, req.ip ?? "unknown");
+				throw new UnauthorizedError("Invalid email or password");
+			}
+
+			// Credentials valid — clear any prior failed-attempt counters.
+			await clearFailedLoginAttempts(validatedData.email);
 
 		const { token, refreshToken } = await createAuthSession(req, user.id);
 		const session = await prisma.session.findFirst({

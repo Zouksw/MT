@@ -183,3 +183,9 @@ export class ServiceUnavailableError extends ApiError {
 		super(503, message);
 	}
 }
+
+export class TooManyRequestsError extends ApiError {
+	constructor(message: string = "Too many requests") {
+		super(429, message);
+	}
+}

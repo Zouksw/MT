@@ -12,6 +12,17 @@ const NOW = new Date();
 const THIRTY_DAYS_AGO = new Date(NOW.getTime() - 30 * 24 * 60 * 60 * 1000);
 const SEVEN_DAYS_AGO = new Date(NOW.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+// Production guard: seed credentials must come from env in prod. The dev
+// fallbacks below (Admin123! etc.) are intentionally weak and committed — they
+// must never run against a production database.
+if (process.env.NODE_ENV === 'production' && !process.env.SEED_ADMIN_PASSWORD) {
+  console.error(
+    '\n[FATAL] Refusing to seed with committed dev credentials in production.\n' +
+    'Set SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD / SEED_DEMO_PASSWORD env vars before seeding.\n',
+  );
+  process.exit(1);
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -79,22 +90,24 @@ interface UserInfo {
 
 const USERS: UserInfo[] = [
   {
-    email: 'admin@trademind.com',
-    password: 'Admin123!',
+    email: process.env.SEED_ADMIN_EMAIL ?? 'admin@trademind.com',
+    // Password sourced from env so real credentials are never committed.
+    // Falls back to a dev-only placeholder when SEED_ADMIN_PASSWORD is unset.
+    password: process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!',
     name: 'System Administrator',
     role: 'ADMIN',
     avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=SA&backgroundColor=3b82f6',
   },
   {
-    email: 'user@trademind.com',
-    password: 'User123!',
+    email: process.env.SEED_USER_EMAIL ?? 'user@trademind.com',
+    password: process.env.SEED_USER_PASSWORD ?? 'User123!',
     name: 'Jane DataScientist',
     role: 'EDITOR',
     avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=JD&backgroundColor=10b981',
   },
   {
-    email: 'demo@trademind.com',
-    password: 'Demo123!',
+    email: process.env.SEED_DEMO_EMAIL ?? 'demo@trademind.com',
+    password: process.env.SEED_DEMO_PASSWORD ?? 'Demo123!',
     name: 'Demo User',
     role: 'VIEWER',
     avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=DU&backgroundColor=f59e0b',
@@ -1641,9 +1654,10 @@ async function main() {
   console.log('==========================================');
   console.log('');
   console.log('  Users:');
-  console.log('    admin@trademind.com / Admin123!  (ADMIN)');
-  console.log('    user@trademind.com  / User123!   (EDITOR)');
-  console.log('    demo@trademind.com  / Demo123!   (VIEWER)');
+  console.log(`    ${USERS[0].email} / ********  (ADMIN)`);
+  console.log(`    ${USERS[1].email} / ********  (EDITOR)`);
+  console.log(`    ${USERS[2].email} / ********  (VIEWER)`);
+  console.log('  (passwords sourced from SEED_*_PASSWORD env vars, or dev fallbacks)');
   console.log('');
   console.log(`  Datasets:      ${DATASETS.length}`);
   console.log(`  Timeseries:    ${allTimeseries.length}`);
