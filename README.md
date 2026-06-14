@@ -6,8 +6,8 @@
 
 AI 驱动的多模型价格预测 · 多因素市场分析 · 108 种大宗商品实时追踪
 
-[![Tests](https://img.shields.io/badge/backend-766%20tests%20passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/frontend-353%20tests%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/backend-~420%20tests%20(Vitest)-brightgreen)]()
+[![Tests](https://img.shields.io/badge/frontend-305%20tests%20(Jest)-brightgreen)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)]()
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-gray)]()
@@ -93,7 +93,7 @@ MT
 | 数据库 | PostgreSQL 15 |
 | 缓存 | Redis 7 |
 | 实时 | Socket.IO (JWT 认证) |
-| 测试 | Vitest (后端 766 tests), Jest (前端 353 tests) |
+| 测试 | Vitest (后端 ~420 tests), Jest (前端 305 tests) |
 | 安全 | JWT, bcrypt, CSRF, Helmet, rate limiting |
 
 ---
@@ -191,10 +191,10 @@ curl http://localhost:8000/api/beef/cuts \
 
 ```bash
 # 后端 (Vitest)
-cd backend && pnpm test              # 766 tests
+cd backend && pnpm test              # ~420 tests
 
 # 前端 (Jest)
-cd frontend && pnpm test             # 353 tests
+cd frontend && pnpm test             # 305 tests
 
 # 类型检查
 cd backend && npx tsc --noEmit
