@@ -380,6 +380,13 @@ model PredictionLog {
   @@index([modelId])
   @@index([commodityId])
   @@index([predictedAt])
+  // Composite indexes for the hot backtest/MAPE/signals query pattern:
+  // signals.ts, backtesting.ts, and mapeTracking.ts all filter modelId+status
+  // and sort by verifiedAt — firing up to 6 such queries per backtest request.
+  @@index([modelId, status, verifiedAt(sort: Desc)])
+  // Backtest/MAPE count() filters commodityId + predictedAt range; the single-
+  // column commodityId index alone forced post-filtering on predictedAt.
+  @@index([commodityId, predictedAt])
   @@map("prediction_logs")
 }
 

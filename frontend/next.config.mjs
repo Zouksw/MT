@@ -124,11 +124,24 @@ const nextConfig = {
               name: 'commons',
               chunks: 'all',
               minChunks: 2,
+              // Keep heavy charting libs OUT of commons — without this they get
+              // hoisted into the shared bundle and every page (login, settings...)
+              // pays the cost on first load. recharts/d3 are only needed on chart pages.
+              test: (module) => {
+                const path = module.resourceForRule || module.context || '';
+                return !/[\\/]node_modules[\\/](recharts|d3|victory|visx|chart\.js|lightweight-charts)[\\/]/.test(path);
+              },
             },
             react: {
               name: 'react',
               chunks: 'all',
               test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+            // Charts into their own lazy chunk so non-chart pages stay light.
+            recharts: {
+              name: 'recharts',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](recharts|d3[-a-z]*|victory|internmap|delaunator|robust-predicates)[\\/]/,
             },
             antd: {
               name: 'antd',
