@@ -71,7 +71,7 @@ export default function CommunityPage() {
 			key: "accuracy",
 			title: "Accuracy",
 			render: (_value: unknown, record: LeaderboardEntry) => (
-				<span style={{ color: record.pnl >= 0 ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
+				<span style={{ color: record.pnl >= 0 ? "#16A34A" : "#DC2626", fontWeight: 600 }}>
 					{record.pnl >= 0 ? "+" : ""}
 					{record.pnl.toFixed(2)}
 				</span>

@@ -135,7 +135,7 @@ export default function PricingPage() {
 								}`}
 							>
 								Yearly
-								<span className="absolute -top-1 -right-1 bg-[#B8860B]/10 text-[#B8860B] text-xs px-2 py-0.5 rounded-full">
+								<span className="absolute -top-1 -right-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
 									Save 20%
 								</span>
 							</button>
@@ -150,9 +150,9 @@ export default function PricingPage() {
 					<StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8">
 						{/* Professional — Full-width top row */}
 						<StaggerChild className="md:col-span-2">
-							<div className="relative rounded-2xl outline-2 outline-[#B8860B] bg-card p-8 md:p-10">
+							<div className="relative rounded-2xl outline-2 outline-primary bg-card p-8 md:p-10">
 								<div className="absolute -top-3 left-8">
-									<span className="bg-[#B8860B] text-white rounded-full px-3 py-0.5 text-xs font-medium">
+									<span className="bg-primary text-white rounded-full px-3 py-0.5 text-xs font-medium">
 										Most Popular
 									</span>
 								</div>
@@ -176,7 +176,7 @@ export default function PricingPage() {
 										<Link href="/dashboard" className="inline-block mt-6">
 											<Button
 												size="lg"
-												className="min-w-[200px] rounded-full bg-[#B8860B] text-white hover:bg-[#D4A030] border-0"
+												className="min-w-[200px] rounded-full bg-primary text-white hover:bg-primary-hover border-0"
 											>
 												{proPlan.cta}
 											</Button>
@@ -186,7 +186,7 @@ export default function PricingPage() {
 										{proPlan.features.map((feature, featureIdx) => (
 											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<li key={featureIdx} className="flex items-start gap-3">
-												<CheckCircle2 size={20} className="text-[#B8860B] flex-shrink-0 mt-0.5" />
+												<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 												<span className="text-body text-muted-foreground">{feature}</span>
 											</li>
 										))}
@@ -224,7 +224,7 @@ export default function PricingPage() {
 									{freePlan.features.map((feature, featureIdx) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										<li key={featureIdx} className="flex items-start gap-3">
-											<CheckCircle2 size={20} className="text-[#B8860B] flex-shrink-0 mt-0.5" />
+											<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 											<span className="text-body text-muted-foreground">{feature}</span>
 										</li>
 									))}
@@ -263,7 +263,7 @@ export default function PricingPage() {
 									{enterprisePlan.features.map((feature, featureIdx) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 										<li key={featureIdx} className="flex items-start gap-3">
-											<CheckCircle2 size={20} className="text-[#B8860B] flex-shrink-0 mt-0.5" />
+											<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 											<span className="text-body text-muted-foreground">{feature}</span>
 										</li>
 									))}
@@ -345,7 +345,7 @@ export default function PricingPage() {
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
 							<Button
 								size="lg"
-								className="min-w-[160px] rounded-full bg-[#B8860B] text-white hover:bg-[#D4A030] border-0"
+								className="min-w-[160px] rounded-full bg-primary text-white hover:bg-primary-hover border-0"
 							>
 								Contact Sales
 							</Button>

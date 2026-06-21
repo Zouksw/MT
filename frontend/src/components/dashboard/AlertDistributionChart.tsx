@@ -51,7 +51,7 @@ interface AlertDistributionChartProps {
 }
 
 const SEVERITY_CONFIG = [
-	{ name: "Critical", key: "critical", color: "#EF4444", mutedColor: "#FCA5A5" },
+	{ name: "Critical", key: "critical", color: "#DC2626", mutedColor: "#FCA5A5" },
 	{ name: "High", key: "high", color: "#F59E0B", mutedColor: "#FCD34D" },
 	{ name: "Medium", key: "medium", color: "#B8860B", mutedColor: "#D4A030" },
 	{ name: "Low", key: "low", color: "#10B981", mutedColor: "#6EE7B7" },
@@ -95,7 +95,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 					<div className="flex items-center justify-between mb-4">
 						<div className="flex items-center gap-2">
 							<div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-								<TriangleAlert className="size-4 text-[#EF4444]" />
+								<TriangleAlert className="size-4 text-[#DC2626]" />
 							</div>
 							<h5 className="text-base font-semibold mb-0!">Alert Distribution</h5>
 						</div>

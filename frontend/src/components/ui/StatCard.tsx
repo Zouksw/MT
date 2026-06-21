@@ -113,9 +113,9 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 const variantColors: Record<StatCardVariant, { text: string }> = {
 	default: { text: "#475569" },
 	primary: { text: "#B8860B" },
-	success: { text: "#10B981" },
+	success: { text: "#16A34A" },
 	warning: { text: "#D97706" },
-	error: { text: "#EF4444" },
+	error: { text: "#DC2626" },
 };
 
 export const StatCard = React.memo<StatCardProps>(
@@ -163,7 +163,7 @@ export const StatCard = React.memo<StatCardProps>(
 					{trend && (
 						<span
 							className="text-xs font-medium"
-							style={{ color: trend.isPositive ? "#10B981" : "#EF4444" }}
+							style={{ color: trend.isPositive ? "#16A34A" : "#DC2626" }}
 						>
 							{trend.isPositive ? "+" : ""}
 							{trend.value}%

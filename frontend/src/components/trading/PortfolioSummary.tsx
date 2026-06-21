@@ -9,7 +9,7 @@ export default function PortfolioSummary() {
 
 	if (loading) {
 		return (
-			<div className="rounded-lg bg-card border p-5 animate-pulse">
+			<div className="rounded-lg bg-card shadow-card dark:shadow-card-dark p-5 animate-pulse">
 				<div className="h-6 bg-muted rounded w-32 mb-4" />
 				<div className="space-y-3">
 					{[1, 2, 3].map((i) => (
@@ -22,7 +22,7 @@ export default function PortfolioSummary() {
 
 	if (portfolios.length === 0) {
 		return (
-			<div className="rounded-lg bg-card border p-8 text-center">
+			<div className="rounded-lg bg-card shadow-card dark:shadow-card-dark p-8 text-center">
 				<p className="text-muted-foreground">
 					No analysis groups yet. Create a group to track related commodities.
 				</p>
@@ -74,7 +74,7 @@ function GroupCard({
 	const { performance, loading } = usePortfolioPerformance(portfolio.id);
 
 	return (
-		<div className="rounded-lg bg-card border">
+		<div className="rounded-lg bg-card shadow-card dark:shadow-card-dark">
 			<div className="px-5 py-3 border-b flex items-center gap-2">
 				<Scale className="size-4 text-primary" />
 				<span className="font-semibold">{portfolio.name}</span>

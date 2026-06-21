@@ -61,14 +61,14 @@ const illustrationMap: Record<
 		title: "No Alerts",
 		description: "You're all caught up! No alerts need your attention right now.",
 		icon: <Bell className="size-16 text-emerald-500" strokeWidth={1.5} />,
-		color: "#10B981",
+		color: "#16A34A",
 		bgColor: "bg-green-50/50 dark:bg-green-900/10",
 	},
 	anomalies: {
 		title: "No Anomalies Detected",
 		description: "Great! Your data looks normal. No anomalies have been detected.",
 		icon: <Bell className="size-16 text-emerald-500" strokeWidth={1.5} />,
-		color: "#10B981",
+		color: "#16A34A",
 		bgColor: "bg-green-50/50 dark:bg-green-900/10",
 	},
 	forecasts: {
@@ -82,7 +82,7 @@ const illustrationMap: Record<
 		title: "No Errors Detected",
 		description: "Everything is running smoothly. No errors to display.",
 		icon: <Bell className="size-16 text-emerald-500" strokeWidth={1.5} />,
-		color: "#10B981",
+		color: "#16A34A",
 		bgColor: "bg-green-50/50 dark:bg-green-900/10",
 	},
 	search: {

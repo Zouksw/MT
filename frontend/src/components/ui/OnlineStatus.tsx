@@ -88,7 +88,7 @@ export const OnlineStatus: React.FC<OnlineStatusProps> = ({
 					width: 10,
 					height: 10,
 					borderRadius: "50%",
-					backgroundColor: isOnline ? "#10B981" : "#EF4444",
+					backgroundColor: isOnline ? "#16A34A" : "#DC2626",
 					boxShadow: `0 0 0 2px ${isOnline ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
 					transition: "background-color 0.3s ease",
 				}}

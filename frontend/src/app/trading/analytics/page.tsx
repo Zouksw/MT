@@ -137,9 +137,9 @@ function StatCard({
 	prefix?: string;
 }) {
 	const colorMap: Record<string, string> = {
-		green: "#22c55e",
+		green: "#16A34A",
 		amber: "#f59e0b",
-		red: "#ef4444",
+		red: "#DC2626",
 		default: "inherit",
 	};
 	return (

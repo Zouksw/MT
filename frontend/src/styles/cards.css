@@ -155,9 +155,9 @@
 }
 
 .stat-card--primary::before { background: #B8860B; }
-.stat-card--success::before { background: linear-gradient(90deg, #10B981, #34D399); }
-.stat-card--warning::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
-.stat-card--error::before { background: linear-gradient(90deg, #EF4444, #F87171); }
+.stat-card--success::before { background: linear-gradient(90deg, #16A34A, #22C55E); }
+.stat-card--warning::before { background: linear-gradient(90deg, #D97706, #F59E0B); }
+.stat-card--error::before { background: linear-gradient(90deg, #DC2626, #F87171); }
 .stat-card--default::before { background: linear-gradient(90deg, #64748B, #94A3B8); }
 
 /* Stat card subtle background tint */

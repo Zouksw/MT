@@ -47,7 +47,7 @@ export default function FAQ() {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 
 	return (
-		<section id="faq" className="bg-white dark:bg-[#0a0a0a] px-6 py-20 md:py-28 lg:py-36">
+		<section id="faq" className="bg-white dark:bg-background px-6 py-20 md:py-28 lg:py-36">
 			<div className="mx-auto max-w-5xl">
 				{/* Header */}
 				<div className="mb-12 md:mb-16">
@@ -84,12 +84,12 @@ export default function FAQ() {
 									onClick={() => setSelectedIndex(index)}
 									className={`flex w-full items-center rounded-lg px-4 py-3 text-left transition-all duration-200 border-l-2 ${
 										selectedIndex === index
-											? "bg-[#B8860B]/5 border-l-[#B8860B] text-[#B8860B]"
+											? "bg-primary/5 border-l-primary text-primary"
 											: "border-l-transparent text-foreground hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-l-gray-300"
 									}`}
 								>
 									<span
-										className={`text-sm font-medium ${selectedIndex === index ? "text-[#B8860B]" : ""}`}
+										className={`text-sm font-medium ${selectedIndex === index ? "text-primary" : ""}`}
 									>
 										{faq.question}
 									</span>

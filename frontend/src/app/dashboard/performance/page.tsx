@@ -416,7 +416,7 @@ export default function PerformancePage() {
 			key: "avg",
 			title: "Avg (ms)",
 			render: (_value, row) => (
-				<span style={{ color: latencyColor(row.avg) === "error" ? "#EF4444" : "inherit" }}>
+				<span style={{ color: latencyColor(row.avg) === "error" ? "#DC2626" : "inherit" }}>
 					{row.avg.toFixed(1)}
 				</span>
 			),
@@ -426,7 +426,7 @@ export default function PerformancePage() {
 			key: "p95",
 			title: "P95 (ms)",
 			render: (_value, row) => (
-				<span style={{ color: latencyColor(row.p95) === "error" ? "#EF4444" : "inherit" }}>
+				<span style={{ color: latencyColor(row.p95) === "error" ? "#DC2626" : "inherit" }}>
 					{row.p95.toFixed(1)}
 				</span>
 			),
@@ -435,7 +435,7 @@ export default function PerformancePage() {
 			key: "p99",
 			title: "P99 (ms)",
 			render: (_value, row) => (
-				<span style={{ color: latencyColor(row.p99) === "error" ? "#EF4444" : "inherit" }}>
+				<span style={{ color: latencyColor(row.p99) === "error" ? "#DC2626" : "inherit" }}>
 					{row.p99.toFixed(1)}
 				</span>
 			),

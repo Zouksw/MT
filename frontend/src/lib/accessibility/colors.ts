@@ -105,11 +105,12 @@ export const DESIGN_COLORS = {
 	secondary: "#475569",
 	"secondary-hover": "#334155",
 
-	// Semantic colors
-	success: "#10B981",
-	warning: "#F59E0B",
-	error: "#EF4444",
-	info: "#D4A030",
+	// Semantic colors — MUST match tailwind.config.ts tokens (#16A34A / #DC2626),
+	// not the stale #10B981 / #EF4444 from the old DESIGN.md.
+	success: "#16A34A",
+	warning: "#D97706",
+	error: "#DC2626",
+	info: "#B8860B",
 
 	// Neutral colors
 	white: "#FFFFFF",

@@ -100,7 +100,7 @@ export default function LandingPage() {
 	return (
 		<div className="overflow-x-hidden w-full max-w-full">
 			{/* Navigation — clean top border bar */}
-			<header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+			<header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white dark:bg-background">
 				<div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-[1200px] mx-auto">
 					{/* Logo */}
 					<a href="/" className="flex items-center gap-2.5">
@@ -143,7 +143,7 @@ export default function LandingPage() {
 
 				{/* Mobile slide-down menu */}
 				{mobileMenuOpen && (
-					<div className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-[#0a0a0a] px-4 py-4 space-y-1">
+					<div className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-background px-4 py-4 space-y-1">
 						{NAV_LINKS.map((link) => (
 							<a
 								key={link.href}
@@ -181,7 +181,7 @@ export default function LandingPage() {
 			<FAQ />
 
 			{/* CTA Section — clean white, no gradients */}
-			<section className="bg-white dark:bg-[#0a0a0a] border-t border-black/5 dark:border-white/10">
+			<section className="bg-white dark:bg-background border-t border-black/5 dark:border-white/10">
 				<div className="px-6 py-24 md:py-36 lg:py-48">
 					<MotionReveal className="text-center max-w-[700px] mx-auto">
 						<h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
@@ -203,7 +203,7 @@ export default function LandingPage() {
 			</section>
 
 			{/* Footer — clean, minimal */}
-			<footer className="bg-white dark:bg-[#0a0a0a] border-t border-black/5 dark:border-white/10 px-6 py-16 md:py-24">
+			<footer className="bg-white dark:bg-background border-t border-black/5 dark:border-white/10 px-6 py-16 md:py-24">
 				<div className="max-w-[1200px] mx-auto">
 					<div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
 						{/* Brand */}

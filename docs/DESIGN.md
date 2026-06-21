@@ -129,6 +129,22 @@ border: 1px solid transparent;  /* shadow-as-border */
 box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 ```
 
+**Shadow levels** (defined in `tailwind.config.ts` → `boxShadow`):
+- **Level 0 (Flat):** No shadow — page background, text
+- **Level 1 (Ring):** `shadow-card` / `shadow-card-dark` — shadow-as-border for cards (`0 0 0 1px rgba(...)`)
+- **Level 2 (Hover):** `shadow-card-hover-dark` — Ring + `0 2px 8px rgba(0,0,0,0.3)` for hover states
+- **Level 3 (Elevated):** `shadow-card-elevated-dark` — Ring + `0 4px 16px rgba(0,0,0,0.3)` for featured cards / dropdowns
+- **Focus:** `shadow-focus` — `0 0 0 2px rgba(184,134,11,0.6)` gold focus ring (accessibility)
+
+---
+
+## Motion
+
+- **Approach:** Minimal-functional — only transitions that aid comprehension
+- **Easing:** `ease-enter` (cubic-bezier(0,0,0.2,1)), `ease-exit` (cubic-bezier(0.4,0,1,1))
+- **Duration:** micro 50-100ms, short 150-250ms, medium 250-400ms
+- Defined as `transitionTimingFunction` + `animation`/`keyframes` in `tailwind.config.ts` (fade-in, slide-up, modal-in, skeleton-pulse)
+
 ---
 
 ## Components
@@ -189,8 +205,21 @@ box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 
 - **Contrast**: All text meets WCAG AA (4.5:1 for body, 3:1 for large text)
 - **Gold on dark**: `#B8860B` on `#0A0A0A` passes AA for large text, use white for body text
-- **Focus**: Visible focus rings on all interactive elements
+- **Focus**: Visible focus rings on all interactive elements (`shadow-focus` gold ring)
 - **Keyboard**: Full keyboard navigation support
+
+---
+
+## Design Rules (enforce during implementation)
+
+1. **Gold = AI intelligence.** Every gold element signals AI content. Use sparingly.
+2. **Green/red = market direction ONLY.** Never use for UI status (success/error).
+3. **Shadow-as-border, never CSS `border` on cards** (Vercel technique). Use `shadow-card` / `shadow-card-dark`.
+4. **Three font weights: 400 (read), 500 (interact), 600 (announce).** Never `font-bold`/`font-light`.
+5. **Geist Mono uppercase for data labels.** Geist Sans for everything else.
+6. **Dark mode is default.** Design dark-first, light-second.
+7. **2-column grids for data-dense pages**, never 3-column (too cramped).
+8. **Minimum radius `rounded` (4px).** No `rounded-sm` or arbitrary sub-4px values.
 
 ---
 
@@ -215,3 +244,4 @@ box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 | 2026-05 | 2-column grid standard | Data-heavy pages need space; 3-column too cramped |
 | 2026-05 | font-semibold max | font-bold (700) too heavy for dark backgrounds |
 | 2026-05 | Shadow-as-border | Cleaner than colored borders on dark theme |
+| 2026-06 | Consolidated duplicate DESIGN.md | `/root/DESIGN.md` (Apr) had stale colors (#22c55e/#ef4444 success/error, #171717 surface) that disagreed with the tailwind.config.ts tokens (#16A34A/#DC2626, #111827). This file (docs/DESIGN.md) is the single source of truth — it matches the implementation. Root version archived. |

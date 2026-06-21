@@ -131,7 +131,7 @@ export const Features: React.FC = () => {
 	return (
 		<section
 			id="features"
-			className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-24 md:py-36 lg:py-48"
+			className="relative overflow-hidden bg-white dark:bg-background px-6 py-24 md:py-36 lg:py-48"
 		>
 			<div className="relative z-10 mx-auto max-w-6xl">
 				{/* Header */}
@@ -165,7 +165,7 @@ export const Features: React.FC = () => {
 							<div
 								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-7 text-center transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] ${index === 0 ? "md:py-9" : ""}`}
 							>
-								<div className="font-mono text-2xl font-semibold text-[#B8860B] md:text-3xl tabular-nums">
+								<div className="font-mono text-2xl font-semibold text-primary md:text-3xl tabular-nums">
 									{metric.value}
 								</div>
 								<div className="mt-1 text-sm text-muted-foreground">{metric.label}</div>
@@ -198,7 +198,7 @@ export const Features: React.FC = () => {
 										<span
 											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											key={idx}
-											className="bg-[#B8860B]/10 px-2.5 py-1 text-xs font-medium text-[#B8860B] rounded-full"
+											className="bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary rounded-full"
 										>
 											{detail}
 										</span>

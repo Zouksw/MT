@@ -187,9 +187,9 @@ export default function ForecastDetailPage() {
 
 	const statusColor =
 		forecast.status === "completed"
-			? "#22c55e"
+			? "#16A34A"
 			: forecast.status === "failed"
-				? "#ef4444"
+				? "#DC2626"
 				: "#f59e0b";
 
 	return (
@@ -278,7 +278,7 @@ export default function ForecastDetailPage() {
 								<div
 									className="mt-1 text-lg font-semibold"
 									style={{
-										color: forecast.accuracy > 80 ? "#22c55e" : "#f59e0b",
+										color: forecast.accuracy > 80 ? "#16A34A" : "#f59e0b",
 									}}
 								>
 									{forecast.accuracy.toFixed(2)}%

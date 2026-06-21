@@ -26,7 +26,7 @@ export const MobileStatsCard: React.FC<MobileStatsCardProps> = ({ items, feature
 						key={index}
 						className={`shrink-0 snap-start ${isFeatured ? "w-[280px] min-w-[280px]" : "w-[200px] min-w-[200px]"}`}
 					>
-						<div className={`rounded border bg-card h-full ${isFeatured ? "p-5" : "p-4"}`}>
+						<div className={`rounded bg-card shadow-card dark:shadow-card-dark h-full ${isFeatured ? "p-5" : "p-4"}`}>
 							<div className="flex flex-col justify-between h-full">
 								<div
 									className={`text-[13px] font-medium text-gray-500 ${isFeatured ? "mb-3" : "mb-2"}`}
@@ -81,7 +81,7 @@ export const DesktopGridStats: React.FC<DesktopGridStatsProps> = ({
 						key={index}
 						className={`col-span-2 ${isFeatured ? `md:col-span-${columns.featured}` : `md:col-span-${columns.standard}`}`}
 					>
-						<div className={`rounded border bg-card h-full ${isFeatured ? "p-6" : "p-5"}`}>
+						<div className={`rounded bg-card shadow-card dark:shadow-card-dark h-full ${isFeatured ? "p-6" : "p-5"}`}>
 							<div className="flex flex-col justify-between h-full">
 								<div
 									className={`text-[13px] font-medium text-gray-500 ${isFeatured ? "mb-3" : "mb-2"}`}

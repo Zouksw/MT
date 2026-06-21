@@ -255,7 +255,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 								<div
 									className="text-2xl font-semibold mt-1"
 									style={{
-										color: anomaly.severity === "high" ? "#ef4444" : "#f59e0b",
+										color: anomaly.severity === "high" ? "#DC2626" : "#f59e0b",
 									}}
 								>
 									{anomaly.actualValue.toFixed(4)}

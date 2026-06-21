@@ -62,7 +62,7 @@ const steps = [
 						<span className="text-xs font-medium text-muted-foreground w-24">{s.model}</span>
 						<div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
 							<div
-								className="h-full rounded-full bg-[#B8860B]/50"
+								className="h-full rounded-full bg-primary/50"
 								style={{ width: `${s.conf}%` }}
 							/>
 						</div>
@@ -83,7 +83,7 @@ const steps = [
 			"7 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
 		preview: (
 			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-white/[0.05]">
-				<Brain size={20} weight="duotone" className="text-[#B8860B] shrink-0" />
+				<Brain size={20} weight="duotone" className="text-primary shrink-0" />
 				<div className="flex-1">
 					<div className="text-xs font-medium text-foreground">AI Consensus</div>
 					<div className="text-xs text-muted-foreground">Strong Buy — 73% confidence</div>
@@ -105,7 +105,7 @@ const features = [
 
 export default function GettingStarted() {
 	return (
-		<section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-20 md:py-28 lg:py-36">
+		<section className="relative overflow-hidden bg-white dark:bg-background px-6 py-20 md:py-28 lg:py-36">
 			{/* Dot grid pattern */}
 			<div
 				className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
@@ -148,7 +148,7 @@ export default function GettingStarted() {
 							<StaggerChild key={index}>
 								<div className="flex gap-6 items-start">
 									<div className="relative flex-shrink-0">
-										<div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full ring-1 ring-[#B8860B]/30 text-sm font-semibold text-[#B8860B]">
+										<div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full ring-1 ring-primary/30 text-sm font-semibold text-primary">
 											{step.number}
 										</div>
 									</div>

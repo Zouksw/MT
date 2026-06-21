@@ -35,7 +35,7 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
 	return (
 		<span
 			ref={ref}
-			className="font-mono text-2xl md:text-3xl font-semibold text-[#B8860B] tabular-nums"
+			className="font-mono text-2xl md:text-3xl font-semibold text-primary tabular-nums"
 		>
 			{value}
 			{suffix}
@@ -68,7 +68,7 @@ const stats = [
 
 export const SocialProof: React.FC = () => {
 	return (
-		<section className="py-12 shadow-[0_-1px_0_0_rgba(0,0,0,0.05),0_1px_0_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.08),0_1px_0_0_rgba(255,255,255,0.08)] bg-white dark:bg-[#0a0a0a]">
+		<section className="py-12 shadow-[0_-1px_0_0_rgba(0,0,0,0.05),0_1px_0_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.08),0_1px_0_0_rgba(255,255,255,0.08)] bg-white dark:bg-background">
 			<div className="max-w-6xl mx-auto px-6">
 				<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
 					{stats.map((stat, i) => (

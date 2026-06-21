@@ -162,7 +162,7 @@ export default function AIAnomaliesPage() {
 					<span
 						className="font-semibold data-text"
 						style={{
-							color: s > 4 ? "#EF4444" : s > 3 ? "#F59E0B" : s > 2 ? "#B8860B" : "#10B981",
+							color: s > 4 ? "#DC2626" : s > 3 ? "#F59E0B" : s > 2 ? "#B8860B" : "#16A34A",
 						}}
 					>
 						{s.toFixed(4)}

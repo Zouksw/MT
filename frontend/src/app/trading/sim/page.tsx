@@ -94,7 +94,7 @@ export default function SimulationPage() {
 											<p className="text-xs text-gray-500">Score</p>
 											<p
 												className="text-sm font-mono"
-												style={{ fontSize: 14, color: a.pnl >= 0 ? "#22c55e" : "#ef4444" }}
+												style={{ fontSize: 14, color: a.pnl >= 0 ? "#16A34A" : "#DC2626" }}
 											>
 												{a.pnl >= 0 ? "↑" : "↓"}
 												{a.pnl.toFixed(2)}
@@ -247,7 +247,7 @@ function AccountDetail({ accountId }: { accountId: string }) {
 							<p className="text-xs text-gray-500">Score</p>
 							<p
 								className="text-lg font-semibold font-mono"
-								style={{ color: account.totalPnl >= 0 ? "#22c55e" : "#ef4444" }}
+								style={{ color: account.totalPnl >= 0 ? "#16A34A" : "#DC2626" }}
 							>
 								{account.totalPnl.toFixed(2)}
 							</p>

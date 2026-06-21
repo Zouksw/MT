@@ -127,7 +127,7 @@ const priceItems = [
 
 export const Hero: React.FC = () => {
 	return (
-		<section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] min-h-[100dvh] flex items-center">
+		<section className="relative overflow-hidden bg-white dark:bg-background min-h-[100dvh] flex items-center">
 			{/* HexGrid SVG background */}
 			<HexGrid />
 
@@ -137,7 +137,7 @@ export const Hero: React.FC = () => {
 					{/* Left: Text content (3/5) */}
 					<div className="lg:col-span-3">
 						<MotionReveal>
-							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-[#B8860B]">
+							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-primary">
 								85+ beef cuts &middot; 8 AI models &middot; 5 export markets
 							</p>
 						</MotionReveal>
@@ -146,14 +146,14 @@ export const Hero: React.FC = () => {
 							<h1 className="text-4xl sm:text-5xl lg:text-7xl tracking-tighter font-semibold text-gray-900 dark:text-white">
 								Global Beef Trade
 								<br />
-								<span className="text-[#B8860B]">Intelligence, Decoded</span>
+								<span className="text-primary">Intelligence, Decoded</span>
 							</h1>
 						</MotionReveal>
 
 						<MotionReveal delay={0.2}>
 							<p className="mt-6 max-w-xl text-lg font-medium text-muted-foreground leading-relaxed">
 								Factory-level cut pricing from{" "}
-								<span className="font-mono text-[#B8860B]">16+ export plants</span> across 5
+								<span className="font-mono text-primary">16+ export plants</span> across 5
 								countries. AI price forecasting, export flow tracking, and supply chain monitoring —
 								all in one platform.
 							</p>
@@ -181,17 +181,17 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.4}>
 							<div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-mono tabular-nums">
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">85+</span>
+									<span className="text-primary font-semibold text-base">85+</span>
 									<span>Beef Cuts Tracked</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">8</span>
+									<span className="text-primary font-semibold text-base">8</span>
 									<span>AI Price Models</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-[#B8860B] font-semibold text-base">5</span>
+									<span className="text-primary font-semibold text-base">5</span>
 									<span>Export Markets</span>
 								</div>
 							</div>
@@ -201,7 +201,7 @@ export const Hero: React.FC = () => {
 					{/* Right: Dashboard mockup (2/5) — dark panel, Tailwind code panel style */}
 					<div className="lg:col-span-2">
 						<MotionReveal delay={0.3}>
-							<div className="rounded-2xl bg-[#0a0a0a] p-4 text-white">
+							<div className="rounded-2xl bg-background p-4 text-white">
 								{/* Window chrome — 3 dots */}
 								<div className="mb-3 flex items-center gap-1.5">
 									<div className="size-2 rounded-full bg-white/20" />
@@ -212,7 +212,7 @@ export const Hero: React.FC = () => {
 								{/* Header bar */}
 								<div className="mb-3 flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<TrendUp size={16} weight="duotone" className="text-[#B8860B]" />
+										<TrendUp size={16} weight="duotone" className="text-primary" />
 										<span className="text-sm font-medium text-gray-400">
 											Chuck Roll Choice — USDA
 										</span>
@@ -250,7 +250,7 @@ export const Hero: React.FC = () => {
 
 								{/* Signal bar */}
 								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
-									<Gauge size={14} weight="duotone" className="text-[#B8860B]" />
+									<Gauge size={14} weight="duotone" className="text-primary" />
 									<span className="text-xs font-medium text-gray-400">AI Consensus</span>
 									<span className="text-xs font-semibold text-green-400 ml-auto">Price Up</span>
 									<span className="text-xs text-gray-500 font-mono tabular-nums">78%</span>
