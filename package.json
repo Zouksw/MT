@@ -19,8 +19,7 @@
 		"restart": "./scripts/restart.sh",
 		"restart:backend": "./scripts/restart.sh --backend",
 		"restart:frontend": "./scripts/restart.sh --frontend",
-		"restart:iotdb": "./scripts/restart.sh --iotdb",
-		"stop": "lsof -ti:3000,8000,5001 2>/dev/null | xargs kill -9 2>/dev/null; pkill -f 'iotdb.*ConfigNode' 2>/dev/null; pkill -f 'iotdb.*DataNode' 2>/dev/null; pkill -f 'ainode.*MainProcess' 2>/dev/null; echo 'All dev servers and IoTDB stopped'"
+		"stop": "lsof -ti:3000,8000,5001 2>/dev/null | xargs kill -9 2>/dev/null; echo 'All dev servers stopped'"
 	},
 	"lint-staged": {
 		"*.{ts,tsx,js,jsx}": [
