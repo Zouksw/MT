@@ -771,6 +771,72 @@ router.get(
 	}),
 );
 
+// Per-commodity data freshness — last price date for each commodity.
+// Complements /sources/freshness (which tracks scraper runs) by answering
+// "which commodities actually have fresh price data". Stale threshold is one
+// week (price data is daily, so a week gap signals a stalled source).
+router.get(
+	"/commodities/freshness",
+	authenticate,
+	asyncHandler(async (_req, res) => {
+		const now = new Date();
+		const staleThreshold = new Date(now.getTime() - MS_PER_WEEK);
+
+		// Latest price date per commodity (daily interval only — intraday is
+		// not tracked and would skew the "is this commodity current" signal).
+		const latestPrices = await prisma.commodityPrice.groupBy({
+			by: ["commodityId"],
+			where: { interval: "daily" },
+			_max: { date: true },
+		});
+
+		const lastByCommodity = new Map<string, Date>();
+		for (const row of latestPrices) {
+			const d = row._max.date;
+			if (d) lastByCommodity.set(row.commodityId, d);
+		}
+
+		const commodities = await prisma.commodity.findMany({
+			select: {
+				id: true,
+				slug: true,
+				name: true,
+				category: true,
+				isActive: true,
+			},
+			orderBy: { name: "asc" },
+		});
+
+		const items = commodities.map((c) => {
+			const lastUpdated = lastByCommodity.get(c.id) ?? null;
+			return {
+				id: c.id,
+				slug: c.slug,
+				name: c.name,
+				category: c.category,
+				isActive: c.isActive,
+				lastUpdated,
+				stale: lastUpdated ? lastUpdated < staleThreshold : true,
+			};
+		});
+
+		const withData = items.filter((i) => i.lastUpdated !== null);
+		const stale = items.filter((i) => i.stale);
+		const noData = items.filter((i) => i.lastUpdated === null);
+
+		success(res, {
+			commodities: items,
+			summary: {
+				total: items.length,
+				withData: withData.length,
+				stale: stale.length,
+				noData: noData.length,
+				coverage: items.length > 0 ? Math.round((withData.length / items.length) * 100) : 0,
+			},
+		});
+	}),
+);
+
 // Ingestion history for a specific source
 router.get(
 	"/sources/:sourceId/history",

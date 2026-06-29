@@ -71,71 +71,31 @@ export function useWatchlistQuotes(watchlistId: string | null) {
 	};
 }
 
-export interface PortfolioData {
+export interface AnalysisGroupData {
 	id: string;
 	name: string;
 	description: string | null;
 	isDefault: boolean;
-	positionCount: number;
-	positions: Array<{
+	memberCount: number;
+	members: Array<{
 		id: string;
 		commodity: { slug: string; name: string; unit: string };
-		side: string;
-		quantity: number;
-		avgEntryPrice: number;
-		currentPrice: number | null;
-		unrealizedPnl: number | null;
+		notes: string | null;
+		addedAt: string;
 	}>;
 	createdAt: string;
 }
 
-// Alias for repositioned naming
-export type AnalysisGroupData = PortfolioData;
-
-export function usePortfolios() {
+export function useAnalysisGroups() {
 	const { data, error, mutate } = useSWR<{
 		success: boolean;
-		data: { portfolios: PortfolioData[] };
+		data: { groups: AnalysisGroupData[] };
 	}>("/portfolios", fetcher, { refreshInterval: 30000 });
 
 	return {
-		portfolios: data?.data?.portfolios ?? [],
+		groups: data?.data?.groups ?? [],
 		loading: !data && !error,
 		error,
 		mutate,
-	};
-}
-
-export function usePortfolioPerformance(portfolioId: string | null) {
-	const { data, error } = useSWR<{
-		success: boolean;
-		data: {
-			performance: {
-				totalUnrealizedPnl: number;
-				totalRealizedPnl: number;
-				totalPnl: number;
-				positionCount: number;
-				longCount: number;
-				shortCount: number;
-				positions: Array<{
-					id: string;
-					commodity: { slug: string; name: string; unit: string };
-					side: string;
-					quantity: number;
-					avgEntryPrice: number;
-					currentPrice: number | null;
-					unrealizedPnl: number | null;
-					realizedPnl: number | null;
-				}>;
-			};
-		};
-	}>(portfolioId ? `/portfolios/${portfolioId}/performance` : null, fetcher, {
-		refreshInterval: 30000,
-	});
-
-	return {
-		performance: data?.data?.performance ?? null,
-		loading: !data && !error,
-		error,
 	};
 }

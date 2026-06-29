@@ -1,15 +1,11 @@
-import bcrypt from "bcryptjs";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
-import { config, jwtUtils, prisma } from "@/lib";
-import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
-import { logger } from "@/lib/logger.js";
+import { config, prisma } from "@/lib";
+import { MS_PER_DAY } from "@/lib/constants";
 import { success, successWithMessage } from "@/lib/response";
 import {
 	asyncHandler,
 	BadRequestError,
-	ConflictError,
-	NotFoundError,
 	TooManyRequestsError,
 	UnauthorizedError,
 } from "@/middleware/errorHandler";
@@ -19,15 +15,25 @@ import {
 	checkAccountLockout,
 	clearFailedLoginAttempts,
 	formatLockoutTime,
-	recordFailedLogin,
 } from "@/services/authLockout";
-import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
-
-type AuditAction = "CREATE" | "READ" | "UPDATE" | "DELETE" | "EXPORT" | "LOGIN";
+import {
+	type RequestCtx,
+	changePassword,
+	createAuthSession,
+	getUserProfile,
+	getUserIdFromToken,
+	invalidateSession,
+	registerUser,
+	rotateRefreshToken,
+	updateUserProfile,
+	verifyCredentials,
+	verifyTokenSession,
+	writeAuditLog,
+} from "@/services/authService";
 
 const router = Router();
 
-// Validation schemas
+// Validation schemas (HTTP boundary — stay in the route)
 const registerSchema = z.object({
 	email: validationSchemas.email,
 	password: validationSchemas.password,
@@ -39,21 +45,18 @@ const loginSchema = z.object({
 	password: z.string().min(1, "Password is required"),
 });
 
-// Helper: Get user ID from token
-async function getUserIdFromToken(authHeader: string | undefined): Promise<string | null> {
-	if (!authHeader?.startsWith("Bearer ")) return null;
-	const token = authHeader.substring(7);
-	try {
-		if (await isTokenBlacklisted(token)) return null;
-		const payload = jwtUtils.verifyToken(token);
-		return payload.userId;
-	} catch (error) {
-		logger.warn("[AUTH] Token verification failed in getUserIdFromToken", error);
-		return null;
-	}
-}
+const updateSchema = z.object({
+	name: z.string().min(1).max(255).optional(),
+	avatarUrl: z.string().url().optional(),
+	preferences: z.record(z.unknown()).optional(),
+});
 
-// Helper: Build auth cookie options
+const changePasswordSchema = z.object({
+	currentPassword: z.string().min(1),
+	newPassword: validationSchemas.password,
+});
+
+// Helper: Build auth cookie options (HTTP boundary — stays in the route)
 function authCookieOptions(req: Request) {
 	return {
 		httpOnly: true,
@@ -64,40 +67,13 @@ function authCookieOptions(req: Request) {
 	};
 }
 
-// Helper: Generate tokens + create session
-async function createAuthSession(req: Request, userId: string) {
-	const token = jwtUtils.generateToken(userId);
-	const refreshToken = jwtUtils.generateRefreshToken(userId);
-	// Capture the created session so callers can use its id directly instead of
-	// re-querying "newest active session", which races under concurrent logins
-	// and can return another device's session.
-	const session = await prisma.session.create({
-		data: {
-			userId,
-			tokenHash: await bcrypt.hash(refreshToken, 12),
-			expiresAt: new Date(Date.now() + config.session.expiresDays * MS_PER_DAY),
-			ipAddress: req.ip,
-			userAgent: req.get("user-agent"),
-		},
-	});
-	return { token, refreshToken, sessionId: session.id };
+// Extract the plain request context the service layer expects.
+function reqCtx(req: Request): RequestCtx {
+	return { ipAddress: req.ip, userAgent: req.get("user-agent") };
 }
 
-// Helper: Write audit log
-async function auditLog(req: Request, userId: string, resourceType: string, action: AuditAction) {
-	await prisma.auditLog
-		.create({
-			data: {
-				userId,
-				resourceType,
-				resourceId: userId,
-				action,
-				ipAddress: req.ip,
-				userAgent: req.get("user-agent"),
-				success: true,
-			},
-		})
-		.catch((err) => logger.warn("Audit log write failed:", err));
+function bearerToken(authHeader: string | undefined): string | null {
+	return authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
 }
 
 /**
@@ -168,24 +144,14 @@ router.post(
 	asyncHandler(async (req: Request, res: Response) => {
 		const validatedData = registerSchema.parse(req.body);
 
-		const existingUser = await prisma.user.findUnique({
-			where: { email: validatedData.email },
-		});
-		if (existingUser) throw new ConflictError("Email already registered");
-
-		const passwordHash = await bcrypt.hash(validatedData.password, 12);
-		const user = await prisma.user.create({
-			data: {
-				email: validatedData.email,
-				passwordHash,
-				name: validatedData.name || validatedData.email.split("@")[0],
-				role: "EDITOR",
-			},
-			select: { id: true, email: true, name: true, role: true, avatarUrl: true, createdAt: true },
+		const user = await registerUser({
+			email: validatedData.email,
+			password: validatedData.password,
+			name: validatedData.name,
 		});
 
-		const { token, refreshToken } = await createAuthSession(req, user.id);
-		await auditLog(req, user.id, "User", "CREATE");
+		const { token, refreshToken } = await createAuthSession(user.id, reqCtx(req));
+		await writeAuditLog(user.id, "User", "CREATE", reqCtx(req));
 
 		res.cookie("auth_token", token, authCookieOptions(req));
 		return success(res, { user, token, refreshToken }, 201);
@@ -262,25 +228,19 @@ router.post(
 				);
 			}
 
-			const user = await prisma.user.findUnique({ where: { email: validatedData.email } });
-			if (!user) {
-				await recordFailedLogin(validatedData.email, req.ip ?? "unknown");
-				throw new UnauthorizedError("Invalid email or password");
-			}
-
-			const isValidPassword = await bcrypt.compare(validatedData.password, user.passwordHash);
-			if (!isValidPassword) {
-				await recordFailedLogin(validatedData.email, req.ip ?? "unknown");
-				throw new UnauthorizedError("Invalid email or password");
-			}
+			const user = await verifyCredentials(
+				validatedData.email,
+				validatedData.password,
+				req.ip ?? "unknown",
+			);
 
 			// Credentials valid — clear any prior failed-attempt counters.
 			await clearFailedLoginAttempts(validatedData.email);
 
-		const { token, refreshToken, sessionId } = await createAuthSession(req, user.id);
+		const { token, refreshToken, sessionId } = await createAuthSession(user.id, reqCtx(req));
 
 		await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-		await auditLog(req, user.id, "User", "LOGIN");
+		await writeAuditLog(user.id, "User", "LOGIN", reqCtx(req));
 
 		res.cookie("auth_token", token, authCookieOptions(req));
 		return success(res, {
@@ -324,33 +284,8 @@ router.post(
 			throw new UnauthorizedError("Invalid token");
 		}
 
-		// Extract and blacklist the access token
-		if (authHeader?.startsWith("Bearer ")) {
-			const token = authHeader.substring(7);
-			await blacklistToken(token, "logout");
-		}
-
-		// Invalidate only the current session
 		const { refreshToken: bodyRefreshToken } = req.body || {};
-		if (bodyRefreshToken) {
-			const sessions = await prisma.session.findMany({
-				where: { userId, isActive: true },
-			});
-			for (const s of sessions) {
-				if (await bcrypt.compare(bodyRefreshToken, s.tokenHash)) {
-					await prisma.session.update({
-						where: { id: s.id },
-						data: { isActive: false },
-					});
-					break;
-				}
-			}
-		} else {
-			await prisma.session.updateMany({
-				where: { userId, isActive: true },
-				data: { isActive: false },
-			});
-		}
+		await invalidateSession(userId, bearerToken(authHeader), bodyRefreshToken);
 
 		// Clear auth cookie
 		res.clearCookie("auth_token", {
@@ -360,7 +295,7 @@ router.post(
 			sameSite: "strict",
 		});
 
-		await auditLog(req, userId, "Session", "DELETE");
+		await writeAuditLog(userId, "Session", "DELETE", reqCtx(req));
 
 		return successWithMessage(res, {}, "Logged out successfully");
 	}),
@@ -415,55 +350,10 @@ router.post(
 			throw new BadRequestError("Refresh token is required");
 		}
 
-		let userId: string;
-		try {
-			const payload = jwtUtils.verifyRefreshToken(refreshToken);
-			userId = payload.userId;
-		} catch (error) {
-			logger.warn("[AUTH] Refresh token verification failed", error);
-			throw new UnauthorizedError("Invalid refresh token");
-		}
-
-		// Find the matching session
-		const sessions = await prisma.session.findMany({
-			where: { userId, isActive: true },
-		});
-
-		let matchedSession: { id: string } | null = null;
-		for (const s of sessions) {
-			if (await bcrypt.compare(refreshToken, s.tokenHash)) {
-				matchedSession = s;
-				break;
-			}
-		}
-
-		if (!matchedSession) {
-			throw new UnauthorizedError("Invalid session");
-		}
-
-		// Invalidate the old session
-		await prisma.session.update({
-			where: { id: matchedSession.id },
-			data: { isActive: false },
-		});
-
-		// Generate new tokens
-		const newToken = jwtUtils.generateToken(userId);
-		const newRefreshToken = jwtUtils.generateRefreshToken(userId);
-		const newTokenHash = await bcrypt.hash(newRefreshToken, 10);
-
-		// Create new session
-		await prisma.session.create({
-			data: {
-				userId,
-				tokenHash: newTokenHash,
-				// Match the TTL used by createAuthSession (login/register), which is
-				// config.session.expiresDays — not a hardcoded 7 days. Using MS_PER_WEEK
-				// here desynced the DB session from the refresh-token JWT's actual TTL.
-				expiresAt: new Date(Date.now() + config.session.expiresDays * MS_PER_DAY),
-				userAgent: req.headers["user-agent"] || null,
-			},
-		});
+		const { token: newToken, refreshToken: newRefreshToken } = await rotateRefreshToken(
+			refreshToken,
+			reqCtx(req),
+		);
 
 		return success(res, { token: newToken, refreshToken: newRefreshToken });
 	}),
@@ -518,35 +408,9 @@ router.get(
 	"/me",
 	asyncHandler(async (req: Request, res: Response) => {
 		const userId = await getUserIdFromToken(req.headers.authorization);
+		if (!userId) throw new UnauthorizedError("Invalid token");
 
-		if (!userId) {
-			throw new UnauthorizedError("Invalid token");
-		}
-
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			select: {
-				id: true,
-				email: true,
-				name: true,
-				role: true,
-				avatarUrl: true,
-				preferences: true,
-				createdAt: true,
-				lastLoginAt: true,
-				_count: {
-					select: {
-						datasets: true,
-						models: true,
-					},
-				},
-			},
-		});
-
-		if (!user) {
-			throw new NotFoundError("User");
-		}
-
+		const user = await getUserProfile(userId);
 		return success(res, { user });
 	}),
 );
@@ -587,20 +451,10 @@ router.put(
 	"/me",
 	asyncHandler(async (req: Request, res: Response) => {
 		const userId = await getUserIdFromToken(req.headers.authorization);
-
-		if (!userId) {
-			throw new UnauthorizedError("Invalid token");
-		}
-
-		const updateSchema = z.object({
-			name: z.string().min(1).max(255).optional(),
-			avatarUrl: z.string().url().optional(),
-			preferences: z.record(z.unknown()).optional(),
-		});
+		if (!userId) throw new UnauthorizedError("Invalid token");
 
 		const validatedData = updateSchema.parse(req.body);
 
-		// Build Prisma update data with proper types
 		const updateData: {
 			name?: string;
 			avatarUrl?: string;
@@ -608,21 +462,10 @@ router.put(
 		} = {};
 		if (validatedData.name !== undefined) updateData.name = validatedData.name;
 		if (validatedData.avatarUrl !== undefined) updateData.avatarUrl = validatedData.avatarUrl;
-		if (validatedData.preferences !== undefined) updateData.preferences = validatedData.preferences;
+		if (validatedData.preferences !== undefined)
+			updateData.preferences = validatedData.preferences;
 
-		const user = await prisma.user.update({
-			where: { id: userId },
-			data: updateData as unknown as Parameters<typeof prisma.user.update>[0]["data"],
-			select: {
-				id: true,
-				email: true,
-				name: true,
-				role: true,
-				avatarUrl: true,
-				preferences: true,
-			},
-		});
-
+		const user = await updateUserProfile(userId, updateData);
 		return success(res, { user });
 	}),
 );
@@ -665,56 +508,17 @@ router.post(
 	asyncHandler(async (req: Request, res: Response) => {
 		const authHeader = req.headers.authorization;
 		const userId = await getUserIdFromToken(authHeader);
+		if (!userId) throw new UnauthorizedError("Invalid token");
 
-		if (!userId) {
-			throw new UnauthorizedError("Invalid token");
-		}
+		const validatedData = changePasswordSchema.parse(req.body);
 
-		const schema = z.object({
-			currentPassword: z.string().min(1),
-			newPassword: validationSchemas.password,
-		});
-
-		const validatedData = schema.parse(req.body);
-
-		// Get user
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-		});
-
-		if (!user) {
-			throw new NotFoundError("User");
-		}
-
-		// Verify current password
-		const isValidPassword = await bcrypt.compare(validatedData.currentPassword, user.passwordHash);
-
-		if (!isValidPassword) {
-			throw new UnauthorizedError("Current password is incorrect");
-		}
-
-		// Hash new password with 12 rounds for better security
-		const passwordHash = await bcrypt.hash(validatedData.newPassword, 12);
-
-		// Blacklist current token
-		if (authHeader?.startsWith("Bearer ")) {
-			const token = authHeader.substring(7);
-			await blacklistToken(token, "password_change");
-		}
-
-		// Update password
-		await prisma.user.update({
-			where: { id: userId },
-			data: { passwordHash },
-		});
-
-		// Invalidate all sessions
-		await prisma.session.updateMany({
-			where: { userId },
-			data: { isActive: false },
-		});
-
-		await auditLog(req, userId, "User", "UPDATE");
+		await changePassword(
+			userId,
+			validatedData.currentPassword,
+			validatedData.newPassword,
+			bearerToken(authHeader),
+		);
+		await writeAuditLog(userId, "User", "UPDATE", reqCtx(req));
 
 		return successWithMessage(res, {}, "Password changed successfully. Please login again.");
 	}),
@@ -759,47 +563,14 @@ router.post(
 router.get(
 	"/verify",
 	asyncHandler(async (req: Request, res: Response) => {
-		// Try to get token from Authorization header first, then from cookie
 		const authHeader = req.headers.authorization;
 		const cookieToken = req.cookies?.auth_token;
+		const token = bearerToken(authHeader) ?? cookieToken;
 
-		const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : cookieToken;
+		if (!token) throw new UnauthorizedError("No token provided");
 
-		if (!token) {
-			throw new UnauthorizedError("No token provided");
-		}
-
-		// Verify token
-		try {
-			const payload = jwtUtils.verifyToken(token);
-
-			// Check if token is blacklisted
-			const isBlacklisted = await isTokenBlacklisted(token);
-
-			if (isBlacklisted) {
-				throw new UnauthorizedError("Token has been revoked");
-			}
-
-			// Check if session is still active
-			const sessions = await prisma.session.findMany({
-				where: { userId: payload.userId, isActive: true },
-			});
-
-			if (sessions.length === 0) {
-				throw new UnauthorizedError("No active session");
-			}
-
-			return success(res, {
-				valid: true,
-				userId: payload.userId,
-				exp: payload.exp,
-			});
-		} catch (error) {
-			if (error instanceof UnauthorizedError) {
-				throw error;
-			}
-			throw new UnauthorizedError("Invalid token");
-		}
+		const { userId, exp } = await verifyTokenSession(token);
+		return success(res, { valid: true, userId, exp });
 	}),
 );
 

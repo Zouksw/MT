@@ -464,7 +464,7 @@ model Commodity {
   updatedAt     DateTime? @updatedAt @map("updated_at")
   prices        CommodityPrice[]
   watchlistItems WatchlistItem[]
-  positions     Position[]
+  groupMembers  GroupMember[]
 
   @@index([category])
   @@index([originCountry])
@@ -550,33 +550,29 @@ model Portfolio {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime? @updatedAt @map("updated_at")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  positions   Position[]
+  members     GroupMember[]
 
   @@unique([userId, name])
   @@index([userId])
   @@map("portfolios")
 }
 
-model Position {
-  id             String     @id @default(uuid())
-  portfolioId    String     @map("portfolio_id")
-  commodityId    String     @map("commodity_id")
-  side           String     @default("LONG") // LONG or SHORT
-  quantity       Decimal    @db.Decimal(18, 6)
-  avgEntryPrice  Decimal    @map("avg_entry_price") @db.Decimal(18, 6)
-  currentPrice   Decimal?   @map("current_price") @db.Decimal(18, 6)
-  unrealizedPnl  Decimal?   @map("unrealized_pnl") @db.Decimal(18, 6)
-  realizedPnl    Decimal?   @map("realized_pnl") @db.Decimal(18, 6)
-  openedAt       DateTime   @default(now()) @map("opened_at")
-  closedAt       DateTime?  @map("closed_at")
-  notes          String?
-  portfolio      Portfolio  @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-  commodity      Commodity  @relation(fields: [commodityId], references: [id])
+/// A commodity tracked within an analysis group. Pure observation (no
+/// positions, sides, quantities, or P&L) — reuses the group only for
+/// correlation overlay (see GET /api/analytics/correlation).
+model GroupMember {
+  id          String    @id @default(uuid())
+  portfolioId String    @map("portfolio_id")
+  commodityId String    @map("commodity_id")
+  notes       String?
+  addedAt     DateTime  @default(now()) @map("added_at")
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  commodity   Commodity @relation(fields: [commodityId], references: [id])
 
+  @@unique([portfolioId, commodityId])
   @@index([portfolioId])
   @@index([commodityId])
-  @@index([closedAt])
-  @@map("positions")
+  @@map("group_members")
 }
 
 // ─── Phase 6: Community & Social ───

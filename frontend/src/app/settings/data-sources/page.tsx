@@ -53,6 +53,24 @@ interface IngestionLog {
 	createdAt: string;
 }
 
+interface CommodityFreshnessItem {
+	id: string;
+	slug: string;
+	name: string;
+	category: string;
+	isActive: boolean;
+	lastUpdated: string | null;
+	stale: boolean;
+}
+
+interface CommodityFreshnessSummary {
+	total: number;
+	withData: number;
+	stale: number;
+	noData: number;
+	coverage: number;
+}
+
 function timeAgo(date: string | null): string {
 	if (!date) return "Never";
 	const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -88,6 +106,8 @@ function TierBadge({ tier }: { tier: string }) {
 export default function DataSourcesPage() {
 	const [sources, setSources] = useState<SourceInfo[]>([]);
 	const [freshness, setFreshness] = useState<FreshnessItem[]>([]);
+	const [commodityFreshness, setCommodityFreshness] = useState<CommodityFreshnessItem[]>([]);
+	const [commoditySummary, setCommoditySummary] = useState<CommodityFreshnessSummary | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [refreshing, setRefreshing] = useState<string | null>(null);
@@ -107,9 +127,10 @@ export default function DataSourcesPage() {
 			const headers: Record<string, string> = {};
 			if (token) headers.Authorization = `Bearer ${token}`;
 
-			const [sourcesRes, freshnessRes] = await Promise.allSettled([
+			const [sourcesRes, freshnessRes, commodityRes] = await Promise.allSettled([
 				fetch(`${API_BASE}/api/market/sources`, { headers }),
 				fetch(`${API_BASE}/api/market/sources/freshness`, { headers }),
+				fetch(`${API_BASE}/api/market/commodities/freshness`, { headers }),
 			]);
 
 			if (sourcesRes.status === "fulfilled" && sourcesRes.value.ok) {
@@ -120,6 +141,14 @@ export default function DataSourcesPage() {
 			if (freshnessRes.status === "fulfilled" && freshnessRes.value.ok) {
 				const data = await freshnessRes.value.json();
 				if (data.success) setFreshness(data.data.freshness || []);
+			}
+
+			if (commodityRes.status === "fulfilled" && commodityRes.value.ok) {
+				const data = await commodityRes.value.json();
+				if (data.success) {
+					setCommodityFreshness(data.data.commodities || []);
+					setCommoditySummary(data.data.summary ?? null);
+				}
 			}
 		} catch {
 			setError("Failed to load data source information");
@@ -406,9 +435,80 @@ export default function DataSourcesPage() {
 								);
 							})}
 						</div>
-					</CardBody>
-				</Card>
-			</LoadingState>
+						</CardBody>
+					</Card>
+
+					{commoditySummary && (
+						<Card className="mt-6">
+							<CardBody>
+								<div className="flex items-center justify-between mb-4">
+									<div>
+										<h2 className="text-lg font-semibold">Commodity Freshness</h2>
+										<p className="text-xs text-muted-foreground mt-0.5">
+											Last price update per commodity — stale means no daily price in 7 days
+										</p>
+									</div>
+									<div className="flex items-center gap-4 text-sm">
+										<div className="text-center">
+											<div className="text-xl font-bold text-foreground">
+												{commoditySummary.coverage}%
+											</div>
+											<div className="text-xs text-muted-foreground">coverage</div>
+										</div>
+										<div className="text-center">
+											<div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+												{commoditySummary.withData}
+											</div>
+											<div className="text-xs text-muted-foreground">with data</div>
+										</div>
+										<div className="text-center">
+											<div className="text-xl font-bold text-red-600 dark:text-red-400">
+												{commoditySummary.stale}
+											</div>
+											<div className="text-xs text-muted-foreground">stale</div>
+										</div>
+									</div>
+								</div>
+								{commodityFreshness.length > 0 ? (
+									<div className="max-h-80 overflow-y-auto border border-border/50 rounded-lg">
+										<table className="w-full text-xs">
+											<thead className="sticky top-0 bg-muted">
+												<tr className="text-muted-foreground">
+													<th className="text-left py-2 px-3 font-medium">Commodity</th>
+													<th className="text-left py-2 px-3 font-medium">Category</th>
+													<th className="text-left py-2 px-3 font-medium">Status</th>
+													<th className="text-right py-2 px-3 font-medium">Last Price</th>
+												</tr>
+											</thead>
+											<tbody>
+												{commodityFreshness.map((c) => (
+													<tr key={c.id} className="border-t border-border/50">
+														<td className="py-1.5 px-3 font-medium">{c.name}</td>
+														<td className="py-1.5 px-3 text-muted-foreground">{c.category}</td>
+														<td className="py-1.5 px-3">
+															{c.lastUpdated === null ? (
+																<span className="text-gray-500">no data</span>
+															) : c.stale ? (
+																<span className="text-red-600 dark:text-red-400">stale</span>
+															) : (
+																<span className="text-emerald-600 dark:text-emerald-400">fresh</span>
+															)}
+														</td>
+														<td className="py-1.5 px-3 text-right text-muted-foreground">
+															{c.lastUpdated ? timeAgo(c.lastUpdated) : "—"}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								) : (
+									<p className="text-sm text-muted-foreground">No commodity freshness data</p>
+								)}
+							</CardBody>
+						</Card>
+					)}
+				</LoadingState>
 		</PageContainer>
 	);
 }

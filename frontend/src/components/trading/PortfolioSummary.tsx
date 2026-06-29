@@ -1,11 +1,11 @@
 "use client";
 
-import { Minus, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import { Scale } from "lucide-react";
 import { Tag } from "@/components/ui/Tag";
-import { usePortfolioPerformance, usePortfolios } from "@/lib/watchlist";
+import { useAnalysisGroups } from "@/lib/watchlist";
 
 export default function PortfolioSummary() {
-	const { portfolios, loading } = usePortfolios();
+	const { groups, loading } = useAnalysisGroups();
 
 	if (loading) {
 		return (
@@ -20,7 +20,7 @@ export default function PortfolioSummary() {
 		);
 	}
 
-	if (portfolios.length === 0) {
+	if (groups.length === 0) {
 		return (
 			<div className="rounded-lg bg-card shadow-card dark:shadow-card-dark p-8 text-center">
 				<p className="text-muted-foreground">
@@ -32,111 +32,44 @@ export default function PortfolioSummary() {
 
 	return (
 		<div className="space-y-4">
-			{portfolios.map((p) => (
-				<GroupCard key={p.id} portfolio={p} />
+			{groups.map((g) => (
+				<GroupCard key={g.id} group={g} />
 			))}
 		</div>
 	);
 }
 
-function PriceChangeIndicator({ value }: { value: number | null }) {
-	if (value === null) return <span className="text-sm text-muted-foreground">--</span>;
-	if (value > 0)
-		return (
-			<span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-				<TrendingUp className="size-3.5" /> +{value.toFixed(2)}
-			</span>
-		);
-	if (value < 0)
-		return (
-			<span className="inline-flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400">
-				<TrendingDown className="size-3.5" /> {value.toFixed(2)}
-			</span>
-		);
-	return (
-		<span className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground">
-			<Minus className="size-3.5" /> 0.00
-		</span>
-	);
-}
-
-function GroupCard({
-	portfolio,
-}: {
-	portfolio: {
-		id: string;
-		name: string;
-		description: string | null;
-		isDefault: boolean;
-		positionCount: number;
-	};
-}) {
-	const { performance, loading } = usePortfolioPerformance(portfolio.id);
-
+function GroupCard({ group }: { group: { id: string; name: string; description: string | null; isDefault: boolean; memberCount: number; members: Array<{ id: string; commodity: { slug: string; name: string; unit: string }; notes: string | null }> } }) {
 	return (
 		<div className="rounded-lg bg-card shadow-card dark:shadow-card-dark">
 			<div className="px-5 py-3 border-b flex items-center gap-2">
 				<Scale className="size-4 text-primary" />
-				<span className="font-semibold">{portfolio.name}</span>
-				{portfolio.isDefault && <Tag color="primary">Default</Tag>}
-				{portfolio.description && (
-					<span className="text-xs text-muted-foreground ml-2">{portfolio.description}</span>
+				<span className="font-semibold">{group.name}</span>
+				{group.isDefault && <Tag color="primary">Default</Tag>}
+				{group.description && (
+					<span className="text-xs text-muted-foreground ml-2">{group.description}</span>
 				)}
+				<span className="ml-auto text-xs text-muted-foreground">
+					{group.memberCount} commodit{group.memberCount === 1 ? "y" : "ies"}
+				</span>
 			</div>
 			<div className="p-5">
-				{loading ? (
-					<div className="flex justify-center">
-						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+				{group.members.length > 0 ? (
+					<div className="divide-y divide-border">
+						{group.members.map((m) => (
+							<div key={m.id} className="flex items-center justify-between py-2">
+								<div className="flex items-center gap-2">
+									<span className="text-sm font-medium">{m.commodity.name}</span>
+									<span className="text-xs text-muted-foreground">{m.commodity.unit}</span>
+								</div>
+								{m.notes && (
+									<span className="text-xs text-muted-foreground truncate max-w-[50%]">
+										{m.notes}
+									</span>
+								)}
+							</div>
+						))}
 					</div>
-				) : performance ? (
-					<>
-						<div className="grid grid-cols-2 gap-4 mb-4">
-							<div>
-								<span className="text-xs text-muted-foreground block mb-1">Avg. Price Change</span>
-								<PriceChangeIndicator value={performance.totalPnl} />
-							</div>
-							<div>
-								<span className="text-xs text-muted-foreground block mb-1">Pending Change</span>
-								<PriceChangeIndicator value={performance.totalUnrealizedPnl} />
-							</div>
-							<div>
-								<span className="text-xs text-muted-foreground block mb-1">Tracked</span>
-								<span className="text-lg font-semibold">{performance.positionCount}</span>
-								<span className="text-xs text-muted-foreground block">commodities</span>
-							</div>
-						</div>
-						{performance.positions.length > 0 && (
-							<div className="divide-y divide-border">
-								{performance.positions.map((pos) => {
-									const changePercent =
-										pos.avgEntryPrice > 0 && pos.currentPrice !== null
-											? ((pos.currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice) * 100
-											: null;
-									return (
-										<div key={pos.id} className="flex items-center justify-between py-2">
-											<div className="flex items-center gap-2">
-												<span className="text-sm font-medium">{pos.commodity.name}</span>
-												<span className="text-xs text-muted-foreground">{pos.commodity.unit}</span>
-											</div>
-											<div className="text-right">
-												{pos.currentPrice !== null && (
-													<div className="text-sm font-mono">{pos.currentPrice.toFixed(2)}</div>
-												)}
-												{changePercent !== null && (
-													<div
-														className={`text-xs font-mono ${changePercent >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
-													>
-														{changePercent >= 0 ? "+" : ""}
-														{changePercent.toFixed(2)}%
-													</div>
-												)}
-											</div>
-										</div>
-									);
-								})}
-							</div>
-						)}
-					</>
 				) : (
 					<p className="text-sm text-muted-foreground text-center py-4">No tracked commodities</p>
 				)}

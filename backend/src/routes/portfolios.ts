@@ -1,41 +1,44 @@
+/**
+ * Analysis Groups (formerly "Portfolios").
+ *
+ * An analysis group is a user-curated set of commodities for tracking and
+ * correlation overlay — NOT a trading portfolio. There are no positions,
+ * sides, quantities, or P&L. Members are added/removed like a watchlist, but
+ * an analysis group carries a description and is meant for multi-commodity
+ * comparison (see GET /api/analytics/correlation, which feeds off group slugs).
+ */
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
-import { computePortfolioPnL } from "@/services/portfolioService";
 
 const router = Router();
 
-const createPortfolioSchema = z.object({
+const createGroupSchema = z.object({
 	name: z.string().min(1).max(100),
 	description: z.string().max(500).optional(),
 });
 
-const createPositionSchema = z.object({
+const addMemberSchema = z.object({
 	commodityId: z.string().uuid(),
-	side: z.enum(["LONG", "SHORT"]),
-	quantity: z.number().positive(),
-	avgEntryPrice: z.number().positive(),
 	notes: z.string().max(500).optional(),
 });
 
-const updatePositionSchema = z.object({
-	quantity: z.number().positive().optional(),
+const updateMemberSchema = z.object({
 	notes: z.string().max(500).optional(),
 });
 
-// GET /api/portfolios — list user's portfolios
+// GET /api/portfolios — list user's analysis groups with members
 router.get(
 	"/",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolios = await prisma.portfolio.findMany({
+		const groups = await prisma.portfolio.findMany({
 			where: { userId: req.userId },
 			include: {
-				positions: {
-					where: { closedAt: null },
+				members: {
 					include: {
 						commodity: { select: { slug: true, name: true, unit: true } },
 					},
@@ -44,34 +47,31 @@ router.get(
 			orderBy: { createdAt: "desc" },
 		});
 
-		const result = portfolios.map((p) => ({
-			id: p.id,
-			name: p.name,
-			description: p.description,
-			isDefault: p.isDefault,
-			positionCount: p.positions.length,
-			positions: p.positions.map((pos) => ({
-				id: pos.id,
-				commodity: pos.commodity,
-				side: pos.side,
-				quantity: Number(pos.quantity),
-				avgEntryPrice: Number(pos.avgEntryPrice),
-				currentPrice: pos.currentPrice ? Number(pos.currentPrice) : null,
-				unrealizedPnl: pos.unrealizedPnl ? Number(pos.unrealizedPnl) : null,
+		const result = groups.map((g) => ({
+			id: g.id,
+			name: g.name,
+			description: g.description,
+			isDefault: g.isDefault,
+			memberCount: g.members.length,
+			members: g.members.map((m) => ({
+				id: m.id,
+				commodity: m.commodity,
+				notes: m.notes,
+				addedAt: m.addedAt,
 			})),
-			createdAt: p.createdAt,
+			createdAt: g.createdAt,
 		}));
 
-		success(res, { portfolios: result });
+		success(res, { groups: result });
 	}),
 );
 
-// POST /api/portfolios — create portfolio
+// POST /api/portfolios — create analysis group
 router.post(
 	"/",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const { name, description } = createPortfolioSchema.parse(req.body);
+		const { name, description } = createGroupSchema.parse(req.body);
 
 		const existing = await prisma.portfolio.findUnique({
 			where: { userId_name: { userId: req.userId, name } },
@@ -80,23 +80,23 @@ router.post(
 			throw new BadRequestError(`Analysis group '${name}' already exists`);
 		}
 
-		const portfolio = await prisma.portfolio.create({
+		const group = await prisma.portfolio.create({
 			data: { userId: req.userId, name, description },
 		});
 
-		success(res, { portfolio }, 201);
+		success(res, { group }, 201);
 	}),
 );
 
-// GET /api/portfolios/:id — portfolio detail with positions
+// GET /api/portfolios/:id — analysis group detail with members
 router.get(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolio = await prisma.portfolio.findUnique({
+		const group = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 			include: {
-				positions: {
+				members: {
 					include: {
 						commodity: {
 							select: {
@@ -108,52 +108,32 @@ router.get(
 							},
 						},
 					},
-					orderBy: { openedAt: "desc" },
+					orderBy: { addedAt: "desc" },
 				},
 			},
 		});
 
-		if (!portfolio || portfolio.userId !== req.userId) {
-			throw new NotFoundError("Portfolio");
+		if (!group || group.userId !== req.userId) {
+			throw new NotFoundError("Analysis group");
 		}
 
-		success(res, { portfolio });
+		success(res, { group });
 	}),
 );
 
-// GET /api/portfolios/:id/performance — P&L summary
-router.get(
-	"/:id/performance",
-	authenticate,
-	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolio = await prisma.portfolio.findUnique({
-			where: { id: req.params.id },
-		});
-
-		if (!portfolio || portfolio.userId !== req.userId) {
-			throw new NotFoundError("Portfolio");
-		}
-
-		const pnl = await computePortfolioPnL(req.params.id);
-		success(res, { performance: pnl });
-	}),
-);
-
-// POST /api/portfolios/:id/positions — open position
+// POST /api/portfolios/:id/members — add commodity to group
 router.post(
-	"/:id/positions",
+	"/:id/members",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolio = await prisma.portfolio.findUnique({
+		const group = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
-		if (!portfolio || portfolio.userId !== req.userId) {
-			throw new NotFoundError("Portfolio");
+		if (!group || group.userId !== req.userId) {
+			throw new NotFoundError("Analysis group");
 		}
 
-		const { commodityId, side, quantity, avgEntryPrice, notes } = createPositionSchema.parse(
-			req.body,
-		);
+		const { commodityId, notes } = addMemberSchema.parse(req.body);
 
 		const commodity = await prisma.commodity.findUnique({
 			where: { id: commodityId },
@@ -162,13 +142,10 @@ router.post(
 			throw new NotFoundError("Commodity");
 		}
 
-		const position = await prisma.position.create({
+		const member = await prisma.groupMember.create({
 			data: {
 				portfolioId: req.params.id,
 				commodityId,
-				side,
-				quantity,
-				avgEntryPrice,
 				notes,
 			},
 			include: {
@@ -176,84 +153,76 @@ router.post(
 			},
 		});
 
-		success(res, { position }, 201);
+		success(res, { member }, 201);
 	}),
 );
 
-// PATCH /api/portfolios/:id/positions/:positionId — update position
+// PATCH /api/portfolios/:id/members/:memberId — update member notes
 router.patch(
-	"/:id/positions/:positionId",
+	"/:id/members/:memberId",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolio = await prisma.portfolio.findUnique({
+		const group = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
-		if (!portfolio || portfolio.userId !== req.userId) {
-			throw new NotFoundError("Portfolio");
+		if (!group || group.userId !== req.userId) {
+			throw new NotFoundError("Analysis group");
 		}
 
-		const position = await prisma.position.findUnique({
-			where: { id: req.params.positionId },
+		const member = await prisma.groupMember.findUnique({
+			where: { id: req.params.memberId },
 		});
-		if (!position || position.portfolioId !== req.params.id) {
-			throw new NotFoundError("Position");
+		if (!member || member.portfolioId !== req.params.id) {
+			throw new NotFoundError("Group member");
 		}
 
-		const data = updatePositionSchema.parse(req.body);
-		const updated = await prisma.position.update({
-			where: { id: req.params.positionId },
+		const data = updateMemberSchema.parse(req.body);
+		const updated = await prisma.groupMember.update({
+			where: { id: req.params.memberId },
 			data,
 		});
 
-		success(res, { position: updated });
+		success(res, { member: updated });
 	}),
 );
 
-// DELETE /api/portfolios/:id/positions/:positionId — close position
+// DELETE /api/portfolios/:id/members/:memberId — remove commodity from group
 router.delete(
-	"/:id/positions/:positionId",
+	"/:id/members/:memberId",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolio = await prisma.portfolio.findUnique({
+		const group = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
-		if (!portfolio || portfolio.userId !== req.userId) {
-			throw new NotFoundError("Portfolio");
+		if (!group || group.userId !== req.userId) {
+			throw new NotFoundError("Analysis group");
 		}
 
-		const position = await prisma.position.findUnique({
-			where: { id: req.params.positionId },
+		const member = await prisma.groupMember.findUnique({
+			where: { id: req.params.memberId },
 		});
-		if (!position || position.portfolioId !== req.params.id) {
-			throw new NotFoundError("Position");
+		if (!member || member.portfolioId !== req.params.id) {
+			throw new NotFoundError("Group member");
 		}
 
-		const closed = await prisma.position.update({
-			where: { id: req.params.positionId },
-			data: {
-				closedAt: new Date(),
-				realizedPnl: position.unrealizedPnl,
-				unrealizedPnl: 0,
-			},
-		});
-
-		success(res, { position: closed });
+		await prisma.groupMember.delete({ where: { id: req.params.memberId } });
+		success(res, { removed: true });
 	}),
 );
 
-// DELETE /api/portfolios/:id — delete portfolio
+// DELETE /api/portfolios/:id — delete analysis group
 router.delete(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const portfolio = await prisma.portfolio.findUnique({
+		const group = await prisma.portfolio.findUnique({
 			where: { id: req.params.id },
 		});
-		if (!portfolio || portfolio.userId !== req.userId) {
-			throw new NotFoundError("Portfolio");
+		if (!group || group.userId !== req.userId) {
+			throw new NotFoundError("Analysis group");
 		}
 
-		if (portfolio.isDefault) {
+		if (group.isDefault) {
 			throw new BadRequestError("Cannot delete default analysis group");
 		}
 
