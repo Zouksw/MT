@@ -245,13 +245,22 @@ export async function getAccountSummary(accountId: string) {
 
 	if (!account) throw new Error("Account not found");
 
-	const openTrades = account.trades.filter((t) => !t.closedAt);
-	const closedTrades = account.trades.filter((t) => t.closedAt);
-
-	const totalRealizedPnl = closedTrades.reduce(
-		(sum, t) => sum + (t.realizedPnl ? Number(t.realizedPnl) : 0),
-		0,
-	);
+	// The include above only fetches the 50 most-recent trades for display.
+	// Counts and realized-PnL totals must come from full-set queries, otherwise
+	// they're silently wrong for any account with >50 trades.
+	const [openTradeCount, closedTradeCount, pnlAggregate] = await Promise.all([
+		prisma.simulationTrade.count({
+			where: { accountId, closedAt: null },
+		}),
+		prisma.simulationTrade.count({
+			where: { accountId, NOT: { closedAt: null } },
+		}),
+		prisma.simulationTrade.aggregate({
+			where: { accountId, NOT: { closedAt: null } },
+			_sum: { realizedPnl: true },
+		}),
+	]);
+	const totalRealizedPnl = Number(pnlAggregate._sum.realizedPnl ?? 0);
 
 	const pendingOrders = await prisma.simulationOrder.count({
 		where: { accountId, status: "PENDING" },
@@ -264,8 +273,8 @@ export async function getAccountSummary(accountId: string) {
 		currentBalance: Number(account.currentBalance),
 		totalPnl: Number(account.currentBalance) - Number(account.initialBalance),
 		totalRealizedPnl,
-		openTradeCount: openTrades.length,
-		closedTradeCount: closedTrades.length,
+		openTradeCount,
+		closedTradeCount,
 		pendingOrderCount: pendingOrders,
 		isActive: account.isActive,
 		recentTrades: account.trades.slice(0, 20),

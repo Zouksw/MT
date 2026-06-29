@@ -294,8 +294,13 @@ router.get(
 				price: close,
 				previousPrice: prevClose,
 				change,
+				// prevClose === 0 is a legitimate value for some scrap/index series;
+				// guard against division by zero with !== 0, not a truthy check that
+				// would null out the percent for any sub-1 price.
 				changePercent:
-					change != null && prevClose ? +((change / prevClose) * 100).toFixed(2) : null,
+					change != null && prevClose !== null && prevClose !== 0
+						? +((change / prevClose) * 100).toFixed(2)
+						: null,
 				date: latest?.date ?? null,
 			};
 		});

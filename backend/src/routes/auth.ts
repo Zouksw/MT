@@ -68,7 +68,10 @@ function authCookieOptions(req: Request) {
 async function createAuthSession(req: Request, userId: string) {
 	const token = jwtUtils.generateToken(userId);
 	const refreshToken = jwtUtils.generateRefreshToken(userId);
-	await prisma.session.create({
+	// Capture the created session so callers can use its id directly instead of
+	// re-querying "newest active session", which races under concurrent logins
+	// and can return another device's session.
+	const session = await prisma.session.create({
 		data: {
 			userId,
 			tokenHash: await bcrypt.hash(refreshToken, 12),
@@ -77,7 +80,7 @@ async function createAuthSession(req: Request, userId: string) {
 			userAgent: req.get("user-agent"),
 		},
 	});
-	return { token, refreshToken };
+	return { token, refreshToken, sessionId: session.id };
 }
 
 // Helper: Write audit log
@@ -274,12 +277,7 @@ router.post(
 			// Credentials valid — clear any prior failed-attempt counters.
 			await clearFailedLoginAttempts(validatedData.email);
 
-		const { token, refreshToken } = await createAuthSession(req, user.id);
-		const session = await prisma.session.findFirst({
-			where: { userId: user.id, isActive: true },
-			orderBy: { createdAt: "desc" },
-			take: 1,
-		});
+		const { token, refreshToken, sessionId } = await createAuthSession(req, user.id);
 
 		await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 		await auditLog(req, user.id, "User", "LOGIN");
@@ -295,7 +293,7 @@ router.post(
 			},
 			token,
 			refreshToken,
-			sessionId: session?.id,
+			sessionId,
 		});
 	}),
 );

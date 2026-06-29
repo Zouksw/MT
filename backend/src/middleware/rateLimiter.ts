@@ -22,7 +22,12 @@ export const createRateLimiter = (options: {
 		standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 		legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 		skipSuccessfulRequests: options.skipSuccessfulRequests || false,
-		skip: (_req: Request) => process.env.NODE_ENV === "development",
+		// Skip rate limiting outside production. In test mode the limiter would
+		// otherwise accumulate across cases in the same process and cause
+		// spurious 429s that mask real failures.
+		skip: (_req: Request) =>
+			process.env.NODE_ENV !== "production" &&
+			process.env.NODE_ENV !== "staging",
 		handler: (_req: Request, res: Response) => {
 			res.status(429).json({
 				error: "Too many requests",

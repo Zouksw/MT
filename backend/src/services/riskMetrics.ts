@@ -24,7 +24,7 @@ export function sortinoRatio(returns: number[], riskFreeRate = 0): number {
 	const excess = returns.map((r) => r - riskFreeRate);
 	const mean = excess.reduce((a, b) => a + b, 0) / excess.length;
 	const downside = excess.filter((r) => r < 0);
-	if (downside.length === 0) return mean > 0 ? Infinity : 0;
+	if (downside.length === 0) return mean > 0 ? mean * 1000 : 0;
 
 	const downsideVariance =
 		downside.reduce((a, b) => a + b ** 2, 0) / downside.length;
@@ -86,7 +86,9 @@ export function calmarRatio(
 	annualizedReturn: number,
 	maxDrawdownPct: number,
 ): number {
-	if (maxDrawdownPct === 0) return annualizedReturn > 0 ? Infinity : 0;
+	// Return a large finite value (not Infinity, which JSON.stringify drops to
+	// null) when there's no drawdown — a profitable strategy with zero drawdown.
+	if (maxDrawdownPct === 0) return annualizedReturn > 0 ? annualizedReturn * 1000 : 0;
 	return annualizedReturn / Math.abs(maxDrawdownPct);
 }
 
@@ -119,7 +121,7 @@ export function profitFactor(
 
 	return grossLoss === 0
 		? grossProfit > 0
-			? Infinity
+			? grossProfit * 1000 // finite sentinel (Infinity → null in JSON)
 			: 0
 		: grossProfit / grossLoss;
 }

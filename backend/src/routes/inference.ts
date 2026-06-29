@@ -228,6 +228,15 @@ router.post(
 
 		const values = prices.map((p) => Number(p.close));
 		const timestamps = prices.map((p) => p.date.getTime());
+
+		// Guard: with zero price points, mean/std would be NaN and the loop below
+		// silently returns an empty anomalies array — misleading the caller.
+		if (values.length === 0) {
+			throw new BadRequestError(
+				"No price data available for anomaly detection on this commodity",
+			);
+		}
+
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
 		const std = Math.sqrt(values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length);
 
@@ -289,6 +298,15 @@ router.post(
 
 		const values = prices.map((p) => Number(p.close));
 		const timestamps = prices.map((p) => p.date.getTime());
+
+		// Guard: with zero price points, mean/std would be NaN and the loop below
+		// silently returns an empty anomalies array — misleading the caller.
+		if (values.length === 0) {
+			throw new BadRequestError(
+				"No price data available for anomaly detection on this commodity",
+			);
+		}
+
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
 		const std = Math.sqrt(values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length);
 

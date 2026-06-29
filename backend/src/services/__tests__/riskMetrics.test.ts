@@ -44,9 +44,14 @@ describe("Risk Metrics", () => {
 			expect(sortino).toBeGreaterThan(0);
 		});
 
-		it("should return Infinity for all positive returns", () => {
+		// No downside returns → no drawdown. Returns a large finite value (not
+		// Infinity, which JSON.stringify drops to null and silently loses the
+		// metric) proportional to the positive mean.
+		it("should return a large finite value for all positive returns", () => {
 			const returns = [0.01, 0.02, 0.03];
-			expect(sortinoRatio(returns)).toBe(Infinity);
+			const result = sortinoRatio(returns);
+			expect(Number.isFinite(result)).toBe(true);
+			expect(result).toBeGreaterThan(0);
 		});
 
 		it("should return 0 for empty array", () => {
@@ -96,8 +101,12 @@ describe("Risk Metrics", () => {
 			expect(calmar).toBeCloseTo(1.5);
 		});
 
-		it("should return Infinity for zero drawdown with positive return", () => {
-			expect(calmarRatio(0.15, 0)).toBe(Infinity);
+		// Zero drawdown with positive return → finite sentinel (not Infinity,
+		// which serializes to null in JSON and loses the metric).
+		it("should return a large finite value for zero drawdown with positive return", () => {
+			const result = calmarRatio(0.15, 0);
+			expect(Number.isFinite(result)).toBe(true);
+			expect(result).toBeGreaterThan(0);
 		});
 
 		it("should return 0 for zero drawdown with no return", () => {
@@ -132,8 +141,11 @@ describe("Risk Metrics", () => {
 			expect(profitFactor(trades)).toBe(2);
 		});
 
-		it("should return Infinity for no losses", () => {
-			expect(profitFactor([{ realizedPnl: 100 }])).toBe(Infinity);
+		// No losses → finite sentinel (not Infinity, which serializes to null).
+		it("should return a large finite value for no losses", () => {
+			const result = profitFactor([{ realizedPnl: 100 }]);
+			expect(Number.isFinite(result)).toBe(true);
+			expect(result).toBeGreaterThan(0);
 		});
 
 		it("should return 0 for no trades", () => {
