@@ -1,55 +1,29 @@
 /**
  * Signals/AI Route Integration Tests
  *
- * Tests real /api/signals endpoints against a running backend.
+ * Drives the in-process Express app via supertest (no running server needed).
  * Verifies model listing, signal generation, accuracy, and correlation.
  */
 
-import { PrismaClient } from "@prisma/client";
+import type { Express } from "express";
 import request from "supertest";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+	createTestApp,
+	getAdminToken,
+	isDbAvailable,
+} from "@/test/helpers/testApp";
 
-const ADMIN_EMAIL = "admin@trademind.com";
-const ADMIN_PASSWORD = "Admin123!";
-const REAL_DB_URL =
-	"postgresql://mt_user:mt_password@localhost:5432/mt_db";
-const BASE = `http://localhost:${process.env.PORT || 8000}`;
-
+let app: Express;
 let dbAvailable = false;
 let token: string;
 
-async function checkDatabase(): Promise<boolean> {
-	try {
-		const res = await fetch(
-			`http://localhost:${process.env.PORT || 8000}/health`,
-			{ signal: AbortSignal.timeout(3000) },
-		);
-		if (!res.ok) return false;
-		const p = new PrismaClient({
-			log: [],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		await p.$connect();
-		await p.$executeRaw`SELECT 1`;
-		await p.$disconnect();
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-async function getAdminToken(): Promise<string> {
-	const res = await request(BASE)
-		.post("/api/auth/login")
-		.send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
-	return res.body.data.token;
-}
-
 describe("Signals/AI Routes (Integration)", () => {
 	beforeAll(async () => {
-		dbAvailable = await checkDatabase();
+		app = createTestApp();
+		dbAvailable = await isDbAvailable();
 		if (!dbAvailable) return;
-		token = await getAdminToken();
+		token = await getAdminToken(app);
 	});
 
 	beforeEach(() => {
@@ -58,7 +32,7 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should return real model list (7 models)", async () => {
 		if (!dbAvailable) return;
-		const res = await request(BASE)
+		const res = await request(app)
 			.get("/api/signals/models")
 			.set("Authorization", `Bearer ${token}`);
 
@@ -73,7 +47,7 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should return accuracy data from real MAPE tracking", async () => {
 		if (!dbAvailable) return;
-		const res = await request(BASE)
+		const res = await request(app)
 			.get("/api/signals/models/accuracy")
 			.set("Authorization", `Bearer ${token}`);
 
@@ -85,7 +59,7 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should generate real signal for a commodity", async () => {
 		if (!dbAvailable) return;
-		const res = await request(BASE)
+		const res = await request(app)
 			.get(
 				"/api/signals/wheat_cme?timeseriesPath=root.trading.wheat_cme.price&horizon=10",
 			)
@@ -102,13 +76,13 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should return model accuracy for specific model", async () => {
 		if (!dbAvailable) return;
-		const modelsRes = await request(BASE)
+		const modelsRes = await request(app)
 			.get("/api/signals/models")
 			.set("Authorization", `Bearer ${token}`);
 
 		const modelId = modelsRes.body.data.models[0];
 
-		const res = await request(BASE)
+		const res = await request(app)
 			.get(`/api/signals/models/${modelId}/accuracy`)
 			.set("Authorization", `Bearer ${token}`);
 
@@ -118,7 +92,7 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should return correlation matrix", async () => {
 		if (!dbAvailable) return;
-		const res = await request(BASE)
+		const res = await request(app)
 			.get(
 				"/api/signals/correlation/matrix?commodities=wheat_cme,corn_cme,gold_cme&window=30",
 			)
@@ -130,13 +104,13 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should return backtest results", async () => {
 		if (!dbAvailable) return;
-		const modelsRes = await request(BASE)
+		const modelsRes = await request(app)
 			.get("/api/signals/models")
 			.set("Authorization", `Bearer ${token}`);
 
 		const modelId = modelsRes.body.data.models[0];
 
-		const res = await request(BASE)
+		const res = await request(app)
 			.get(`/api/signals/models/${modelId}/backtest`)
 			.set("Authorization", `Bearer ${token}`);
 
@@ -146,13 +120,13 @@ describe("Signals/AI Routes (Integration)", () => {
 
 	it("should return predictions with pagination", async () => {
 		if (!dbAvailable) return;
-		const modelsRes = await request(BASE)
+		const modelsRes = await request(app)
 			.get("/api/signals/models")
 			.set("Authorization", `Bearer ${token}`);
 
 		const modelId = modelsRes.body.data.models[0];
 
-		const res = await request(BASE)
+		const res = await request(app)
 			.get(`/api/signals/models/${modelId}/predictions?limit=10`)
 			.set("Authorization", `Bearer ${token}`);
 

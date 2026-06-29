@@ -2,54 +2,25 @@
  * Billing Route Integration Tests
  */
 
-import { PrismaClient } from "@prisma/client";
+import type { Express } from "express";
 import request from "supertest";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+	createTestApp,
+	getAdminToken,
+	isDbAvailable,
+} from "@/test/helpers/testApp";
 
-const REAL_DB_URL =
-	"postgresql://mt_user:mt_password@localhost:5432/mt_db";
-const BASE = `http://localhost:${process.env.PORT || 8000}`;
-
-let _prisma: PrismaClient;
+let app: Express;
 let dbAvailable = false;
 let token: string;
 
-async function checkDatabase(): Promise<boolean> {
-	try {
-		const res = await fetch(
-			`http://localhost:${process.env.PORT || 8000}/health`,
-			{ signal: AbortSignal.timeout(3000) },
-		);
-		if (!res.ok) return false;
-		const p = new PrismaClient({
-			log: [],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		await p.$connect();
-		await p.$executeRaw`SELECT 1`;
-		await p.$disconnect();
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-async function getAdminToken(): Promise<string> {
-	const res = await request(BASE)
-		.post("/api/auth/login")
-		.send({ email: "admin@trademind.com", password: "Admin123!" });
-	return res.body.data.token;
-}
-
 describe("Billing Routes (Integration)", () => {
 	beforeAll(async () => {
-		dbAvailable = await checkDatabase();
+		app = createTestApp();
+		dbAvailable = await isDbAvailable();
 		if (!dbAvailable) return;
-		_prisma = new PrismaClient({
-			log: ["error"],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		token = await getAdminToken();
+		token = await getAdminToken(app);
 	});
 
 	beforeEach(() => {
@@ -59,7 +30,7 @@ describe("Billing Routes (Integration)", () => {
 	describe("GET /api/billing/plans", () => {
 		it("should return available plans", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/billing/plans")
 				.set({ Authorization: `Bearer ${token}` });
 
@@ -76,7 +47,7 @@ describe("Billing Routes (Integration)", () => {
 	describe("GET /api/billing/subscription", () => {
 		it("should return current subscription", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/billing/subscription")
 				.set({ Authorization: `Bearer ${token}` });
 
@@ -90,7 +61,7 @@ describe("Billing Routes (Integration)", () => {
 	describe("GET /api/billing/usage", () => {
 		it("should return usage stats", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/billing/usage")
 				.set({ Authorization: `Bearer ${token}` });
 
@@ -102,7 +73,7 @@ describe("Billing Routes (Integration)", () => {
 	describe("POST /api/billing/cancel", () => {
 		it("should reject cancel for free plan", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/billing/cancel")
 				.set({ Authorization: `Bearer ${token}` });
 
@@ -117,7 +88,7 @@ describe("Billing Routes (Integration)", () => {
 
 	it("should reject unauthenticated request", async () => {
 		if (!dbAvailable) return;
-		const res = await request(BASE).get("/api/billing/plans");
+		const res = await request(app).get("/api/billing/plans");
 		expect(res.status).toBe(401);
 	});
 });

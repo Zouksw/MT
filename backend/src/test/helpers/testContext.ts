@@ -84,21 +84,16 @@ export async function destroyTestContext(ctx: TestContext): Promise<void> {
 			where: { name: { startsWith: ctx.prefix } },
 		});
 	} catch {}
-	try {
-		await ctx.prisma.watchlist.deleteMany({
-			where: { name: { startsWith: ctx.prefix } },
-		});
-	} catch {}
-	try {
-		await ctx.prisma.simulationAccount.deleteMany({
-			where: { name: { startsWith: ctx.prefix } },
-		});
-	} catch {}
-	try {
-		await ctx.prisma.dataset.deleteMany({
-			where: { slug: { startsWith: ctx.prefix } },
-		});
-	} catch {}
+		try {
+			await ctx.prisma.watchlist.deleteMany({
+				where: { name: { startsWith: ctx.prefix } },
+			});
+		} catch {}
+		try {
+			await ctx.prisma.dataset.deleteMany({
+				where: { slug: { startsWith: ctx.prefix } },
+			});
+		} catch {}
 	try {
 		await ctx.prisma.user.deleteMany({
 			where: { email: { startsWith: ctx.prefix } },

@@ -1,61 +1,33 @@
 /**
  * User Feature Route Integration Tests
  *
- * Tests watchlists and billing endpoints against a running backend.
+ * Drives the in-process Express app via supertest.
  * Uses real admin token and cleans up test data.
  */
 
-import { PrismaClient } from "@prisma/client";
+import type { Express } from "express";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	createTestApp,
+	getAdminToken,
+	getPrisma,
+	isDbAvailable,
+} from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `usr-${Date.now()}`;
-const ADMIN_EMAIL = "admin@trademind.com";
-const ADMIN_PASSWORD = "Admin123!";
-const REAL_DB_URL =
-	"postgresql://mt_user:mt_password@localhost:5432/mt_db";
-const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
-let prisma: PrismaClient;
+let app: Express;
+const prisma = getPrisma();
 let dbAvailable = false;
 let token: string;
 
-async function checkDatabase(): Promise<boolean> {
-	try {
-		const res = await fetch(
-			`http://localhost:${process.env.PORT || 8000}/health`,
-			{ signal: AbortSignal.timeout(3000) },
-		);
-		if (!res.ok) return false;
-		const p = new PrismaClient({
-			log: [],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		await p.$connect();
-		await p.$executeRaw`SELECT 1`;
-		await p.$disconnect();
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-async function getAdminToken(): Promise<string> {
-	const res = await request(BASE)
-		.post("/api/auth/login")
-		.send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
-	return res.body.data.token;
-}
-
 describe("User Feature Routes (Integration)", () => {
 	beforeAll(async () => {
-		dbAvailable = await checkDatabase();
+		app = createTestApp();
+		dbAvailable = await isDbAvailable();
 		if (!dbAvailable) return;
-		prisma = new PrismaClient({
-			log: ["error"],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		token = await getAdminToken();
+		token = await getAdminToken(app);
 	});
 
 	afterAll(async () => {
@@ -67,7 +39,6 @@ describe("User Feature Routes (Integration)", () => {
 		} catch {
 			/* ignore */
 		}
-		await prisma.$disconnect();
 	});
 
 	beforeEach(() => {
@@ -77,7 +48,7 @@ describe("User Feature Routes (Integration)", () => {
 	describe("GET /api/watchlists", () => {
 		it("should return watchlists (may be empty for admin)", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -90,7 +61,7 @@ describe("User Feature Routes (Integration)", () => {
 	describe("POST /api/watchlists", () => {
 		it("should create a watchlist", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`)
 				.send({ name: `${TEST_PREFIX}-watchlist` });
@@ -102,7 +73,7 @@ describe("User Feature Routes (Integration)", () => {
 
 		it("should reject duplicate watchlist name", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`)
 				.send({ name: `${TEST_PREFIX}-watchlist` });
@@ -124,7 +95,7 @@ describe("User Feature Routes (Integration)", () => {
 			commodityId = row.id;
 
 			// Get the watchlist we created
-			const listRes = await request(BASE)
+			const listRes = await request(app)
 				.get("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -133,7 +104,7 @@ describe("User Feature Routes (Integration)", () => {
 			);
 			watchlistId = wl.id;
 
-			const res = await request(BASE)
+			const res = await request(app)
 				.post(`/api/watchlists/${watchlistId}/items`)
 				.set("Authorization", `Bearer ${token}`)
 				.send({ commodityId });
@@ -144,7 +115,7 @@ describe("User Feature Routes (Integration)", () => {
 
 		it("should list watchlist with items and latest prices", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -160,7 +131,7 @@ describe("User Feature Routes (Integration)", () => {
 	describe("GET /api/billing/plans", () => {
 		it("should return all plans with features", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/billing/plans")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -175,7 +146,7 @@ describe("User Feature Routes (Integration)", () => {
 	describe("GET /api/billing/subscription", () => {
 		it("should return current subscription", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/billing/subscription")
 				.set("Authorization", `Bearer ${token}`);
 

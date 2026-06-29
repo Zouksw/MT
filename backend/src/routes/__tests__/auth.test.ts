@@ -1,54 +1,31 @@
 /**
  * Auth Route Integration Tests
  *
- * Tests real /api/auth endpoints against a running backend with real PostgreSQL + Redis.
- * Creates test users with unique prefixes and cleans up after.
+ * Drives the in-process Express app via supertest (no running server needed).
+ * Uses real PostgreSQL (seed data) + Redis. Creates test users with unique
+ * prefixes and cleans up after. Skips automatically if the DB is unavailable.
  */
 
-import { PrismaClient } from "@prisma/client";
+import type { Express } from "express";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	SEED_ADMIN,
+	createTestApp,
+	getPrisma,
+	isDbAvailable,
+} from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `auth-${Date.now()}`;
-const ADMIN_EMAIL = "admin@trademind.com";
-const ADMIN_PASSWORD = "Admin123!";
-const REAL_DB_URL =
-	"postgresql://mt_user:mt_password@localhost:5432/mt_db";
-const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
-let prisma: PrismaClient;
+let app: Express;
 let dbAvailable = false;
-
-async function checkDatabase(): Promise<boolean> {
-	try {
-		// Check HTTP server first (integration tests need running backend)
-		const res = await fetch(
-			`http://localhost:${process.env.PORT || 8000}/health`,
-			{ signal: AbortSignal.timeout(3000) },
-		);
-		if (!res.ok) return false;
-		// Check database
-		const p = new PrismaClient({
-			log: [],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		await p.$connect();
-		await p.$executeRaw`SELECT 1`;
-		await p.$disconnect();
-		return true;
-	} catch {
-		return false;
-	}
-}
+const prisma = getPrisma();
 
 describe("Auth Routes (Integration)", () => {
 	beforeAll(async () => {
-		dbAvailable = await checkDatabase();
-		if (!dbAvailable) return;
-		prisma = new PrismaClient({
-			log: ["error"],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
+		app = createTestApp();
+		dbAvailable = await isDbAvailable();
 	});
 
 	afterAll(async () => {
@@ -60,18 +37,13 @@ describe("Auth Routes (Integration)", () => {
 		} catch {
 			/* ignore */
 		}
-		await prisma.$disconnect();
-	});
-
-	beforeEach(() => {
-		if (!dbAvailable) return;
 	});
 
 	describe("POST /api/auth/register", () => {
 		it("should register a new user with real DB and real bcrypt", async () => {
 			if (!dbAvailable) return;
 			const email = `${TEST_PREFIX}-new@test.com`;
-			const res = await request(BASE).post("/api/auth/register").send({
+			const res = await request(app).post("/api/auth/register").send({
 				email,
 				password: "SecurePass123!",
 				name: "Integration Test User",
@@ -88,12 +60,12 @@ describe("Auth Routes (Integration)", () => {
 			if (!dbAvailable) return;
 			const email = `${TEST_PREFIX}-dup@test.com`;
 			// Register first
-			await request(BASE)
+			await request(app)
 				.post("/api/auth/register")
 				.send({ email, password: "SecurePass123!", name: "Dup User" });
 
 			// Try again with same email
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/register")
 				.send({ email, password: "AnotherPass456!", name: "Dup User 2" });
 
@@ -102,7 +74,7 @@ describe("Auth Routes (Integration)", () => {
 
 		it("should reject invalid email", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).post("/api/auth/register").send({
+			const res = await request(app).post("/api/auth/register").send({
 				email: "not-an-email",
 				password: "SecurePass123!",
 				name: "Test",
@@ -113,7 +85,7 @@ describe("Auth Routes (Integration)", () => {
 
 		it("should reject missing password", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/register")
 				.send({ email: `${TEST_PREFIX}-nopass@test.com`, name: "Test" });
 
@@ -124,9 +96,9 @@ describe("Auth Routes (Integration)", () => {
 	describe("POST /api/auth/login", () => {
 		it("should login admin with correct credentials", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/login")
-				.send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+				.send({ email: SEED_ADMIN.email, password: SEED_ADMIN.password });
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -136,9 +108,9 @@ describe("Auth Routes (Integration)", () => {
 
 		it("should reject wrong password", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/login")
-				.send({ email: ADMIN_EMAIL, password: "WrongPassword123!" });
+				.send({ email: SEED_ADMIN.email, password: "WrongPassword123!" });
 
 			expect(res.status).toBe(401);
 			expect(res.body.success).toBe(false);
@@ -146,7 +118,7 @@ describe("Auth Routes (Integration)", () => {
 
 		it("should reject non-existent user", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/login")
 				.send({ email: "nonexistent@nowhere.com", password: "Whatever123!" });
 
@@ -157,30 +129,30 @@ describe("Auth Routes (Integration)", () => {
 	describe("GET /api/auth/me", () => {
 		it("should return current user with valid token", async () => {
 			if (!dbAvailable) return;
-			const loginRes = await request(BASE)
+			const loginRes = await request(app)
 				.post("/api/auth/login")
-				.send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+				.send({ email: SEED_ADMIN.email, password: SEED_ADMIN.password });
 
 			const token = loginRes.body.data.token;
 
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/auth/me")
 				.set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			expect(res.body.data.user.email).toBe(ADMIN_EMAIL);
+			expect(res.body.data.user.email).toBe(SEED_ADMIN.email);
 		});
 
 		it("should reject request without token", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/auth/me");
+			const res = await request(app).get("/api/auth/me");
 			expect(res.status).toBe(401);
 		});
 
 		it("should reject malformed JWT", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/auth/me")
 				.set("Authorization", "Bearer invalid.jwt.token");
 

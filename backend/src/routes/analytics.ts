@@ -3,51 +3,8 @@ import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
-import { computeRiskReport } from "@/services/riskMetrics";
 
 const router = Router();
-
-// GET /api/analytics/risk/:accountId — Risk metrics for simulation account
-router.get(
-	"/risk/:accountId",
-	authenticate,
-	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const account = await prisma.simulationAccount.findUnique({
-			where: { id: req.params.accountId },
-		});
-
-		if (!account || account.userId !== req.userId) {
-			throw new NotFoundError("Simulation account");
-		}
-
-		const trades = await prisma.simulationTrade.findMany({
-			where: { accountId: req.params.accountId },
-			orderBy: { openedAt: "asc" },
-		});
-
-		// Convert Prisma Decimal to plain numbers
-		const plainTrades = trades.map((t) => ({
-			realizedPnl: t.realizedPnl ? Number(t.realizedPnl) : null,
-		}));
-
-		// Generate daily returns from trade PnL
-		const dailyPnl = new Map<string, number>();
-		for (const trade of trades) {
-			if (trade.closedAt && trade.realizedPnl) {
-				const day = trade.closedAt.toISOString().slice(0, 10);
-				dailyPnl.set(day, (dailyPnl.get(day) || 0) + Number(trade.realizedPnl));
-			}
-		}
-
-		const dailyReturns = Array.from(dailyPnl.values()).map(
-			(pnl) => pnl / Number(account.initialBalance),
-		);
-
-		const report = computeRiskReport(dailyReturns, plainTrades);
-
-		success(res, { risk: report });
-	}),
-);
 
 // GET /api/analytics/seasonality/:commoditySlug — Seasonality analysis
 router.get(

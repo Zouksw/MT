@@ -1,52 +1,27 @@
 /**
  * API Workflow Integration Tests
  *
- * Tests real API endpoints against a running backend with real PostgreSQL.
- * Each test exercises a complete user workflow: register → authenticate → CRUD → cleanup.
- * Automatically skipped if database is unavailable.
+ * Drives the in-process Express app via supertest (no running server needed)
+ * with real PostgreSQL. Each test exercises a complete user workflow:
+ * register → authenticate → CRUD → cleanup. Automatically skipped if the
+ * database is unavailable.
  */
 
-import { PrismaClient } from "@prisma/client";
+import type { Express } from "express";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import {
+	createTestApp,
+	getAdminToken,
+	getPrisma,
+	isDbAvailable,
+} from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `wf-${Date.now()}`;
-const ADMIN_EMAIL = "admin@trademind.com";
-const ADMIN_PASSWORD = "Admin123!";
-const REAL_DB_URL = "postgresql://mt_user:mt_password@localhost:5432/mt_db";
 
-let prisma: PrismaClient;
+let app: Express;
+const prisma = getPrisma();
 let dbAvailable = false;
-
-// Check real database + HTTP server connectivity (integration tests need both)
-async function checkDatabase(): Promise<boolean> {
-	try {
-		// Check HTTP server first
-		const res = await fetch(`http://localhost:${process.env.PORT || 8000}/health`, {
-			signal: AbortSignal.timeout(3000),
-		});
-		if (!res.ok) return false;
-		// Check database
-		const p = new PrismaClient({
-			log: [],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
-		await p.$connect();
-		await p.$executeRaw`SELECT 1`;
-		await p.$disconnect();
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-// Login and get a real JWT token
-async function getAdminToken(): Promise<string> {
-	const res = await request(`http://localhost:${process.env.PORT || 8000}`)
-		.post("/api/auth/login")
-		.send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
-	return res.body.data.token;
-}
 
 // Get a real commodity slug from DB
 async function getRealCommoditySlug(): Promise<string> {
@@ -58,12 +33,8 @@ async function getRealCommoditySlug(): Promise<string> {
 
 describe("API Workflow Integration Tests", () => {
 	beforeAll(async () => {
-		dbAvailable = await checkDatabase();
-		if (!dbAvailable) return;
-		prisma = new PrismaClient({
-			log: ["error"],
-			datasources: { db: { url: REAL_DB_URL } },
-		});
+		app = createTestApp();
+		dbAvailable = await isDbAvailable();
 	});
 
 	afterAll(async () => {
@@ -79,20 +50,11 @@ describe("API Workflow Integration Tests", () => {
 			await prisma.watchlist.deleteMany({
 				where: { name: { startsWith: TEST_PREFIX } },
 			});
-			await prisma.simulationAccount.deleteMany({
-				where: { name: { startsWith: TEST_PREFIX } },
-			});
 		} catch {
 			/* ignore cleanup errors */
 		}
-		await prisma.$disconnect();
 	});
 
-	beforeEach(() => {
-		if (!dbAvailable) return;
-	});
-
-	const BASE = `http://localhost:${process.env.PORT || 8000}`;
 
 	// ─── Auth Workflow ────────────────────────────────────────────────
 
@@ -103,7 +65,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should register a new user", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/register")
 				.send({ email, password, name: "Workflow Test User" });
 
@@ -116,7 +78,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should login with correct credentials", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).post("/api/auth/login").send({ email, password });
+			const res = await request(app).post("/api/auth/login").send({ email, password });
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -126,7 +88,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should reject wrong password", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/auth/login")
 				.send({ email, password: "WrongPassword!" });
 
@@ -136,7 +98,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should get current user with valid token", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -145,7 +107,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should reject request without token", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/auth/me");
+			const res = await request(app).get("/api/auth/me");
 			expect(res.status).toBe(401);
 		});
 	});
@@ -160,12 +122,12 @@ describe("API Workflow Integration Tests", () => {
 		beforeAll(async () => {
 			if (!dbAvailable) return;
 			// Get admin token for dataset operations
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list existing datasets", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/datasets").set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/datasets").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -176,7 +138,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should create a new dataset", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)
 				.send({
@@ -195,7 +157,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should reject duplicate slug", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)
 				.send({ name: "Duplicate", slug, storageFormat: "CSV" });
@@ -205,7 +167,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should get dataset by ID", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get(`/api/datasets/${datasetId}`)
 				.set("Authorization", `Bearer ${token}`);
 
@@ -217,7 +179,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should update dataset", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.patch(`/api/datasets/${datasetId}`)
 				.set("Authorization", `Bearer ${token}`)
 				.send({ description: "Updated by integration test" });
@@ -229,7 +191,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should delete dataset", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.delete(`/api/datasets/${datasetId}`)
 				.set("Authorization", `Bearer ${token}`);
 
@@ -239,7 +201,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should return 404 for deleted dataset", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get(`/api/datasets/${datasetId}`)
 				.set("Authorization", `Bearer ${token}`);
 
@@ -254,12 +216,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list all commodities with prices", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/market/commodities")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -277,7 +239,7 @@ describe("API Workflow Integration Tests", () => {
 		test("should get price history for a commodity", async () => {
 			if (!dbAvailable) return;
 			const slug = await getRealCommoditySlug();
-			const res = await request(BASE)
+			const res = await request(app)
 				.get(`/api/market/commodities/${slug}/price?interval=daily&limit=10`)
 				.set("Authorization", `Bearer ${token}`);
 
@@ -296,7 +258,7 @@ describe("API Workflow Integration Tests", () => {
 		test("should list market fundamentals for a commodity", async () => {
 			if (!dbAvailable) return;
 			const slug = await getRealCommoditySlug();
-			const res = await request(BASE)
+			const res = await request(app)
 				.get(`/api/market/commodities/${slug}/fundamentals`)
 				.set("Authorization", `Bearer ${token}`);
 
@@ -313,12 +275,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list all beef cuts grouped by primal", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/beef/cuts").set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/beef/cuts").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -328,7 +290,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should list all factories", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/beef/factories");
+			const res = await request(app).get("/api/beef/factories");
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -343,7 +305,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should get latest prices", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/beef/prices/latest")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -366,12 +328,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list available prediction models", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/signals/models")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -384,7 +346,7 @@ describe("API Workflow Integration Tests", () => {
 		test("should generate signal for commodity (with fallback price)", async () => {
 			if (!dbAvailable) return;
 			const slug = await getRealCommoditySlug();
-			const res = await request(BASE)
+			const res = await request(app)
 				.get(`/api/signals/${slug}?timeseriesPath=root.trading.${slug}.price&horizon=10`)
 				.set("Authorization", `Bearer ${token}`);
 
@@ -399,7 +361,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should get model accuracy data", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/signals/models/accuracy")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -410,70 +372,12 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should get correlation matrix", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/signals/correlation/matrix?window=30")
 				.set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-		});
-	});
-
-	// ─── Simulation Trading Workflow ──────────────────────────────────
-
-	describe("Simulation: create account → place order → view trades", () => {
-		let token: string;
-		let accountId: string;
-
-		beforeAll(async () => {
-			if (!dbAvailable) return;
-			token = await getAdminToken();
-		});
-
-		test("should create a simulation account", async () => {
-			if (!dbAvailable) return;
-			const res = await request(BASE)
-				.post("/api/sim/accounts")
-				.set("Authorization", `Bearer ${token}`)
-				.send({ name: `${TEST_PREFIX}-sim-account`, initialBalance: 50000 });
-
-			expect(res.status).toBe(201);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data.account.name).toBe(`${TEST_PREFIX}-sim-account`);
-			accountId = res.body.data.account.id;
-		});
-
-		test("should list user accounts", async () => {
-			if (!dbAvailable) return;
-			const res = await request(BASE)
-				.get("/api/sim/accounts")
-				.set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data.accounts.length).toBeGreaterThanOrEqual(1);
-		});
-
-		test("should place a market order", async () => {
-			if (!dbAvailable) return;
-			const slug = await getRealCommoditySlug();
-			const res = await request(BASE)
-				.post(`/api/sim/accounts/${accountId}/orders`)
-				.set("Authorization", `Bearer ${token}`)
-				.send({
-					commoditySlug: slug,
-					type: "MARKET",
-					side: "BUY",
-					quantity: 10,
-				});
-
-			// May succeed or fail depending on price availability
-			if (res.status === 201) {
-				expect(res.body.success).toBe(true);
-				expect(res.body.data).toHaveProperty("order");
-			} else {
-				expect(res.body.success).toBe(false);
-			}
 		});
 	});
 
@@ -485,12 +389,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should create a watchlist", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.post("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`)
 				.send({ name: `${TEST_PREFIX}-watchlist` });
@@ -508,7 +412,7 @@ describe("API Workflow Integration Tests", () => {
         SELECT id FROM commodities WHERE slug = ${slug} LIMIT 1
       `;
 
-			const res = await request(BASE)
+			const res = await request(app)
 				.post(`/api/watchlists/${watchlistId}/items`)
 				.set("Authorization", `Bearer ${token}`)
 				.send({ commodityId: commodity.id });
@@ -519,7 +423,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should list watchlists with items and prices", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -542,12 +446,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list alerts with real data", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/alerts").set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/alerts").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -557,7 +461,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should list anomalies (or empty if no detections run)", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/anomalies").set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/anomalies").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -574,7 +478,7 @@ describe("API Workflow Integration Tests", () => {
 	describe("Health & Metrics: system endpoints", () => {
 		test("should return health status", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/health");
+			const res = await request(app).get("/health");
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
 			expect(res.body.data.status).toBe("ok");
@@ -583,8 +487,8 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should return metrics with valid structure", async () => {
 			if (!dbAvailable) return;
-			const token = await getAdminToken();
-			const res = await request(BASE).get("/api/metrics").set("Authorization", `Bearer ${token}`);
+			const token = await getAdminToken(app);
+			const res = await request(app).get("/api/metrics").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -601,12 +505,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should get current subscription", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/billing/subscription")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -625,12 +529,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list API keys", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE).get("/api/api-keys").set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/api-keys").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -646,12 +550,12 @@ describe("API Workflow Integration Tests", () => {
 
 		beforeAll(async () => {
 			if (!dbAvailable) return;
-			token = await getAdminToken();
+			token = await getAdminToken(app);
 		});
 
 		test("should list portfolios", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/portfolios")
 				.set("Authorization", `Bearer ${token}`);
 
@@ -661,7 +565,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should compute correlation between commodities", async () => {
 			if (!dbAvailable) return;
-			const res = await request(BASE)
+			const res = await request(app)
 				.get("/api/analytics/correlation?slugs=wheat_cme,corn_cme,gold_cme")
 				.set("Authorization", `Bearer ${token}`);
 
