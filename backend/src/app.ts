@@ -38,7 +38,6 @@ import { modelsRouter } from "@/routes/models";
 import { portfolioRouter } from "@/routes/portfolios";
 import securityRouter from "@/routes/security";
 import { signalsRouter } from "@/routes/signals";
-import { socialRouter } from "@/routes/social";
 import { timeseriesRouter } from "@/routes/timeseries";
 import { watchlistRouter } from "@/routes/watchlist";
 
@@ -183,7 +182,6 @@ export function createApp(): AppInstance {
 	app.use("/api/watchlists", watchlistRouter);
 	app.use("/api/portfolios", portfolioRouter);
 	app.use("/api/analytics", analyticsRouter);
-	app.use("/api/social", socialRouter);
 	app.use("/api/billing", billingRouter);
 	app.use("/api/security", securityRouter);
 

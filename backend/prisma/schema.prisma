@@ -35,9 +35,6 @@ model User {
   sessions             Session[]
   watchlists           Watchlist[]
   portfolios           Portfolio[]
-  sharedSignals        SharedSignal[]
-  signalComments       SignalComment[]
-  signalLikes          SignalLike[]
   subscription         Subscription?
 
   @@index([email])
@@ -573,57 +570,6 @@ model GroupMember {
   @@index([portfolioId])
   @@index([commodityId])
   @@map("group_members")
-}
-
-// ─── Phase 6: Community & Social ───
-
-model SharedSignal {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  commoditySlug   String   @map("commodity_slug")
-  signalType      String   @map("signal_type") // BUY, SELL, HOLD
-  confidence      Decimal  @db.Decimal(3, 2)
-  reasoning       String?
-  currentPrice    Decimal? @map("current_price") @db.Decimal(18, 6)
-  targetPrice     Decimal? @map("target_price") @db.Decimal(18, 6)
-  likes           Int      @default(0)
-  commentsCount   Int      @default(0) @map("comments_count")
-  createdAt       DateTime @default(now()) @map("created_at")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  signalComments  SignalComment[]
-  signalLikes     SignalLike[]
-
-  @@index([userId])
-  @@index([createdAt(sort: Desc)])
-  @@index([commoditySlug])
-  @@map("shared_signals")
-}
-
-model SignalComment {
-  id         String       @id @default(uuid())
-  signalId   String       @map("signal_id")
-  userId     String       @map("user_id")
-  content    String
-  createdAt  DateTime     @default(now()) @map("created_at")
-  signal     SharedSignal @relation(fields: [signalId], references: [id], onDelete: Cascade)
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([signalId])
-  @@index([userId])
-  @@map("signal_comments")
-}
-
-model SignalLike {
-  id         String       @id @default(uuid())
-  signalId   String       @map("signal_id")
-  userId     String       @map("user_id")
-  createdAt  DateTime     @default(now()) @map("created_at")
-  signal     SharedSignal @relation(fields: [signalId], references: [id], onDelete: Cascade)
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([signalId, userId])
-  @@index([signalId])
-  @@map("signal_likes")
 }
 
 // ─── Phase 7: Monetization ───

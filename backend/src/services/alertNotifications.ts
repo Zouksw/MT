@@ -61,49 +61,6 @@ export async function checkSignalChange(
 }
 
 /**
- * Create anomaly notification
- */
-export async function notifyAnomaly(
-	commodityId: string,
-	anomalyType: string,
-	message: string,
-	severity: "info" | "warning" | "critical" = "warning",
-	data: Record<string, unknown> = {},
-	io?: Server,
-): Promise<void> {
-	const event: NotificationEvent = {
-		type: "anomaly",
-		severity,
-		commodityId,
-		message: `[${anomalyType}] ${message}`,
-		data: { anomalyType, ...data },
-		timestamp: new Date().toISOString(),
-	};
-
-	await emitNotification(event, io);
-}
-
-/**
- * Create forecast ready notification
- */
-export async function notifyForecastReady(
-	commodityId: string,
-	modelCount: number,
-	io?: Server,
-): Promise<void> {
-	const event: NotificationEvent = {
-		type: "forecast_ready",
-		severity: "info",
-		commodityId,
-		message: `Forecast updated: ${modelCount} models available`,
-		data: { modelCount },
-		timestamp: new Date().toISOString(),
-	};
-
-	await emitNotification(event, io);
-}
-
-/**
  * Emit notification via WebSocket + persist to alerts
  */
 async function emitNotification(

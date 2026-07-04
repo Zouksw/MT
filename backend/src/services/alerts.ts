@@ -8,12 +8,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib";
 
-// Re-export rule management (includes sendNotification adapter)
-export {
-	createAlertRule,
-	evaluateAlertRule,
-	triggerAlert,
-} from "./alert-rules";
+// Re-export rule creation (the only live rule-management entry point)
+export { createAlertRule } from "./alert-rules";
 // Re-export types
 export * from "./alert-types";
 
