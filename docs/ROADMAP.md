@@ -160,11 +160,12 @@
 - **质量门**: ✅ 集成测试 143/144 零 429(与第 1 轮一致,无回归)
 - 详见 `reviews/2026-06-29-round-2.md`
 
-### 第 3 轮 — 覆盖扩张与漏洞
-- **A**: A3 缺口商品定向补采
-- **B**: B2 Portfolio → 分析分组
-- **C**: C3 前端 Next.js 升级 (依赖 C1 测试保护)
-- **质量门**: + audit high/critical 归零
+### 第 3 轮 — 覆盖扩张与漏洞 ✅ 完成(2026-06-29)
+- **A**: **诚实标记失效源** ✅ 诊断确认 8 个无 key 源外部端点全失效;scraperManager skip 改 error 记录(不再掩盖)
+- **B**: **B3 AI 功能分层** ✅ 修 M7,VIEWER(免费)被拦截,EDITOR+(Pro)放行;aiAccess 接到 6 个 AI 端点
+- **C**: **C2续 marketData 抽 service** ✅ marketData.ts 858→595 行,10 函数下沉 marketService.ts
+- **质量门**: ✅ 189/190 通过零 429(测试数 144→190),build 成功
+- 详见 `reviews/2026-06-29-round-3.md`
 
 ### 第 4 轮 — 收口
 - **A**: A4 数据源集成测试

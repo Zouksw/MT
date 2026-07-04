@@ -1,6 +1,7 @@
 import { type Request, type Response, Router } from "express";
 import { logger, prisma } from "@/lib";
 import { authenticate } from "@/middleware/auth";
+import { checkAIAccess } from "@/middleware/aiAccess";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
 import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
@@ -42,7 +43,7 @@ router.get(
 
 router.post(
 	"/predict",
-	authenticate,
+	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { commodityId, horizon, algorithm, confidenceLevel } = req.body;
@@ -90,7 +91,7 @@ router.post(
 
 router.post(
 	"/predict/batch",
-	authenticate,
+	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { requests } = req.body;
@@ -163,7 +164,7 @@ router.post(
 
 router.post(
 	"/predict/visualize",
-	authenticate,
+	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { commodityId, horizon, algorithm, confidenceLevel, historyPoints } = req.body;
@@ -208,7 +209,7 @@ router.post(
 
 router.post(
 	"/anomalies",
-	authenticate,
+	checkAIAccess,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { commodityId, threshold, historyPoints } = req.body;
 
@@ -277,7 +278,7 @@ router.post(
 
 router.post(
 	"/anomalies/visualize",
-	authenticate,
+	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { commodityId, threshold, historyPoints } = req.body;
@@ -393,7 +394,7 @@ router.get(
 
 router.post(
 	"/models/train",
-	authenticate,
+	checkAIAccess,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { algorithm, commodityId } = req.body;
 		if (!algorithm) {

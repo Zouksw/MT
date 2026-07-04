@@ -11,6 +11,7 @@
 import { logger, prisma } from "@/lib";
 import { MS_PER_HOUR } from "@/lib/constants";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
+import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import { schedulePredictionsFromPostgreSQL } from "@/services/predictionCache";
 import { initPredictionQueue } from "@/services/predictionQueue";
 import { config } from "./lib";
@@ -27,7 +28,7 @@ const DAILY = 24 * HOURLY;
 
 async function runSourcesAndLog(sourceNames: string[], label: string) {
 	try {
-		const results: Record<string, { inserted: number; updated: number }> = {};
+		const results: Record<string, ScraperResult> = {};
 		for (const name of sourceNames) {
 			try {
 				results[name] = await scraperManager.runSource(name);
@@ -43,13 +44,26 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
 
 		for (const [source, result] of Object.entries(results)) {
 			try {
-				const status = result.inserted === 0 && result.updated === 0 ? "warning" : "success";
+				// Skipped (e.g. missing API key) is a distinct state from "ran but
+				// produced nothing" — record it as an error with the reason so the
+				// freshness board surfaces dormant sources instead of masking them.
+				let status: string;
+				let errorMessage: string | undefined;
+				if (result.skipped) {
+					status = "error";
+					errorMessage = result.skipReason ?? "skipped";
+				} else if (result.inserted === 0 && result.updated === 0) {
+					status = "warning";
+				} else {
+					status = "success";
+				}
 				await prisma.ingestionLog.create({
 					data: {
 						source,
 						status,
 						inserted: result.inserted,
 						updated: result.updated,
+						errorMessage,
 					},
 				});
 			} catch (err) {

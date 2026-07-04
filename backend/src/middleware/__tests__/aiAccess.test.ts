@@ -160,11 +160,11 @@ describe("AI Access Control Middleware", () => {
 			// This test would require jest.isolateModules() which is complex
 		});
 
-		it("should allow access for MODERATOR role", async () => {
+		it("should allow access for EDITOR role (Pro tier)", async () => {
 			mockReq.user = {
-				id: "moderator-123",
-				email: "moderator@example.com",
-				role: "MODERATOR",
+				id: "editor-123",
+				email: "editor@example.com",
+				role: "EDITOR",
 			};
 
 			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
@@ -172,16 +172,17 @@ describe("AI Access Control Middleware", () => {
 			expect(mockNext).toHaveBeenCalled();
 		});
 
-		it("should allow access for VIEWER role", async () => {
+		it("should DENY access for VIEWER role (free tier — M7 fix)", async () => {
 			mockReq.user = {
 				id: "viewer-123",
 				email: "viewer@example.com",
 				role: "VIEWER",
 			};
 
-			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
-
-			expect(mockNext).toHaveBeenCalled();
+			expect(() => checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext)).toThrow(
+				/Pro subscription/,
+			);
+			expect(mockNext).not.toHaveBeenCalled();
 		});
 	});
 

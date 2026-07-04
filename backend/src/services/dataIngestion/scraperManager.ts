@@ -3,6 +3,10 @@ import { logger } from "@/lib";
 export interface ScraperResult {
 	inserted: number;
 	updated: number;
+	/** True when the source was skipped (e.g. missing API key) rather than run. */
+	skipped?: boolean;
+	/** Reason for skipping, surfaced to ingestion logs and the freshness board. */
+	skipReason?: string;
 }
 
 export interface Scraper {
@@ -59,16 +63,19 @@ export class ScraperManager {
 			throw new Error(`Unknown source: ${name}`);
 		}
 
-		// Check if source requires an API key that isn't configured
+		// Check if source requires an API key that isn't configured. Surface this
+		// as a skipped result (not a silent success+0) so ingestion logs and the
+		// freshness board honestly reflect that the source is dormant.
 		if (scraper.requiresKey && !process.env[scraper.requiresKey]) {
+			const reason = `Missing ${scraper.requiresKey}`;
 			this.health.set(name, {
 				lastRun: null,
 				success: false,
-				error: `Missing ${scraper.requiresKey}`,
+				error: reason,
 				skippedNoKey: true,
 			});
-			logger.debug(`[ScraperManager] ${name} skipped — ${scraper.requiresKey} not configured`);
-			return { inserted: 0, updated: 0 };
+			logger.warn(`[ScraperManager] ${name} skipped — ${reason}`);
+			return { inserted: 0, updated: 0, skipped: true, skipReason: reason };
 		}
 
 		const start = Date.now();

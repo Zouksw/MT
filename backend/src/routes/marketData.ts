@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
-import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
+import { MS_PER_DAY } from "@/lib/constants";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate, authorize } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
@@ -9,6 +9,17 @@ import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/error
 import { scraperManager } from "@/services/dataIngestion";
 import { detectFieldMapping, type FieldMapping } from "@/services/dataIngestion/normalizer";
 import { importRows, parseCSV } from "@/services/dataIngestion/sources/manualImport";
+import {
+	getCommodityFreshness,
+	getFundamentals,
+	getLatestExchangeRates,
+	getLatestPrice,
+	getPriceHistory,
+	getPricesBySource,
+	getSourceFreshness,
+	listCommodities,
+	requireCommodity,
+} from "@/services/marketService";
 
 const router = Router();
 
@@ -41,33 +52,7 @@ router.get(
 	authenticate,
 	cacheRoute("market:commodities", 300),
 	asyncHandler(async (_req, res) => {
-		const commodities = await prisma.commodity.findMany({
-			where: { isActive: true },
-			orderBy: { category: "asc" },
-			include: {
-				prices: {
-					orderBy: { date: "desc" },
-					take: 1,
-					select: { close: true, date: true },
-				},
-			},
-		});
-
-		const result = commodities.map((c) => ({
-			id: c.id,
-			slug: c.slug,
-			name: c.name,
-			nameCn: c.nameCn,
-			category: c.category,
-			subcategory: c.subcategory,
-			grade: c.grade,
-			originCountry: c.originCountry,
-			unit: c.unit,
-			currency: c.currency,
-			latestPrice: c.prices[0]?.close ?? null,
-			latestDate: c.prices[0]?.date ?? null,
-		}));
-
+		const result = await listCommodities();
 		success(res, { commodities: result, count: result.length });
 	}),
 );
@@ -77,27 +62,8 @@ router.get(
 	authenticate,
 	cacheRoute("market:latest", 60),
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const { slug } = req.params;
-
-		const commodity = await prisma.commodity.findUnique({
-			where: { slug },
-			include: {
-				prices: {
-					orderBy: { date: "desc" },
-					take: 1,
-				},
-			},
-		});
-
-		if (!commodity) {
-			throw new NotFoundError(`Commodity '${slug}'`);
-		}
-
-		if (!commodity.prices.length) {
-			return success(res, { commodity, price: null });
-		}
-
-		const price = commodity.prices[0];
+		const { commodity, price } = await getLatestPrice(req.params.slug);
+		if (!price) return success(res, { commodity, price: null });
 		success(res, {
 			commodity: {
 				id: commodity.id,
@@ -123,31 +89,8 @@ router.get(
 	authenticate,
 	cacheRoute("market:prices", 120),
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const { slug } = req.params;
 		const params = priceHistorySchema.parse(req.query);
-
-		const commodity = await prisma.commodity.findUnique({ where: { slug } });
-		if (!commodity) {
-			throw new NotFoundError(`Commodity '${slug}'`);
-		}
-
-		const where: Record<string, unknown> = {
-			commodityId: commodity.id,
-			interval: params.interval,
-		};
-
-		if (params.from || params.to) {
-			where.date = {
-				...(params.from && { gte: params.from }),
-				...(params.to && { lte: params.to }),
-			};
-		}
-
-		const prices = await prisma.commodityPrice.findMany({
-			where,
-			orderBy: { date: "asc" },
-			take: params.limit,
-		});
+		const { commodity, prices } = await getPriceHistory(req.params.slug, params);
 
 		success(res, {
 			commodity: {
@@ -168,43 +111,10 @@ router.get(
 	authenticate,
 	cacheRoute("market:prices-multi", 120),
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const { slug } = req.params;
 		const interval = (req.query.interval as string) || "daily";
 		const limit = Math.min(Number(req.query.limit) || 365, 10000);
-
-		const commodity = await prisma.commodity.findUnique({ where: { slug } });
-		if (!commodity) {
-			throw new NotFoundError(`Commodity '${slug}'`);
-		}
-
-		const prices = await prisma.commodityPrice.findMany({
-			where: { commodityId: commodity.id, interval },
-			orderBy: { date: "asc" },
-			take: limit,
-			select: { date: true, close: true, source: true, interval: true },
-		});
-
-		const bySource = new Map<string, Array<{ date: string; close: number }>>();
-		for (const p of prices) {
-			const src = p.source;
-			if (!bySource.has(src)) bySource.set(src, []);
-			bySource.get(src)?.push({
-				date: p.date.toISOString().slice(0, 10),
-				close: Number(p.close),
-			});
-		}
-
-		success(res, {
-			commodity: {
-				id: commodity.id,
-				slug: commodity.slug,
-				name: commodity.name,
-				unit: commodity.unit,
-			},
-			interval,
-			sources: Object.fromEntries(bySource),
-			sourceCount: bySource.size,
-		});
+		const result = await getPricesBySource(req.params.slug, interval, limit);
+		success(res, result);
 	}),
 );
 
@@ -213,42 +123,8 @@ router.get(
 	authenticate,
 	cacheRoute("market:fundamentals", 600),
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const { slug } = req.params;
-
-		const commodity = await prisma.commodity.findUnique({ where: { slug } });
-		if (!commodity) {
-			throw new NotFoundError(`Commodity '${slug}'`);
-		}
-
-		const thirtyDaysAgo = new Date();
-		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-		// Filter factors relevant to the commodity's category/currency
-		const relevantRegions: string[] = [];
-		if (commodity.currency === "CNY") relevantRegions.push("USD/CNY");
-		if (commodity.currency === "AUD" || commodity.category === "beef_cuts")
-			relevantRegions.push("AUD/USD");
-		if (commodity.currency === "BRL" || commodity.category === "beef_cuts")
-			relevantRegions.push("BRL/USD");
-
-		const factors = await prisma.marketFactor.findMany({
-			where: {
-				date: { gte: thirtyDaysAgo },
-				...(relevantRegions.length > 0 ? { region: { in: relevantRegions } } : {}),
-			},
-			orderBy: { date: "desc" },
-			take: 200,
-		});
-
-		success(res, {
-			commodity: {
-				id: commodity.id,
-				slug: commodity.slug,
-				category: commodity.category,
-			},
-			factors,
-			count: factors.length,
-		});
+		const result = await getFundamentals(req.params.slug);
+		success(res, { ...result, count: result.factors.length });
 	}),
 );
 
@@ -257,30 +133,8 @@ router.get(
 	authenticate,
 	cacheRoute("market:exchange-rates", 300),
 	asyncHandler(async (_req, res) => {
-		const today = new Date();
-		const sevenDaysAgo = new Date();
-		sevenDaysAgo.setDate(today.getDate() - 7);
-
-		const rates = await prisma.marketFactor.findMany({
-			where: {
-				type: "exchange_rate",
-				date: { gte: sevenDaysAgo },
-			},
-			orderBy: { date: "desc" },
-		});
-
-		const latest = new Map<string, (typeof rates)[0]>();
-		for (const rate of rates) {
-			const key = rate.region || "unknown";
-			if (!latest.has(key)) {
-				latest.set(key, rate);
-			}
-		}
-
-		success(res, {
-			rates: Array.from(latest.values()),
-			count: latest.size,
-		});
+		const rates = await getLatestExchangeRates();
+		success(res, { rates, count: rates.length });
 	}),
 );
 
@@ -701,73 +555,9 @@ router.post(
 router.get(
 	"/sources/freshness",
 	authenticate,
-		asyncHandler(async (_req, res) => {
-			const now = new Date();
-			const sevenDaysAgo = new Date(now.getTime() - MS_PER_WEEK);
-
-		// Get latest ingestion log per source
-		const _latestLogs = await prisma.ingestionLog.groupBy({
-			by: ["source"],
-			_max: { createdAt: true },
-			where: { createdAt: { gte: sevenDaysAgo } },
-		});
-
-		// Get success rate per source (last 7 days)
-		const recentLogs = await prisma.ingestionLog.findMany({
-			where: { createdAt: { gte: sevenDaysAgo } },
-			orderBy: { createdAt: "desc" },
-		});
-
-		const sourceStats = new Map<
-			string,
-			{
-				total: number;
-				success: number;
-				lastRun: Date | null;
-				lastInserted: number;
-				lastUpdated: number;
-			}
-		>();
-		for (const log of recentLogs) {
-			const stat = sourceStats.get(log.source) || {
-				total: 0,
-				success: 0,
-				lastRun: null as Date | null,
-				lastInserted: 0,
-				lastUpdated: 0,
-			};
-			stat.total++;
-			if (log.status === "success") stat.success++;
-			if (!stat.lastRun || log.createdAt > stat.lastRun) {
-				stat.lastRun = log.createdAt;
-				stat.lastInserted = log.inserted;
-				stat.lastUpdated = log.updated;
-			}
-			sourceStats.set(log.source, stat);
-		}
-
-		const freshness = Array.from(sourceStats.entries()).map(([source, stat]) => ({
-			source,
-			successRate: stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0,
-			lastRun: stat.lastRun,
-			stale: stat.lastRun ? now.getTime() - stat.lastRun.getTime() > MS_PER_DAY : true,
-			lastInserted: stat.lastInserted,
-			lastUpdated: stat.lastUpdated,
-			totalRuns: stat.total,
-		}));
-
-		const staleSources = freshness.filter((f) => f.stale);
-		const healthySources = freshness.filter((f) => !f.stale);
-
-		success(res, {
-			freshness,
-			summary: {
-				total: freshness.length,
-				healthy: healthySources.length,
-				stale: staleSources.length,
-				staleSources: staleSources.map((s) => s.source),
-			},
-		});
+	asyncHandler(async (_req, res) => {
+		const result = await getSourceFreshness();
+		success(res, result);
 	}),
 );
 
@@ -779,61 +569,8 @@ router.get(
 	"/commodities/freshness",
 	authenticate,
 	asyncHandler(async (_req, res) => {
-		const now = new Date();
-		const staleThreshold = new Date(now.getTime() - MS_PER_WEEK);
-
-		// Latest price date per commodity (daily interval only — intraday is
-		// not tracked and would skew the "is this commodity current" signal).
-		const latestPrices = await prisma.commodityPrice.groupBy({
-			by: ["commodityId"],
-			where: { interval: "daily" },
-			_max: { date: true },
-		});
-
-		const lastByCommodity = new Map<string, Date>();
-		for (const row of latestPrices) {
-			const d = row._max.date;
-			if (d) lastByCommodity.set(row.commodityId, d);
-		}
-
-		const commodities = await prisma.commodity.findMany({
-			select: {
-				id: true,
-				slug: true,
-				name: true,
-				category: true,
-				isActive: true,
-			},
-			orderBy: { name: "asc" },
-		});
-
-		const items = commodities.map((c) => {
-			const lastUpdated = lastByCommodity.get(c.id) ?? null;
-			return {
-				id: c.id,
-				slug: c.slug,
-				name: c.name,
-				category: c.category,
-				isActive: c.isActive,
-				lastUpdated,
-				stale: lastUpdated ? lastUpdated < staleThreshold : true,
-			};
-		});
-
-		const withData = items.filter((i) => i.lastUpdated !== null);
-		const stale = items.filter((i) => i.stale);
-		const noData = items.filter((i) => i.lastUpdated === null);
-
-		success(res, {
-			commodities: items,
-			summary: {
-				total: items.length,
-				withData: withData.length,
-				stale: stale.length,
-				noData: noData.length,
-				coverage: items.length > 0 ? Math.round((withData.length / items.length) * 100) : 0,
-			},
-		});
+		const result = await getCommodityFreshness();
+		success(res, result);
 	}),
 );
 
