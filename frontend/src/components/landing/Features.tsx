@@ -163,7 +163,7 @@ export const Features: React.FC = () => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index}>
 							<div
-								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-7 text-center transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] ${index === 0 ? "md:py-9" : ""}`}
+								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-5 md:p-7 text-center transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] ${index === 0 ? "md:py-9" : ""}`}
 							>
 								<div className="font-mono text-2xl font-semibold text-primary md:text-3xl tabular-nums">
 									{metric.value}
@@ -180,7 +180,7 @@ export const Features: React.FC = () => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index} className={feature.span}>
 							<div
-								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
+								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
 							>
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 									{feature.title}

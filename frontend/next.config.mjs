@@ -79,7 +79,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+              // 'unsafe-eval' is dev-only (Next.js Fast Refresh/HMR needs it);
+              // production builds don't. 'unsafe-inline' remains for now —
+              // removing it requires nonce-based CSP infrastructure (Next.js
+              // injects inline runtime chunks), tracked as a follow-up.
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdn.jsdelivr.net`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob:",
               "font-src 'self' https://fonts.gstatic.com",

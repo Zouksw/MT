@@ -236,7 +236,7 @@ export default function AIPredictPage() {
 					<div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mb-6">
 						<div className="p-6">
 							<div className="text-lg font-semibold text-foreground flex items-center gap-2 mb-1">
-								<span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 flex-shrink-0" />
+								<span className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-400 flex-shrink-0" />
 								Configuration
 							</div>
 							<div className="text-sm text-muted-foreground mb-4">Set prediction parameters</div>
@@ -382,7 +382,7 @@ export default function AIPredictPage() {
 								<div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] mt-6 mb-6">
 									<div className="p-6">
 										<div className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-											<span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 flex-shrink-0" />
+											<span className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-400 flex-shrink-0" />
 											Model Information
 										</div>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

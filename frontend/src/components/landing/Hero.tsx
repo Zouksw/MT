@@ -265,7 +265,7 @@ export const Hero: React.FC = () => {
 					{features.map((feature, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={i} className={`${feature.span}`}>
-							<div className="group relative rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-[#111] p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14]">
+							<div className="group relative rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14]">
 								<div className="relative z-10">
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 										{feature.title}

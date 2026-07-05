@@ -33,7 +33,7 @@ describe("ChartToolbar", () => {
 		);
 
 		const candleBtn = screen.getByText("Candle").closest("button") as HTMLButtonElement;
-		expect(candleBtn.className).toContain("bg-[#171717]");
+		expect(candleBtn.className).toContain("bg-gray-900");
 	});
 
 	it("should call onChartTypeChange when switching type", () => {

@@ -107,7 +107,7 @@ export default function FAQ() {
 								animate={{ opacity: 1, y: 0 }}
 								exit={{ opacity: 0, y: -12 }}
 								transition={SPRING_DEFAULTS}
-								className="rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-[#111] p-6 md:p-8"
+								className="rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-gray-950 p-6 md:p-8"
 							>
 								<div className="flex items-center mb-4">
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-white">

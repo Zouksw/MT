@@ -61,10 +61,7 @@ const steps = [
 					>
 						<span className="text-xs font-medium text-muted-foreground w-24">{s.model}</span>
 						<div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-							<div
-								className="h-full rounded-full bg-primary/50"
-								style={{ width: `${s.conf}%` }}
-							/>
+							<div className="h-full rounded-full bg-primary/50" style={{ width: `${s.conf}%` }} />
 						</div>
 						<span
 							className={`text-xs font-mono tabular-nums ${s.signal === "Buy" ? "text-green-600 dark:text-green-400" : "text-amber-500"}`}
@@ -153,7 +150,7 @@ export default function GettingStarted() {
 										</div>
 									</div>
 
-									<div className="flex-1 rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-[#111] p-5 md:p-6 transition-all duration-300 hover:outline-black/10 dark:hover:outline-white/15">
+									<div className="flex-1 rounded-2xl outline outline-black/5 dark:outline-white/10 bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:outline-black/10 dark:hover:outline-white/15">
 										<div className="flex items-center mb-2">
 											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 												{step.title}

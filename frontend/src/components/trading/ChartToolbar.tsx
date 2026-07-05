@@ -55,7 +55,7 @@ export default function ChartToolbar({
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
                 ${
 									isActive
-										? "bg-[#171717] text-white"
+										? "bg-gray-900 text-white"
 										: "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
 								}
               `}

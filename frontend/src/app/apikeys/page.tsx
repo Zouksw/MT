@@ -386,9 +386,12 @@ export default function ApiKeyList() {
 					</Alert>
 
 					<div>
-						<span className="block font-medium text-foreground mb-2">Your API Key:</span>
+						<label htmlFor="created-api-key" className="block font-medium text-foreground mb-2">
+							Your API Key:
+						</label>
 						<div className="relative">
 							<input
+								id="created-api-key"
 								type={showKey ? "text" : "password"}
 								value={createdKey?.apiKey || ""}
 								readOnly

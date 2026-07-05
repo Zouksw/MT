@@ -18,7 +18,7 @@ describe("TimeframeSelector", () => {
 		render(<TimeframeSelector value="daily" onChange={jest.fn()} />);
 
 		const dailyBtn = screen.getByText("Daily").closest("button") as HTMLButtonElement;
-		expect(dailyBtn.className).toContain("bg-[#171717]");
+		expect(dailyBtn.className).toContain("bg-gray-900");
 	});
 
 	it("should call onChange when clicking a different timeframe", () => {
@@ -52,6 +52,6 @@ describe("TimeframeSelector", () => {
 		render(<TimeframeSelector value="weekly" onChange={jest.fn()} />);
 
 		const weeklyBtn = screen.getByText("Weekly").closest("button") as HTMLButtonElement;
-		expect(weeklyBtn.className).toContain("bg-[#171717]");
+		expect(weeklyBtn.className).toContain("bg-gray-900");
 	});
 });

@@ -107,7 +107,7 @@ export function AuthPage(props: AuthPageProps) {
 	return (
 		<div className="flex min-h-screen">
 			{/* Left Side — Dark brand panel, refined industrial */}
-			<div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-[#0a0a0a] text-white p-12">
+			<div className="hidden md:flex md:w-[45%] lg:w-[50%] flex-col justify-between relative overflow-hidden bg-gray-950 text-white p-12">
 				{/* Dot pattern */}
 				<div
 					className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -166,7 +166,7 @@ export function AuthPage(props: AuthPageProps) {
 			</div>
 
 			{/* Right Side — Form */}
-			<div className="flex flex-1 items-center justify-center bg-white dark:bg-[#111] px-6 py-12 md:px-12">
+			<div className="flex flex-1 items-center justify-center bg-white dark:bg-gray-950 px-6 py-12 md:px-12">
 				<motion.div
 					initial={{ opacity: 0, y: 16 }}
 					animate={{ opacity: 1, y: 0 }}

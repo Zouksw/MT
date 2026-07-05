@@ -79,7 +79,7 @@ export default function AboutPage() {
 			</section>
 
 			{/* Stats Section — asymmetric grid */}
-			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-[#111]">
+			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-950">
 				<div className="max-w-5xl mx-auto">
 					<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 						{[
@@ -140,7 +140,7 @@ export default function AboutPage() {
 						</div>
 						<div className="md:col-span-2">
 							<MotionReveal delay={0.2}>
-								<div className="rounded-xl p-8 bg-primary/5 dark:bg-[#111] ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
+								<div className="rounded-xl p-8 bg-primary/5 dark:bg-gray-950 ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
 									<div className="grid grid-cols-2 gap-8">
 										{[
 											{ value: "99.94%", label: "Platform Uptime" },
@@ -165,7 +165,7 @@ export default function AboutPage() {
 			</section>
 
 			{/* Values Section — bento grid */}
-			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-[#111]">
+			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-950">
 				<div className="max-w-7xl mx-auto">
 					<div className="mb-12 max-w-2xl">
 						<MotionReveal>
@@ -259,7 +259,7 @@ export default function AboutPage() {
 						{/* CEO — featured card, spans left 3 cols and 2 rows */}
 						<StaggerChild className="md:col-span-3 md:row-span-2">
 							<div className="bg-white dark:bg-background rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex flex-col md:flex-row">
-								<div className="md:w-2/5 bg-gray-50 dark:bg-[#111] flex items-center justify-center p-8 md:p-12">
+								<div className="md:w-2/5 bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-8 md:p-12">
 									<div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
 										{/* eslint-disable-next-line @next/next/no-img-element */}
 										{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
@@ -344,7 +344,7 @@ export default function AboutPage() {
 			</section>
 
 			{/* CTA Section — dark bg with accent text */}
-			<section className="relative py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gray-900 dark:bg-[#111]">
+			<section className="relative py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gray-900 dark:bg-gray-950">
 				<div className="relative z-10 max-w-4xl mx-auto text-center">
 					<MotionReveal>
 						<h2

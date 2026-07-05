@@ -11,7 +11,7 @@ export interface PageContainerProps {
 export const PageContainer: React.FC<PageContainerProps> = ({ children, className = "" }) => {
 	return (
 		<div
-			className={`page-container bg-pattern-dots min-h-screen bg-white dark:bg-[#0a0a0a] p-6 ${className}`}
+			className={`page-container bg-pattern-dots min-h-screen bg-white dark:bg-gray-950 p-6 ${className}`}
 		>
 			<PageTransition variant="slide-up">
 				<div className="mx-auto max-w-[1440px]">{children}</div>

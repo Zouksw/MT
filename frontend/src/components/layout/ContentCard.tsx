@@ -33,7 +33,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 					<div>
 						{title && (
 							<div className="text-lg font-semibold text-foreground flex items-center gap-2">
-								<span className="w-2 h-2 rounded-full bg-[#171717] dark:bg-gray-400 flex-shrink-0" />
+								<span className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-400 flex-shrink-0" />
 								{title}
 							</div>
 						)}

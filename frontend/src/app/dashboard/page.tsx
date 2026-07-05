@@ -158,7 +158,7 @@ export default function DashboardPage() {
 
 					{stats?.aiModels && (
 						<div className={isMobile ? "mt-4" : "mt-6"}>
-							<div className="rounded-lg p-5 sm:p-6 text-white relative overflow-hidden bg-[#171717]">
+							<div className="rounded-lg p-5 sm:p-6 text-white relative overflow-hidden bg-gray-900">
 								<div
 									className="absolute top-4 right-12 w-16 h-16 rounded-full bg-white/5"
 									style={{ animation: "float 6s ease-in-out infinite" }}
