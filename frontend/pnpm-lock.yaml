@@ -176,6 +176,9 @@ devDependencies:
   jest-environment-jsdom:
     specifier: ^29.7.0
     version: 29.7.0
+  js-yaml:
+    specifier: ^5.2.1
+    version: 5.2.1
   knip:
     specifier: ^6.6.1
     version: 6.6.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
@@ -8220,6 +8223,13 @@ packages:
     hasBin: true
     dependencies:
       argparse: 2.0.1
+
+  /js-yaml@5.2.1:
+    resolution: {integrity: sha512-zfLtNfQqxVqq3uaTqSkh4x4hZw3KHobGUA0fJUj4wawW8bsQLTVqpHdXSIzidh7o+4lEW36tANuAGdaFx6Zgnw==}
+    hasBin: true
+    dependencies:
+      argparse: 2.0.1
+    dev: true
 
   /jsdoc-type-pratt-parser@4.8.0:
     resolution: {integrity: sha512-iZ8Bdb84lWRuGHamRXFyML07r21pcwBrLkHEuHgEY5UbCouBwv7ECknDRKzsQIXMiqpPymqtIf8TC/shYKB5rw==}

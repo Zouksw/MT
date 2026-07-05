@@ -212,33 +212,73 @@
 - **C2续 metrics 抽 service** ✅ metrics.ts 657→388 行,新建 metricsService.ts(~330 行,进程级单例 store + Redis web-vitals 层);附带修 web-vitals 摄入回归(路由层 authenticate 压过 router.use 公开例外,前端无 auth 上报全 401)
 - 质量门:✅ Next.js high 归零 + 测试 433/434(与 Round 7 一致,无回归)
 
-### 第 9 轮 — 数据覆盖突破(依赖 key)
-- **激活 4 个 API key**(FRED/OPENWEATHER/MLA/USDA_MARS):需用户提供
-- **诊断 0 产出源**:dce/fao/usda/baltic 等(端点可达但解析空)——逐个排查解析逻辑
-- 质量门:覆盖率 34.5%→提升(视 key 与修复情况)
+### 第 9 轮 — 持续项收尾(L1 token / L9 a11y / L10 CSP) ✅ 完成(2026-07-05)
+- L1 ✅ 27 处 arbitrary color 清零 / L9 ✅ apikeys label 关联修复 / L10 🟡 生产移除 unsafe-eval(unsafe-inline 待 nonce)
+- 见 `reviews/2026-07-05-round-9.md`
 
-### 持续(每轮附带)
-- ~~L1 设计 token 化(剩余 ~27 处类内 arbitrary)~~ ✅ 完成(Round 9,27 处清零)
-- ~~L9 a11y(label 关联)~~ ✅ 完成(Round 9);L10 CSP 🟡 部分(生产移除 `unsafe-eval`,`unsafe-inline` 待 nonce 基础设施)
-- 依赖漏洞清零(前后端) — 前端 8 / 后端 6(多为 dev/transitive)
-- ⚠️ **前端 Jest 配置损坏**(Next.js 15 `next/jest` API 变化)— 下一轮独立修复 → ✅ **已修复**(Round 10:根因是 `is-core-module/core.json` 被 pnpm prune 误删,非配置问题;前端测试 272/272 通过)
-- ⚠️ **反复磁盘损坏模式**(Round 5 js-yaml / Round 7 venv / Round 10 is-core-module)— 需排查清理任务并加白名单
+### 第 10 轮 — 前端测试修复 ✅ 完成(2026-07-05)
+- 根因:`is-core-module/core.json` 被 pnpm prune 误删(第三次磁盘损坏),非 next/jest 配置问题
+- 修复后前端测试 20 suites / 272 tests 全过
+
+### 第 11 轮 — 运维根治磁盘损坏 + 全面探查 ✅ 完成(2026-07-05)
+- **根因确认**:`cron-cleanup.sh` 每日 `pnpm store prune`(pnpm 8.15 误删包文件)
+- **根治**:移除 prune + integrity guard(cron-healthcheck 每 5min 巡检历史受害文件)+ 修 js-yaml 潜伏损坏
+- **探查结论**(详见 `reviews/2026-07-05-round-11.md`):数据源 4 key 已到位 / 测试覆盖是最大风险 / 漏洞 multer+vitest ROI 高
+
+---
+
+## 后续轮次计划(基于 Round 11 全面探查,2026-07-05 重排)
+
+**重排依据**:探查发现测试覆盖是最大风险(核心 AI/billing/auth 几乎无测试),数据源 key 实际已到位(A 线不再阻塞),依赖漏洞中 multer(patch)+vitest(dev)ROI 高。
+
+### 第 12 轮 — 核心测试补强(P0,风险最高)
+> 核心产品几乎无测试,任何后续重构都高风险。先补最关键的。
+- **billing + Stripe webhook 测试**:订阅创建/webhook 签名验证/失败的支付不触发订阅(金融不可逆,最高优先)
+- **inference 边界测试**:predictionQueue/predictionCache(核心产品,Python 交接 0 测试)
+- **authService 测试**:token 签发/refresh/密码验证(仅邻接 helper 有测试)
+- 质量门:backend 新增 ≥3 个关键模块测试,全过
+
+### 第 13 轮 — 依赖漏洞清零(低风险高 ROI)
+- **multer 2.1.1→2.2.0**(prod 直接依赖,patch 升,低风险)
+- **vitest 2.1.9→3.x**(dev,critical UI 文件读取漏洞;major 升,需适配 config)
+- **nodemailer 8→9**(prod,major 升,验证邮件发送)
+- frontend transitive(storybook/shadcn 引入)评估:升级或接受 dev-only 现状
+- 质量门:backend prod high 归零 + 测试无回归
+
+### 第 14 轮 — A 线数据覆盖推进(key 已到位)
+> 探查修正:4 key(FRED/MLA/USDA_MARS/OPENWEATHER)实际已在 .env,A 线可推进。
+- **补全 argentina stub**(唯一真 stub,空解析)
+- **排查脆弱源 0 产出**:abares(正则→0)/fao_prices(条件插入)/inac(条件插入)逐个修
+- **加固 ScraperManager**:usdaAms/fred 的 key 守卫提升到 manager 级(目前内部处理)
+- 质量门:活跃源产出率提升 + argentina 有数据
+
+### 第 15 轮 — 服务层测试补强
+- datasetService / anomalyService / modelService / metricsService 单元测试(本轮前已抽 service 但无测试)
+- dataIngestion/index + helpers + beefCutNormalizer(数据信任边界)
+- 质量门:service 覆盖 35%→60%+
+
+### 第 16 轮(可选)— 前端测试 + CSP nonce 化
+- 前端关键页面测试(trading/ai-predict/settings)
+- L10 收尾:CSP nonce 基础设施移除 unsafe-inline
+- 质量门:frontend 测试覆盖提升 + CSP 生产无 unsafe-inline
 
 ---
 
 ## 指标目标 (完成定义)
 
-| 指标 | 起点 | 当前 | 目标 |
+| 指标 | 起点 | 当前(Round 11) | 目标 |
 |------|------|------|------|
-| 商品数据覆盖率 | 34.5% | 34.5%(A 线暂缓) | **≥60%** |
-| 依赖漏洞 (high+critical) | 51 | **43**(Next.js 8 high 清零,前端 16→8;后端 6) | **0** |
-| 胖路由 (>600 行) | 6 | **0** ✅(metrics 抽 service,全项目清零) | **0** |
-| 路由直连 Prisma | 208 处 | **~60**(6 路由抽 service,含 metrics) | **<30** (仅简单 CRUD) |
-| 测试 429 假失败 | 存在 | **0** ✅(C1 进程内测试) | **0** |
-| 前端数据获取模式 | 2 套 | 2 套 | **1 套 (SWR)** |
-| Simulation 定位 | 模拟交易(伪) | **回测工具** ✅(B1 已删伪交易) | 回测工具 |
-| Portfolio 定位 | 投资组合(交易) | **分析分组** ✅(B2 去交易语义) | 分析分组 |
-| AI 预测可用 | ✅(曾运行) | **✅ 恢复**(Round 7 重建 venv + 修 auth 链) | ✅ 恢复 |
+| 商品数据覆盖率 | 34.5% | 34.5%(key 已到位,Round 14 推进) | **≥60%** |
+| 依赖漏洞 (high+critical) | 51 | **43**(Next.js 8 清零;前端 8 dev/transitive + 后端 6) | **0** |
+| 胖路由 (>600 行) | 6 | **0** ✅ | **0** |
+| 路由直连 Prisma | 208 处 | **~60**(6 路由抽 service) | **<30** |
+| 测试 429 假失败 | 存在 | **0** ✅ | **0** |
+| 前端测试可运行 | ❌(配置损坏)| **✅**(Round 10 修复,272/272) | ✅ |
+| AI 预测可用 | ⚠️ DOWN | **✅ 恢复**(Round 7) | ✅ |
+| 磁盘损坏复发 | 3 次 | **✅ 根治**(Round 11,移除 prune + guard) | 0 次 |
+| L1 token 化 | 27 处 | **0** ✅ | **0** |
+| backend route 测试覆盖 | ~40% | 47%(9/19) | **≥80%** |
+| backend service 测试覆盖 | ~30% | 35%(8/23) | **≥60%** |
 
 ---
 

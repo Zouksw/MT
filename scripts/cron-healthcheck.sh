@@ -29,3 +29,18 @@ fi
 if [ -z "$RESTARTED" ]; then
     echo "[$NOW] All services healthy"
 fi
+
+# Dependency-file integrity guard. Catches the recurring pnpm-store/venv
+# corruption pattern early (Round 5 js-yaml, Round 7 venv, Round 10
+# is-core-module/core.json) before a silent failure surfaces as a confusing
+# build/test/runtime error.
+for f in \
+    "/root/frontend/node_modules/.pnpm/is-core-module@*/node_modules/is-core-module/core.json" \
+    "/root/frontend/node_modules/js-yaml/package.json" \
+    "/root/inference-service/venv/bin/python"
+do
+    # shellcheck disable=SC2086
+    if ! ls $f >/dev/null 2>&1; then
+        echo "[$NOW] INTEGRITY ALERT: missing $f — possible store corruption"
+    fi
+done
