@@ -167,6 +167,9 @@ devDependencies:
   cross-fetch:
     specifier: ^4.1.0
     version: 4.1.0
+  is-core-module:
+    specifier: 2.16.1
+    version: 2.16.1
   jest:
     specifier: ^29.7.0
     version: 29.7.0(@types/node@20.19.33)

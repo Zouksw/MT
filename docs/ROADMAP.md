@@ -221,7 +221,8 @@
 - ~~L1 设计 token 化(剩余 ~27 处类内 arbitrary)~~ ✅ 完成(Round 9,27 处清零)
 - ~~L9 a11y(label 关联)~~ ✅ 完成(Round 9);L10 CSP 🟡 部分(生产移除 `unsafe-eval`,`unsafe-inline` 待 nonce 基础设施)
 - 依赖漏洞清零(前后端) — 前端 8 / 后端 6(多为 dev/transitive)
-- ⚠️ **前端 Jest 配置损坏**(Next.js 15 `next/jest` API 变化)— 下一轮独立修复
+- ⚠️ **前端 Jest 配置损坏**(Next.js 15 `next/jest` API 变化)— 下一轮独立修复 → ✅ **已修复**(Round 10:根因是 `is-core-module/core.json` 被 pnpm prune 误删,非配置问题;前端测试 272/272 通过)
+- ⚠️ **反复磁盘损坏模式**(Round 5 js-yaml / Round 7 venv / Round 10 is-core-module)— 需排查清理任务并加白名单
 
 ---
 
