@@ -7,6 +7,16 @@ import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { getPagination, limitSchema } from "@/schemas/common";
 import { modelsQuerySchema, predictSchema, trainModelSchema } from "@/schemas/models";
+import {
+	createForecasts,
+	createModelRecord,
+	deleteForecasts,
+	deleteModel,
+	getModel,
+	listForecasts,
+	listModels,
+	setModelActive,
+} from "@/services/modelService";
 
 const router = Router();
 
@@ -48,32 +58,13 @@ router.get(
 		const { skip, take } = getPagination(req.query);
 		const params = modelsQuerySchema.parse(req.query);
 
-		const where: Prisma.ForecastingModelWhereInput = {};
-		if (timeseriesId) where.timeseriesId = timeseriesId as string;
-		if (params.isActive !== undefined) where.isActive = params.isActive;
-		if (algorithm) {
-			// Use 'in' filter for enum values (requires array)
-			where.algorithm = { in: [algorithm as ModelAlgorithm] };
-		}
-
-		const [models, total] = await Promise.all([
-			prisma.forecastingModel.findMany({
-				where,
-				skip,
-				take,
-				include: {
-					timeseries: {
-						select: { id: true, name: true, slug: true, unit: true },
-					},
-					trainedBy: {
-						select: { id: true, name: true, email: true },
-					},
-					_count: { select: { forecasts: true } },
-				},
-				orderBy: { trainedAt: "desc" },
-			}),
-			prisma.forecastingModel.count({ where }),
-		]);
+		const { models, total } = await listModels({
+			timeseriesId: timeseriesId as string | undefined,
+			isActive: params.isActive,
+			algorithm: algorithm as string | undefined,
+			skip,
+			take,
+		});
 		return paginated(res, models, {
 			page: params.page,
 			limit: params.limit,
@@ -106,34 +97,7 @@ router.get(
 router.get(
 	"/:id",
 	asyncHandler(async (req, res) => {
-		const model = await prisma.forecastingModel.findUnique({
-			where: { id: req.params.id },
-			include: {
-				timeseries: {
-					select: {
-						id: true,
-						name: true,
-						slug: true,
-						unit: true,
-						dataset: {
-							select: { id: true, name: true, slug: true },
-						},
-					},
-				},
-				trainedBy: {
-					select: { id: true, name: true, email: true },
-				},
-				forecasts: {
-					take: 10,
-					orderBy: { timestamp: "desc" },
-				},
-				_count: { select: { forecasts: true } },
-			},
-		});
-
-		if (!model) {
-			throw new NotFoundError("Model");
-		}
+		const model = await getModel(req.params.id);
 		return success(res, { model });
 	}),
 );
@@ -193,23 +157,9 @@ router.post(
 		// Check if timeseries exists
 		const timeseries = await prisma.timeseries.findUnique({
 			where: { id: validatedData.timeseriesId },
-			include: {
-				dataset: true,
-			},
+			include: { dataset: true },
 		});
-
-		if (!timeseries) {
-			throw new NotFoundError("Timeseries");
-		}
-
-		// Deactivate existing models for this timeseries
-		await prisma.forecastingModel.updateMany({
-			where: {
-				timeseriesId: validatedData.timeseriesId,
-				isActive: true,
-			},
-			data: { isActive: false },
-		});
+		if (!timeseries) throw new NotFoundError("Timeseries");
 
 		// Get training data count for metrics
 		const dataPointsCount = await prisma.datapoint.count({
@@ -224,32 +174,16 @@ router.post(
 			},
 		});
 
-		// Create model record in database
-		const model = await prisma.forecastingModel.create({
-			data: {
-				timeseriesId: validatedData.timeseriesId,
-				trainedById: userId,
-				algorithm: validatedData.algorithm,
-				hyperparameters: (validatedData.hyperparameters || {}) as Record<
-					string,
-					string | number | boolean
-				>,
-				trainingMetrics: {
-					trainingSamples: dataPointsCount,
-				},
-				version: 1,
-				isActive: true,
-				trainedAt: new Date(),
-				deployedAt: new Date(),
-			},
-			include: {
-				timeseries: {
-					select: { id: true, name: true, slug: true, unit: true },
-				},
-				trainedBy: {
-					select: { id: true, name: true, email: true },
-				},
-			},
+		// Create model record (deactivates prior active models internally)
+		const model = await createModelRecord({
+			timeseriesId: validatedData.timeseriesId,
+			trainedById: userId,
+			algorithm: validatedData.algorithm,
+			hyperparameters: (validatedData.hyperparameters || {}) as Record<
+				string,
+				string | number | boolean
+			>,
+			trainingSamples: dataPointsCount,
 		});
 
 		// Emit WebSocket event
@@ -379,10 +313,7 @@ router.post(
 		}));
 
 		// Batch insert forecasts
-		await prisma.forecast.createMany({
-			data: forecasts,
-			skipDuplicates: true,
-		});
+		await createForecasts(forecasts);
 
 		// Emit WebSocket event
 		const io = req.app.get("io");
@@ -448,24 +379,16 @@ router.post(
 router.get(
 	"/:modelId/forecasts",
 	asyncHandler(async (req, res) => {
-		const { modelId } = req.params;
 		const { start, end } = req.query;
 		const params = limitSchema.parse(req.query);
-
-		const where: Prisma.ForecastWhereInput = { modelId };
-
-		if (start || end) {
-			where.timestamp = {};
-			if (start) where.timestamp.gte = new Date(start as string);
-			if (end) where.timestamp.lte = new Date(end as string);
-		}
-
-		const forecasts = await prisma.forecast.findMany({
-			where,
-			take: params.limit,
-			orderBy: { timestamp: "asc" },
-		});
-
+		const forecasts = await listForecasts(
+			req.params.modelId,
+			{
+				start: start as string | undefined,
+				end: end as string | undefined,
+			},
+			params.limit,
+		);
 		return success(res, { forecasts });
 	}),
 );
@@ -507,33 +430,11 @@ router.patch(
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { isActive } = req.body;
-
-		if (typeof isActive !== "undefined") {
-			// If activating, deactivate other models for the same timeseries
-			if (isActive) {
-				const model = await prisma.forecastingModel.findUnique({
-					where: { id: req.params.id },
-				});
-
-				if (model) {
-					await prisma.forecastingModel.updateMany({
-						where: {
-							timeseriesId: model.timeseriesId,
-							id: { not: req.params.id },
-						},
-						data: { isActive: false },
-					});
-				}
-			}
-
-			const model = await prisma.forecastingModel.update({
-				where: { id: req.params.id },
-				data: { isActive },
-			});
-			return success(res, { model });
+		if (typeof isActive === "undefined") {
+			throw new BadRequestError("No valid fields to update");
 		}
-
-		throw new BadRequestError("No valid fields to update");
+		const model = await setModelActive(req.params.id, isActive);
+		return success(res, { model });
 	}),
 );
 
@@ -562,19 +463,7 @@ router.delete(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const model = await prisma.forecastingModel.findUnique({
-			where: { id: req.params.id },
-			select: { trainedById: true },
-		});
-		if (!model) {
-			throw new NotFoundError("Model");
-		}
-		if (model.trainedById !== req.userId && req.user?.role !== "ADMIN") {
-			throw new BadRequestError("You can only delete models you created");
-		}
-		await prisma.forecastingModel.delete({
-			where: { id: req.params.id },
-		});
+		await deleteModel(req.params.id, req.userId, req.user?.role);
 		return successWithMessage(res, {}, "Model deleted successfully");
 	}),
 );
@@ -611,18 +500,11 @@ router.delete(
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { start, end } = req.query;
-
-		const where: Prisma.ForecastWhereInput = { modelId: req.params.modelId };
-
-		if (start || end) {
-			where.timestamp = {};
-			if (start) where.timestamp.gte = new Date(start as string);
-			if (end) where.timestamp.lte = new Date(end as string);
-		}
-
-		const result = await prisma.forecast.deleteMany({ where });
-
-		return successWithMessage(res, { count: result.count }, `Deleted ${result.count} forecasts`);
+		const count = await deleteForecasts(req.params.modelId, {
+			start: start as string | undefined,
+			end: end as string | undefined,
+		});
+		return successWithMessage(res, { count }, `Deleted ${count} forecasts`);
 	}),
 );
 

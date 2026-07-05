@@ -127,8 +127,8 @@ export function AuthPage(props: AuthPageProps) {
 
 				{/* Brand mark */}
 				<div className="relative z-10">
-					<div className="mb-10 flex h-14 w-14 items-center justify-center rounded-xl bg-[#B8860B]/10 ring-1 ring-[#B8860B]/20">
-						<Lightning size={28} weight="duotone" className="text-[#B8860B]" />
+					<div className="mb-10 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+						<Lightning size={28} weight="duotone" className="text-primary" />
 					</div>
 				</div>
 
@@ -149,7 +149,7 @@ export function AuthPage(props: AuthPageProps) {
 						108 commodities.
 						<br />7 AI models.
 						<br />
-						<span className="text-[#B8860B]">One signal.</span>
+						<span className="text-primary">One signal.</span>
 					</p>
 					<p className="mt-4 text-sm text-white/40">AI-powered commodity market analytics</p>
 				</motion.div>
@@ -178,7 +178,7 @@ export function AuthPage(props: AuthPageProps) {
 						initial={{ width: 0 }}
 						animate={{ width: 48 }}
 						transition={SPRING_DEFAULTS}
-						className="mb-8 h-1 rounded-full bg-[#B8860B]"
+						className="mb-8 h-1 rounded-full bg-primary"
 					/>
 
 					<h2 className="font-display text-3xl font-semibold text-gray-900 dark:text-white">

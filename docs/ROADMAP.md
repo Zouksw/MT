@@ -179,6 +179,12 @@
 - **质量门**: ✅ 238/239 通过零 429(与第 4 轮一致,无回归),build 成功
 - 详见 `reviews/2026-07-05-round-5.md`
 
+### 第 6 轮 — models 重构 + L1 token ✅ 完成(2026-07-05)
+- **C**: **C2续 models 抽 service** ✅ models.ts 629→511 行(退出胖路由),8 函数下沉 modelService;train/predict 留路由(inference+emit 耦合)
+- **L1**: **#B8860B → primary token**(6 处,零风险)。其余图表 stroke 不动
+- **质量门**: ✅ 238/239 通过零 429(无回归),build 成功
+- 详见 `reviews/2026-07-05-round-6.md`
+
 ### 持续 (每轮附带)
 - 清遗留 Bug 表
 - 设计 token 化 (L1, 376 处)

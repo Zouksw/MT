@@ -84,7 +84,7 @@ export default function ChartToolbar({
 									[opt.key]: e.target.checked,
 								})
 							}
-							className="w-3.5 h-3.5 rounded accent-[#B8860B] cursor-pointer"
+							className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
 						/>
 						{opt.label}
 					</label>
