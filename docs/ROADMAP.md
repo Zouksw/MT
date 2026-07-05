@@ -201,11 +201,11 @@
 
 经 ops-check + investigate 全面探索,优先级重排——**先恢复 AI 功能(inference)**,因它是平台核心且当前完全失效。
 
-### 第 7 轮 — AI 功能恢复(P0,功能性)
-- **修复 inference venv**:重建 venv(requirements.txt),启动 uvicorn,验证 /health:10810
-- **验证 AI 链路**:触发一次预测,确认 prediction_logs 增长
-- **接入 pm2 托管**:把 inference 服务加入 ecosystem.config.cjs(开机自启 + 崩溃恢复)
-- 质量门:inference /health 200 + 一次预测成功
+### 第 7 轮 — AI 功能恢复(P0,功能性) ✅ 完成(2026-07-05)
+- **重建 inference venv** ✅ `rm -rf venv && python3 -m venv venv && pip install -r requirements.txt`(torch 2.12/chronos 2.3.1/sktime 1.0.1 等)
+- **修复 checkAIAccess 回归** ✅ inference.ts 6 端点缺失 `authenticate`(B3 重构遗留),全部改为 `authenticate, checkAIAccess,` 链式 — 否则即便 ADMIN 也 403
+- **接入 PM2** ✅ ecosystem.config.cjs 新增 `mt-inference`(2G mem limit / 10s kill / 30s listen / 15s min_uptime),pm2 save 已持久化
+- **质量门**: ✅ inference /health 200 + /api/inference/status healthy + ADMIN predict 成功(crude_oil arima 真实预测)+ VIEWER 403 + 无 token 401;测试 433/434 通过(1 既有 live-DB 失败,与本次无关)
 
 ### 第 8 轮 — C3 升级 + metrics 收尾
 - **C3 Next.js 15.5.15→15.5.18**(patch,修 high 漏洞)

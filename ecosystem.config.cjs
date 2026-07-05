@@ -71,5 +71,35 @@ module.exports = {
       max_restarts: 10,
       restart_delay: 3000,
     },
+    {
+      name: 'mt-inference',
+      // Python FastAPI inference service — torch/sktime/statsmodels/chronos models
+      // for predictions + anomaly detection. Heavy imports; expect ~10s cold start.
+      script: path.join(ROOT, 'inference-service/venv/bin/python'),
+      args: '-m uvicorn main:app --host 0.0.0.0 --port 10810',
+      cwd: path.join(ROOT, 'inference-service'),
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '2G',
+      env_production: {
+        INFERENCE_HOST: '0.0.0.0',
+        INFERENCE_PORT: '10810',
+        INFERENCE_LOG_LEVEL: 'info',
+      },
+      // Logging
+      error_file: path.join(ROOT, '.logs/inference-error.log'),
+      out_file: path.join(ROOT, '.logs/inference-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      // Graceful shutdown — torch model teardown can be slow
+      kill_timeout: 10000,
+      listen_timeout: 30000,
+      // Crash recovery
+      min_uptime: '15s',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
   ],
 };

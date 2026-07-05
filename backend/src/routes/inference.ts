@@ -1,7 +1,7 @@
 import { type Request, type Response, Router } from "express";
 import { logger, prisma } from "@/lib";
-import { authenticate } from "@/middleware/auth";
 import { checkAIAccess } from "@/middleware/aiAccess";
+import { authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
 import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
@@ -43,6 +43,7 @@ router.get(
 
 router.post(
 	"/predict",
+	authenticate,
 	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
@@ -91,6 +92,7 @@ router.post(
 
 router.post(
 	"/predict/batch",
+	authenticate,
 	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
@@ -164,6 +166,7 @@ router.post(
 
 router.post(
 	"/predict/visualize",
+	authenticate,
 	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
@@ -209,6 +212,7 @@ router.post(
 
 router.post(
 	"/anomalies",
+	authenticate,
 	checkAIAccess,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { commodityId, threshold, historyPoints } = req.body;
@@ -233,9 +237,7 @@ router.post(
 		// Guard: with zero price points, mean/std would be NaN and the loop below
 		// silently returns an empty anomalies array — misleading the caller.
 		if (values.length === 0) {
-			throw new BadRequestError(
-				"No price data available for anomaly detection on this commodity",
-			);
+			throw new BadRequestError("No price data available for anomaly detection on this commodity");
 		}
 
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -278,6 +280,7 @@ router.post(
 
 router.post(
 	"/anomalies/visualize",
+	authenticate,
 	checkAIAccess,
 	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
@@ -303,9 +306,7 @@ router.post(
 		// Guard: with zero price points, mean/std would be NaN and the loop below
 		// silently returns an empty anomalies array — misleading the caller.
 		if (values.length === 0) {
-			throw new BadRequestError(
-				"No price data available for anomaly detection on this commodity",
-			);
+			throw new BadRequestError("No price data available for anomaly detection on this commodity");
 		}
 
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -394,6 +395,7 @@ router.get(
 
 router.post(
 	"/models/train",
+	authenticate,
 	checkAIAccess,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { algorithm, commodityId } = req.body;
