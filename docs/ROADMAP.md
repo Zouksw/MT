@@ -207,10 +207,10 @@
 - **接入 PM2** ✅ ecosystem.config.cjs 新增 `mt-inference`(2G mem limit / 10s kill / 30s listen / 15s min_uptime),pm2 save 已持久化
 - **质量门**: ✅ inference /health 200 + /api/inference/status healthy + ADMIN predict 成功(crude_oil arima 真实预测)+ VIEWER 403 + 无 token 401;测试 433/434 通过(1 既有 live-DB 失败,与本次无关)
 
-### 第 8 轮 — C3 升级 + metrics 收尾
-- **C3 Next.js 15.5.15→15.5.18**(patch,修 high 漏洞)
-- **C2续 metrics 抽 service**(状态化 service 新样板,endpointMetrics 单例迁移)
-- 质量门:audit high 归零 + 测试无回归
+### 第 8 轮 — C3 升级 + metrics 收尾 ✅ 完成(2026-07-05)
+- **C3 Next.js 15.5.15→15.5.20** ✅(原定 15.5.18,改用最新 patch;**Next.js 8 个 high 漏洞全清零**)+ 修 `next.config.mjs` 残留 `withNextIntl` 包装(Round 5 删 i18n 遗留休眠 bug)
+- **C2续 metrics 抽 service** ✅ metrics.ts 657→388 行,新建 metricsService.ts(~330 行,进程级单例 store + Redis web-vitals 层);附带修 web-vitals 摄入回归(路由层 authenticate 压过 router.use 公开例外,前端无 auth 上报全 401)
+- 质量门:✅ Next.js high 归零 + 测试 433/434(与 Round 7 一致,无回归)
 
 ### 第 9 轮 — 数据覆盖突破(依赖 key)
 - **激活 4 个 API key**(FRED/OPENWEATHER/MLA/USDA_MARS):需用户提供
@@ -229,14 +229,14 @@
 | 指标 | 起点 | 当前 | 目标 |
 |------|------|------|------|
 | 商品数据覆盖率 | 34.5% | 34.5%(A 线暂缓) | **≥60%** |
-| 依赖漏洞 (high+critical) | 51 | 51 | **0** |
-| 胖路由 (>600 行) | 6 | **1**(仅 metrics 657) | **0** |
-| 路由直连 Prisma | 208 处 | **~75**(5 路由抽 service) | **<30** (仅简单 CRUD) |
+| 依赖漏洞 (high+critical) | 51 | **43**(Next.js 8 high 清零,前端 16→8;后端 6) | **0** |
+| 胖路由 (>600 行) | 6 | **0** ✅(metrics 抽 service,全项目清零) | **0** |
+| 路由直连 Prisma | 208 处 | **~60**(6 路由抽 service,含 metrics) | **<30** (仅简单 CRUD) |
 | 测试 429 假失败 | 存在 | **0** ✅(C1 进程内测试) | **0** |
 | 前端数据获取模式 | 2 套 | 2 套 | **1 套 (SWR)** |
 | Simulation 定位 | 模拟交易(伪) | **回测工具** ✅(B1 已删伪交易) | 回测工具 |
 | Portfolio 定位 | 投资组合(交易) | **分析分组** ✅(B2 去交易语义) | 分析分组 |
-| AI 预测可用 | ✅(曾运行) | **⚠️ DOWN**(venv 损坏) | ✅ 恢复 |
+| AI 预测可用 | ✅(曾运行) | **✅ 恢复**(Round 7 重建 venv + 修 auth 链) | ✅ 恢复 |
 
 ---
 

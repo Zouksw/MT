@@ -1,10 +1,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import withBundleAnalyzer from '@next/bundle-analyzer';
-import createNextIntlPlugin from 'next-intl/plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -157,8 +155,6 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(
-  withBundleAnalyzer({
-    enabled: process.env.ANALYZE === 'true',
-  })(nextConfig)
-);
+export default withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+})(nextConfig);
