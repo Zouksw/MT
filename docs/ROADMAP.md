@@ -227,58 +227,65 @@
 
 ---
 
-## 后续轮次计划(基于 Round 11 全面探查,2026-07-05 重排)
+## 后续轮次计划(基于核心价值链审计,2026-07-05 重排)
 
-**重排依据**:探查发现测试覆盖是最大风险(核心 AI/billing/auth 几乎无测试),数据源 key 实际已到位(A 线不再阻塞),依赖漏洞中 multer(patch)+vitest(dev)ROI 高。
+**重排依据(关键修正)**:核心价值链审计(`reviews/2026-07-05-core-value-chain-audit.md`)发现**整条 AI 预测链是断的** —— 调度在跑但 0 条预测落库(forecasts/anomalies/prediction_logs-completed 全为 0)。billing 无支付功能(静态套餐),按用户决策降级不再投入。**先通水管(让核心链产出)再装修(测试/漏洞)。**
 
-### 第 12 轮 — 核心测试补强(P0,风险最高)
-> 核心产品几乎无测试,任何后续重构都高风险。先补最关键的。
-- **billing + Stripe webhook 测试**:订阅创建/webhook 签名验证/失败的支付不触发订阅(金融不可逆,最高优先)
-- **inference 边界测试**:predictionQueue/predictionCache(核心产品,Python 交接 0 测试)
-- **authService 测试**:token 签发/refresh/密码验证(仅邻接 helper 有测试)
-- 质量门:backend 新增 ≥3 个关键模块测试,全过
+> ⚠️ 前几轮(7-11)的"AI 已恢复"判断需修正:Round 7 修的是 inference 服务可达 + 单条手工 curl 能预测,但**批量调度链路从未跑通**(ARIMA 维度 bug + 队列状态不回写 + 72 商品无数据)。
 
-### 第 13 轮 — 依赖漏洞清零(低风险高 ROI)
-- **multer 2.1.1→2.2.0**(prod 直接依赖,patch 升,低风险)
-- **vitest 2.1.9→3.x**(dev,critical UI 文件读取漏洞;major 升,需适配 config)
-- **nodemailer 8→9**(prod,major 升,验证邮件发送)
-- frontend transitive(storybook/shadcn 引入)评估:升级或接受 dev-only 现状
-- 质量门:backend prod high 归零 + 测试无回归
+### 第 12 轮 — 打通预测链路断点(P0,核心价值)
+> 平台当前产出 0 条预测。这是最高优先级,不做这步后面都是空中楼阁。
+- **修 ARIMA 维度 bug**(inference 服务):`array is 0-dimensional, but 1 were indexed` —— 批量调度路径的 numpy 维度错误,手工 curl 不触发但调度触发
+- **修 predictionQueue 状态不回写**:1066 条 prediction_logs 全卡 `pending`,worker 静默吞异常 —— 补 try/catch + completed/failed 回写
+- **验证 forecasts 落库**:跑通后确认 forecasts 表从 0 增长
+- 质量门:至少 1 个有数据商品(如 crude_oil_cme)8 模型全部 completed 落库 + forecasts 表有真实预测行
 
-### 第 14 轮 — A 线数据覆盖推进(key 已到位)
-> 探查修正:4 key(FRED/MLA/USDA_MARS/OPENWEATHER)实际已在 .env,A 线可推进。
+### 第 13 轮 — 数据覆盖扩张(预测的输入)
+> 72/110 商品 0 价格点 = 预测无输入。这是预测失败的根因。
 - **补全 argentina stub**(唯一真 stub,空解析)
-- **排查脆弱源 0 产出**:abares(正则→0)/fao_prices(条件插入)/inac(条件插入)逐个修
-- **加固 ScraperManager**:usdaAms/fred 的 key 守卫提升到 manager 级(目前内部处理)
-- 质量门:活跃源产出率提升 + argentina 有数据
+- **修脆弱源 0 产出**:abares(正则失效)/fao_prices(条件插入逻辑)/inac —— 逐个排查产出 0 的原因
+- **核查 72 空商品的归属**:哪些品类完全无源、哪些有源但解析空
+- 质量门:有数据商品 38→60+,活跃源产出率提升
 
-### 第 15 轮 — 服务层测试补强
-- datasetService / anomalyService / modelService / metricsService 单元测试(本轮前已抽 service 但无测试)
-- dataIngestion/index + helpers + beefCutNormalizer(数据信任边界)
-- 质量门:service 覆盖 35%→60%+
+### 第 14 轮 — 信号/分析链路激活
+> tradingSignals/backtest/correlationAnalysis 服务代码真实存在但依赖 forecasts 数据(当前 0)。
+- **tradingSignals 激活**: forecasts 有数据后,验证 BUY/SELL/HOLD 信号真实计算
+- **backtest 激活**: 回测引擎 runBacktest 真实运行验证
+- **correlationAnalysis 激活**: 131 因子当前仅 1 type —— 补因子采集
+- 质量门:signals 有真实输出 + 至少 1 个回测报告生成
 
-### 第 16 轮(可选)— 前端测试 + CSP nonce 化
-- 前端关键页面测试(trading/ai-predict/settings)
-- L10 收尾:CSP nonce 基础设施移除 unsafe-inline
-- 质量门:frontend 测试覆盖提升 + CSP 生产无 unsafe-inline
+### 第 15 轮 — 核心链路测试保护
+> 链路跑通后再补测试,否则测试的是断的链。
+- predictionQueue / predictionCache / inference 边界测试(核心产品)
+- dataIngestion orchestration(index/helpers/beefCutNormalizer)测试
+- tradingSignals / backtest 单元测试
+- 质量门:核心价值链关键模块有测试,防回归
+
+### 第 16 轮 — 收尾(漏洞/前端/billing 静态化)
+- 依赖漏洞清零(multer patch / vitest major)
+- billing 正式降级为静态展示(移除冗余路由逻辑,保留套餐配置)
+- 前端关键页面测试 + CSP nonce 化(可选)
+
+### 降级:billing(静态套餐,不再投入开发资源)
 
 ---
 
 ## 指标目标 (完成定义)
 
-| 指标 | 起点 | 当前(Round 11) | 目标 |
+| 指标 | 起点 | 当前(Round 11 审计后) | 目标 |
 |------|------|------|------|
-| 商品数据覆盖率 | 34.5% | 34.5%(key 已到位,Round 14 推进) | **≥60%** |
-| 依赖漏洞 (high+critical) | 51 | **43**(Next.js 8 清零;前端 8 dev/transitive + 后端 6) | **0** |
+| **预测成功落库** | ? | **0 条**(链路断, forecasts/anomalies 全空)| **每 30min 增长** |
+| **有数据商品** | 34.5% | **35%(38/110)** | **≥60%** |
+| **市场因子类型** | 131(声称)| **1 type / 45 行** | **多类型覆盖** |
+| 商品数据覆盖率 | 34.5% | 35% | **≥60%** |
+| 依赖漏洞 (high+critical) | 51 | **43** | **0** |
 | 胖路由 (>600 行) | 6 | **0** ✅ | **0** |
-| 路由直连 Prisma | 208 处 | **~60**(6 路由抽 service) | **<30** |
+| 路由直连 Prisma | 208 处 | **~60** | **<30** |
 | 测试 429 假失败 | 存在 | **0** ✅ | **0** |
-| 前端测试可运行 | ❌(配置损坏)| **✅**(Round 10 修复,272/272) | ✅ |
-| AI 预测可用 | ⚠️ DOWN | **✅ 恢复**(Round 7) | ✅ |
-| 磁盘损坏复发 | 3 次 | **✅ 根治**(Round 11,移除 prune + guard) | 0 次 |
+| 前端测试可运行 | ❌ | **✅**(272/272) | ✅ |
+| inference 服务可达 | ❌ DOWN | **✅ UP**(Round 7) | ✅ |
+| 磁盘损坏复发 | 3 次 | **✅ 根治**(Round 11) | 0 次 |
 | L1 token 化 | 27 处 | **0** ✅ | **0** |
-| backend route 测试覆盖 | ~40% | 47%(9/19) | **≥80%** |
-| backend service 测试覆盖 | ~30% | 35%(8/23) | **≥60%** |
 
 ---
 
