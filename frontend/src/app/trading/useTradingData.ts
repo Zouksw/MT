@@ -161,65 +161,74 @@ export function useTradingData() {
 	}, [beefPrices]);
 
 	// Fetch AI signal when commodity changes
-	const loadSignal = useCallback(async () => {
-		if (!selected || prices.length === 0) return;
+	const loadSignal = useCallback(
+		async (signal?: AbortSignal) => {
+			if (!selected || prices.length === 0) return;
 
-		const currentPrice = prices[prices.length - 1]?.close;
-		if (!currentPrice) return;
+			const currentPrice = prices[prices.length - 1]?.close;
+			if (!currentPrice) return;
 
-		setSignalLoading(true);
-		try {
-			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-			const headers: Record<string, string> = { "Content-Type": "application/json" };
-			if (token) headers.Authorization = `Bearer ${token}`;
+			setSignalLoading(true);
+			try {
+				const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
+				const headers: Record<string, string> = { "Content-Type": "application/json" };
+				if (token) headers.Authorization = `Bearer ${token}`;
 
-			const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-			const [signalRes, accRes] = await Promise.allSettled([
-				fetch(
-					`${apiBase}/api/signals/${selected.slug}?timeseriesPath=root.trading.${selected.slug}.price&currentPrice=${currentPrice}&horizon=10`,
-					{ headers },
-				),
-				fetch(`${apiBase}/api/signals/models/accuracy?commodityId=${selected.slug}&days=30`, {
-					headers,
-				}),
-			]);
+				const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				const [signalRes, accRes] = await Promise.allSettled([
+					fetch(
+						`${apiBase}/api/signals/${selected.slug}?timeseriesPath=root.trading.${selected.slug}.price&currentPrice=${currentPrice}&horizon=10`,
+						{ headers, signal },
+					),
+					fetch(`${apiBase}/api/signals/models/accuracy?commodityId=${selected.slug}&days=30`, {
+						headers,
+						signal,
+					}),
+				]);
 
-			if (signalRes.status === "fulfilled" && signalRes.value.ok) {
-				const data = await signalRes.value.json();
-				if (data.success && data.data) {
-					// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-					setSignal((prev: any) => {
-						if (prev?.type && prev.type !== data.data.type) {
-							setPreviousSignalType(prev.type);
-						}
-						return data.data;
-					});
-				}
-			}
-
-			if (accRes.status === "fulfilled" && accRes.value.ok) {
-				const accData = await accRes.value.json();
-				if (accData.success && accData.data?.accuracy) {
-					const valid = accData.data.accuracy.filter(
-						(m: { avgMape: number | null }) => m.avgMape !== null,
-					);
-					if (valid.length > 0) {
-						valid.sort((a: { avgMape: number }, b: { avgMape: number }) => a.avgMape - b.avgMape);
-						setBestModelId(valid[0].modelId);
-					} else {
-						setBestModelId(undefined);
+				if (signalRes.status === "fulfilled" && signalRes.value.ok) {
+					const data = await signalRes.value.json();
+					if (data.success && data.data) {
+						// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+						setSignal((prev: any) => {
+							if (prev?.type && prev.type !== data.data.type) {
+								setPreviousSignalType(prev.type);
+							}
+							return data.data;
+						});
 					}
 				}
+
+				if (accRes.status === "fulfilled" && accRes.value.ok) {
+					const accData = await accRes.value.json();
+					if (accData.success && accData.data?.accuracy) {
+						const valid = accData.data.accuracy.filter(
+							(m: { avgMape: number | null }) => m.avgMape !== null,
+						);
+						if (valid.length > 0) {
+							valid.sort((a: { avgMape: number }, b: { avgMape: number }) => a.avgMape - b.avgMape);
+							setBestModelId(valid[0].modelId);
+						} else {
+							setBestModelId(undefined);
+						}
+					}
+				}
+			} catch (err) {
+				// Aborted requests throw AbortError — that's expected on fast commodity
+				// switches and must NOT clear loading state of the in-flight request.
+				if (err instanceof DOMException && err.name === "AbortError") return;
+				// Signal fetch failed — keep existing signal or null
+			} finally {
+				setSignalLoading(false);
 			}
-		} catch {
-			// Signal fetch failed — keep existing signal or null
-		} finally {
-			setSignalLoading(false);
-		}
-	}, [selected, prices]);
+		},
+		[selected, prices],
+	);
 
 	useEffect(() => {
-		loadSignal();
+		const controller = new AbortController();
+		loadSignal(controller.signal);
+		return () => controller.abort();
 	}, [loadSignal]);
 
 	// Fetch prediction history for selected commodity

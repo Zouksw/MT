@@ -173,6 +173,12 @@
 - **质量门**: ✅ 238/239 通过零 429(测试数 190→239),build 成功
 - 详见 `reviews/2026-06-29-round-4.md`
 
+### 第 5 轮 — datasets 重构 + bug 清零 ✅ 完成(2026-07-05)
+- **C**: **C2续 datasets 抽 service** ✅ datasets.ts 648→374 行,7 函数下沉 datasetService(CSV/JSON import 整体下沉)
+- **bug**: **FE-H6 credentials 嵌套** ✅ / **FE-M1 中文硬编码** ✅ / **FE-H1 loadSignal 竞态** ✅ 三个遗留前端 bug 清零
+- **质量门**: ✅ 238/239 通过零 429(与第 4 轮一致,无回归),build 成功
+- 详见 `reviews/2026-07-05-round-5.md`
+
 ### 持续 (每轮附带)
 - 清遗留 Bug 表
 - 设计 token 化 (L1, 376 处)

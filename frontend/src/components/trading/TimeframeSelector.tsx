@@ -7,10 +7,10 @@ interface TimeframeSelectorProps {
 	onChange: (tf: Timeframe) => void;
 }
 
-const options: { key: Timeframe; labelCn: string; labelEn: string }[] = [
-	{ key: "daily", labelCn: "日", labelEn: "Daily" },
-	{ key: "weekly", labelCn: "周", labelEn: "Weekly" },
-	{ key: "monthly", labelCn: "月", labelEn: "Monthly" },
+const options: { key: Timeframe; label: string }[] = [
+	{ key: "daily", label: "Daily" },
+	{ key: "weekly", label: "Weekly" },
+	{ key: "monthly", label: "Monthly" },
 ];
 
 export default function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {
@@ -34,14 +34,7 @@ export default function TimeframeSelector({ value, onChange }: TimeframeSelector
             `}
 						aria-pressed={isActive}
 					>
-						<span className="block text-sm leading-tight">{opt.labelCn}</span>
-						<span
-							className={`block text-[10px] leading-tight ${
-								isActive ? "text-gray-300" : "text-gray-400"
-							}`}
-						>
-							{opt.labelEn}
-						</span>
+						{opt.label}
 					</button>
 				);
 			})}

@@ -135,8 +135,8 @@ export default function AIPredictPage() {
 			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
 			const response = await fetch("/api/inference/predict/visualize", {
 				method: "POST",
+				credentials: "include",
 				headers: {
-					credentials: "include",
 					"Content-Type": "application/json",
 					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},

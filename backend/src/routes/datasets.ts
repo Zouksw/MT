@@ -1,47 +1,25 @@
-import type { Prisma } from "@prisma/client";
 import { Router } from "express";
-import Papa from "papaparse";
-import { logger, prisma } from "@/lib";
+import { logger } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { cacheRoute, invalidateCache } from "@/middleware/cacheDecorator";
-import {
-	asyncHandler,
-	BadRequestError,
-	ForbiddenError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { asyncHandler } from "@/middleware/errorHandler";
 import { getPagination, paginationSchema } from "@/schemas/common";
 import {
 	createDatasetSchema as newCreateDatasetSchema,
 	updateDatasetSchema as newUpdateDatasetSchema,
 } from "@/schemas/datasets";
+import {
+	createDataset,
+	deleteDataset,
+	getDataset,
+	importDatasetData,
+	serializeDataset,
+	updateDataset,
+	listDatasets,
+} from "@/services/datasetService";
 
 const router = Router();
-
-type DatasetRow = {
-	sizeBytes?: bigint | null;
-	rowsCount?: number | null;
-	owner?: Record<string, unknown>;
-	[key: string]: unknown;
-};
-
-// Helper to serialize BigInt fields for JSON responses
-const serializeDataset = (dataset: DatasetRow) => {
-	const serialized: DatasetRow = { ...dataset };
-
-	// Convert all BigInt fields to string
-	if (serialized.sizeBytes)
-		serialized.sizeBytes = serialized.sizeBytes.toString() as unknown as bigint;
-
-	// Handle nested objects
-	if (serialized.owner) serialized.owner = { ...serialized.owner };
-
-	return serialized;
-};
-
-const _serializeDatasets = (datasets: DatasetRow[]) =>
-	datasets.map((ds: DatasetRow) => serializeDataset(ds));
 
 /**
  * @openapi
@@ -112,41 +90,15 @@ router.get(
 		const { skip, take } = getPagination(req.query);
 		const params = paginationSchema.parse(req.query);
 
-		const where: Prisma.DatasetWhereInput = {};
-
-		if (search) {
-			where.OR = [
-				{ name: { contains: search as string, mode: "insensitive" } },
-				{ description: { contains: search as string, mode: "insensitive" } },
-			];
-		}
-
-		const [datasets, total] = await Promise.all([
-			prisma.dataset.findMany({
-				where,
-				skip,
-				take,
-				include: {
-					owner: { select: { id: true, name: true, email: true } },
-					_count: { select: { timeseries: true } },
-				},
-				orderBy: { createdAt: "desc" },
-			}),
-			prisma.dataset.count({ where }),
-		]);
-
-		// Convert BigInt to string for JSON serialization
-		const serializedDatasets = datasets.map(
-			(ds: { sizeBytes?: bigint | null; rowsCount?: number | null; [key: string]: unknown }) => ({
-				...ds,
-				sizeBytes: ds.sizeBytes?.toString() || null,
-				rowsCount: ds.rowsCount || null,
-			}),
-		);
+		const { datasets, total } = await listDatasets({
+			search: search as string | undefined,
+			skip,
+			take,
+		});
 
 		res.json({
 			success: true,
-			data: serializedDatasets,
+			data: datasets,
 			pagination: {
 				page: params.page,
 				limit: params.limit,
@@ -182,23 +134,7 @@ router.get(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const dataset = await prisma.dataset.findUnique({
-			where: { id: req.params.id },
-			include: {
-				owner: { select: { id: true, name: true, email: true } },
-				timeseries: {
-					include: {
-						_count: { select: { dataPoints: true } },
-					},
-				},
-				_count: { select: { timeseries: true } },
-			},
-		});
-
-		if (!dataset) {
-			throw new NotFoundError("Dataset");
-		}
-
+		const dataset = await getDataset(req.params.id);
 		success(res, serializeDataset(dataset));
 	}),
 );
@@ -246,46 +182,9 @@ router.post(
 	"/",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const userId = req.userId;
 		const validatedData = newCreateDatasetSchema.parse(req.body);
 
-		// Check slug uniqueness
-		const existing = await prisma.dataset.findFirst({
-			where: {
-				slug: validatedData.slug,
-			},
-		});
-
-		if (existing) {
-			throw new BadRequestError("Slug already exists");
-		}
-
-		// Get or create default organization for the user
-		const defaultOrgId = "default-org-id";
-		const organization = await prisma.organizations.upsert({
-			where: { id: defaultOrgId },
-			update: {},
-			create: {
-				id: defaultOrgId,
-				owner_id: userId,
-				name: "Default",
-				slug: "default",
-			},
-		});
-
-		const dataset = await prisma.dataset.create({
-			data: {
-				name: validatedData.name,
-				slug: validatedData.slug,
-				description: validatedData.description,
-				storageFormat: validatedData.storageFormat,
-				ownerId: userId,
-				organization_id: organization.id,
-			},
-			include: {
-				owner: { select: { id: true, name: true, email: true } },
-			},
-		});
+		const dataset = await createDataset(validatedData, req.userId);
 
 		// Invalidate cache after creating a dataset
 		await invalidateCache("datasets:*").catch((err) =>
@@ -336,32 +235,9 @@ router.patch(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const userId = req.userId;
 		const validatedData = newUpdateDatasetSchema.parse(req.body);
 
-		const dataset = await prisma.dataset.findUnique({
-			where: { id: req.params.id },
-		});
-
-		if (!dataset) {
-			throw new NotFoundError("Dataset");
-		}
-
-		// Check ownership (simplified)
-		if (dataset.ownerId !== userId) {
-			throw new ForbiddenError();
-		}
-
-		const updatedDataset = await prisma.dataset.update({
-			where: { id: req.params.id },
-			data: {
-				...validatedData,
-				lastAccessedAt: new Date(),
-			},
-			include: {
-				owner: { select: { id: true, name: true, email: true } },
-			},
-		});
+		const updatedDataset = await updateDataset(req.params.id, req.userId, validatedData);
 
 		// Invalidate cache after updating a dataset
 		await invalidateCache("datasets:*").catch((err) =>
@@ -402,24 +278,7 @@ router.delete(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const userId = req.userId;
-
-		const dataset = await prisma.dataset.findUnique({
-			where: { id: req.params.id },
-		});
-
-		if (!dataset) {
-			throw new NotFoundError("Dataset");
-		}
-
-		// Check ownership
-		if (dataset.ownerId !== userId) {
-			throw new ForbiddenError();
-		}
-
-		await prisma.dataset.delete({
-			where: { id: req.params.id },
-		});
+		await deleteDataset(req.params.id, req.userId);
 
 		// Invalidate cache after deleting a dataset
 		await invalidateCache("datasets:*").catch((err) =>
@@ -498,149 +357,16 @@ router.post(
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { format, data } = req.body;
 
-		if (!format || !data) {
-			throw new BadRequestError("Format and data are required");
-		}
-
-		const dataset = await prisma.dataset.findUnique({
-			where: { id: req.params.id },
-		});
-
-		if (!dataset) {
-			throw new NotFoundError("Dataset");
-		}
-
-		// Check ownership
-		if (dataset.ownerId !== req.userId) {
-			throw new ForbiddenError();
-		}
-
-		let parsedData: Record<string, unknown>[] = [];
-		let timestampColumn = "timestamp";
-		let valueColumns: string[] = [];
-
-		// Parse data based on format
-		if (format === "csv") {
-			const parseResult = Papa.parse(data, {
-				header: true,
-				dynamicTyping: true,
-				skipEmptyLines: true,
-			});
-
-			if (parseResult.errors.length > 0) {
-				throw new BadRequestError("CSV parsing failed");
-			}
-
-			parsedData = parseResult.data as Record<string, unknown>[];
-
-			// Find timestamp column (look for common names)
-			const columns = Object.keys(parsedData[0] || {});
-			timestampColumn =
-				columns.find((col) =>
-					["timestamp", "time", "datetime", "date", "ts"].includes(col.toLowerCase()),
-				) || columns[0];
-
-			// Value columns are all columns except timestamp
-			valueColumns = columns.filter((col) => col !== timestampColumn);
-		} else if (format === "json") {
-			parsedData = Array.isArray(data) ? data : [data];
-			const columns = Object.keys(parsedData[0] || {});
-			timestampColumn =
-				columns.find((col) =>
-					["timestamp", "time", "datetime", "date", "ts"].includes(col.toLowerCase()),
-				) || columns[0];
-			valueColumns = columns.filter((col) => col !== timestampColumn);
-		} else {
-			throw new BadRequestError('Unsupported format. Use "csv" or "json"');
-		}
-
-		if (parsedData.length === 0) {
-			throw new BadRequestError("No data found");
-		}
-
-		// Create timeseries for each value column
-		const timeseries = await Promise.all(
-			valueColumns.map(async (column) => {
-				// Generate slug from column name (lowercase, replace spaces with hyphens)
-				const slug = column
-					.toLowerCase()
-					.replace(/[^a-z0-9]+/g, "-")
-					.replace(/^-|-$/g, "");
-
-				return prisma.timeseries.upsert({
-					where: {
-						datasetId_slug: {
-							datasetId: dataset.id,
-							slug: slug,
-						},
-					},
-					update: {},
-					create: {
-						datasetId: dataset.id,
-						name: column,
-						slug: slug,
-						unit: "",
-					},
-				});
-			}),
+		const { dataset, importStats } = await importDatasetData(
+			req.params.id,
+			req.userId,
+			format,
+			data,
 		);
 
-		// Batch insert datapoints (1000 at a time)
-		const batchSize = 1000;
-		let totalDatapoints = 0;
-
-		for (let i = 0; i < parsedData.length; i += batchSize) {
-			const batch = parsedData.slice(i, i + batchSize);
-			const datapoints: {
-				timeseriesId: string;
-				timestamp: Date;
-				valueJson: string;
-			}[] = [];
-
-			for (const row of batch) {
-				const timestamp = new Date(row[timestampColumn] as string | number | Date);
-				if (Number.isNaN(timestamp.getTime())) {
-					continue;
-				}
-
-				for (const ts of timeseries) {
-					const value = row[ts.name];
-					if (value !== null && value !== undefined) {
-						datapoints.push({
-							timeseriesId: ts.id,
-							timestamp,
-							valueJson: JSON.stringify(value),
-						});
-					}
-				}
-			}
-
-			if (datapoints.length > 0) {
-				await prisma.datapoint.createMany({
-					data: datapoints,
-					skipDuplicates: true,
-				});
-				totalDatapoints += datapoints.length;
-			}
-		}
-
-		// Update dataset with import statistics
-		const updatedDataset = await prisma.dataset.update({
-			where: { id: req.params.id },
-			data: {
-				isImported: true,
-				rowsCount: totalDatapoints,
-				lastAccessedAt: new Date(),
-			},
-		});
-
 		success(res, {
-			dataset: serializeDataset(updatedDataset),
-			importStats: {
-				timeseriesCreated: timeseries.length,
-				datapointsImported: totalDatapoints,
-				columns: valueColumns,
-			},
+			dataset: serializeDataset(dataset),
+			importStats,
 		});
 	}),
 );

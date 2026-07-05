@@ -18,8 +18,8 @@ describe("ChartToolbar", () => {
 			/>,
 		);
 
-		expect(screen.getByText("K线")).toBeInTheDocument();
-		expect(screen.getByText("折线")).toBeInTheDocument();
+		expect(screen.getByText("Candle")).toBeInTheDocument();
+		expect(screen.getByText("Line")).toBeInTheDocument();
 	});
 
 	it("should highlight active chart type", () => {
@@ -32,7 +32,7 @@ describe("ChartToolbar", () => {
 			/>,
 		);
 
-		const candleBtn = screen.getByText("K线").closest("button") as HTMLButtonElement;
+		const candleBtn = screen.getByText("Candle").closest("button") as HTMLButtonElement;
 		expect(candleBtn.className).toContain("bg-[#171717]");
 	});
 
@@ -47,7 +47,7 @@ describe("ChartToolbar", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByText("折线"));
+		fireEvent.click(screen.getByText("Line"));
 
 		expect(onChange).toHaveBeenCalledWith("line");
 	});

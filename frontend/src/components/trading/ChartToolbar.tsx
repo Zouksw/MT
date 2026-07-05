@@ -19,8 +19,8 @@ interface ChartToolbarProps {
 }
 
 const chartTypeOptions: { key: ChartType; label: string; icon: string }[] = [
-	{ key: "candlestick", label: "K线", icon: "||" },
-	{ key: "line", label: "折线", icon: "~" },
+	{ key: "candlestick", label: "Candle", icon: "||" },
+	{ key: "line", label: "Line", icon: "~" },
 ];
 
 const indicatorOptions: { key: keyof IndicatorState; label: string }[] = [
