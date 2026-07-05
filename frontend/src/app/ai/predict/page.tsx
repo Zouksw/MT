@@ -70,18 +70,6 @@ export default function AIPredictPage() {
 			description: "Auto-Regressive Integrated Moving Average",
 		},
 		{
-			id: "timer_xl",
-			name: "Timer_XL (LSTM)",
-			type: "Deep Learning",
-			description: "Long Short-Term Memory Network",
-		},
-		{
-			id: "sundial",
-			name: "Sundial (Transformer)",
-			type: "Deep Learning",
-			description: "Transformer-based Model",
-		},
-		{
 			id: "holtwinters",
 			name: "Holt-Winters",
 			type: "Classic",
@@ -324,14 +312,6 @@ export default function AIPredictPage() {
 								<li>
 									<strong className="text-foreground">ARIMA:</strong> Classic statistical method for
 									time series forecasting
-								</li>
-								<li>
-									<strong className="text-foreground">Timer_XL (LSTM):</strong> Long Short-Term
-									Memory for complex patterns
-								</li>
-								<li>
-									<strong className="text-foreground">Sundial (Transformer):</strong>{" "}
-									Transformer-based for complex time patterns
 								</li>
 								<li>
 									<strong className="text-foreground">Holt-Winters:</strong> Triple exponential

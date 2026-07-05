@@ -30,6 +30,12 @@ def predict_arima(
     confidence_level: float = 0.95,
 ) -> dict:
     arr = np.array(values, dtype=float)
+    # ARIMA(2,1,1) needs at least p+d+1 = 4 points for conditional least squares;
+    # with fewer, statsmodels' sum-of-squares slicing degenerates to a 0-d array
+    # and raises "too many indices for array". Degrade gracefully to the naive
+    # forecaster instead of crashing the batch prediction pipeline.
+    if len(arr) < 4:
+        return predict_naive(values, horizon, confidence_level)
     model = ARIMA(arr, order=(2, 1, 1))
     fitted = model.fit()
     fc = fitted.get_forecast(steps=horizon)

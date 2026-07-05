@@ -217,7 +217,7 @@ export default function LandingPage() {
 								</span>
 							</div>
 							<p className="text-sm text-muted-foreground leading-relaxed">
-								85+ beef cuts. 8 AI price models. 5 export markets.
+								85+ beef cuts. 6 AI price models. 5 export markets.
 							</p>
 						</div>
 

@@ -19,7 +19,7 @@ app.include_router(health.router, tags=["health"])
 @app.on_event("startup")
 def startup():
     logger.info(f"Inference service starting on {settings.host}:{settings.port}")
-    logger.info(f"Available models: arima, holtwinters, exponential_smoothing, naive_forecaster, stl_forecaster, timer_xl, sundial, chronos")
+    logger.info(f"Available models: arima, holtwinters, exponential_smoothing, naive_forecaster, stl_forecaster, chronos")
 
 
 if __name__ == "__main__":

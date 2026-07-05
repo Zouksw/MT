@@ -8,11 +8,7 @@
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, isDbAvailable } from "@/test/helpers/testApp";
 
 let app: Express;
 let dbAvailable = false;
@@ -30,7 +26,7 @@ describe("Signals/AI Routes (Integration)", () => {
 		if (!dbAvailable) return;
 	});
 
-	it("should return real model list (7 models)", async () => {
+	it("should return real model list (5 models)", async () => {
 		if (!dbAvailable) return;
 		const res = await request(app)
 			.get("/api/signals/models")
@@ -38,8 +34,8 @@ describe("Signals/AI Routes (Integration)", () => {
 
 		expect(res.status).toBe(200);
 		expect(res.body.success).toBe(true);
-		expect(res.body.data.models.length).toBe(7);
-		expect(res.body.data.count).toBe(7);
+		expect(res.body.data.models.length).toBe(5);
+		expect(res.body.data.count).toBe(5);
 
 		// Models are string IDs (e.g. "arima", "holtwinters")
 		expect(typeof res.body.data.models[0]).toBe("string");
@@ -60,9 +56,7 @@ describe("Signals/AI Routes (Integration)", () => {
 	it("should generate real signal for a commodity", async () => {
 		if (!dbAvailable) return;
 		const res = await request(app)
-			.get(
-				"/api/signals/wheat_cme?timeseriesPath=root.trading.wheat_cme.price&horizon=10",
-			)
+			.get("/api/signals/wheat_cme?timeseriesPath=root.trading.wheat_cme.price&horizon=10")
 			.set("Authorization", `Bearer ${token}`);
 
 		expect(res.status).toBe(200);
@@ -71,7 +65,7 @@ describe("Signals/AI Routes (Integration)", () => {
 		expect(["BUY", "SELL", "HOLD"]).toContain(res.body.data.type);
 		expect(res.body.data).toHaveProperty("confidence");
 		expect(res.body.data).toHaveProperty("individualSignals");
-		expect(res.body.data.individualSignals).toHaveLength(7);
+		expect(res.body.data.individualSignals).toHaveLength(5);
 	});
 
 	it("should return model accuracy for specific model", async () => {
@@ -93,9 +87,7 @@ describe("Signals/AI Routes (Integration)", () => {
 	it("should return correlation matrix", async () => {
 		if (!dbAvailable) return;
 		const res = await request(app)
-			.get(
-				"/api/signals/correlation/matrix?commodities=wheat_cme,corn_cme,gold_cme&window=30",
-			)
+			.get("/api/signals/correlation/matrix?commodities=wheat_cme,corn_cme,gold_cme&window=30")
 			.set("Authorization", `Bearer ${token}`);
 
 		expect(res.status).toBe(200);

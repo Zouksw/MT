@@ -15,8 +15,8 @@ const features = [
 	{
 		title: "AI Price Forecasting",
 		description:
-			"8 independent models — ARIMA, Holt-Winters, STL, Timer-XL, Chronos-2 — each producing price forecasts with confidence intervals and MAPE verification.",
-		details: ["8 AI models", "Confidence intervals", "MAPE tracking"],
+			"6 independent models — ARIMA, Holt-Winters, STL, Chronos-2 — each producing price forecasts with confidence intervals and MAPE verification.",
+		details: ["6 AI models", "Confidence intervals", "MAPE tracking"],
 		span: "",
 		visual: null,
 		goldAccent: true,

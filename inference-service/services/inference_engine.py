@@ -1,23 +1,32 @@
-"""Unified inference engine — routes to statistical or deep learning models."""
+"""Unified inference engine — routes to statistical models or the Chronos foundation model.
+
+Architecture (IoTDB AINode-style): only pretrained / ready-to-use models are
+served. Statistical models (ARIMA, Holt-Winters, etc.) do fast parameter
+estimation at predict-time (standard for this model class); Chronos is a
+zero-shot pretrained time-series foundation model. No model is trained from
+scratch on request — the previous Timer-XL/Sundial online-training path was
+removed as an anti-pattern.
+"""
 
 import logging
 import time
 
 from services.statistical_models import STATISTICAL_MODELS
-from services.deep_models import DEEP_MODELS
 
 logger = logging.getLogger(__name__)
 
 CHRONOS_AVAILABLE = False
 try:
-    from chronos import ChronosPipeline
-    import numpy as np
+    from chronos import ChronosPipeline  # noqa: F401
+    import numpy as np  # noqa: F401
+
     CHRONOS_AVAILABLE = True
     logger.info("Chronos-forecasting available")
 except ImportError:
     logger.warning("chronos-forecasting not installed — chronos model unavailable")
 
-_all_models = {**STATISTICAL_MODELS, **DEEP_MODELS}
+# Only pretrained / ready-to-use models. No self-training models.
+_all_models = {**STATISTICAL_MODELS}
 if CHRONOS_AVAILABLE:
     _all_models["chronos"] = None  # handled separately
 
@@ -41,8 +50,6 @@ def predict(
         result = _predict_chronos(values, horizon, confidence_level)
     elif model_id in STATISTICAL_MODELS:
         result = STATISTICAL_MODELS[model_id](values, horizon, confidence_level)
-    elif model_id in DEEP_MODELS:
-        result = DEEP_MODELS[model_id](values, horizon, confidence_level)
     else:
         raise ValueError(f"Model {model_id} not implemented")
 
@@ -88,12 +95,10 @@ def list_models() -> list[dict]:
         {"id": "exponential_smoothing", "name": "Exponential Smoothing", "type": "statistical", "description": "Simple exponential smoothing"},
         {"id": "naive_forecaster", "name": "Naive Forecaster", "type": "statistical", "description": "Last-value baseline forecaster"},
         {"id": "stl_forecaster", "name": "STL Forecaster", "type": "statistical", "description": "STL decomposition with linear trend extrapolation"},
-        {"id": "timer_xl", "name": "Timer-XL (LSTM)", "type": "deep_learning", "description": "LSTM-based forecaster, trains on input data"},
-        {"id": "sundial", "name": "Sundial (Transformer)", "type": "deep_learning", "description": "Transformer-based forecaster, trains on input data"},
     ]
     if CHRONOS_AVAILABLE:
         models.append({
             "id": "chronos", "name": "Chronos-2", "type": "foundation",
-            "description": "Amazon Chronos T5 time-series foundation model",
+            "description": "Amazon Chronos T5 time-series foundation model (pretrained, zero-shot)",
         })
     return models

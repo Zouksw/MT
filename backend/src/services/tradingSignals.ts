@@ -15,15 +15,14 @@
 import { logger } from "../lib";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
 
-// All 7 AI Node models. TIMER_XL/SUNDIAL may be unavailable.
+// All pretrained / ready-to-use models (IoTDB AINode style — no self-training).
+// Timer-XL/Sundial (per-request online training) removed in Round 12.
 const ALL_MODELS = [
 	"arima",
 	"holtwinters",
 	"exponential_smoothing",
 	"naive_forecaster",
 	"stl_forecaster",
-	"timer_xl",
-	"sundial",
 ] as const;
 
 export type SignalType = "BUY" | "SELL" | "HOLD";
@@ -87,10 +86,7 @@ function calculateConfidence(
 /**
  * Classify a prediction into BUY/SELL/HOLD
  */
-function classifySignal(
-	predictedChange: number,
-	confidence: number,
-): SignalType {
+function classifySignal(predictedChange: number, confidence: number): SignalType {
 	if (predictedChange > 1 && confidence > 0.7) return "BUY";
 	if (predictedChange < -1 && confidence > 0.7) return "SELL";
 	return "HOLD";
@@ -99,9 +95,7 @@ function classifySignal(
 /**
  * Generate trading signal from multiple model predictions (parallel, fault-tolerant)
  */
-export async function generateSignal(
-	req: SignalRequest,
-): Promise<TradingSignal> {
+export async function generateSignal(req: SignalRequest): Promise<TradingSignal> {
 	const models = req.models || ALL_MODELS;
 	const horizon = req.horizon || 10;
 	const currentPrice = req.currentPrice;
@@ -114,18 +108,10 @@ export async function generateSignal(
 	const results = await Promise.allSettled(
 		models.map(async (modelId): Promise<ModelSignal> => {
 			try {
-				let prediction = await getCachedPrediction(
-					req.commodityId,
-					modelId,
-					horizon,
-				);
+				let prediction = await getCachedPrediction(req.commodityId, modelId, horizon);
 
 				if (!prediction) {
-					prediction = await runAndCachePrediction(
-						req.commodityId,
-						modelId,
-						horizon,
-					);
+					prediction = await runAndCachePrediction(req.commodityId, modelId, horizon);
 				}
 
 				if (!prediction.values?.length) {
@@ -142,8 +128,7 @@ export async function generateSignal(
 				}
 
 				const lastPredicted = prediction.values[prediction.values.length - 1];
-				const predictedChange =
-					((lastPredicted - currentPrice) / currentPrice) * 100;
+				const predictedChange = ((lastPredicted - currentPrice) / currentPrice) * 100;
 				const confidence = calculateConfidence(
 					currentPrice,
 					prediction.lowerBound,
@@ -191,9 +176,7 @@ export async function generateSignal(
 		};
 	});
 
-	const availableSignals = individualSignals.filter(
-		(s) => s.status === "available",
-	);
+	const availableSignals = individualSignals.filter((s) => s.status === "available");
 	const availableCount = availableSignals.length;
 
 	// All models failed
@@ -225,10 +208,7 @@ export async function generateSignal(
 	if (buyCount > sellCount && buyCount >= Math.ceil(availableCount / 2)) {
 		consensusType = "BUY";
 		modelsAgree = buyCount;
-	} else if (
-		sellCount > buyCount &&
-		sellCount >= Math.ceil(availableCount / 2)
-	) {
+	} else if (sellCount > buyCount && sellCount >= Math.ceil(availableCount / 2)) {
 		consensusType = "SELL";
 		modelsAgree = sellCount;
 	}
@@ -236,8 +216,7 @@ export async function generateSignal(
 	// Confidence = agreement ratio + magnitude bonus
 	const agreementRatio = modelsAgree / availableCount;
 	const avgMagnitude = Math.abs(
-		availableSignals.reduce((sum, s) => sum + s.predictedChange, 0) /
-			availableCount,
+		availableSignals.reduce((sum, s) => sum + s.predictedChange, 0) / availableCount,
 	);
 	const consensusConfidence = Math.min(
 		1,
@@ -254,8 +233,7 @@ export async function generateSignal(
 		.reduce((max, s) => Math.max(max, s.predictedValue), currentPrice * 1.05);
 
 	const predictedDirection =
-		availableSignals.reduce((sum, s) => sum + s.predictedChange, 0) /
-		availableCount;
+		availableSignals.reduce((sum, s) => sum + s.predictedChange, 0) / availableCount;
 
 	return {
 		type: consensusType,

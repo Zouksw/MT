@@ -74,44 +74,6 @@ const AI_NODE_ALGORITHMS = [
 			{ name: "seasonal_periods", label: "Seasonal period", default: 7, min: 2, max: 365 },
 		],
 	},
-	{
-		value: "timer_xl",
-		label: "Timer-XL (LSTM)",
-		description: "Long Short-Term Memory network - requires pretrained weights",
-		icon: "lstm",
-		category: "deeplearning",
-		features: [
-			"Long-term dependency capture",
-			"Complex pattern recognition",
-			"Requires pretraining",
-		],
-		requiresWeights: true,
-		hyperparameters: [
-			{
-				name: "model_path",
-				label: "Model weights path",
-				type: "string",
-				placeholder: "/path/to/timer_xl_weights.pth",
-			},
-		],
-	},
-	{
-		value: "sundial",
-		label: "Sundial (Transformer)",
-		description: "Transformer time series model - requires pretrained weights",
-		icon: "transformer",
-		category: "deeplearning",
-		features: ["Attention mechanism", "Parallel computation", "Requires pretraining"],
-		requiresWeights: true,
-		hyperparameters: [
-			{
-				name: "model_path",
-				label: "Model weights path",
-				type: "string",
-				placeholder: "/path/to/sundial_weights.pth",
-			},
-		],
-	},
 ];
 
 export default function ForecastCreate() {

@@ -35,8 +35,6 @@ export const MODEL_NAME_MAP: Record<string, string> = {
 	exponential_smoothing: "Exp. Smoothing",
 	naive_forecaster: "Naive",
 	stl_forecaster: "STL",
-	timer_xl: "Timer-XL",
-	sundial: "Sundial",
 };
 
 export const MODEL_COLORS: Record<string, string> = {
@@ -45,8 +43,6 @@ export const MODEL_COLORS: Record<string, string> = {
 	exponential_smoothing: "#EC4899",
 	naive_forecaster: "#F97316",
 	stl_forecaster: "#14B8A6",
-	timer_xl: "#06B6D4",
-	sundial: "#6366F1",
 };
 
 export interface PredictionLog {

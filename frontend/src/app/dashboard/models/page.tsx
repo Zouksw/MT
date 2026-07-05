@@ -24,8 +24,6 @@ const modelDescMap: Record<string, string> = {
 	exponential_smoothing: "Simple exponential smoothing",
 	naive_forecaster: "Baseline: last observed value",
 	stl_forecaster: "STL decomposition + forecast",
-	timer_xl: "LSTM deep learning model",
-	sundial: "Transformer-based model",
 };
 
 function getMapeVariant(mape: number | null): "success" | "warning" | "error" | "default" {

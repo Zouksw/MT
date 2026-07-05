@@ -10,12 +10,7 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	getPrisma,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, getPrisma, isDbAvailable } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `wf-${Date.now()}`;
 
@@ -54,7 +49,6 @@ describe("API Workflow Integration Tests", () => {
 			/* ignore cleanup errors */
 		}
 	});
-
 
 	// ─── Auth Workflow ────────────────────────────────────────────────
 
@@ -339,8 +333,8 @@ describe("API Workflow Integration Tests", () => {
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			expect(res.body.data.models.length).toBe(7);
-			expect(res.body.data.count).toBe(7);
+			expect(res.body.data.models.length).toBe(5);
+			expect(res.body.data.count).toBe(5);
 		});
 
 		test("should generate signal for commodity (with fallback price)", async () => {
@@ -356,7 +350,7 @@ describe("API Workflow Integration Tests", () => {
 			expect(["BUY", "SELL", "HOLD"]).toContain(res.body.data.type);
 			expect(res.body.data).toHaveProperty("confidence");
 			expect(res.body.data).toHaveProperty("individualSignals");
-			expect(res.body.data.individualSignals).toHaveLength(7);
+			expect(res.body.data.individualSignals).toHaveLength(5);
 		});
 
 		test("should get model accuracy data", async () => {
@@ -423,9 +417,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should list watchlists with items and prices", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/watchlists")
-				.set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/watchlists").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -555,9 +547,7 @@ describe("API Workflow Integration Tests", () => {
 
 		test("should list portfolios", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/portfolios")
-				.set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/portfolios").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);

@@ -14,12 +14,12 @@ const faqs: FAQItem[] = [
 	{
 		question: "What is MT?",
 		answer:
-			"MT is a beef trade analytics platform. We track 85+ standardized beef cuts across 16+ export factories in 5 major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina). 8 independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.",
+			"MT is a beef trade analytics platform. We track 85+ standardized beef cuts across 16+ export factories in 5 major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina). 6 independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.",
 	},
 	{
 		question: "How does the AI price forecasting work?",
 		answer:
-			"Eight models run independently on each beef commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL decomposition, Timer-XL (LSTM), Sundial (Transformer), and Chronos-2. Each produces a price forecast, a directional signal (up/down/stable), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.",
+			"Six models run independently on each beef commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL decomposition, and Chronos-2. Each produces a price forecast, a directional signal (up/down/stable), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.",
 	},
 	{
 		question: "What beef cuts are covered?",

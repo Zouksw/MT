@@ -35,8 +35,6 @@ export const TRADING_COLORS = {
 		exponential_smoothing: "#8B5CF6",
 		naive_forecaster: "#64748B",
 		stl_forecaster: "#EC4899",
-		timer_xl: "#14B8A6",
-		sundial: "#F97316",
 	} as Record<string, string>,
 
 	// Forecast zone annotation

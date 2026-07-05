@@ -11,8 +11,6 @@ const router = Router();
 
 const VALID_MODELS = [
 	"arima",
-	"timer_xl",
-	"sundial",
 	"holtwinters",
 	"exponential_smoothing",
 	"naive_forecaster",

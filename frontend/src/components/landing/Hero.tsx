@@ -106,9 +106,9 @@ const features = [
 		span: "md:col-span-2",
 	},
 	{
-		title: "8 AI Price Models",
+		title: "6 AI Price Models",
 		description:
-			"ARIMA, Holt-Winters, STL, Timer-XL, Chronos-2 — each producing independent price forecasts with confidence intervals",
+			"ARIMA, Holt-Winters, STL, Chronos-2 — each producing independent price forecasts with confidence intervals",
 		span: "",
 	},
 	{
@@ -138,7 +138,7 @@ export const Hero: React.FC = () => {
 					<div className="lg:col-span-3">
 						<MotionReveal>
 							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-primary">
-								85+ beef cuts &middot; 8 AI models &middot; 5 export markets
+								85+ beef cuts &middot; 6 AI models &middot; 5 export markets
 							</p>
 						</MotionReveal>
 

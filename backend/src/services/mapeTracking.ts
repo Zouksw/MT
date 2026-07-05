@@ -21,11 +21,15 @@ export interface LogPredictionParams {
 }
 
 /**
- * Log a prediction for later accuracy verification
+ * Log a prediction for later accuracy verification.
+ *
+ * Called by predictionCache.runAndCachePrediction AFTER the prediction has
+ * been successfully computed and cached, so the status is "completed" (not
+ * "pending"). The pending state was a bug — it left all 1066+ rows stuck
+ * because no code path ever advanced them. Status lifecycle:
+ *   completed  → verified   (verifyPrediction runs when actuals arrive)
  */
-export async function logPrediction(
-	params: LogPredictionParams,
-): Promise<string> {
+export async function logPrediction(params: LogPredictionParams): Promise<string> {
 	const log = await prisma.predictionLog.create({
 		data: {
 			modelId: params.modelId,
@@ -35,7 +39,7 @@ export async function logPrediction(
 			lowerBounds: params.lowerBounds ?? undefined,
 			upperBounds: params.upperBounds ?? undefined,
 			confidence: params.confidence ?? undefined,
-			status: "pending",
+			status: "completed",
 		},
 	});
 
@@ -133,9 +137,7 @@ export async function getModelAccuracy(
 	};
 
 	const last7d = new Date(Date.now() - 7 * 86400000);
-	const last7dLogs = verified.filter(
-		(l) => l.verifiedAt && l.verifiedAt >= last7d,
-	);
+	const last7dLogs = verified.filter((l) => l.verifiedAt && l.verifiedAt >= last7d);
 
 	return {
 		modelId,
@@ -167,8 +169,6 @@ export async function getAllModelAccuracy(
 		"exponential_smoothing",
 		"naive_forecaster",
 		"stl_forecaster",
-		"timer_xl",
-		"sundial",
 	];
 
 	const results = await Promise.all(
