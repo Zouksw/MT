@@ -185,10 +185,42 @@
 - **质量门**: ✅ 238/239 通过零 429(无回归),build 成功
 - 详见 `reviews/2026-07-05-round-6.md`
 
+### 全面探索(2026-07-05)— ops-check + investigate
+发现两个关键问题(详见 `reviews/2026-07-05-exploration.md`):
+- ⚠️ **inference 服务(10810)DOWN** — venv 损坏(click.core/idna.core 缺失),AI 预测全静默失败。修复=重建 venv
+- 📊 数据源实测修正:Round 3 判定的"端点全失效"实为"间歇可达但 0 产出"(success+warning),仅 fred/weather 因缺 key 是真 error
+
 ### 持续 (每轮附带)
 - 清遗留 Bug 表
-- 设计 token 化 (L1, 376 处)
+- 设计 token 化 (L1, 219 处,多数图表 stroke)
 - a11y (L9)、CSP (L10)
+
+---
+
+## 后续轮次计划(基于全面探索,2026-07-05 重排)
+
+经 ops-check + investigate 全面探索,优先级重排——**先恢复 AI 功能(inference)**,因它是平台核心且当前完全失效。
+
+### 第 7 轮 — AI 功能恢复(P0,功能性)
+- **修复 inference venv**:重建 venv(requirements.txt),启动 uvicorn,验证 /health:10810
+- **验证 AI 链路**:触发一次预测,确认 prediction_logs 增长
+- **接入 pm2 托管**:把 inference 服务加入 ecosystem.config.cjs(开机自启 + 崩溃恢复)
+- 质量门:inference /health 200 + 一次预测成功
+
+### 第 8 轮 — C3 升级 + metrics 收尾
+- **C3 Next.js 15.5.15→15.5.18**(patch,修 high 漏洞)
+- **C2续 metrics 抽 service**(状态化 service 新样板,endpointMetrics 单例迁移)
+- 质量门:audit high 归零 + 测试无回归
+
+### 第 9 轮 — 数据覆盖突破(依赖 key)
+- **激活 4 个 API key**(FRED/OPENWEATHER/MLA/USDA_MARS):需用户提供
+- **诊断 0 产出源**:dce/fao/usda/baltic 等(端点可达但解析空)——逐个排查解析逻辑
+- 质量门:覆盖率 34.5%→提升(视 key 与修复情况)
+
+### 持续(每轮附带)
+- L1 设计 token 化(剩余 ~27 处类内 arbitrary)
+- L9 a11y(label 关联)、L10 CSP
+- 依赖漏洞清零(前后端)
 
 ---
 
@@ -198,12 +230,13 @@
 |------|------|------|------|
 | 商品数据覆盖率 | 34.5% | 34.5%(A 线暂缓) | **≥60%** |
 | 依赖漏洞 (high+critical) | 51 | 51 | **0** |
-| 胖路由 (>600 行) | 6 | 4(community 已删 + auth 抽 service 后<600) | **0** |
-| 路由直连 Prisma | 208 处 | ~185(auth 下沉 service) | **<30** (仅简单 CRUD) |
+| 胖路由 (>600 行) | 6 | **1**(仅 metrics 657) | **0** |
+| 路由直连 Prisma | 208 处 | **~75**(5 路由抽 service) | **<30** (仅简单 CRUD) |
 | 测试 429 假失败 | 存在 | **0** ✅(C1 进程内测试) | **0** |
 | 前端数据获取模式 | 2 套 | 2 套 | **1 套 (SWR)** |
 | Simulation 定位 | 模拟交易(伪) | **回测工具** ✅(B1 已删伪交易) | 回测工具 |
 | Portfolio 定位 | 投资组合(交易) | **分析分组** ✅(B2 去交易语义) | 分析分组 |
+| AI 预测可用 | ✅(曾运行) | **⚠️ DOWN**(venv 损坏) | ✅ 恢复 |
 
 ---
 
