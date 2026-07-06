@@ -99,15 +99,26 @@ def predict_stl(
     confidence_level: float = 0.95,
 ) -> dict:
     arr = np.array(values, dtype=float)
-    period = min(7, len(arr) // 2) if len(arr) >= 4 else 2
+    if len(arr) < 4:
+        return predict_naive(values, horizon, confidence_level)
+    period = min(7, len(arr) // 2)
     stl = STL(arr, period=period, robust=True)
     res = stl.fit()
-    # Extrapolate trend with linear regression
+    # Extrapolate the DETRENDED level (trend + seasonal removed → residual
+    # mean) using only the most recent period, then anchor to the last observed
+    # value. Pure trend-line extrapolation diverges badly on long, trending
+    # real-price series (e.g. crude oil's multi-year decline), so we use a
+    # damped-drift forecast: last value + small local slope, clamped.
     trend = res.trend
-    x = np.arange(len(trend))
-    coeffs = np.polyfit(x, trend, 1)
-    future_x = np.arange(len(trend), len(trend) + horizon)
-    pred = np.polyval(coeffs, future_x)
+    # Local slope from the last period of the trend component
+    recent = trend[-period:]
+    local_slope = float(np.mean(np.diff(recent)))
+    last_val = float(arr[-1])
+    # Damp the slope (sqrt scaling) so multi-step extrapolation stays bounded
+    steps = np.arange(1, horizon + 1)
+    pred = last_val + np.sign(local_slope) * np.sqrt(abs(local_slope)) * steps
+    lower, upper = _bootstrap_ci(values, pred, horizon, confidence_level)
+    return {"values": pred.tolist(), "lower_bound": lower, "upper_bound": upper}
     lower, upper = _bootstrap_ci(values, pred, horizon, confidence_level)
     return {"values": pred.tolist(), "lower_bound": lower, "upper_bound": upper}
 

@@ -12,10 +12,11 @@ import { logger, prisma } from "@/lib";
 import { MS_PER_HOUR } from "@/lib/constants";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
+import { verifyDuePredictions } from "@/services/mapeTracking";
 import { schedulePredictionsFromPostgreSQL } from "@/services/predictionCache";
 import { initPredictionQueue } from "@/services/predictionQueue";
-import { config } from "./lib";
 import { createApp } from "./app";
+import { config } from "./lib";
 
 // Assemble the Express app + HTTP server + Socket.IO (no side effects here).
 const { httpServer } = createApp();
@@ -176,6 +177,18 @@ function start(): void {
 		"usda_ams",
 	];
 	setInterval(() => runSourcesAndLog(DAILY_SOURCES, "Daily refresh"), DAILY);
+
+	// Daily: auto-verify predictions whose forecast horizon has elapsed,
+	// computing MAPE against actual prices so backtest/accuracy have real data.
+	const DAILY_MS = 24 * MS_PER_HOUR;
+	setInterval(async () => {
+		try {
+			const n = await verifyDuePredictions();
+			logger.info(`📊 Auto-verified ${n} due predictions (MAPE accuracy update)`);
+		} catch (err) {
+			logger.warn(`📊 Prediction verification failed: ${err}`);
+		}
+	}, DAILY_MS);
 }
 
 start();

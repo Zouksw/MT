@@ -93,6 +93,67 @@ export async function verifyPrediction(
 }
 
 /**
+ * Auto-verify completed predictions whose forecast horizon has elapsed.
+ *
+ * For each completed prediction_log older than its horizon, fetch the actual
+ * daily close prices for the prediction's commodity over the forecast period
+ * and compute MAPE via verifyPrediction. This closes the loop:
+ *   completed → verified  so backtest/accuracy endpoints have real MAPE data.
+ *
+ * Designed to run on a schedule (called from server.ts). Idempotent — only
+ * touches status='completed' rows whose predictedAt + horizon has passed.
+ *
+ * @returns number of predictions verified this run
+ */
+export async function verifyDuePredictions(): Promise<number> {
+	// Completed predictions whose forecast window has fully elapsed.
+	// horizon is in steps; each step ~= 1 day for daily prices.
+	const due = await prisma.predictionLog.findMany({
+		where: {
+			status: "completed",
+			// predictedAt + horizon days must be <= now (forecast window elapsed)
+			predictedAt: { lte: new Date(Date.now() - 7 * 86400000) },
+		},
+		select: { id: true, commodityId: true, horizon: true, predictedAt: true },
+		take: 200, // bound per run
+	});
+
+	let verified = 0;
+	for (const log of due) {
+		try {
+			// Fetch actual daily closes AFTER the prediction was made, up to horizon
+			const actualPrices = await prisma.commodityPrice.findMany({
+				where: {
+					commodityId: log.commodityId,
+					interval: "daily",
+					date: { gt: log.predictedAt },
+				},
+				orderBy: { date: "asc" },
+				take: log.horizon,
+				select: { close: true },
+			});
+
+			// Need enough actuals to compute a meaningful MAPE
+			if (actualPrices.length < Math.min(log.horizon, 3)) continue;
+
+			const actualValues = actualPrices.map((p) => Number(p.close));
+			const result = await verifyPrediction(log.id, actualValues);
+			if (result) verified++;
+		} catch {
+			// Individual verification failures must not abort the batch
+		}
+	}
+
+	if (verified > 0) {
+		// imported lazily to avoid circular import at module load
+		const { logger } = await import("@/lib");
+		logger.info(`[MAPE] Auto-verified ${verified} of ${due.length} due predictions`);
+	}
+
+	return verified;
+}
+
+/**
  * Get model accuracy (average MAPE) over a time window
  */
 export async function getModelAccuracy(
