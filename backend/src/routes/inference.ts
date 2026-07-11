@@ -1,5 +1,6 @@
 import { type Request, type Response, Router } from "express";
 import { logger, prisma } from "@/lib";
+import { success } from "@/lib/response";
 import { checkAIAccess } from "@/middleware/aiAccess";
 import { authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
@@ -8,6 +9,29 @@ import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
 import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inference";
 
 const router = Router();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve a caller-supplied commodityId into the UUID that the price table is
+ * keyed on. Callers (frontend, clients) may pass either a UUID or a slug such
+ * as "crude_oil_cme"; the underlying CommodityPrice.commodityId column only
+ * matches UUIDs. Mirrors the resolution in routes/signals.ts:258-270.
+ *
+ * Returns the UUID, or throws BadRequestError when the slug/UUID is unknown.
+ * Splitting this from the existence check would let callers probe which ids
+ * exist, so the 400 carries no existence signal beyond "not found".
+ */
+async function resolveCommodityId(input: string): Promise<string> {
+	if (UUID_RE.test(input)) return input;
+	const commodity = await prisma.commodity.findFirst({ where: { slug: input } });
+	if (!commodity) {
+		throw new BadRequestError(
+			`Commodity "${input}" not found. Use GET /api/signals/commodities to list available commodities.`,
+		);
+	}
+	return commodity.id;
+}
 
 const VALID_MODELS = [
 	"arima",
@@ -51,20 +75,26 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
+		// Callers may pass either a UUID or a slug (e.g. "crude_oil_cme").
+		// resolve to the UUID the price table and the prewarmed cache are keyed
+		// on. Without this, a slug produced "Insufficient price data: 0 points"
+		// because CommodityPrice.commodityId only matches UUIDs.
+		const uuid = await resolveCommodityId(commodityId);
+
 		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : "arima";
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 
-		const cacheKey = cacheKeys.prediction(commodityId, modelId, h);
+		const cacheKey = cacheKeys.prediction(uuid, modelId, h);
 		const cachedResult = await cacheGet(cacheKey);
 		if (cachedResult) {
-			return res.json({ ...cachedResult, cached: true });
+			return success(res, { ...cachedResult, commodityId, cached: true });
 		}
 
 		// Errors propagate to errorHandler via asyncHandler (which logs + shapes
 		// the response). No try/catch needed here — it would only double-log.
 		const result = await predictFromCache({
-			commodityId,
+			commodityId: uuid,
 			horizon: h,
 			algorithm: modelId,
 			confidenceLevel: cl,
@@ -79,7 +109,7 @@ router.post(
 		};
 
 		await cacheSet(cacheKey, response, 900);
-		res.json({ ...response, cached: false });
+		success(res, { ...response, commodityId, cached: false });
 	}),
 );
 
@@ -114,7 +144,21 @@ router.post(
 			const h = Math.min(Math.max(Number(r.horizon) || 10, 1), 100);
 			const cl = Number(r.confidenceLevel) || 0.95;
 
-			const cacheKey = cacheKeys.prediction(commodityId, modelId, h);
+			// Resolve slug→UUID inside the try so an unknown id is reported per-row
+			// (matching the existing per-row error contract) rather than failing
+			// the whole batch.
+			let uuid: string;
+			try {
+				uuid = await resolveCommodityId(commodityId);
+			} catch (err) {
+				results.push({
+					error: err instanceof Error ? err.message : String(err),
+					commodityId,
+				});
+				continue;
+			}
+
+			const cacheKey = cacheKeys.prediction(uuid, modelId, h);
 			const cachedResult = await cacheGet(cacheKey);
 
 			if (cachedResult) {
@@ -125,7 +169,7 @@ router.post(
 
 			try {
 				const result = await predictFromCache({
-					commodityId,
+					commodityId: uuid,
 					horizon: h,
 					algorithm: modelId,
 					confidenceLevel: cl,
@@ -171,6 +215,8 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
+		const uuid = await resolveCommodityId(commodityId);
+
 		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : "arima";
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
@@ -178,20 +224,20 @@ router.post(
 
 		const [historicalData, predictionResult] = await Promise.all([
 			prisma.commodityPrice.findMany({
-				where: { commodityId, interval: "daily" },
+				where: { commodityId: uuid, interval: "daily" },
 				orderBy: { date: "desc" },
 				take: limit,
 				select: { date: true, close: true },
 			}),
 			predictFromCache({
-				commodityId,
+				commodityId: uuid,
 				horizon: h,
 				algorithm: modelId,
 				confidenceLevel: cl,
 			}),
 		]);
 
-		res.json({
+		success(res, {
 			commodityId,
 			historical: historicalData.map((p) => ({
 				timestamp: p.date.getTime(),
@@ -216,11 +262,13 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
+		const uuid = await resolveCommodityId(commodityId);
+
 		const th = Number(threshold) || 2.5;
 		const limit = Number(historyPoints) || 100;
 
 		const prices = await prisma.commodityPrice.findMany({
-			where: { commodityId, interval: "daily" },
+			where: { commodityId: uuid, interval: "daily" },
 			orderBy: { date: "asc" },
 			take: limit,
 			select: { date: true, close: true },
@@ -285,11 +333,13 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
+		const uuid = await resolveCommodityId(commodityId);
+
 		const th = Number(threshold) || 2.5;
 		const limit = Number(historyPoints) || 100;
 
 		const prices = await prisma.commodityPrice.findMany({
-			where: { commodityId, interval: "daily" },
+			where: { commodityId: uuid, interval: "daily" },
 			orderBy: { date: "asc" },
 			take: limit,
 			select: { date: true, close: true },
@@ -333,7 +383,7 @@ router.post(
 			bySeverity[a.severity] = (bySeverity[a.severity] || 0) + 1;
 		}
 
-		res.json({
+		success(res, {
 			commodityId,
 			historical: prices.map((p) => ({
 				timestamp: p.date.getTime(),
