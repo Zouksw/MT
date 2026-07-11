@@ -22,6 +22,8 @@
 - [CLAUDE.md](../CLAUDE.md) — AI assistant instructions (project root)
 
 ### Reviews & Audits (`reviews/`)
+- [**2026-07-12 Round 27 多技能探查 + 后续开发计划**](reviews/2026-07-12-round-27-exploration.md) — 4 路 Explore agent + review + ops-check;覆盖 36.4%,瓶颈是数据源;R27-32 计划
+- [2026-07-12 Round 25-26](reviews/2026-07-12-round-25.md) — Storybook/phosphor/envelope 清理 + inference slug/UUID 修复(双向回归)
 - [**2026-07-06 多技能深度审计**](reviews/2026-07-06-multi-skill-audit.md) — 6 技能交叉验证的运行态/架构债/优化项总报告（已 review 二次验证）
 - [**2026-07-06 Round 17-19 执行收尾**](reviews/2026-07-06-round-17-19.md) — 前端 build 修复 + 静默吞错修复 + 数据停摆根因 + 索引
 - [2026-07-05 核心价值链审计](reviews/2026-07-05-core-value-chain-audit.md) — AI 预测/数据/分析链断裂点定位（上一轮基线）
