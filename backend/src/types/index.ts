@@ -61,16 +61,11 @@ export interface SecurityAuditLog {
 // API Request/Response Types
 // ============================================================================
 
-/**
- * Authenticated request with user
- */
-export interface AuthenticatedRequest {
-	user: {
-		id: string;
-		email: string;
-		role: "ADMIN" | "EDITOR" | "VIEWER";
-	};
-}
+// NOTE: `AuthenticatedRequest` lived here as a third duplicate of the type
+// defined in middleware/auth.ts (the canonical one all routes import). It had
+// a divergent shape (no userId, different user fields) and zero importers, so
+// it was removed to stop carrying a misleading duplicate. Use the middleware
+// version: `import { type AuthenticatedRequest } from "@/middleware/auth"`.
 
 /**
  * Filter parameters
