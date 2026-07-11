@@ -124,7 +124,11 @@ export async function runAndCachePrediction(
 			await client.setEx(key, PREDICTION_TTL_SECONDS, JSON.stringify(cached));
 		}
 
-		// Log prediction for MAPE accuracy tracking (non-blocking)
+		// Log prediction for MAPE accuracy tracking (non-blocking).
+		// Failures here must not break the cached prediction (the caller still
+		// gets a result), but they MUST be observable — a silent swallow leaves
+		// prediction_logs with gaps and hides a broken DB write path. Log the
+		// error with enough context to diagnose, then move on.
 		import("./mapeTracking")
 			.then(({ logPrediction }) => {
 				logPrediction({
@@ -134,12 +138,14 @@ export async function runAndCachePrediction(
 					predictedValues: result.values,
 					lowerBounds: result.lower_bound ?? undefined,
 					upperBounds: result.upper_bound ?? undefined,
-				}).catch(() => {
-					/* non-blocking */
+				}).catch((error) => {
+					logger.error(
+						`Failed to log prediction for ${modelId}/${commodityId} (MAPE tracking): ${error}`,
+					);
 				});
 			})
-			.catch(() => {
-				/* non-blocking */
+			.catch((error) => {
+				logger.error(`Failed to load mapeTracking module: ${error}`);
 			});
 
 		return cached;

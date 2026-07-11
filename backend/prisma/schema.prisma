@@ -535,6 +535,7 @@ model WatchlistItem {
 
   @@unique([watchlistId, commodityId])
   @@index([watchlistId])
+  @@index([commodityId])
   @@map("watchlist_items")
 }
 

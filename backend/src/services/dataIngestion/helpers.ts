@@ -65,8 +65,27 @@ export async function upsertPrice(data: {
 				source: data.source,
 			},
 		},
-		select: { id: true },
+		select: { id: true, open: true, high: true, low: true, close: true, volume: true },
 	});
+
+	// If the row exists with identical values, skip the write entirely and
+	// report neither insert nor update — a no-op re-scrape of the same data
+	// should not inflate the "updated" count (which previously made FRED's
+	// 7-day re-fetch look like 246K updates when zero values actually changed).
+	if (existed) {
+		const samePrice =
+			Number(existed.open) === data.open &&
+			Number(existed.high) === data.high &&
+			Number(existed.low) === data.low &&
+			Number(existed.close) === data.close &&
+			(existed.volume === null
+				? data.volume == null
+				: Number(existed.volume) === (data.volume ?? null));
+		if (samePrice) {
+			return { inserted: 0, updated: 0 };
+		}
+	}
+
 	await prisma.commodityPrice.upsert({
 		where: {
 			commodityId_interval_date_source: {
