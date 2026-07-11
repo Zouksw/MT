@@ -108,19 +108,37 @@ export async function verifyPrediction(
 export async function verifyDuePredictions(): Promise<number> {
 	// Completed predictions whose forecast window has fully elapsed.
 	// horizon is in steps; each step ~= 1 day for daily prices.
+	//
+	// We can't express "predictedAt + horizon <= now" as a single SQL filter
+	// (horizon varies per row), so we fetch candidates older than the minimum
+	// plausible horizon (7 days) and then check per-row in code. Ordered by
+	// predictedAt DESC so newer predictions (which are more likely to have
+	// fresh actuals) are processed first — older seed-era predictions whose
+	// commodities have no live data don't starve the queue.
+	const cutoff = new Date(Date.now() - 7 * 86400000);
+	const now = Date.now();
 	const due = await prisma.predictionLog.findMany({
 		where: {
 			status: "completed",
-			// predictedAt + horizon days must be <= now (forecast window elapsed)
-			predictedAt: { lte: new Date(Date.now() - 7 * 86400000) },
+			predictedAt: { lte: cutoff },
 		},
 		select: { id: true, commodityId: true, horizon: true, predictedAt: true },
-		take: 200, // bound per run
+		orderBy: { predictedAt: "desc" },
+		take: 500,
 	});
 
 	let verified = 0;
+	let skippedNoActuals = 0;
+	let skippedHorizon = 0;
 	for (const log of due) {
 		try {
+			// Per-row horizon check: predictedAt + horizon days must have elapsed
+			const horizonMs = log.horizon * 86400000;
+			if (log.predictedAt.getTime() + horizonMs > now) {
+				skippedHorizon++;
+				continue;
+			}
+
 			// Fetch actual daily closes AFTER the prediction was made, up to horizon
 			const actualPrices = await prisma.commodityPrice.findMany({
 				where: {
@@ -134,7 +152,10 @@ export async function verifyDuePredictions(): Promise<number> {
 			});
 
 			// Need enough actuals to compute a meaningful MAPE
-			if (actualPrices.length < Math.min(log.horizon, 3)) continue;
+			if (actualPrices.length < Math.min(log.horizon, 3)) {
+				skippedNoActuals++;
+				continue;
+			}
 
 			const actualValues = actualPrices.map((p) => Number(p.close));
 			const result = await verifyPrediction(log.id, actualValues);
@@ -144,11 +165,11 @@ export async function verifyDuePredictions(): Promise<number> {
 		}
 	}
 
-	if (verified > 0) {
-		// imported lazily to avoid circular import at module load
-		const { logger } = await import("@/lib");
-		logger.info(`[MAPE] Auto-verified ${verified} of ${due.length} due predictions`);
-	}
+	// imported lazily to avoid circular import at module load
+	const { logger } = await import("@/lib");
+	logger.info(
+		`[MAPE] Verified ${verified} of ${due.length} due predictions (${skippedNoActuals} no actuals, ${skippedHorizon} horizon not elapsed)`,
+	);
 
 	return verified;
 }

@@ -171,15 +171,18 @@ function start(): void {
 
 	// Daily: auto-verify predictions whose forecast horizon has elapsed,
 	// computing MAPE against actual prices so backtest/accuracy have real data.
+	// Runs immediately on startup (to catch up after downtime) then every 24h.
 	const DAILY_MS = 24 * MS_PER_HOUR;
-	setInterval(async () => {
+	const runVerification = async () => {
 		try {
 			const n = await verifyDuePredictions();
 			logger.info(`📊 Auto-verified ${n} due predictions (MAPE accuracy update)`);
 		} catch (err) {
 			logger.warn(`📊 Prediction verification failed: ${err}`);
 		}
-	}, DAILY_MS);
+	};
+	setTimeout(runVerification, 15000); // 15s delay lets scrapers finish first
+	setInterval(runVerification, DAILY_MS);
 }
 
 start();
