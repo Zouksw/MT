@@ -14,7 +14,6 @@ import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import { verifyDuePredictions } from "@/services/mapeTracking";
 import { schedulePredictionsFromPostgreSQL } from "@/services/predictionCache";
-import { initPredictionQueue } from "@/services/predictionQueue";
 import { createApp } from "./app";
 import { config } from "./lib";
 
@@ -127,14 +126,6 @@ function start(): void {
 			.catch((err) => {
 				logger.error(`📊 Initial data fetch failed: ${err}`);
 			});
-
-		// Initialize prediction queue (BullMQ workers)
-		try {
-			initPredictionQueue();
-			logger.info("🤖 Prediction queue initialized");
-		} catch (err) {
-			logger.warn(`🤖 Prediction queue skipped (Redis may not be available): ${err}`);
-		}
 
 		// Schedule AI predictions from PostgreSQL (async, non-blocking)
 		setTimeout(async () => {

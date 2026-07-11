@@ -81,7 +81,6 @@
 		"jest-environment-jsdom": "^29.7.0",
 		"js-yaml": "^5.2.1",
 		"knip": "^6.6.1",
-		"msw": "^2.13.3",
 		"storybook": "8",
 		"tailwindcss": "^4.2.2",
 		"typescript": "^5.8.3",
