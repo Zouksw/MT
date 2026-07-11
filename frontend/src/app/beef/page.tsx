@@ -7,17 +7,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-async function beefFetcher(url: string) {
-	const res = await fetch(`${API_BASE}${url}`, {
-		headers: { "Content-Type": "application/json" },
-		credentials: "include",
-	});
-	if (!res.ok) throw new Error(`${res.status}`);
-	return res.json();
-}
+import { beefFetcher } from "@/lib/beef";
 
 export default function BeefOverview() {
 	const {

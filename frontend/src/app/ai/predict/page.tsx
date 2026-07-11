@@ -140,10 +140,12 @@ export default function AIPredictPage() {
 			if (!response.ok) {
 				const error = await response.json();
 				if (response.status === 403 || response.status === 503) {
-					setPermissionError(error.error || "AI features are restricted to administrators");
-					throw new Error(error.error || "Prediction failed");
+					setPermissionError(
+						error.error?.message || "AI features are restricted to administrators",
+					);
+					throw new Error(error.error?.message || "Prediction failed");
 				}
-				throw new Error(error.error || "Prediction failed");
+				throw new Error(error.error?.message || "Prediction failed");
 			}
 
 			const data = await response.json();

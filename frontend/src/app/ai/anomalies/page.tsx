@@ -107,7 +107,7 @@ export default function AIAnomaliesPage() {
 
 			if (!response.ok) {
 				const error = await response.json();
-				throw new Error(error.error || "Detection failed");
+				throw new Error(error.error?.message || "Detection failed");
 			}
 
 			const data = await response.json();

@@ -149,7 +149,7 @@ export default function ForecastCreate() {
 
 			if (!response.ok) {
 				const errData = await response.json();
-				throw new Error(errData.error || "Failed to generate forecast");
+				throw new Error(errData.error?.message || "Failed to generate forecast");
 			}
 
 			const result = await response.json();
@@ -288,10 +288,7 @@ export default function ForecastCreate() {
 
 					{/* Algorithm Info */}
 					{algorithmInfo && (
-						<Alert
-							variant={algorithmInfo.category === "deeplearning" ? "warning" : "info"}
-							className="mb-4"
-						>
+						<Alert variant="info" className="mb-4">
 							<div>
 								<p className="font-semibold mb-1">{algorithmInfo.label} features:</p>
 								<ul className="list-disc pl-5 space-y-0.5 text-sm">
@@ -300,11 +297,6 @@ export default function ForecastCreate() {
 										<li key={idx}>{feature}</li>
 									))}
 								</ul>
-								{algorithmInfo.requiresWeights && (
-									<p className="text-sm mt-2 text-primary">
-										This algorithm requires pretrained model weight files
-									</p>
-								)}
 							</div>
 						</Alert>
 					)}
@@ -353,36 +345,23 @@ export default function ForecastCreate() {
 							</button>
 							{showHyperparams && (
 								<div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-									{algorithmInfo.hyperparameters.map((param) => {
-										const isString = "type" in param && param.type === "string";
-										return isString ? (
-											<Input
-												key={param.name}
-												label={param.label}
-												placeholder={"placeholder" in param ? param.placeholder : ""}
-												value={hyperparameters[param.name] || ""}
-												onChange={(e) => handleHyperparamChange(param.name, e.target.value)}
-												fullWidth
-												helperText={"default" in param ? `Default: ${param.default}` : undefined}
-											/>
-										) : (
-											<Input
-												key={param.name}
-												label={param.label}
-												type="number"
-												min={"min" in param ? String(param.min) : undefined}
-												max={"max" in param ? String(param.max) : undefined}
-												step={"step" in param ? String(param.step) : "1"}
-												value={
-													hyperparameters[param.name] ??
-													("default" in param ? String(param.default) : "")
-												}
-												onChange={(e) => handleHyperparamChange(param.name, e.target.value)}
-												fullWidth
-												helperText={"default" in param ? `Default: ${param.default}` : undefined}
-											/>
-										);
-									})}
+									{algorithmInfo.hyperparameters.map((param) => (
+										<Input
+											key={param.name}
+											label={param.label}
+											type="number"
+											min={"min" in param ? String(param.min) : undefined}
+											max={"max" in param ? String(param.max) : undefined}
+											step={"step" in param ? String(param.step) : "1"}
+											value={
+												hyperparameters[param.name] ??
+												("default" in param ? String(param.default) : "")
+											}
+											onChange={(e) => handleHyperparamChange(param.name, e.target.value)}
+											fullWidth
+											helperText={"default" in param ? `Default: ${param.default}` : undefined}
+										/>
+									))}
 								</div>
 							)}
 						</div>
