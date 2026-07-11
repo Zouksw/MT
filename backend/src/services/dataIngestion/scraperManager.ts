@@ -7,6 +7,9 @@ export interface ScraperResult {
 	skipped?: boolean;
 	/** Reason for skipping, surfaced to ingestion logs and the freshness board. */
 	skipReason?: string;
+	/** Set when runSource threw (caught by runSourcesAndLog) so the status
+	 * classifier records a hard failure as `error`, not `warning`. */
+	error?: string;
 }
 
 export interface Scraper {
@@ -47,6 +50,18 @@ export class ScraperManager {
 		for (const r of results) {
 			if (r.status === "fulfilled") {
 				summary[r.value.name] = r.value.result;
+			} else {
+				// A rejected source must reach the caller so it can log the failure
+				// (the refresh-all route checks `if ("error" in result)` to write an
+				// error ingestionLog row). Previously rejected sources were dropped
+				// entirely, making that branch dead code and silently hiding failed
+				// sources from the freshness board.
+				const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+				// We don't know the source name on rejection (the mapper threw before
+				// returning {name, result}), so use the matching entry's name.
+				const idx = results.indexOf(r);
+				const name = entries[idx]?.[0] ?? `unknown_${idx}`;
+				summary[name] = { error: reason };
 			}
 		}
 

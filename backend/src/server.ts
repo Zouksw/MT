@@ -33,8 +33,15 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
 			try {
 				results[name] = await scraperManager.runSource(name);
 			} catch (err) {
-				results[name] = { inserted: 0, updated: 0 };
-				logger.error(`📊 [${label}] ${name} failed: ${err}`);
+				// A thrown source is a hard failure (parse error, network down,
+				// unexpected exception) — NOT the same as "ran but produced 0 rows".
+				// Mark it with the error message so the status classification below
+				// records it as `error` on the freshness board. Without this flag a
+				// thrown source fell into the {inserted:0,updated:0} → warning
+				// branch, masking total failures as low-data warnings.
+				const msg = err instanceof Error ? err.message : String(err);
+				results[name] = { inserted: 0, updated: 0, error: msg };
+				logger.error(`📊 [${label}] ${name} failed: ${msg}`);
 			}
 		}
 		const summary = Object.entries(results)
@@ -52,6 +59,10 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
 				if (result.skipped) {
 					status = "error";
 					errorMessage = result.skipReason ?? "skipped";
+				} else if (result.error) {
+					// Thrown source (caught in the run loop above) — hard failure.
+					status = "error";
+					errorMessage = result.error;
 				} else if (result.inserted === 0 && result.updated === 0) {
 					status = "warning";
 				} else {

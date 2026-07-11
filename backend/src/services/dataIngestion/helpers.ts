@@ -131,8 +131,21 @@ export async function upsertFactor(data: {
 }) {
 	const existed = await prisma.marketFactor.findUnique({
 		where: { type_region_date: { type: data.type, region: data.region, date: data.date } },
-		select: { id: true },
+		select: { id: true, value: true, unit: true },
 	});
+
+	// If the row exists with identical value+unit, skip the write entirely and
+	// report neither insert nor update — same no-op short-circuit as upsertPrice.
+	// Without this, every re-scrape of unchanged factor data (FRED/USDA/SECEX/etc.)
+	// reported {updated:1}, inflating ingestion metrics identically to the
+	// fixed upsertPrice count bug.
+	if (existed) {
+		const sameFactor = Number(existed.value) === data.value && existed.unit === data.unit;
+		if (sameFactor) {
+			return { inserted: 0, updated: 0 };
+		}
+	}
+
 	await prisma.marketFactor.upsert({
 		where: { type_region_date: { type: data.type, region: data.region, date: data.date } },
 		update: {

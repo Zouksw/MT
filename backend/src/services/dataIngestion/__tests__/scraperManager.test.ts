@@ -11,11 +11,7 @@ vi.mock("@/lib", () => ({
 import type { Scraper, ScraperResult } from "../scraperManager";
 import { ScraperManager } from "../scraperManager";
 
-function createMockScraper(
-	name: string,
-	result?: ScraperResult,
-	shouldThrow?: boolean,
-): Scraper {
+function createMockScraper(name: string, result?: ScraperResult, shouldThrow?: boolean): Scraper {
 	return {
 		name,
 		fetch: vi.fn(async () => {
@@ -72,9 +68,7 @@ describe("ScraperManager", () => {
 		});
 
 		it("should throw for unknown source", async () => {
-			await expect(manager.runSource("unknown")).rejects.toThrow(
-				"Unknown source: unknown",
-			);
+			await expect(manager.runSource("unknown")).rejects.toThrow("Unknown source: unknown");
 		});
 
 		it("should update health on failure", async () => {
@@ -98,9 +92,7 @@ describe("ScraperManager", () => {
 			};
 			manager.registerSource("string-error", scraper);
 
-			await expect(manager.runSource("string-error")).rejects.toBe(
-				"string error",
-			);
+			await expect(manager.runSource("string-error")).rejects.toBe("string error");
 
 			const health = manager.getHealth();
 			expect(health["string-error"].error).toBe("string error");
@@ -131,13 +123,28 @@ describe("ScraperManager", () => {
 			const results = await manager.runAll();
 
 			expect(results.good).toEqual({ inserted: 5, updated: 0 });
-			// Failed sources are excluded from results by Promise.allSettled
-			expect(results.bad).toBeUndefined();
+			// Failed sources are now included with an {error} entry so the
+			// refresh-all route can log them. Previously rejected sources were
+			// dropped entirely, hiding failures from the freshness board.
+			expect(results.bad).toEqual({ error: "bad failed" });
 		});
 
 		it("should return empty object when no sources registered", async () => {
 			const results = await manager.runAll();
 			expect(results).toEqual({});
+		});
+
+		it("should include rejected sources as {error} entries (regression)", async () => {
+			// Regression: rejected sources were previously dropped from the
+			// summary entirely, making the refresh-all route's `if ("error" in result)`
+			// branch dead code and silently hiding failed sources.
+			const bad = createMockScraper("crashed", undefined, true);
+			manager.registerSource("crashed", bad);
+
+			const results = await manager.runAll();
+
+			expect(results.crashed).toEqual({ error: "crashed failed" });
+			expect("error" in results.crashed).toBe(true);
 		});
 	});
 
@@ -152,10 +159,7 @@ describe("ScraperManager", () => {
 		});
 
 		it("should reflect run results", async () => {
-			manager.registerSource(
-				"ok",
-				createMockScraper("ok", { inserted: 1, updated: 0 }),
-			);
+			manager.registerSource("ok", createMockScraper("ok", { inserted: 1, updated: 0 }));
 			await manager.runSource("ok");
 
 			const health = manager.getHealth();
