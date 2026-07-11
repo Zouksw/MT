@@ -1,21 +1,28 @@
 "use client";
 
-type SignalType = "BUY" | "SELL" | "HOLD";
+type Direction = "up" | "down" | "flat";
 
-interface SignalBadgeProps {
-	type: SignalType;
+interface DirectionBadgeProps {
+	direction: Direction;
 	confidence?: number;
 	size?: "small" | "default" | "large";
 }
 
-const signalConfig: Record<SignalType, { color: string; arrow: string; bg: string }> = {
-	BUY: { color: "#16a34a", arrow: "↑", bg: "#f0fdf4" },
-	SELL: { color: "#dc2626", arrow: "↓", bg: "#fef2f2" },
-	HOLD: { color: "#d97706", arrow: "−", bg: "#fffbeb" },
+const directionConfig: Record<
+	Direction,
+	{ color: string; arrow: string; bg: string; label: string }
+> = {
+	up: { color: "#16a34a", arrow: "↑", bg: "#f0fdf4", label: "上涨" },
+	down: { color: "#dc2626", arrow: "↓", bg: "#fef2f2", label: "下跌" },
+	flat: { color: "#d97706", arrow: "−", bg: "#fffbeb", label: "横盘" },
 };
 
-export default function SignalBadge({ type, confidence, size = "default" }: SignalBadgeProps) {
-	const config = signalConfig[type];
+export default function DirectionBadge({
+	direction,
+	confidence,
+	size = "default",
+}: DirectionBadgeProps) {
+	const config = directionConfig[direction];
 	const scale = size === "small" ? 0.85 : size === "large" ? 1.2 : 1;
 
 	return (
@@ -35,7 +42,7 @@ export default function SignalBadge({ type, confidence, size = "default" }: Sign
 				border: `1px solid ${config.color}30`,
 			}}
 		>
-			{config.arrow} {type}
+			{config.arrow} {config.label}
 			{confidence !== undefined && (
 				<span style={{ opacity: 0.8, marginLeft: 4, fontWeight: 400 }}>
 					{Math.round(confidence * 100)}%

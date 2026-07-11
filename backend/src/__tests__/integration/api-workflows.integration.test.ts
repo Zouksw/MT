@@ -346,11 +346,11 @@ describe("API Workflow Integration Tests", () => {
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			expect(res.body.data).toHaveProperty("type");
-			expect(["BUY", "SELL", "HOLD"]).toContain(res.body.data.type);
+			expect(res.body.data).toHaveProperty("direction");
+			expect(["up", "down", "flat"]).toContain(res.body.data.direction);
 			expect(res.body.data).toHaveProperty("confidence");
-			expect(res.body.data).toHaveProperty("individualSignals");
-			expect(res.body.data.individualSignals).toHaveLength(5);
+			expect(res.body.data).toHaveProperty("individualForecasts");
+			expect(res.body.data.individualForecasts).toHaveLength(5);
 		});
 
 		test("should get model accuracy data", async () => {

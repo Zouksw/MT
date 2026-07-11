@@ -11,9 +11,9 @@ import DataSourcePanel from "@/components/trading/DataSourcePanel";
 import MarketFactorsPanel from "@/components/trading/MarketFactorsPanel";
 import ModelConsensusTable from "@/components/trading/ModelConsensusTable";
 import MultiSourceChart from "@/components/trading/MultiSourceChart";
+import PriceForecastPanel from "@/components/trading/PriceForecastPanel";
 import ProfessionalChart from "@/components/trading/ProfessionalChart";
 import TimeframeSelector from "@/components/trading/TimeframeSelector";
-import TradingSignalPanel from "@/components/trading/TradingSignalPanel";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -87,20 +87,20 @@ export default function TradingPage() {
 			{/* Anomaly alerts */}
 			<AnomalyAlertBanner anomalies={d.anomalies} />
 
-			{/* Signal change alert */}
+			{/* Forecast direction change alert */}
 			{!d.beefMode &&
-				d.previousSignalType &&
-				d.signal?.type &&
-				d.previousSignalType !== d.signal.type && (
+				d.previousDirection &&
+				d.signal?.direction &&
+				d.previousDirection !== d.signal.direction && (
 					<Alert
 						variant="info"
-						title={`Signal changed: ${d.previousSignalType} → ${d.signal.type}`}
+						title={`预测方向变化: ${d.previousDirection} → ${d.signal.direction}`}
 						closable
-						onClose={() => d.setPreviousSignalType(null)}
+						onClose={() => d.setPreviousDirection(null)}
 						className="mb-4"
 					>
-						The consensus signal for {d.selected?.nameCn || d.selected?.name} shifted from{" "}
-						{d.previousSignalType} to {d.signal.type}.
+						{d.selected?.nameCn || d.selected?.name} 的预测方向从 {d.previousDirection} 转为{" "}
+						{d.signal.direction}。
 					</Alert>
 				)}
 
@@ -278,18 +278,23 @@ export default function TradingPage() {
 						</div>
 					)}
 					{
-						<TradingSignalPanel
-							consensusType={d.signal?.type || "HOLD"}
+						<PriceForecastPanel
+							consensusDirection={d.signal?.direction || "flat"}
 							confidence={d.signal?.confidence || 0}
 							modelsAgree={d.signal?.modelsAgree || 0}
 							totalModels={d.signal?.totalModels || 0}
-							individualSignals={(d.signal?.individualSignals ?? []).filter(Boolean)}
-							predictedDirection={d.signal?.predictedDirection || 0}
+							individualForecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
+							predictedChange={d.signal?.predictedChange || 0}
+							currentPrice={d.currentPrice}
+							predictedPrice={d.signal?.predictedPrice || d.currentPrice}
+							horizon={d.signal?.horizon || 10}
+							range={
+								d.signal?.range || { lower: d.currentPrice * 0.97, upper: d.currentPrice * 1.03 }
+							}
 							supportLevel={d.signal?.supportLevel || d.currentPrice * 0.97}
 							resistanceLevel={d.signal?.resistanceLevel || d.currentPrice * 1.04}
-							distribution={d.signal?.distribution || { buy: 0, sell: 0, hold: 0 }}
-							currentPrice={d.currentPrice}
-							bestModelId={d.bestModelId}
+							distribution={d.signal?.distribution || { up: 0, down: 0, flat: 0 }}
+							bestModelId={d.signal?.bestModel || d.bestModelId}
 							loading={d.signalLoading}
 							timestamp={d.signal?.timestamp}
 						/>
@@ -362,7 +367,7 @@ export default function TradingPage() {
 								</div>
 							) : (
 								<ModelConsensusTable
-									signals={(d.signal?.individualSignals ?? []).filter(Boolean)}
+									forecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
 									loading={d.signalLoading}
 								/>
 							)}

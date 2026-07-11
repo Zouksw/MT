@@ -1,13 +1,15 @@
 /**
- * Trading Signals Tests
+ * Price Forecast Tests
  *
- * The signal engine decides BUY/SELL/HOLD from multi-model predictions. These
- * tests pin the classification thresholds and consensus logic that Round 12
- * (model-list pruning) and Round 14 (STL fix) touched — regressions there
- * silently degrade signal quality, so each rule gets an explicit test.
+ * The forecast engine produces a *price forecast* (direction up/down/flat +
+ * predicted price + range) from multi-model predictions. These tests pin the
+ * direction thresholds, consensus logic, and the price-forecast fields
+ * (predictedPrice / range / bestModel) that the semantic refactor introduced.
  *
- * predictionCache is mocked so generateSignal is exercised as pure logic over
- * canned predictions — no Redis, no inference service, no DB.
+ * Old BUY/SELL/HOLD trade-signal tests were replaced when the product was
+ * repositioned to an information platform. predictionCache is mocked so
+ * generateForecast is exercised as pure logic over canned predictions — no
+ * Redis, no inference service, no DB.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,14 +26,14 @@ vi.mock("@/lib", () => ({
 }));
 
 import { getCachedPrediction, runAndCachePrediction } from "@/services/predictionCache";
-import { generateSignal, getAllModels } from "@/services/tradingSignals";
+import { generateForecast, getAllModels } from "@/services/tradingSignals";
 
 const mockedGetCached = vi.mocked(getCachedPrediction);
 const mockedRunAndCache = vi.mocked(runAndCachePrediction);
 
 /**
  * Build a cached prediction shape matching CachedPrediction from predictionCache.
- * Tight bounds (±1) → high confidence; wide bounds → low confidence.
+ * Tight bounds (spread small) → high confidence; wide bounds → low confidence.
  */
 function makePrediction(currentPrice: number, predictedPrice: number, spread = 2) {
 	return {
@@ -46,7 +48,7 @@ function makePrediction(currentPrice: number, predictedPrice: number, spread = 2
 	};
 }
 
-describe("Trading Signals", () => {
+describe("Price Forecast Engine", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockedGetCached.mockResolvedValue(null);
@@ -80,73 +82,95 @@ describe("Trading Signals", () => {
 		});
 	});
 
-	describe("generateSignal — classification thresholds", () => {
-		it("classifies BUY when predicted increase > 1% AND confidence > 70%", async () => {
-			// 100 → 101.5 = +1.5% change — just above the 1% BUY bar. Chosen at
-			// the boundary so the test fails if someone nudges the threshold up
-			// (verified via mutation: flipping >1 to >2 makes this FAIL).
+	describe("generateForecast — direction classification", () => {
+		it("classifies direction 'up' when predicted increase > 1%", async () => {
+			// 100 → 101.5 = +1.5% — just above the 1% up band. Boundary chosen
+			// so the test fails if the band widens (verified via mutation:
+			// changing the band to >2 makes this FAIL).
 			mockedGetCached.mockResolvedValue(makePrediction(100, 101.5, 2) as never);
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima"],
 			});
 
-			expect(signal.individualSignals[0].type).toBe("BUY");
-			expect(signal.individualSignals[0].status).toBe("available");
-			expect(signal.availableModels).toBe(1);
+			expect(forecast.individualForecasts[0].direction).toBe("up");
+			expect(forecast.individualForecasts[0].status).toBe("available");
+			expect(forecast.availableModels).toBe(1);
 		});
 
-		it("classifies SELL when predicted decrease > 1% AND confidence > 70%", async () => {
-			// 100 → 88 = -12% change
+		it("classifies direction 'down' when predicted decrease > 1%", async () => {
+			// 100 → 88 = -12%
 			mockedGetCached.mockResolvedValue(makePrediction(100, 88, 2) as never);
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima"],
 			});
 
-			expect(signal.individualSignals[0].type).toBe("SELL");
+			expect(forecast.individualForecasts[0].direction).toBe("down");
 		});
 
-		it("classifies HOLD when predicted change < 1% (below threshold)", async () => {
-			// 100 → 100.5 = +0.5% change — under the 1% BUY bar
+		it("classifies direction 'flat' when predicted change < 1%", async () => {
+			// 100 → 100.5 = +0.5% — inside the ±1% flat band
 			mockedGetCached.mockResolvedValue(makePrediction(100, 100.5, 2) as never);
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima"],
 			});
 
-			expect(signal.individualSignals[0].type).toBe("HOLD");
-		});
-
-		it("classifies HOLD when confidence <= 70% even with large predicted change", async () => {
-			// 100 → 120 = +20%, but wide bounds (spread=40) → low confidence.
-			// spread/price = 40/100 = 0.4 → confidence = 1 - 0.4 = 0.6 < 0.7
-			mockedGetCached.mockResolvedValue(makePrediction(100, 120, 40) as never);
-
-			const signal = await generateSignal({
-				commodityId: "c1",
-				horizon: 10,
-				currentPrice: 100,
-				models: ["arima"],
-			});
-
-			expect(signal.individualSignals[0].type).toBe("HOLD");
-			expect(signal.individualSignals[0].confidence).toBeLessThanOrEqual(0.7);
+			expect(forecast.individualForecasts[0].direction).toBe("flat");
 		});
 	});
 
-	describe("generateSignal — fault tolerance (Promise.allSettled)", () => {
+	describe("generateForecast — price forecast fields", () => {
+		it("exposes predictedPrice, currentPrice, range, and horizon", async () => {
+			mockedGetCached.mockResolvedValue(makePrediction(100, 105, 2) as never);
+
+			const forecast = await generateForecast({
+				commodityId: "c1",
+				horizon: 10,
+				currentPrice: 100,
+				models: ["arima"],
+			});
+
+			expect(forecast.currentPrice).toBe(100);
+			expect(forecast.horizon).toBe(10);
+			// Consensus predicted price = median of available models' end values
+			expect(forecast.predictedPrice).toBe(105);
+			// Range spans [min, max] across models (single model → both equal)
+			expect(forecast.range.lower).toBe(105);
+			expect(forecast.range.upper).toBe(105);
+		});
+
+		it("picks the highest-confidence model as bestModel", async () => {
+			// arima: spread=2 → confidence high; holtwinters: spread=40 → low
+			mockedGetCached.mockImplementation(async (_c, modelId) => {
+				if (modelId === "arima") return makePrediction(100, 105, 2) as never;
+				return makePrediction(100, 106, 40) as never;
+			});
+
+			const forecast = await generateForecast({
+				commodityId: "c1",
+				horizon: 10,
+				currentPrice: 100,
+				models: ["arima", "holtwinters"],
+			});
+
+			expect(forecast.bestModel).toBe("arima");
+		});
+	});
+
+	describe("generateForecast — fault tolerance (Promise.allSettled)", () => {
 		it("marks a failed model 'unavailable' without blocking the others", async () => {
-			// arima throws inside runAndCachePrediction; holtwinters returns a BUY
+			// arima throws inside runAndCachePrediction; holtwinters returns up
 			mockedGetCached.mockImplementation(async (_c, modelId) => {
 				if (modelId === "arima") return null;
 				return makePrediction(100, 112, 2) as never;
@@ -156,37 +180,37 @@ describe("Trading Signals", () => {
 				return makePrediction(100, 112, 2) as never;
 			});
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima", "holtwinters"],
 			});
 
-			const arima = signal.individualSignals.find((s) => s.modelId === "arima");
-			const holt = signal.individualSignals.find((s) => s.modelId === "holtwinters");
+			const arima = forecast.individualForecasts.find((f) => f.modelId === "arima");
+			const holt = forecast.individualForecasts.find((f) => f.modelId === "holtwinters");
 			expect(arima?.status).toBe("unavailable");
 			expect(arima?.error).toBe("inference down");
 			expect(holt?.status).toBe("available");
-			expect(signal.availableModels).toBe(1);
+			expect(forecast.availableModels).toBe(1);
 		});
 
-		it("returns a HOLD consensus with zero confidence when ALL models fail", async () => {
+		it("returns a flat consensus with zero confidence when ALL models fail", async () => {
 			mockedGetCached.mockResolvedValue(null);
 			mockedRunAndCache.mockRejectedValue(new Error("all down") as never);
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima", "holtwinters"],
 			});
 
-			expect(signal.type).toBe("HOLD");
-			expect(signal.confidence).toBe(0);
-			expect(signal.availableModels).toBe(0);
-			expect(signal.distribution).toEqual({ buy: 0, sell: 0, hold: 0 });
-			expect(signal.individualSignals.every((s) => s.status === "unavailable")).toBe(true);
+			expect(forecast.direction).toBe("flat");
+			expect(forecast.confidence).toBe(0);
+			expect(forecast.availableModels).toBe(0);
+			expect(forecast.distribution).toEqual({ up: 0, down: 0, flat: 0 });
+			expect(forecast.individualForecasts.every((f) => f.status === "unavailable")).toBe(true);
 		});
 
 		it("treats an empty prediction result (no values) as unavailable", async () => {
@@ -195,70 +219,70 @@ describe("Trading Signals", () => {
 				values: [],
 			} as never);
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima"],
 			});
 
-			expect(signal.individualSignals[0].status).toBe("unavailable");
-			expect(signal.individualSignals[0].error).toBe("Empty prediction result");
+			expect(forecast.individualForecasts[0].status).toBe("unavailable");
+			expect(forecast.individualForecasts[0].error).toBe("Empty prediction result");
 		});
 	});
 
-	describe("generateSignal — consensus", () => {
-		it("returns BUY consensus when a majority of available models vote BUY", async () => {
-			// 2 of 3 BUY (>1% up, high confidence), 1 HOLD
+	describe("generateForecast — consensus", () => {
+		it("returns 'up' consensus when a plurality of models point up", async () => {
+			// 2 of 3 up (>1%), 1 flat
 			mockedGetCached.mockImplementation(async (_c, modelId) => {
-				if (modelId === "arima") return makePrediction(100, 115, 2) as never; // BUY
-				if (modelId === "holtwinters") return makePrediction(100, 114, 2) as never; // BUY
-				return makePrediction(100, 100.3, 2) as never; // HOLD (<1%)
+				if (modelId === "arima") return makePrediction(100, 115, 2) as never; // up
+				if (modelId === "holtwinters") return makePrediction(100, 114, 2) as never; // up
+				return makePrediction(100, 100.3, 2) as never; // flat (<1%)
 			});
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima", "holtwinters", "naive_forecaster"],
 			});
 
-			expect(signal.type).toBe("BUY");
-			expect(signal.modelsAgree).toBe(2);
-			expect(signal.distribution.buy).toBe(2);
-			expect(signal.distribution.hold).toBe(1);
+			expect(forecast.direction).toBe("up");
+			expect(forecast.modelsAgree).toBe(2);
+			expect(forecast.distribution.up).toBe(2);
+			expect(forecast.distribution.flat).toBe(1);
 		});
 
-		it("falls back to HOLD consensus when no single direction reaches majority", async () => {
-			// 1 BUY, 1 SELL, 1 HOLD — no majority for either direction
+		it("falls back to 'flat' consensus when no direction is a plurality winner", async () => {
+			// 1 up, 1 down, 1 flat — no direction beats the others
 			mockedGetCached.mockImplementation(async (_c, modelId) => {
-				if (modelId === "arima") return makePrediction(100, 115, 2) as never; // BUY
-				if (modelId === "holtwinters") return makePrediction(100, 85, 2) as never; // SELL
-				return makePrediction(100, 100.3, 2) as never; // HOLD
+				if (modelId === "arima") return makePrediction(100, 115, 2) as never; // up
+				if (modelId === "holtwinters") return makePrediction(100, 85, 2) as never; // down
+				return makePrediction(100, 100.3, 2) as never; // flat
 			});
 
-			const signal = await generateSignal({
+			const forecast = await generateForecast({
 				commodityId: "c1",
 				horizon: 10,
 				currentPrice: 100,
 				models: ["arima", "holtwinters", "naive_forecaster"],
 			});
 
-			expect(signal.type).toBe("HOLD");
-			expect(signal.distribution).toEqual({ buy: 1, sell: 1, hold: 1 });
+			expect(forecast.direction).toBe("flat");
+			expect(forecast.distribution).toEqual({ up: 1, down: 1, flat: 1 });
 		});
 	});
 
-	describe("generateSignal — input validation", () => {
+	describe("generateForecast — input validation", () => {
 		it("throws when currentPrice is 0 (avoids divide-by-zero in change %)", async () => {
 			await expect(
-				generateSignal({ commodityId: "c1", horizon: 10, currentPrice: 0 }),
+				generateForecast({ commodityId: "c1", horizon: 10, currentPrice: 0 }),
 			).rejects.toThrow(/current price/i);
 		});
 
 		it("throws when currentPrice is negative", async () => {
 			await expect(
-				generateSignal({ commodityId: "c1", horizon: 10, currentPrice: -50 }),
+				generateForecast({ commodityId: "c1", horizon: 10, currentPrice: -50 }),
 			).rejects.toThrow(/current price/i);
 		});
 	});

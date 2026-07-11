@@ -40,7 +40,7 @@ export function useTradingData() {
 			predictedAt: string;
 		}>
 	>([]);
-	const [previousSignalType, setPreviousSignalType] = useState<string | null>(null);
+	const [previousDirection, setPreviousDirection] = useState<string | null>(null);
 	const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([]);
 	const [predictionOverlays, setPredictionOverlays] = useState<PredictionOverlay[]>([]);
 
@@ -191,8 +191,8 @@ export function useTradingData() {
 					if (data.success && data.data) {
 						// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 						setSignal((prev: any) => {
-							if (prev?.type && prev.type !== data.data.type) {
-								setPreviousSignalType(prev.type);
+							if (prev?.direction && prev.direction !== data.data.direction) {
+								setPreviousDirection(prev.direction);
 							}
 							return data.data;
 						});
@@ -411,8 +411,8 @@ export function useTradingData() {
 		error,
 		setError,
 		predictionHistory,
-		previousSignalType,
-		setPreviousSignalType,
+		previousDirection,
+		setPreviousDirection,
 		anomalies,
 		beefMode,
 		setBeefMode,

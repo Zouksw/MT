@@ -12,14 +12,11 @@
 import type { Prisma } from "@prisma/client";
 import type { Server } from "socket.io";
 import { logger, prisma } from "@/lib";
-import {
-	dispatchNotification,
-	getConfiguredChannels,
-} from "./notificationChannels";
-import type { SignalType } from "./tradingSignals";
+import { dispatchNotification, getConfiguredChannels } from "./notificationChannels";
+import type { Direction } from "./tradingSignals";
 
 export interface NotificationEvent {
-	type: "anomaly" | "signal_change" | "forecast_ready";
+	type: "anomaly" | "forecast_change" | "forecast_ready";
 	severity: "info" | "warning" | "critical";
 	commodityId: string;
 	message: string;
@@ -27,33 +24,39 @@ export interface NotificationEvent {
 	timestamp: string;
 }
 
-// Track last signals per commodity for change detection
-const lastSignals = new Map<string, SignalType>();
+// Track last forecast direction per commodity for change detection
+const lastDirections = new Map<string, Direction>();
+
+const DIRECTION_LABEL: Record<Direction, string> = {
+	up: "上涨",
+	down: "下跌",
+	flat: "横盘",
+};
 
 /**
- * Check for signal changes and emit notifications
+ * Check for forecast-direction changes and emit notifications.
+ * Fires when the consensus direction flips (e.g. flat → up).
  */
 export async function checkSignalChange(
 	commodityId: string,
-	newSignal: SignalType,
+	newDirection: Direction,
 	confidence: number,
 	io?: Server,
 ): Promise<void> {
-	const previous = lastSignals.get(commodityId);
+	const previous = lastDirections.get(commodityId);
 
-	// Update tracked signal
-	lastSignals.set(commodityId, newSignal);
+	// Update tracked direction
+	lastDirections.set(commodityId, newDirection);
 
-	if (!previous || previous === newSignal) return;
+	if (!previous || previous === newDirection) return;
 
-	// Signal changed — create notification
+	// Direction changed — create notification
 	const event: NotificationEvent = {
-		type: "signal_change",
-		severity:
-			newSignal === "HOLD" ? "info" : confidence > 0.7 ? "critical" : "warning",
+		type: "forecast_change",
+		severity: newDirection === "flat" ? "info" : confidence > 0.7 ? "critical" : "warning",
 		commodityId,
-		message: `Signal changed: ${previous} → ${newSignal} (confidence: ${Math.round(confidence * 100)}%)`,
-		data: { previousSignal: previous, newSignal, confidence },
+		message: `预测方向变化: ${DIRECTION_LABEL[previous]} → ${DIRECTION_LABEL[newDirection]} (置信度: ${Math.round(confidence * 100)}%)`,
+		data: { previousDirection: previous, newDirection, confidence },
 		timestamp: new Date().toISOString(),
 	};
 
@@ -63,10 +66,7 @@ export async function checkSignalChange(
 /**
  * Emit notification via WebSocket + persist to alerts
  */
-async function emitNotification(
-	event: NotificationEvent,
-	io?: Server,
-): Promise<void> {
+async function emitNotification(event: NotificationEvent, io?: Server): Promise<void> {
 	// 1. WebSocket broadcast
 	if (io) {
 		try {
@@ -100,7 +100,7 @@ async function emitNotification(
 						type:
 							event.type === "anomaly"
 								? ("ANOMALY" as const)
-								: event.type === "signal_change"
+								: event.type === "forecast_change"
 									? ("FORECAST_READY" as const)
 									: ("SYSTEM" as const),
 						severity:

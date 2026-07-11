@@ -23,7 +23,7 @@ import {
 } from "@/services/correlationAnalysis";
 import { getAllModelAccuracy, getModelAccuracy } from "@/services/mapeTracking";
 import { getAllCachedPredictions } from "@/services/predictionCache";
-import { generateSignal, getAllModels } from "@/services/tradingSignals";
+import { generateForecast, getAllModels } from "@/services/tradingSignals";
 
 const router = Router();
 
@@ -265,7 +265,7 @@ router.get(
 			: await prisma.commodity.findFirst({ where: { slug: commodityId } });
 		if (!commodity) {
 			throw new BadRequestError(
-				`Commodity "\${commodityId}" not found. Use GET /api/signals/commodities to list available commodities.`,
+				`Commodity "${commodityId}" not found. Use GET /api/signals/commodities to list available commodities.`,
 			);
 		}
 
@@ -281,22 +281,22 @@ router.get(
 
 		const models = params.models ? params.models.split(",").filter((m) => m) : undefined;
 
-		const signal = await generateSignal({
+		const forecast = await generateForecast({
 			commodityId: commodity.id,
 			horizon: params.horizon,
 			currentPrice,
 			models,
 		});
 
-		// Check for signal changes and send notifications (non-blocking)
+		// Check for forecast-direction changes and send notifications (non-blocking)
 		const io = req.app.get("io");
-		checkSignalChange(commodityId, signal.type, signal.confidence, io).catch((err) =>
+		checkSignalChange(commodityId, forecast.direction, forecast.confidence, io).catch((err) =>
 			logger.warn("Signal change check failed:", err),
 		);
 
 		success(res, {
 			commodityId,
-			...signal,
+			...forecast,
 			timestamp: new Date().toISOString(),
 		});
 	}),

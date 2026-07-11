@@ -1,15 +1,20 @@
 /**
- * Trading Signal Engine v2 — Multi-Model Ensemble
+ * Price Forecast Engine — Multi-Model Ensemble
  *
- * Generates BUY/SELL/HOLD signals from multiple AI model predictions.
- * Uses Promise.allSettled for parallel execution — failed models don't block others.
+ * Generates a *price forecast* (not a trade recommendation) from multiple AI
+ * model predictions. This is the information-platform framing: the platform
+ * tells the user "commodity X is projected at $Y in N days, range [lo, hi]",
+ * not "BUY/SELL". Trade-recommendation semantics (BUY/SELL/HOLD) were removed
+ * when the product was repositioned to an information/analysis platform.
  *
- * Signal logic (from design doc):
- * - Confidence = 1 - (upperBound - lowerBound) / currentPrice, clamped to [0, 1]
- * - BUY:  predicted increase > 1% AND confidence > 70%
- * - SELL: predicted decrease > 1% AND confidence > 70%
- * - HOLD: change < 1% OR confidence < 70%
- * - Consensus: count signals across all returning models, show distribution
+ * Forecast logic:
+ * - direction: up if models predict >+1% on average, down if <-1%, else flat
+ * - confidence = agreement ratio blended with predicted magnitude, in [0,1]
+ * - predictedPrice / range = median of available models' end-of-horizon values;
+ *   range = [min, max] across models (robust to outlier models)
+ * - support / resistance = price floor / ceiling implied by the forecast range
+ *
+ * Uses Promise.allSettled for parallel execution — failed models don't block.
  */
 
 import { logger } from "../lib";
@@ -25,38 +30,73 @@ const ALL_MODELS = [
 	"stl_forecaster",
 ] as const;
 
-export type SignalType = "BUY" | "SELL" | "HOLD";
+/** Direction of the consensus forecast — replaces the old BUY/SELL/HOLD union. */
+export type Direction = "up" | "down" | "flat";
 
-export interface ModelSignal {
+export interface ModelForecast {
 	modelId: string;
-	type: SignalType;
+	/** This model's direction: up/down/flat. */
+	direction: Direction;
+	/** Predicted % change at end of horizon vs current price. */
 	predictedChange: number;
-	currentValue: number;
-	predictedValue: number;
+	currentPrice: number;
+	/** Predicted price at end of horizon. */
+	predictedPrice: number;
+	/** Confidence derived from this model's prediction-interval width, [0,1]. */
 	confidence: number;
 	status: "available" | "unavailable";
 	error?: string;
 }
 
-export interface TradingSignal {
-	type: SignalType;
+export interface PriceForecast {
+	/** Consensus direction across models. */
+	direction: Direction;
+	/** Blended confidence: agreement ratio + magnitude, in [0,1]. */
 	confidence: number;
+	/** Number of models agreeing with the consensus direction. */
 	modelsAgree: number;
 	totalModels: number;
 	availableModels: number;
-	predictedDirection: number;
+	/** Consensus predicted % change at end of horizon (mean of available models). */
+	predictedChange: number;
+	/** Current spot price the forecast is measured from. */
+	currentPrice: number;
+	/** Consensus predicted price at end of horizon (median of available models). */
+	predictedPrice: number;
+	/** Forecast horizon in steps (days for daily series). */
+	horizon: number;
+	/** Consensus price range across models: [min, max] of end-of-horizon values. */
+	range: { lower: number; upper: number };
+	/** Price floor implied by non-down models (former "support"). */
 	supportLevel: number;
+	/** Price ceiling implied by non-up models (former "resistance"). */
 	resistanceLevel: number;
-	individualSignals: ModelSignal[];
-	distribution: { buy: number; sell: number; hold: number };
+	/** Per-model forecasts. */
+	individualForecasts: ModelForecast[];
+	/** How many models point up / down / flat. */
+	distribution: { up: number; down: number; flat: number };
+	/** Model id with the highest confidence among available models, if any. */
+	bestModel?: string;
 	timestamp: string;
 }
 
-export interface SignalRequest {
+export interface ForecastRequest {
 	commodityId: string;
 	horizon: number;
 	currentPrice: number;
 	models?: string[];
+}
+
+/** Direction band: |change| at or below this is "flat", in percent. */
+const FLAT_BAND_PCT = 1;
+
+/**
+ * Classify a predicted change (%) into a direction.
+ */
+function classifyDirection(predictedChangePct: number): Direction {
+	if (predictedChangePct > FLAT_BAND_PCT) return "up";
+	if (predictedChangePct < -FLAT_BAND_PCT) return "down";
+	return "flat";
 }
 
 /**
@@ -84,19 +124,20 @@ function calculateConfidence(
 }
 
 /**
- * Classify a prediction into BUY/SELL/HOLD
+ * Median of a numeric array (used for robust consensus price).
  */
-function classifySignal(predictedChange: number, confidence: number): SignalType {
-	if (predictedChange > 1 && confidence > 0.7) return "BUY";
-	if (predictedChange < -1 && confidence > 0.7) return "SELL";
-	return "HOLD";
+function median(values: number[]): number {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	const mid = Math.floor(sorted.length / 2);
+	return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
- * Generate trading signal from multiple model predictions (parallel, fault-tolerant)
+ * Generate a price forecast from multiple model predictions (parallel, fault-tolerant).
  */
-export async function generateSignal(req: SignalRequest): Promise<TradingSignal> {
-	const models = req.models || ALL_MODELS;
+export async function generateForecast(req: ForecastRequest): Promise<PriceForecast> {
+	const models = req.models || (ALL_MODELS as readonly string[]);
 	const horizon = req.horizon || 10;
 	const currentPrice = req.currentPrice;
 
@@ -106,7 +147,7 @@ export async function generateSignal(req: SignalRequest): Promise<TradingSignal>
 
 	// Execute all models in parallel — failed models become "unavailable"
 	const results = await Promise.allSettled(
-		models.map(async (modelId): Promise<ModelSignal> => {
+		models.map(async (modelId): Promise<ModelForecast> => {
 			try {
 				let prediction = await getCachedPrediction(req.commodityId, modelId, horizon);
 
@@ -117,10 +158,10 @@ export async function generateSignal(req: SignalRequest): Promise<TradingSignal>
 				if (!prediction.values?.length) {
 					return {
 						modelId,
-						type: "HOLD",
+						direction: "flat",
 						predictedChange: 0,
-						currentValue: currentPrice,
-						predictedValue: currentPrice,
+						currentPrice,
+						predictedPrice: currentPrice,
 						confidence: 0,
 						status: "unavailable",
 						error: "Empty prediction result",
@@ -137,10 +178,10 @@ export async function generateSignal(req: SignalRequest): Promise<TradingSignal>
 
 				return {
 					modelId,
-					type: classifySignal(predictedChange, confidence),
+					direction: classifyDirection(predictedChange),
 					predictedChange: Math.round(predictedChange * 100) / 100,
-					currentValue: currentPrice,
-					predictedValue: lastPredicted,
+					currentPrice,
+					predictedPrice: Math.round(lastPredicted * 100) / 100,
 					confidence: Math.round(confidence * 100) / 100,
 					status: "available",
 				};
@@ -149,10 +190,10 @@ export async function generateSignal(req: SignalRequest): Promise<TradingSignal>
 				logger.error(`Model ${modelId} failed: ${msg}`);
 				return {
 					modelId,
-					type: "HOLD",
+					direction: "flat",
 					predictedChange: 0,
-					currentValue: currentPrice,
-					predictedValue: currentPrice,
+					currentPrice,
+					predictedPrice: currentPrice,
 					confidence: 0,
 					status: "unavailable",
 					error: msg,
@@ -162,90 +203,120 @@ export async function generateSignal(req: SignalRequest): Promise<TradingSignal>
 	);
 
 	// Collect results
-	const individualSignals: ModelSignal[] = results.map((r) => {
+	const individualForecasts: ModelForecast[] = results.map((r) => {
 		if (r.status === "fulfilled") return r.value;
 		return {
 			modelId: "unknown",
-			type: "HOLD" as SignalType,
+			direction: "flat" as Direction,
 			predictedChange: 0,
-			currentValue: currentPrice,
-			predictedValue: currentPrice,
+			currentPrice,
+			predictedPrice: currentPrice,
 			confidence: 0,
 			status: "unavailable" as const,
 			error: r.reason?.message || "Unknown error",
 		};
 	});
 
-	const availableSignals = individualSignals.filter((s) => s.status === "available");
-	const availableCount = availableSignals.length;
+	const availableForecasts = individualForecasts.filter((f) => f.status === "available");
+	const availableCount = availableForecasts.length;
 
 	// All models failed
 	if (availableCount === 0) {
 		return {
-			type: "HOLD",
+			direction: "flat",
 			confidence: 0,
 			modelsAgree: 0,
 			totalModels: models.length,
 			availableModels: 0,
-			predictedDirection: 0,
+			predictedChange: 0,
+			currentPrice,
+			predictedPrice: currentPrice,
+			horizon,
+			range: { lower: currentPrice, upper: currentPrice },
 			supportLevel: currentPrice,
 			resistanceLevel: currentPrice,
-			individualSignals,
-			distribution: { buy: 0, sell: 0, hold: 0 },
+			individualForecasts,
+			distribution: { up: 0, down: 0, flat: 0 },
 			timestamp: new Date().toISOString(),
 		};
 	}
 
-	// Count signals
-	const buyCount = availableSignals.filter((s) => s.type === "BUY").length;
-	const sellCount = availableSignals.filter((s) => s.type === "SELL").length;
-	const holdCount = availableCount - buyCount - sellCount;
+	// Count directions
+	const upCount = availableForecasts.filter((f) => f.direction === "up").length;
+	const downCount = availableForecasts.filter((f) => f.direction === "down").length;
+	const flatCount = availableCount - upCount - downCount;
 
-	// Determine consensus
-	let consensusType: SignalType = "HOLD";
-	let modelsAgree = holdCount;
+	// Determine consensus direction (plurality, must beat the others)
+	let consensusDirection: Direction = "flat";
+	let modelsAgree = flatCount;
 
-	if (buyCount > sellCount && buyCount >= Math.ceil(availableCount / 2)) {
-		consensusType = "BUY";
-		modelsAgree = buyCount;
-	} else if (sellCount > buyCount && sellCount >= Math.ceil(availableCount / 2)) {
-		consensusType = "SELL";
-		modelsAgree = sellCount;
+	if (upCount > downCount && upCount > flatCount) {
+		consensusDirection = "up";
+		modelsAgree = upCount;
+	} else if (downCount > upCount && downCount > flatCount) {
+		consensusDirection = "down";
+		modelsAgree = downCount;
 	}
 
 	// Confidence = agreement ratio + magnitude bonus
 	const agreementRatio = modelsAgree / availableCount;
 	const avgMagnitude = Math.abs(
-		availableSignals.reduce((sum, s) => sum + s.predictedChange, 0) / availableCount,
+		availableForecasts.reduce((sum, f) => sum + f.predictedChange, 0) / availableCount,
 	);
 	const consensusConfidence = Math.min(
 		1,
 		agreementRatio * 0.7 + Math.min(avgMagnitude / 5, 1) * 0.3,
 	);
 
-	// Support & resistance
-	const supportLevel = availableSignals
-		.filter((s) => s.type !== "SELL")
-		.reduce((min, s) => Math.min(min, s.predictedValue), currentPrice * 0.95);
+	// Consensus predicted price = median of available models (robust to outliers)
+	const predictedPrices = availableForecasts.map((f) => f.predictedPrice);
+	const consensusPrice = median(predictedPrices);
 
-	const resistanceLevel = availableSignals
-		.filter((s) => s.type !== "BUY")
-		.reduce((max, s) => Math.max(max, s.predictedValue), currentPrice * 1.05);
+	// Forecast range = min/max across models (shows model disagreement spread)
+	const rangeLower = Math.min(...predictedPrices);
+	const rangeUpper = Math.max(...predictedPrices);
 
-	const predictedDirection =
-		availableSignals.reduce((sum, s) => sum + s.predictedChange, 0) / availableCount;
+	// Support & resistance: price floor from non-down models, ceiling from non-up models
+	const supportLevel = availableForecasts
+		.filter((f) => f.direction !== "down")
+		.reduce((min, f) => Math.min(min, f.predictedPrice), currentPrice * 0.95);
+
+	const resistanceLevel = availableForecasts
+		.filter((f) => f.direction !== "up")
+		.reduce((max, f) => Math.max(max, f.predictedPrice), currentPrice * 1.05);
+
+	const predictedChange =
+		availableForecasts.reduce((sum, f) => sum + f.predictedChange, 0) / availableCount;
+
+	// Best model = highest confidence among available models
+	let bestModel: string | undefined;
+	let bestConfidence = -1;
+	for (const f of availableForecasts) {
+		if (f.confidence > bestConfidence) {
+			bestConfidence = f.confidence;
+			bestModel = f.modelId;
+		}
+	}
 
 	return {
-		type: consensusType,
+		direction: consensusDirection,
 		confidence: Math.round(consensusConfidence * 100) / 100,
 		modelsAgree,
 		totalModels: models.length,
 		availableModels: availableCount,
-		predictedDirection: Math.round(predictedDirection * 100) / 100,
+		predictedChange: Math.round(predictedChange * 100) / 100,
+		currentPrice,
+		predictedPrice: Math.round(consensusPrice * 100) / 100,
+		horizon,
+		range: {
+			lower: Math.round(rangeLower * 100) / 100,
+			upper: Math.round(rangeUpper * 100) / 100,
+		},
 		supportLevel: Math.round(supportLevel * 100) / 100,
 		resistanceLevel: Math.round(resistanceLevel * 100) / 100,
-		individualSignals,
-		distribution: { buy: buyCount, sell: sellCount, hold: holdCount },
+		individualForecasts,
+		distribution: { up: upCount, down: downCount, flat: flatCount },
+		bestModel,
 		timestamp: new Date().toISOString(),
 	};
 }

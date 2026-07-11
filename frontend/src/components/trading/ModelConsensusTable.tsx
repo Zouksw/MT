@@ -2,33 +2,35 @@
 
 import { Table } from "@/components/ui/Table";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
-import SignalBadge from "./SignalBadge";
+import DirectionBadge from "./DirectionBadge";
 
-interface ModelSignal {
+type Direction = "up" | "down" | "flat";
+
+interface ModelForecast {
 	modelId: string;
-	type: "BUY" | "SELL" | "HOLD";
+	direction: Direction;
 	predictedChange: number;
-	currentValue: number;
-	predictedValue: number;
+	currentPrice: number;
+	predictedPrice: number;
 	confidence: number;
 }
 
 interface ModelConsensusTableProps {
-	signals: ModelSignal[];
+	forecasts: ModelForecast[];
 	loading?: boolean;
 }
 
 export default function ModelConsensusTable({
-	signals,
+	forecasts,
 	loading = false,
 }: ModelConsensusTableProps) {
-	const tableData = signals.filter(Boolean).map((s) => ({ ...s, id: s.modelId }));
+	const tableData = forecasts.filter(Boolean).map((f) => ({ ...f, id: f.modelId }));
 
-	type Row = ModelSignal & { id: string };
+	type Row = ModelForecast & { id: string };
 	const columns = [
 		{
 			key: "modelId",
-			title: "Model",
+			title: "模型",
 			dataIndex: "modelId" as const,
 			render: (_v: unknown, row: Row) => (
 				<span className="font-semibold font-mono text-[13px]">
@@ -37,20 +39,20 @@ export default function ModelConsensusTable({
 			),
 		},
 		{
-			key: "type",
-			title: "Signal",
-			dataIndex: "type" as const,
+			key: "direction",
+			title: "方向",
+			dataIndex: "direction" as const,
 			render: (_v: unknown, row: Row) => (
-				<SignalBadge type={row.type} confidence={row.confidence} size="small" />
+				<DirectionBadge direction={row.direction} confidence={row.confidence} size="small" />
 			),
 		},
 		{
-			key: "predictedValue",
-			title: "Predicted",
-			dataIndex: "predictedValue" as const,
+			key: "predictedPrice",
+			title: "预测价格",
+			dataIndex: "predictedPrice" as const,
 			render: (_v: unknown, row: Row) => (
 				<span className="font-mono">
-					{row.predictedValue?.toLocaleString("en-US", {
+					{row.predictedPrice?.toLocaleString("en-US", {
 						minimumFractionDigits: 2,
 						maximumFractionDigits: 2,
 					})}
@@ -59,7 +61,7 @@ export default function ModelConsensusTable({
 		},
 		{
 			key: "predictedChange",
-			title: "Change",
+			title: "变化",
 			dataIndex: "predictedChange" as const,
 			render: (_v: unknown, row: Row) => (
 				<span
@@ -76,7 +78,7 @@ export default function ModelConsensusTable({
 		},
 		{
 			key: "confidence",
-			title: "Confidence",
+			title: "置信度",
 			dataIndex: "confidence" as const,
 			render: (_v: unknown, row: Row) => {
 				const pct = Math.round(row.confidence * 100);
@@ -106,11 +108,7 @@ export default function ModelConsensusTable({
 	}
 
 	if (tableData.length === 0) {
-		return (
-			<div className="text-center py-8 text-gray-400 text-sm">
-				No model signals available for this commodity
-			</div>
-		);
+		return <div className="text-center py-8 text-gray-400 text-sm">该商品暂无模型预测数据</div>;
 	}
 
 	return <Table columns={columns} dataSource={tableData} />;

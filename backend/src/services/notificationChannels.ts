@@ -32,7 +32,7 @@ export interface ChannelConfig {
 }
 
 export interface NotificationPayload {
-	type: "anomaly" | "signal_change" | "forecast_ready";
+	type: "anomaly" | "forecast_change" | "forecast_ready";
 	severity: "info" | "warning" | "critical";
 	commodityId: string;
 	message: string;
@@ -86,21 +86,14 @@ function getSlackConfig(): { webhookUrl: string; channel: string } | null {
 /**
  * Send notification via email
  */
-async function sendEmail(
-	to: string[],
-	payload: NotificationPayload,
-): Promise<boolean> {
+async function sendEmail(to: string[], payload: NotificationPayload): Promise<boolean> {
 	const transport = getEmailTransport();
 	if (!transport || to.length === 0) return false;
 
 	const fromAddress = process.env.SMTP_FROM || "noreply@mt.local";
 
 	const severityEmoji =
-		payload.severity === "critical"
-			? "🔴"
-			: payload.severity === "warning"
-				? "🟡"
-				: "🔵";
+		payload.severity === "critical" ? "🔴" : payload.severity === "warning" ? "🟡" : "🔵";
 
 	const subject = `${severityEmoji} [${payload.severity.toUpperCase()}] ${payload.type.replace("_", " ")} — ${payload.commodityId}`;
 
