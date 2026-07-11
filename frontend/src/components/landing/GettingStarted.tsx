@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Brain, CheckCircle } from "@phosphor-icons/react";
+import { ArrowRight, Brain, CheckCircle2 } from "lucide-react";
 
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 
@@ -80,7 +80,7 @@ const steps = [
 			"7 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
 		preview: (
 			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-white/[0.05]">
-				<Brain size={20} weight="duotone" className="text-primary shrink-0" />
+				<Brain size={20} className="text-primary shrink-0" />
 				<div className="flex-1">
 					<div className="text-xs font-medium text-foreground">AI Consensus</div>
 					<div className="text-xs text-muted-foreground">Strong Buy — 73% confidence</div>
@@ -173,7 +173,7 @@ export default function GettingStarted() {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index}>
 							<div className="flex items-center gap-3 rounded-xl outline outline-black/5 dark:outline-white/10 px-5 py-4">
-								<CheckCircle size={20} weight="fill" className="text-green-500 flex-shrink-0" />
+								<CheckCircle2 size={20} className="text-green-500 flex-shrink-0" />
 								<span className="text-sm font-medium text-foreground">{feature}</span>
 							</div>
 						</StaggerChild>
@@ -187,7 +187,7 @@ export default function GettingStarted() {
 						className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
 					>
 						Start your free trial
-						<ArrowRight size={16} weight="bold" />
+						<ArrowRight size={16} />
 					</a>
 					<p className="mt-4 text-sm text-gray-400">
 						Free to get started. No credit card required.

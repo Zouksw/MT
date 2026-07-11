@@ -162,18 +162,18 @@ export default function ForecastCreate() {
 				horizon: Number(horizon),
 				confidenceLevel: Number(confidenceLevel),
 				hyperparameters: hyperparameters || {},
-				predictionValues: result.values || [],
+				predictionValues: result.data?.values || [],
 				predictionMetadata: {
 					timestamp: new Date().toISOString(),
 					model: algorithm,
-					dataPoints: result.values?.length || Number(horizon),
+					dataPoints: result.data?.values?.length || Number(horizon),
 				},
 				status: "completed",
 			});
 
 			toast.showSuccess(
 				"Forecast Generated Successfully",
-				`Generated ${result.values?.length || horizon} forecast points using ${algorithm.toUpperCase()}.`,
+				`Generated ${result.data?.values?.length || horizon} forecast points using ${algorithm.toUpperCase()}.`,
 			);
 
 			setTimeout(() => {

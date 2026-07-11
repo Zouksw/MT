@@ -22,13 +22,10 @@
 		"test:e2e:debug": "playwright test --debug",
 		"analyze": "ANALYZE=true next build",
 		"analyze:server": "ANALYZE=true BUNDLE_ANALYZE=server next build",
-		"analyze:browser": "ANALYZE=true BUNDLE_ANALYZE=browser next build",
-		"storybook": "storybook dev -p 6006",
-		"build-storybook": "storybook build"
+		"analyze:browser": "ANALYZE=true BUNDLE_ANALYZE=browser next build"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.4.1",
-		"@phosphor-icons/react": "^2.1.10",
 		"@tailwindcss/oxide-linux-x64-gnu": "^4.2.3",
 		"axios": "^1.16.0",
 		"class-variance-authority": "^0.7.1",
@@ -57,15 +54,6 @@
 		"@jest/globals": "^29.7.0",
 		"@next/bundle-analyzer": "^16.2.2",
 		"@playwright/test": "^1.58.2",
-		"@storybook/addon-a11y": "8",
-		"@storybook/addon-essentials": "8",
-		"@storybook/addon-interactions": "8",
-		"@storybook/blocks": "8",
-		"@storybook/builder-vite": "8",
-		"@storybook/nextjs": "8",
-		"@storybook/react": "8",
-		"@storybook/react-vite": "8",
-		"@storybook/test": "8",
 		"@tailwindcss/postcss": "^4.2.3",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
@@ -81,7 +69,6 @@
 		"jest-environment-jsdom": "^29.7.0",
 		"js-yaml": "^5.2.1",
 		"knip": "^6.6.1",
-		"storybook": "8",
 		"tailwindcss": "^4.2.2",
 		"typescript": "^5.8.3",
 		"webpack": "5"

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Gauge, TrendUp } from "@phosphor-icons/react";
+import { ArrowRight, Gauge, TrendingUp } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { HexGrid } from "@/components/ui/GeometricArt";
@@ -166,7 +166,7 @@ export const Hero: React.FC = () => {
 									className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
 								>
 									Start Tracking Beef Prices
-									<ArrowRight size={16} weight="bold" />
+									<ArrowRight size={16} />
 								</a>
 								<a
 									href="#features"
@@ -212,7 +212,7 @@ export const Hero: React.FC = () => {
 								{/* Header bar */}
 								<div className="mb-3 flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<TrendUp size={16} weight="duotone" className="text-primary" />
+										<TrendingUp size={16} className="text-primary" />
 										<span className="text-sm font-medium text-gray-400">
 											Chuck Roll Choice — USDA
 										</span>
@@ -250,7 +250,7 @@ export const Hero: React.FC = () => {
 
 								{/* Signal bar */}
 								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
-									<Gauge size={14} weight="duotone" className="text-primary" />
+									<Gauge size={14} className="text-primary" />
 									<span className="text-xs font-medium text-gray-400">AI Consensus</span>
 									<span className="text-xs font-semibold text-green-400 ml-auto">Price Up</span>
 									<span className="text-xs text-gray-500 font-mono tabular-nums">78%</span>

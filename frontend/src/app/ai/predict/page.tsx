@@ -149,10 +149,10 @@ export default function AIPredictPage() {
 			}
 
 			const data = await response.json();
-			setResult(data);
+			setResult(data.data);
 			setApiError(null);
 			toast.showSuccess(
-				`Prediction completed! Generated ${data.prediction?.values?.length || 0} data points.`,
+				`Prediction completed! Generated ${data.data?.prediction?.values?.length || 0} data points.`,
 			);
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : "Prediction failed";

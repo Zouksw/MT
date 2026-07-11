@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, List, X } from "@phosphor-icons/react";
+import { ArrowUp, List, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { MotionReveal } from "@/components/ui/MotionReveal";

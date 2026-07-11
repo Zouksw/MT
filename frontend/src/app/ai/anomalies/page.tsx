@@ -111,8 +111,10 @@ export default function AIAnomaliesPage() {
 			}
 
 			const data = await response.json();
-			setResult(data);
-			toast.showSuccess(`Detection completed! Found ${data.statistics.total} anomalies.`);
+			setResult(data.data);
+			toast.showSuccess(
+				`Detection completed! Found ${data.data?.statistics?.total || 0} anomalies.`,
+			);
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : "Detection failed";
 			setApiError(msg);

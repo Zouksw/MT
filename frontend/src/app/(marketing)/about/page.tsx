@@ -1,14 +1,6 @@
 "use client";
 
-import {
-	Buildings,
-	CalendarBlank,
-	ChartBar,
-	Globe,
-	Lightning,
-	ShieldCheck,
-	Users,
-} from "@phosphor-icons/react";
+import { Building, Calendar, ChartColumn, Globe, ShieldCheck, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
@@ -83,10 +75,10 @@ export default function AboutPage() {
 				<div className="max-w-5xl mx-auto">
 					<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 						{[
-							{ number: "2024", label: "Founded", Icon: CalendarBlank },
-							{ number: "487", label: "Enterprise Users", Icon: Buildings },
+							{ number: "2024", label: "Founded", Icon: Calendar },
+							{ number: "487", label: "Enterprise Users", Icon: Building },
 							{ number: "47", label: "Countries", Icon: Globe },
-							{ number: "1.2B", label: "Data Points/Day", Icon: ChartBar },
+							{ number: "1.2B", label: "Data Points/Day", Icon: ChartColumn },
 						].map((stat, idx) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
@@ -96,7 +88,7 @@ export default function AboutPage() {
 									<div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
 									<div className="flex justify-center mb-3">
 										<div className="text-primary">
-											<stat.Icon size={22} weight="duotone" />
+											<stat.Icon size={22} />
 										</div>
 									</div>
 									<div className="text-3xl md:text-4xl font-display font-semibold text-primary mb-2 tabular-nums">
@@ -198,7 +190,7 @@ export default function AboutPage() {
 								title: "Transparent Models",
 								description:
 									"Every signal shows which model generated it, the confidence interval, the MAPE accuracy score, and which factors are driving the prediction. No blind trust required.",
-								Icon: Lightning,
+								Icon: Zap,
 								span: "",
 							},
 							{
@@ -220,7 +212,7 @@ export default function AboutPage() {
 									</div>
 									<div className="relative z-10">
 										<div className="mb-4 text-primary transition-transform duration-200 group-hover:scale-110">
-											<value.Icon size={24} weight="duotone" />
+											<value.Icon size={24} />
 										</div>
 										<h3 className="text-h4 font-display font-semibold text-foreground mb-3">
 											{value.title}

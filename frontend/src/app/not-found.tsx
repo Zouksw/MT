@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowLeft, House } from "@phosphor-icons/react";
-import { FileSearch } from "lucide-react";
+import { ArrowLeft, FileSearch, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BrokenHex } from "@/components/ui/GeometricArt";
 import { MotionReveal } from "@/components/ui/MotionReveal";
@@ -44,7 +43,7 @@ export default function NotFound() {
 						onClick={() => router.push("/")}
 						className="inline-flex items-center gap-2 h-12 px-8 py-3 text-base font-semibold rounded-full bg-black text-white hover:bg-gray-800 transition-colors"
 					>
-						<House size={18} weight="duotone" />
+						<Home size={18} />
 						Go Home
 					</button>
 					<button
@@ -52,7 +51,7 @@ export default function NotFound() {
 						onClick={() => router.back()}
 						className="inline-flex items-center gap-2 h-12 px-8 py-3 text-base font-semibold rounded-full border border-black/20 text-black hover:bg-black/5 dark:border-white/20 dark:text-white dark:hover:bg-white/5 transition-colors"
 					>
-						<ArrowLeft size={18} weight="duotone" />
+						<ArrowLeft size={18} />
 						Go Back
 					</button>
 				</div>

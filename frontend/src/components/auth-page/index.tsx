@@ -1,7 +1,7 @@
 "use client";
 
-import { GithubLogo, Lightning } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
+import { Code, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SPRING_DEFAULTS } from "@/lib/motion";
 import type { AuthPageProps } from "./auth-types";
@@ -128,7 +128,7 @@ export function AuthPage(props: AuthPageProps) {
 				{/* Brand mark */}
 				<div className="relative z-10">
 					<div className="mb-10 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-						<Lightning size={28} weight="duotone" className="text-primary" />
+						<Zap size={28} className="text-primary" />
 					</div>
 				</div>
 
@@ -156,11 +156,7 @@ export function AuthPage(props: AuthPageProps) {
 
 				{/* Footer */}
 				<div className="relative z-10 flex items-center gap-4 text-white/30">
-					<GithubLogo
-						size={18}
-						weight="duotone"
-						className="cursor-pointer transition-colors hover:text-white/60"
-					/>
+					<Code size={18} className="cursor-pointer transition-colors hover:text-white/60" />
 					<span className="text-xs">&copy; 2026 MT</span>
 				</div>
 			</div>
