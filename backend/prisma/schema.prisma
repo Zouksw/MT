@@ -28,9 +28,7 @@ model User {
   auditLogs            AuditLog[]
   datasets             Dataset[]
   models               ForecastingModel[]
-  organization_members organization_members[]
   organizations        organizations[]
-  saved_queries        saved_queries[]
   securityAuditLogs    SecurityAuditLog[]     @relation("SecurityAuditLogs")
   sessions             Session[]
   watchlists           Watchlist[]
@@ -305,19 +303,6 @@ model SecurityAuditLog {
   @@map("security_audit_logs")
 }
 
-model organization_members {
-  id              String        @id
-  organization_id String
-  user_id         String
-  role            UserRole      @default(VIEWER)
-  created_at      DateTime      @default(now())
-  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  users           User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@unique([organization_id, user_id])
-  @@index([user_id])
-}
-
 model organizations {
   id                   String                 @id
   owner_id             String
@@ -330,7 +315,6 @@ model organizations {
   created_at           DateTime               @default(now())
   updated_at           DateTime?
   datasets             Dataset[]
-  organization_members organization_members[]
   users                User                   @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   @@index([created_at(sort: Desc)])
@@ -338,24 +322,6 @@ model organizations {
   @@index([slug])
 }
 
-model saved_queries {
-  id              String    @id
-  user_id         String
-  organization_id String?
-  name            String
-  description     String?
-  query_params    Json
-  is_public       Boolean   @default(false)
-  usage_count     Int       @default(0)
-  created_at      DateTime  @default(now())
-  updated_at      DateTime?
-  last_used_at    DateTime?
-  users           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([organization_id])
-  @@index([user_id, created_at(sort: Desc)])
-  @@index([user_id])
-}
 
 model PredictionLog {
   id              String    @id @default(uuid())
@@ -578,9 +544,6 @@ model GroupMember {
 model Subscription {
   id                String   @id @default(uuid())
   userId            String   @map("user_id")
-  stripeCustomerId  String?  @map("stripe_customer_id")
-  stripePriceId     String?  @map("stripe_price_id")
-  stripeSubId       String?  @map("stripe_sub_id")
   plan              String   @default("free") // free, pro, enterprise
   status            String   @default("active") // active, past_due, canceled
   currentPeriodEnd  DateTime? @map("current_period_end")
@@ -590,7 +553,6 @@ model Subscription {
   usageRecords      UsageRecord[]
 
   @@unique([userId])
-  @@index([stripeCustomerId])
   @@index([plan])
   @@map("subscriptions")
 }
