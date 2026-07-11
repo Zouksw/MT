@@ -10,11 +10,7 @@
 import type { Prisma, StorageFormat } from "@prisma/client";
 import Papa from "papaparse";
 import { prisma } from "@/lib";
-import {
-	BadRequestError,
-	ForbiddenError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { BadRequestError, ForbiddenError, NotFoundError } from "@/middleware/errorHandler";
 
 type DatasetRow = {
 	sizeBytes?: bigint | null;
@@ -33,11 +29,7 @@ export function serializeDataset(dataset: DatasetRow) {
 }
 
 /** List datasets with optional search + pagination. */
-export async function listDatasets(options: {
-	search?: string;
-	skip: number;
-	take: number;
-}) {
+export async function listDatasets(options: { search?: string; skip: number; take: number }) {
 	const where: Prisma.DatasetWhereInput = {};
 	if (options.search) {
 		where.OR = [
@@ -71,8 +63,11 @@ export async function listDatasets(options: {
 	return { datasets: serialized, total };
 }
 
-/** Get a single dataset with timeseries + owner. */
-export async function getDataset(id: string) {
+/** Get a single dataset with timeseries + owner.
+ *  When `userId` is provided, scope by ownership and throw NotFoundError for
+ *  non-owners — so a caller cannot distinguish "does not exist" from "not mine"
+ *  (prevents existence-leak / IDOR on the read path). */
+export async function getDataset(id: string, userId?: string) {
 	const dataset = await prisma.dataset.findUnique({
 		where: { id },
 		include: {
@@ -81,7 +76,10 @@ export async function getDataset(id: string) {
 			_count: { select: { timeseries: true } },
 		},
 	});
-	if (!dataset) throw new NotFoundError("Dataset");
+	// Same response for "missing" and "not owned" — no existence disclosure.
+	if (!dataset || (userId !== undefined && dataset.ownerId !== userId)) {
+		throw new NotFoundError("Dataset");
+	}
 	return dataset;
 }
 
@@ -189,7 +187,9 @@ export async function importDatasetData(
 			) || columns[0];
 		valueColumns = columns.filter((col) => col !== timestampColumn);
 	} else if (format === "json") {
-		parsedData = Array.isArray(data) ? (data as Record<string, unknown>[]) : [data as Record<string, unknown>];
+		parsedData = Array.isArray(data)
+			? (data as Record<string, unknown>[])
+			: [data as Record<string, unknown>];
 		const columns = Object.keys(parsedData[0] || {});
 		timestampColumn =
 			columns.find((col) =>

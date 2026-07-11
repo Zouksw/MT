@@ -61,28 +61,25 @@ router.post(
 			return res.json({ ...cachedResult, cached: true });
 		}
 
-		try {
-			const result = await predictFromCache({
-				commodityId,
-				horizon: h,
-				algorithm: modelId,
-				confidenceLevel: cl,
-			});
+		// Errors propagate to errorHandler via asyncHandler (which logs + shapes
+		// the response). No try/catch needed here — it would only double-log.
+		const result = await predictFromCache({
+			commodityId,
+			horizon: h,
+			algorithm: modelId,
+			confidenceLevel: cl,
+		});
 
-			const response = {
-				timestamps: result.timestamps,
-				values: result.values,
-				lowerBound: result.lowerBound,
-				upperBound: result.upperBound,
-				algorithm: modelId,
-			};
+		const response = {
+			timestamps: result.timestamps,
+			values: result.values,
+			lowerBound: result.lowerBound,
+			upperBound: result.upperBound,
+			algorithm: modelId,
+		};
 
-			await cacheSet(cacheKey, response, 900);
-			res.json({ ...response, cached: false });
-		} catch (error) {
-			logger.error(`Prediction failed for ${commodityId}/${modelId}: ${error}`);
-			throw error;
-		}
+		await cacheSet(cacheKey, response, 900);
+		res.json({ ...response, cached: false });
 	}),
 );
 

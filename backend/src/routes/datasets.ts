@@ -14,9 +14,9 @@ import {
 	deleteDataset,
 	getDataset,
 	importDatasetData,
+	listDatasets,
 	serializeDataset,
 	updateDataset,
-	listDatasets,
 } from "@/services/datasetService";
 
 const router = Router();
@@ -129,12 +129,12 @@ router.get(
  *       404:
  *         description: Dataset not found
  */
-// GET /api/datasets/:id - Get single dataset
+// GET /api/datasets/:id - Get single dataset (scoped to owner; IDOR-safe)
 router.get(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const dataset = await getDataset(req.params.id);
+		const dataset = await getDataset(req.params.id, req.userId);
 		success(res, serializeDataset(dataset));
 	}),
 );
