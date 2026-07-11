@@ -1,11 +1,13 @@
 /**
- * Commodity Futures via FRED + Stooq
+ * Commodity Futures & Daily Prices via FRED + Stooq
  *
- * Primary: FRED public CSV (no API key needed for daily crude oil & natural gas)
+ * Primary: FRED public CSV (no API key needed for daily crude oil, natural gas,
+ *          beef carcass, and exchange rates)
  * Fallback: Stooq.com CSV for CME futures (may be blocked by Cloudflare)
  *
  * Covers: Live Cattle, Feeder Cattle, Lean Hogs, Corn, Soybeans, Wheat,
- * Soybean Meal, Soybean Oil, Coffee, Sugar, Cotton, Crude Oil, Natural Gas, Gold.
+ * Soybean Meal, Soybean Oil, Coffee, Sugar, Cotton, Crude Oil, Natural Gas, Gold,
+ * US Beef Carcass Price, USD/CNY, BRL/USD, AUD/USD, EUR/USD.
  */
 
 import { logger } from "@/lib";
@@ -134,6 +136,43 @@ const FRED_DAILY: Record<
 		name: "Natural Gas Henry Hub (FRED)",
 		category: "energy",
 		unit: "USD/MMBtu",
+	},
+	// Beef carcass price (daily, USDA-reported via FRED)
+	BEEF: {
+		seriesId: "CBBTCUSD",
+		slug: "beef_carcass_us",
+		name: "US Beef Carcass Price (FRED)",
+		category: "beef_cuts",
+		unit: "USD/cwt",
+	},
+	// Exchange rates (daily, FRED DEX series — no API key needed)
+	USDCNY: {
+		seriesId: "DEXCHUS",
+		slug: "usd_cny",
+		name: "USD/CNY Exchange Rate (FRED)",
+		category: "forex",
+		unit: "CNY/USD",
+	},
+	BRLUSD: {
+		seriesId: "DEXBZUS",
+		slug: "brl_usd",
+		name: "BRL/USD Exchange Rate (FRED)",
+		category: "forex",
+		unit: "BRL/USD",
+	},
+	AUDUSD: {
+		seriesId: "DEXUSAL",
+		slug: "aud_usd",
+		name: "AUD/USD Exchange Rate (FRED)",
+		category: "forex",
+		unit: "AUD/USD",
+	},
+	EURUSD: {
+		seriesId: "DEXUSEU",
+		slug: "eur_usd",
+		name: "EUR/USD Exchange Rate (FRED)",
+		category: "forex",
+		unit: "EUR/USD",
 	},
 };
 
