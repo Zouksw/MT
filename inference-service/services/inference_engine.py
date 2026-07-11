@@ -39,6 +39,8 @@ def predict(
     timestamps: list[int],
     horizon: int,
     confidence_level: float = 0.95,
+    exog: list[list[float]] | None = None,
+    future_exog: list[list[float]] | None = None,
 ) -> dict:
     """Run prediction with the specified model. Returns dict with values, lower_bound, upper_bound."""
     if model_id not in _all_models:
@@ -48,6 +50,11 @@ def predict(
 
     if model_id == "chronos":
         result = _predict_chronos(values, horizon, confidence_level)
+    elif model_id == "sarimax":
+        # SARIMAX is the only model that consumes exogenous variables.
+        result = STATISTICAL_MODELS["sarimax"](
+            values, horizon, confidence_level, exog=exog, future_exog=future_exog
+        )
     elif model_id in STATISTICAL_MODELS:
         result = STATISTICAL_MODELS[model_id](values, horizon, confidence_level)
     else:
@@ -91,6 +98,7 @@ def list_models() -> list[dict]:
     """Return metadata for all available models."""
     models = [
         {"id": "arima", "name": "ARIMA", "type": "statistical", "description": "AutoRegressive Integrated Moving Average"},
+        {"id": "sarimax", "name": "SARIMAX", "type": "statistical", "description": "ARIMA with exogenous variables (multivariate: FX, freight, feed, etc.)"},
         {"id": "holtwinters", "name": "Holt-Winters", "type": "statistical", "description": "Triple exponential smoothing with trend and seasonality"},
         {"id": "exponential_smoothing", "name": "Exponential Smoothing", "type": "statistical", "description": "Simple exponential smoothing"},
         {"id": "naive_forecaster", "name": "Naive Forecaster", "type": "statistical", "description": "Last-value baseline forecaster"},

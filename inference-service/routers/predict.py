@@ -12,6 +12,10 @@ class PredictRequest(BaseModel):
     model_id: str = Field(default="arima", description=f"One of: {MODEL_IDS}")
     horizon: int = Field(default=10, ge=1, le=100, description="Number of steps to forecast")
     confidence_level: float = Field(default=0.95, ge=0.8, le=0.99)
+    # Exogenous (external) variables for SARIMAX. Optional — only the "sarimax"
+    # model consumes them; other models ignore them. Shape: (n_obs, n_factors).
+    exog: list[list[float]] | None = Field(default=None, description="Historical exogenous variables (SARIMAX only)")
+    future_exog: list[list[float]] | None = Field(default=None, description="Forecast-window exogenous variables (SARIMAX only)")
 
 
 class PredictResponse(BaseModel):
@@ -41,6 +45,8 @@ def predict_handler(req: PredictRequest):
             timestamps=req.timestamps,
             horizon=req.horizon,
             confidence_level=req.confidence_level,
+            exog=req.exog,
+            future_exog=req.future_exog,
         )
     except Exception as e:
         raise HTTPException(500, f"Prediction failed: {e}") from e

@@ -1,8 +1,9 @@
-"""Statistical forecasting models — ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL."""
+"""Statistical forecasting models — ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL, SARIMAX."""
 
 import numpy as np
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.seasonal import STL
 from sktime.forecasting.naive import NaiveForecaster
 
@@ -47,6 +48,87 @@ def predict_arima(
         "lower_bound": lower.tolist(),
         "upper_bound": upper.tolist(),
     }
+
+
+def predict_sarimax(
+    values: list[float],
+    horizon: int,
+    confidence_level: float = 0.95,
+    exog: list[list[float]] | None = None,
+    future_exog: list[list[float]] | None = None,
+) -> dict:
+    """ARIMAX / SARIMAX — ARIMA with exogenous (external) variables.
+
+    This is the multivariate path: instead of forecasting a price from its own
+    history alone, it conditions on *leading/driving factors* (FX rates, freight
+    indices, feed prices, a correlated commodity, etc.). For a platform like
+    mooket.com where import-meat to-land price ≈ origin price × FX × tariff, the
+    exogenous channel is where most of the real signal lives.
+
+    `exog` shape: (n_observations, n_factors) — historical exogenous values,
+    one row per element of `values`, same length.
+    `future_exog` shape: (horizon, n_factors) — known/projected exogenous values
+    for the forecast window. If omitted, we forward-fill the last observed row,
+    which is a reasonable default for slowly-moving drivers (FX, freight).
+    """
+    arr = np.array(values, dtype=float)
+    if len(arr) < 4:
+        return predict_naive(values, horizon, confidence_level)
+
+    # No exogenous data supplied → degrade to plain ARIMA(2,1,1).
+    if not exog or len(exog) == 0:
+        return predict_arima(values, horizon, confidence_level)
+
+    exog_arr = np.array(exog, dtype=float)
+    # Guard: exog must align with the target series.
+    if exog_arr.shape[0] != len(arr):
+        raise ValueError(
+            f"exog length ({exog_arr.shape[0]}) must equal values length ({len(arr)})"
+        )
+    if exog_arr.ndim == 1:
+        exog_arr = exog_arr.reshape(-1, 1)
+
+    n_factors = exog_arr.shape[1]
+    if future_exog is None or len(future_exog) == 0:
+        # Forward-fill last observed exogenous row for the horizon. Suitable for
+        # slow-moving drivers; volatile ones should pass explicit future_exog.
+        last_row = exog_arr[-1, :].reshape(1, -1)
+        future_exog_arr = np.repeat(last_row, horizon, axis=0)
+    else:
+        future_exog_arr = np.array(future_exog, dtype=float)
+        if future_exog_arr.ndim == 1:
+            future_exog_arr = future_exog_arr.reshape(-1, 1)
+        if future_exog_arr.shape[0] != horizon:
+            raise ValueError(
+                f"future_exog length ({future_exog_arr.shape[0]}) must equal horizon ({horizon})"
+            )
+
+    try:
+        model = SARIMAX(
+            arr,
+            exog=exog_arr,
+            order=(2, 1, 1),
+            enforce_stationarity=False,
+            enforce_invertibility=False,
+        )
+        fitted = model.fit(disp=False, maxiter=100)
+        fc = fitted.get_forecast(steps=horizon, exog=future_exog_arr)
+        pred = fc.predicted_mean
+        # Native SARIMAX confidence interval — respects confidence_level.
+        z = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}.get(confidence_level, 1.96)
+        se = fc.se_mean
+        lower = pred - z * se
+        upper = pred + z * se
+        return {
+            "values": pred.tolist(),
+            "lower_bound": lower.tolist(),
+            "upper_bound": upper.tolist(),
+            "n_factors": n_factors,
+        }
+    except (np.linalg.LinAlgError, ValueError) as e:
+        # SARIMAX can fail to converge on messy real data; fall back to ARIMA
+        # rather than crashing the prediction pipeline.
+        return predict_arima(values, horizon, confidence_level)
 
 
 def predict_holtwinters(
@@ -125,6 +207,7 @@ def predict_stl(
 
 STATISTICAL_MODELS = {
     "arima": predict_arima,
+    "sarimax": predict_sarimax,
     "holtwinters": predict_holtwinters,
     "exponential_smoothing": predict_exponential_smoothing,
     "naive_forecaster": predict_naive,
