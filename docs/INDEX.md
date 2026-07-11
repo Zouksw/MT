@@ -1,6 +1,6 @@
 # MT — Documentation
 
-**Version**: 2.0.0 | **Last Updated**: 2026-06-06
+**Version**: 2.1.0 | **Last Updated**: 2026-07-06
 
 ---
 
@@ -12,14 +12,21 @@
 - [Design System](DESIGN.md) — UI/UX design spec
 
 ### Core Documentation
+- [Roadmap](ROADMAP.md) — Development roadmap (含 Round 17-19 完成状态 + 实测指标表)
 - [Security](SECURITY.md) — Security policies and best practices
-- [Roadmap](ROADMAP.md) — Development roadmap
 - [CHANGELOG](CHANGELOG.md) — Version history
 
 ### Developer Resources
 - [Contributing](guides/CONTRIBUTING.md) — Contribution guidelines
 - [Secrets Management](guides/SECRETS-MANAGEMENT.md) — Credentials handling
 - [CLAUDE.md](../CLAUDE.md) — AI assistant instructions (project root)
+
+### Reviews & Audits (`reviews/`)
+- [**2026-07-06 多技能深度审计**](reviews/2026-07-06-multi-skill-audit.md) — 6 技能交叉验证的运行态/架构债/优化项总报告（已 review 二次验证）
+- [**2026-07-06 Round 17-19 执行收尾**](reviews/2026-07-06-round-17-19.md) — 前端 build 修复 + 静默吞错修复 + 数据停摆根因 + 索引
+- [2026-07-05 核心价值链审计](reviews/2026-07-05-core-value-chain-audit.md) — AI 预测/数据/分析链断裂点定位（上一轮基线）
+- [2026-07-05 Round 7-12](reviews/) — AI 恢复 / 重构 / 链路打通的逐轮记录
+- [2026-06-14 全量审查集](reviews/2026-06-14-full-review.md) — bugfix / design / devex / performance
 
 ### Domain Reference
 - [数据源全链路审计报告](数据源全链路审计报告.md) — Data source audit
@@ -34,8 +41,9 @@
 | [API.md](API.md) | REST API endpoints and schemas | Developers |
 | [SECURITY.md](SECURITY.md) | Security configuration | Operators, Developers |
 | [DESIGN.md](DESIGN.md) | UI/UX design system | Designers, Developers |
-| [ROADMAP.md](ROADMAP.md) | Future development | All |
+| [ROADMAP.md](ROADMAP.md) | Development roadmap + 实测指标 | All |
 | [CHANGELOG.md](CHANGELOG.md) | Version history | All |
+| [reviews/](reviews/) | 轮次审查与深度审计档案 | Maintainers |
 
 ---
 
@@ -49,17 +57,17 @@ pnpm stop             # Stop all services
 
 **Run Tests**:
 ```bash
-cd backend && npx vitest run    # 480 backend tests
-cd frontend && npx jest --forceExit  # 305 frontend tests
+cd backend && npx vitest run    # ~465 backend tests (464 pass, 1 live-DB data-dependent)
+cd frontend && npx jest --forceExit  # 272 frontend tests
 ```
 
 **Health Check**:
 ```bash
 cd backend && npx tsc --noEmit && npx @biomejs/biome lint src/ && npx vitest run
-cd frontend && npx tsc --noEmit --project tsconfig.json && npx @biomejs/biome lint src/ && npx jest --forceExit
+cd frontend && npx tsc --noEmit -p tsconfig.json && npx next build  # build = the real gate
 ```
 
 ---
 
 **Maintainer**: MT Team
-**Last Review**: 2026-06-06
+**Last Review**: 2026-07-06

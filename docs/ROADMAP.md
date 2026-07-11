@@ -1,6 +1,6 @@
 # MT Platform — Roadmap
 
-**Last Updated**: 2026-06-29 | **Status**: Active
+**Last Updated**: 2026-07-06 | **Status**: Active
 
 > 大宗商品市场**信息与分析**平台(非交易平台)。本文档是后续开发的单一事实来源,
 > 替代 2026-06-06 旧版。所有数字均为 2026-06-29 实测,非估算。
@@ -270,19 +270,54 @@
 
 ---
 
+## 第 17-19 轮 — 多技能审计后的优化实施 ✅ 完成(2026-07-06)
+
+> 基于 [`reviews/2026-07-06-multi-skill-audit.md`](reviews/2026-07-06-multi-skill-audit.md)（6 技能交叉验证 + review 二次纠正）。执行细节见 [`reviews/2026-07-06-round-17-19.md`](reviews/2026-07-06-round-17-19.md)。
+
+**Round 17 — P0-5 前端 build 失败 ✅**
+- 根因：`forecasts/create/page.tsx` 残留深度学习模型的死渲染分支（`requiresWeights` + 不可达 string-input）→ TS 编译失败 → `next build` exit 1
+- 修复：删死分支（+18/-39 行），`next build` exit 0，272 前端测试无回归
+
+**Round 18 — P0-1 predictionCache 静默吞错 ✅**
+- 根因：`predictionCache.ts:137/141` 两处 `.catch(()=>{})` 吞掉 `logPrediction` 失败 → prediction_logs 间歇停摆（与 Round 12 自述的"worker 静默吞异常"同类复发，不同路径）
+- 修复：两处空 catch → `logger.error`（保持非阻塞）+ 回归测试（gen-tests 双向验证：无修复 FAIL / 有修复 PASS）
+
+**Round 18 — P0-2 数据采集停摆根因（定位，非代码修复）✅**
+- 取证：747 合格预测里 **691 条 actuals_after=0**；18 源里 16 个 inserted=0；"246K updated"是 `upsertPrice` 不比值导致的虚胖计数
+- 真根因：**FRED 系列 lag**（DCOILWTICO/DHHNGSP 停在 6/29，上游未发新数据）+ Stooq 被 Cloudflare 拦 + 16 源解析失效
+- **结论：非单点代码 bug，属主线 A（第 13 轮），归数据源排期**
+
+**Round 19 — P0-3/4 MAPE 调参：判定不修（Iron Law）✅**
+- 取证：调参最多 42→63（+21），但 **691（92.5%）无论调参都不可验证**（actuals=0）
+- 根因在数据（P0-2），不在参数。**暂不修，等数据流入后再复核 7 天冷却**
+
+**Round 19 — P1-8 加索引 ✅**
+- 修正初版"5 个外键缺索引"误报 → **实际只 1 个真缺**（其余被 unique 复合左前缀覆盖）
+- 修复：`WatchlistItem.commodityId` 加 `@@index`（待 `prisma migrate`）
+
+**质量门：** ✅ 前后端 tsc 0 错误 / ✅ 前端 next build exit 0 / ✅ 后端 464 测试（1 预存在 live-DB 失败，无关）/ ✅ 前端 272 测试 / ✅ prisma validate
+
+**关键修正：** 第 12 轮"forecasts 表增长"成功指标与实际架构不符——预测存 Redis 缓存（`prediction:*` TTL 45min），forecasts 仅训练路径写。**正确度量是 prediction_logs 增量**（见下方指标表）。
+
+---
+
 ## 指标目标 (完成定义)
 
-| 指标 | 起点 | 当前(Round 11 审计后) | 目标 |
+| 指标 | 起点 | 当前(Round 19 后) | 目标 |
 |------|------|------|------|
-| **预测成功落库** | ? | **0 条**(链路断, forecasts/anomalies 全空)| **每 30min 增长** |
+| **prediction_logs 落库** | 1066 全 pending | **1591 completed + 42 verified** ✅(Round 12 状态机修复 + Round 18 吞错修复)| **每 30min 稳定增长**(待 Round 18 吞错修复生效后复测) |
+| ~~forecasts 表~~ | ~~0~~ | ~~0~~ | **指标废弃**(架构错配:预测存 Redis 缓存,forecasts 仅训练路径写;改用 prediction_logs) |
+| **MAPE 可验证率** | — | **42/747 (5.6%)** ⚠️ | **>50%** (依赖主线 A 数据流入:691/747 actuals_after=0) |
+| **MAPE 均值(质量)** | — | **149%** ⚠️(比朴素法差 1.5 倍) | **<30%** |
 | **有数据商品** | 34.5% | **35%(38/110)** | **≥60%** |
-| **市场因子类型** | 131(声称)| **1 type / 45 行** | **多类型覆盖** |
+| **市场因子类型** | 131(声称)| **1 type / 48 行** | **多类型覆盖** |
 | 商品数据覆盖率 | 34.5% | 35% | **≥60%** |
 | 依赖漏洞 (high+critical) | 51 | **43** | **0** |
 | 胖路由 (>600 行) | 6 | **0** ✅ | **0** |
 | 路由直连 Prisma | 208 处 | **~60** | **<30** |
 | 测试 429 假失败 | 存在 | **0** ✅ | **0** |
 | 前端测试可运行 | ❌ | **✅**(272/272) | ✅ |
+| **前端 next build** | ❌(Round 17 前 exit 1) | **✅ exit 0**(Round 17) | ✅ |
 | inference 服务可达 | ❌ DOWN | **✅ UP**(Round 7) | ✅ |
 | 磁盘损坏复发 | 3 次 | **✅ 根治**(Round 11) | 0 次 |
 | L1 token 化 | 27 处 | **0** ✅ | **0** |
