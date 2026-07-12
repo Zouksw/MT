@@ -1,6 +1,17 @@
 # MT — Documentation
 
-**Version**: 2.1.0 | **Last Updated**: 2026-07-06
+**Version**: 2.2.0 | **Last Updated**: 2026-07-12
+
+---
+
+## 产品定位 (单一事实来源)
+
+> **为中国牛肉产业链上下游提供进口/国产牛肉价格数据采集、行情展示、多维分析,并以 AI 模型预测未来价格走势的专业平台。**
+
+- **对标**: 类[牧集网](https://web.mooket.com/)的牛肉贸易数据/展示/分析 + 类 IoTDB AINode 的预训练模型预测
+- **差异化**: 牧集无 AI 预测;AINode 无行业数据。本项目 = 牧集的数据深度 × AINode 的预测智能
+- **最终形态 spec**: [PRODUCT-SPEC.md](PRODUCT-SPEC.md)
+- **前端提升计划**: [FRONTEND-IMPROVEMENT-PLAN.md](FRONTEND-IMPROVEMENT-PLAN.md)
 
 ---
 
