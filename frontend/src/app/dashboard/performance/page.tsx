@@ -563,7 +563,7 @@ export default function PerformancePage() {
 											type="monotone"
 											dataKey="avg"
 											name="Average"
-											stroke="#B8860B"
+											stroke="#8B6914"
 											strokeWidth={2.5}
 											dot={false}
 											isAnimationActive={true}
@@ -624,7 +624,7 @@ export default function PerformancePage() {
 											type="monotone"
 											dataKey="heapUsedMB"
 											name="Heap Used"
-											stroke="#B8860B"
+											stroke="#8B6914"
 											strokeWidth={2.5}
 											dot={false}
 											isAnimationActive={true}

@@ -46,7 +46,7 @@ jest.mock("@/components/dashboard/QuickActions", () => ({
 
 // Mock StatCard to avoid animation timer issues
 jest.mock("@/components/ui/StatCard", () => ({
-	StatCard: ({ title, value }: { title: string; value: number }) => (
+	StatCard: ({ title, value }: { title: string; value: number | string }) => (
 		<div data-testid={`stat-card-${title}`}>
 			{title}: {value}
 		</div>
@@ -81,7 +81,16 @@ const defaultStats = {
 	forecasts: { total: 8, trend: -8 },
 	alerts: { total: 3, bySeverity: { critical: 0, high: 1, medium: 2, low: 0 }, trend: -12 },
 	aiModels: { active: 5, total: 7 },
-	beef: { cuts: 85, factories: 16, prices: 2400 },
+	beef: {
+		cuts: 85,
+		factories: 16,
+		prices: 2400,
+		avgPrice: 4.52,
+		minPrice: 3.1,
+		maxPrice: 6.8,
+		coverage: 0.6,
+		latestDate: "2026-04-30T12:34:56.450Z",
+	},
 	recentAlerts: [],
 	recentForecasts: [],
 };
@@ -102,11 +111,15 @@ describe("DashboardPage", () => {
 		expect(screen.getByText(/Welcome back, Test User/)).toBeInTheDocument();
 	});
 
-	it("should render stat cards with correct values", () => {
+	it("should render beef average price hero and supporting stat cards", () => {
 		render(<DashboardPage />);
 
-		expect(screen.getByTestId("stat-card-Beef Cuts")).toHaveTextContent("85");
+		// Hero shows the formatted average price
+		expect(screen.getByText("Beef Average Price")).toBeInTheDocument();
+		expect(screen.getByText(/\$4\.52/)).toBeInTheDocument();
+		// Supporting cards
 		expect(screen.getByTestId("stat-card-Factories")).toHaveTextContent("16");
+		expect(screen.getByTestId("stat-card-Price Records")).toBeInTheDocument();
 	});
 
 	it("should show loading state when stats are loading", () => {
@@ -154,11 +167,5 @@ describe("DashboardPage", () => {
 
 		expect(screen.getByText("AI Price Models")).toBeInTheDocument();
 		expect(screen.getByText(/models.*generating/)).toHaveTextContent(/5/);
-	});
-
-	it("should show healthy system indicator", () => {
-		render(<DashboardPage />);
-
-		expect(screen.getByText("Healthy")).toBeInTheDocument();
 	});
 });

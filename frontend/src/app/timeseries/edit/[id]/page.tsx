@@ -34,7 +34,7 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 		slug: "",
 		description: "",
 		unit: "",
-		colorHex: "#B8860B",
+		colorHex: "#8B6914",
 		timezone: "UTC",
 		isAnomalyDetectionEnabled: false,
 	});
@@ -51,7 +51,7 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 				slug: String(r.slug || ""),
 				description: String(r.description || ""),
 				unit: String(r.unit || ""),
-				colorHex: String(r.colorHex || "#B8860B"),
+				colorHex: String(r.colorHex || "#8B6914"),
 				timezone: String(r.timezone || "UTC"),
 				isAnomalyDetectionEnabled: Boolean(r.isAnomalyDetectionEnabled),
 			});

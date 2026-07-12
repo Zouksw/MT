@@ -18,7 +18,7 @@ export function getMapeTextColor(mape: number): string {
 export function getMapeFillColor(mape: number | null): string {
 	if (mape === null) return "#6B7280";
 	if (mape < 3) return "#16A34A";
-	if (mape < 7) return "#D4A030";
+	if (mape < 7) return "#A8821C";
 	if (mape < 12) return "#F97316";
 	return "#DC2626";
 }

@@ -88,22 +88,22 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #B8860B;
+  background: #8B6914;
   border-radius: 8px 8px 0 0;
 }
 
 .dark .content-card--accent::before {
-  background: linear-gradient(90deg, #B8860B, #D4A030);
+  background: linear-gradient(90deg, #8B6914, #A8821C);
 }
 
 /* Gradient Text - Professional Blue (limited use) */
 .gradient-text {
-  color: #B8860B;
+  color: #8B6914;
   font-weight: 600;
 }
 
 .dark .gradient-text {
-  color: #D4A030;
+  color: #A8821C;
   font-weight: 600;
 }
 
@@ -154,7 +154,7 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.stat-card--primary::before { background: #B8860B; }
+.stat-card--primary::before { background: #8B6914; }
 .stat-card--success::before { background: linear-gradient(90deg, #16A34A, #22C55E); }
 .stat-card--warning::before { background: linear-gradient(90deg, #D97706, #F59E0B); }
 .stat-card--error::before { background: linear-gradient(90deg, #DC2626, #F87171); }

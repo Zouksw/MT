@@ -3,6 +3,7 @@
 import { Beef, DollarSign, Target, Warehouse } from "lucide-react";
 import useSWR from "swr";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { MarketForecastBoard } from "@/components/market/MarketForecastBoard";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -115,6 +116,11 @@ export default function BeefOverview() {
 					icon={<Warehouse />}
 					variant="warning"
 				/>
+			</div>
+
+			{/* AI forecast board — prediction woven into the market view (PRODUCT-SPEC core). */}
+			<div className="mb-6">
+				<MarketForecastBoard />
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">

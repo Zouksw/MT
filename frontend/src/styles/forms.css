@@ -16,12 +16,12 @@
 .ant-input-focused,
 .ant-select-focused .ant-select-selector {
   box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.1);
-  border-color: #B8860B;
+  border-color: #8B6914;
 }
 
 .dark .ant-input:focus,
 .dark .ant-input-focused,
 .dark .ant-select-focused .ant-select-selector {
   box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
-  border-color: #D4A030;
+  border-color: #A8821C;
 }

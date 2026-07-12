@@ -11,6 +11,7 @@ import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { deleteRecord, useList } from "@/lib/api";
+import { formatDecimal, formatPercent, toNum } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 // Forecast record shape returned from the API
@@ -62,24 +63,16 @@ export default function ForecastList() {
 
 	const totalPages = Math.ceil((forecasts?.length || 0) / pageSize);
 
-	// Helper to get numeric value from possibly-decimal object
-	const toNum = (value: number | { toNumber(): number } | null | undefined): number => {
-		if (typeof value === "object" && value !== null && typeof value.toNumber === "function") {
-			return value.toNumber();
-		}
-		return Number(value);
-	};
-
-	// Model algorithm tag color
-	const algoTagColor = (
-		algo: string,
-	): "primary" | "info" | "success" | "warning" | "error" | "default" => {
-		const map: Record<string, "primary" | "info" | "success" | "warning" | "error" | "default"> = {
+	// Model algorithm tag color.
+	// DESIGN RULE: green/red are reserved for market direction ONLY.
+	// Model types are AI metadata → use primary/info/neutral tones, never directional colors.
+	const algoTagColor = (algo: string): "primary" | "info" | "default" => {
+		const map: Record<string, "primary" | "info" | "default"> = {
 			ARIMA: "info",
 			PROPHET: "primary",
-			LSTM: "success",
-			TRANSFORMER: "warning",
-			ENSEMBLE: "error",
+			LSTM: "primary",
+			TRANSFORMER: "info",
+			ENSEMBLE: "info",
 		};
 		return map[algo] || "default";
 	};
@@ -131,13 +124,13 @@ export default function ForecastList() {
 					record.timestamp || "",
 					`"${timeseriesName}"`,
 					algorithm,
-					predictedValue?.toFixed(4) || "",
+					formatDecimal(predictedValue, 4),
 					`"${unit}"`,
-					confidence?.toFixed(4) || "",
-					lowerBound?.toFixed(4) || "",
-					upperBound?.toFixed(4) || "",
+					formatDecimal(confidence, 4),
+					formatDecimal(lowerBound, 4),
+					formatDecimal(upperBound, 4),
 					record.isAnomaly ? "Yes" : "No",
-					anomalyProbability?.toFixed(4) || "",
+					formatDecimal(anomalyProbability, 4),
 					record.createdAt || "",
 				].join(",");
 			}),
@@ -221,7 +214,7 @@ export default function ForecastList() {
 						className="text-[13px] text-foreground"
 						style={{ fontVariantNumeric: "tabular-nums" }}
 					>
-						{numValue.toFixed(2)} {unit}
+						{formatDecimal(numValue, 2)} {unit}
 					</span>
 				);
 			},
@@ -232,12 +225,11 @@ export default function ForecastList() {
 			dataIndex: "confidence",
 			width: 110,
 			align: "center",
+			// DESIGN RULE: confidence is NOT market direction → blue/neutral only, never green.
 			render: (value: unknown) => {
 				const numValue = toNum(value as number | { toNumber(): number } | null | undefined);
-				const percentage = (numValue * 100).toFixed(0);
-				const color: "success" | "info" | "warning" =
-					numValue >= 0.9 ? "success" : numValue >= 0.7 ? "info" : "warning";
-				return <Tag color={color}>{percentage}%</Tag>;
+				const color: "info" | "default" = numValue >= 0.7 ? "info" : "default";
+				return <Tag color={color}>{formatPercent(numValue)}</Tag>;
 			},
 		},
 		{
@@ -256,7 +248,7 @@ export default function ForecastList() {
 
 				return (
 					<span className="text-xs text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>
-						[{lower.toFixed(2)}, {upper.toFixed(2)}] {unit}
+						[{formatDecimal(lower, 2)}, {formatDecimal(upper, 2)}] {unit}
 					</span>
 				);
 			},
@@ -267,25 +259,27 @@ export default function ForecastList() {
 			dataIndex: "isAnomaly",
 			width: 100,
 			align: "center",
+			// DESIGN RULE: anomaly status is NOT market direction.
+			// Yes = warning (amber), No = muted neutral. Never red/green.
 			render: (isAnomaly: unknown, record: ForecastRecord) => {
 				const probability = toNum(record.anomalyProbability);
 
 				if (isAnomaly as boolean) {
 					return (
 						<div>
-							<span className="text-sm font-medium text-red-600 dark:text-red-400">Yes</span>
+							<span className="text-sm font-medium text-amber-600 dark:text-amber-400">Yes</span>
 							{probability > 0 && (
 								<div
 									className="text-[11px] text-muted-foreground"
 									style={{ fontVariantNumeric: "tabular-nums" }}
 								>
-									{(probability * 100).toFixed(0)}%
+									{formatPercent(probability)}
 								</div>
 							)}
 						</div>
 					);
 				}
-				return <span className="text-sm font-medium text-green-600 dark:text-green-400">No</span>;
+				return <span className="text-sm font-medium text-muted-foreground">No</span>;
 			},
 		},
 		{
@@ -359,7 +353,7 @@ export default function ForecastList() {
 				<StatCard
 					title="Active Models"
 					value={uniqueModels}
-					variant="success"
+					variant="info"
 					loading={loading}
 					icon={<Zap className="size-4" />}
 				/>

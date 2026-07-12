@@ -103,7 +103,7 @@ const CHART_COLORS = {
 	upWick: "#16a34a",
 	downWick: "#dc2626",
 	sma20: "#f59e0b",
-	sma50: "#B8860B",
+	sma50: "#8B6914",
 	support: "#10b981",
 	resistance: "#ef4444",
 	prediction: "#f59e0b",
@@ -202,8 +202,8 @@ export default function ProfessionalChart({
 			},
 			crosshair: {
 				mode: CrosshairMode.Normal,
-				vertLine: { labelBackgroundColor: isDark ? "#334155" : "#B8860B" },
-				horzLine: { labelBackgroundColor: isDark ? "#334155" : "#B8860B" },
+				vertLine: { labelBackgroundColor: isDark ? "#334155" : "#8B6914" },
+				horzLine: { labelBackgroundColor: isDark ? "#334155" : "#8B6914" },
 			},
 			rightPriceScale: {
 				borderColor: isDark ? "#1e293b" : "#e2e8f0",

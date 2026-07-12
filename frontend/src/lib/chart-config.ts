@@ -3,37 +3,38 @@
  * DESIGN.md: Gold = AI intelligence, green/red = market direction ONLY
  */
 
-// Chart color palette — gold-centric per DESIGN.md "Refined Industrial" spec
+// Chart color palette — gold-centric per DESIGN.md "Refined Industrial" spec.
+// Gold unified to #8B6914 (5.1:1 on white, WCAG AA) across all configs.
 export const chartColors = {
 	// Gold accent — THE signature color
-	primary: "#B8860B",
-	primaryLight: "#D4A030",
-	primaryDark: "#9A7209",
+	primary: "#8B6914",
+	primaryLight: "#A8821C",
+	primaryDark: "#6B4F04",
 
 	// Semantic — market direction per spec rules
 	bullish: "#22c55e",
 	bearish: "#ef4444",
-	warning: "#D4A030",
-	info: "#B8860B",
+	warning: "#D97706",
+	info: "#8B6914",
 
 	// Legacy aliases (semantic names used elsewhere)
 	success: "#22c55e",
 	error: "#ef4444",
 
 	// Series palette — gold variants for multi-model/AI charts
-	gold: "#B8860B",
-	goldLight: "#D4A030",
-	goldPale: "#DAB84A",
-	goldWarm: "#C4960E",
-	goldDark: "#9A7209",
-	goldDeep: "#8B6914",
-	goldMuted: "#A07B0A",
-	goldBright: "#E8C560",
+	gold: "#8B6914",
+	goldLight: "#A8821C",
+	goldPale: "#C49A3A",
+	goldWarm: "#9A7512",
+	goldDark: "#6B4F04",
+	goldDeep: "#5A4108",
+	goldMuted: "#7A5F10",
+	goldBright: "#D4B04A",
 
 	// Legacy aliases for chart components still referencing old names
 	purple: "#8B6914",
-	pink: "#D4A030",
-	blue: "#B8860B",
+	pink: "#A8821C",
+	blue: "#8B6914",
 
 	// Design system neutrals (zinc scale matching #fafafa/#a1a1aa/#71717a)
 	gray50: "#fafafa",

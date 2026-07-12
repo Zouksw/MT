@@ -53,7 +53,7 @@ interface AlertDistributionChartProps {
 const SEVERITY_CONFIG = [
 	{ name: "Critical", key: "critical", color: "#DC2626", mutedColor: "#FCA5A5" },
 	{ name: "High", key: "high", color: "#F59E0B", mutedColor: "#FCD34D" },
-	{ name: "Medium", key: "medium", color: "#B8860B", mutedColor: "#D4A030" },
+	{ name: "Medium", key: "medium", color: "#8B6914", mutedColor: "#A8821C" },
 	{ name: "Low", key: "low", color: "#10B981", mutedColor: "#6EE7B7" },
 ];
 

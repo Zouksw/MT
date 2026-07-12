@@ -48,7 +48,7 @@
   }
 
   .mobile-tab-item.active {
-    color: #B8860B;
+    color: #8B6914;
   }
 
   .mobile-tab-item-icon {
@@ -242,7 +242,7 @@
   }
 
   .mobile-swipe-action.edit {
-    background: #B8860B;
+    background: #8B6914;
   }
 }
 
@@ -432,7 +432,7 @@
     width: 24px;
     height: 24px;
     border: 3px solid #E5E7EB;
-    border-top-color: #B8860B;
+    border-top-color: #8B6914;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }

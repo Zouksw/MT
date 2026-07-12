@@ -142,7 +142,7 @@ export function BacktestDetailChart({ prediction }: BacktestDetailChartProps) {
 						type="monotone"
 						dataKey="upper"
 						stroke="none"
-						fill="#B8860B"
+						fill="#8B6914"
 						fillOpacity={0.08}
 						dot={false}
 						name="Upper Bound"
@@ -154,7 +154,7 @@ export function BacktestDetailChart({ prediction }: BacktestDetailChartProps) {
 						type="monotone"
 						dataKey="lower"
 						stroke="none"
-						fill="#B8860B"
+						fill="#8B6914"
 						fillOpacity={0.08}
 						dot={false}
 						name="Confidence Interval"
@@ -163,9 +163,9 @@ export function BacktestDetailChart({ prediction }: BacktestDetailChartProps) {
 				<Line
 					type="monotone"
 					dataKey="predicted"
-					stroke="#B8860B"
+					stroke="#8B6914"
 					strokeWidth={2}
-					dot={{ r: 3, fill: "#B8860B" }}
+					dot={{ r: 3, fill: "#8B6914" }}
 					name="Predicted"
 					isAnimationActive={true}
 					animationDuration={chartAnimations.duration}

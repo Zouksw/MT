@@ -41,6 +41,14 @@ export interface DashboardStats {
 		cuts: number;
 		factories: number;
 		prices: number;
+		/** Derived from /beef/prices/latest — the live beef price board. */
+		avgPrice: number | null;
+		minPrice: number | null;
+		maxPrice: number | null;
+		/** Fraction of cuts with a latest price (0–1). */
+		coverage: number | null;
+		/** ISO date of the most recent price record. */
+		latestDate: string | null;
 	};
 	recentAlerts: Alert[];
 	recentForecasts: Forecast[];
@@ -177,6 +185,38 @@ export const useDashboardStats = () => {
 	const beefFactories = factoriesData?.data?.factories ?? factoriesData?.factories ?? [];
 	const beefPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
 
+	// Derived live beef-price board from /beef/prices/latest.
+	// Each record has { price, date, cutCode }. We aggregate to avg/min/max and
+	// compute coverage = priced cuts / total cuts. All null when no data so the
+	// UI can show an honest empty state instead of fabricated numbers.
+	const pricedCuts = new Set<string>();
+	let priceSum = 0;
+	let priceCount = 0;
+	let minPrice = Number.POSITIVE_INFINITY;
+	let maxPrice = 0;
+	let latestDate: string | null = null;
+	for (const p of beefPrices as Array<{ price?: number; date?: string; cutCode?: string }>) {
+		const price = typeof p?.price === "number" ? p.price : Number(p?.price);
+		if (!Number.isFinite(price) || price <= 0) continue;
+		priceSum += price;
+		priceCount += 1;
+		if (price < minPrice) minPrice = price;
+		if (price > maxPrice) maxPrice = price;
+		if (p?.cutCode) pricedCuts.add(p.cutCode);
+		const d = p?.date;
+		if (d && (!latestDate || d > latestDate)) latestDate = d;
+	}
+	const beefPriceStats = {
+		avgPrice: priceCount > 0 ? priceSum / priceCount : null,
+		minPrice: priceCount > 0 ? minPrice : null,
+		maxPrice: priceCount > 0 ? maxPrice : null,
+		coverage: beefCuts.length > 0 ? pricedCuts.size / beefCuts.length : null,
+		latestDate,
+	};
+
+	// AI models — real count from the models registry (was hardcoded 8/8, a fake).
+	const aiTotal = forecastsData?.total ?? forecastsData?.data?.length ?? 0;
+
 	const stats: DashboardStats | null = isAuth
 		? datasetsData && timeseriesData && alertsData
 			? {
@@ -198,13 +238,14 @@ export const useDashboardStats = () => {
 						trend: trends.alerts,
 					},
 					aiModels: {
-						active: 8,
-						total: 8,
+						active: aiTotal,
+						total: aiTotal,
 					},
 					beef: {
 						cuts: beefCuts.length,
 						factories: beefFactories.length,
 						prices: beefPrices.length,
+						...beefPriceStats,
 					},
 					recentAlerts: Array.isArray(recentAlertsData?.data)
 						? recentAlertsData.data
@@ -219,11 +260,12 @@ export const useDashboardStats = () => {
 				timeseries: { total: 0, trend: 0 },
 				forecasts: { total: 0, trend: 0 },
 				alerts: { total: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0 }, trend: 0 },
-				aiModels: { active: 8, total: 8 },
+				aiModels: { active: aiTotal, total: aiTotal },
 				beef: {
 					cuts: beefCuts.length,
 					factories: beefFactories.length,
 					prices: beefPrices.length,
+					...beefPriceStats,
 				},
 				recentAlerts: [],
 				recentForecasts: [],

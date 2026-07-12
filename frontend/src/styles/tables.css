@@ -101,11 +101,11 @@
 
 /* Row hover with left accent border */
 .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
-  box-shadow: inset 3px 0 0 0 #B8860B;
+  box-shadow: inset 3px 0 0 0 #8B6914;
 }
 
 .dark .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
-  box-shadow: inset 3px 0 0 0 #D4A030;
+  box-shadow: inset 3px 0 0 0 #A8821C;
 }
 
 /* Table wrapper */

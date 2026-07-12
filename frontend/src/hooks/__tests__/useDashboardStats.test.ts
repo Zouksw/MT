@@ -295,7 +295,7 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats?.timeseries.total).toBe(0);
 	});
 
-	it("should include mock AI models data", async () => {
+	it("should report AI models count from the registry (no longer hardcoded)", async () => {
 		mockUseRetryableFetch.mockImplementation(() => ({
 			data: { total: 0, data: [] },
 			error: undefined,
@@ -313,8 +313,10 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(result.current.stats?.aiModels.active).toBe(8);
-		expect(result.current.stats?.aiModels.total).toBe(8);
+		// Previously this was a hardcoded fake (8/8). Now derived from the models
+		// registry — with an empty registry the count is honestly 0.
+		expect(result.current.stats?.aiModels.active).toBe(0);
+		expect(result.current.stats?.aiModels.total).toBe(0);
 	});
 
 	it("should include trend data", async () => {

@@ -228,7 +228,7 @@ export default function AnomalyList() {
 			{/* Statistics */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 				<StatCard label="Total Anomalies" value={totalAnomalies} />
-				<StatCard label="Critical" value={criticalCount} color="#B8860B" />
+				<StatCard label="Critical" value={criticalCount} color="#8B6914" />
 				<StatCard label="High" value={highCount} color="#EC4899" />
 				<StatCard label="Detection Rate" value="98.5" suffix="%" />
 			</div>

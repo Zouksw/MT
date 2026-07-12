@@ -7,7 +7,7 @@ export interface TrendIndicator {
 	isPositive: boolean;
 }
 
-export type StatCardVariant = "default" | "primary" | "success" | "warning" | "error";
+export type StatCardVariant = "default" | "primary" | "info" | "success" | "warning" | "error";
 
 export interface StatCardProps {
 	title: string;
@@ -124,7 +124,8 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 
 const variantColors: Record<StatCardVariant, { text: string }> = {
 	default: { text: "#475569" },
-	primary: { text: "#B8860B" },
+	primary: { text: "#8B6914" },
+	info: { text: "#2563EB" },
 	success: { text: "#16A34A" },
 	warning: { text: "#D97706" },
 	error: { text: "#DC2626" },

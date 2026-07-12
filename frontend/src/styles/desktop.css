@@ -50,7 +50,7 @@
 
   .desktop-nav-item:hover {
     background: rgba(184, 134, 11, 0.08);
-    color: #B8860B;
+    color: #8B6914;
   }
 
   .dark .desktop-nav-item:hover {
@@ -59,17 +59,17 @@
   }
 
   .desktop-nav-item.active {
-    background: #B8860B;
+    background: #8B6914;
     color: #FFFFFF;
   }
 
   .dark .desktop-nav-item.active {
-    background: #B8860B;
+    background: #8B6914;
     color: #FFFFFF;
   }
 
   .desktop-nav-item:focus-visible {
-    outline: 2px solid #B8860B;
+    outline: 2px solid #8B6914;
     outline-offset: 2px;
   }
 
@@ -129,8 +129,8 @@
   }
 
   .ant-btn-primary:hover {
-    background: #9A7209;
-    border-color: #9A7209;
+    background: #6B4F04;
+    border-color: #6B4F04;
   }
 
   /* Table row hover */
@@ -148,7 +148,7 @@
   }
 
   a:hover {
-    color: #B8860B;
+    color: #8B6914;
   }
 
   /* Icon button hover */
@@ -170,7 +170,7 @@
 
   .icon-button:hover {
     background: #F3F4F6;
-    color: #B8860B;
+    color: #8B6914;
   }
 
   .dark .icon-button:hover {
@@ -193,7 +193,7 @@
 @media (min-width: 1024px) {
   /* Focus visible styles for keyboard navigation */
   *:focus-visible {
-    outline: 2px solid #B8860B;
+    outline: 2px solid #8B6914;
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -203,7 +203,7 @@
     position: absolute;
     top: -40px;
     left: 0;
-    background: #B8860B;
+    background: #8B6914;
     color: #FFFFFF;
     padding: 8px 16px;
     z-index: 10000;
@@ -272,7 +272,7 @@
   }
 
   .ant-breadcrumb-link:hover {
-    color: #B8860B;
+    color: #8B6914;
   }
 }
 
@@ -328,7 +328,7 @@
   .ant-select-focused .ant-select-selector,
   .ant-picker-focused {
     box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.1);
-    border-color: #B8860B;
+    border-color: #8B6914;
   }
 
   /* Form label styling */

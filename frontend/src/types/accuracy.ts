@@ -38,7 +38,7 @@ export const MODEL_NAME_MAP: Record<string, string> = {
 };
 
 export const MODEL_COLORS: Record<string, string> = {
-	arima: "#B8860B",
+	arima: "#8B6914",
 	holtwinters: "#8B5CF6",
 	exponential_smoothing: "#EC4899",
 	naive_forecaster: "#F97316",

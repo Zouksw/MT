@@ -207,7 +207,7 @@ export default function SettingsPage() {
 									cy="64"
 									r="54"
 									fill="none"
-									stroke="#B8860B"
+									stroke="#8B6914"
 									strokeWidth="8"
 									strokeLinecap="round"
 									strokeDasharray={`${securityScore * 3.39} 339`}

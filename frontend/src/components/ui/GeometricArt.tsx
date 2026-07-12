@@ -5,7 +5,7 @@ import React from "react";
 /**
  * Geometric art SVG components for subtle background decorations.
  * Designed for Vercel/Tailwind aesthetic: white backgrounds, black text,
- * gold (#B8860B) accent. All rendered at very low opacity.
+ * gold (#8B6914) accent. All rendered at very low opacity.
  */
 
 // ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ const _HexGrid: React.FC<{ className?: string }> = ({ className }) => {
 						{/* Row A — centred at (w/2, h/2) */}
 						<polygon
 							points={hexPoints(w / 2, h / 2, HEX_RADIUS)}
-							stroke="#B8860B"
+							stroke="#8B6914"
 							strokeWidth={HEX_STROKE}
 							fill="none"
 							opacity={0.04}
@@ -62,13 +62,13 @@ const _HexGrid: React.FC<{ className?: string }> = ({ className }) => {
 						<polygon
 							points={hexPoints(w / 2, h / 2, HEX_RADIUS - 1)}
 							stroke="none"
-							fill="#B8860B"
+							fill="#8B6914"
 							opacity={0.02}
 						/>
 						{/* Row B — offset by w/2, shifted down by h */}
 						<polygon
 							points={hexPoints(w, h + h / 2, HEX_RADIUS)}
-							stroke="#B8860B"
+							stroke="#8B6914"
 							strokeWidth={HEX_STROKE}
 							fill="none"
 							opacity={0.04}
@@ -184,7 +184,7 @@ const _DotGrid: React.FC<{ className?: string }> = ({ className }) => {
 						patternUnits="userSpaceOnUse"
 						fill="none"
 					>
-						<circle cx={spacing / 2} cy={spacing / 2} r={1} fill="#B8860B" opacity={0.06} />
+						<circle cx={spacing / 2} cy={spacing / 2} r={1} fill="#8B6914" opacity={0.06} />
 					</pattern>
 				</defs>
 				<rect width="100%" height="100%" fill="url(#dot-grid-pattern)" />
@@ -238,7 +238,7 @@ const _BrokenHex: React.FC<{ className?: string }> = ({ className }) => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: decorative placeholder
 						key={i}
 						points={hexPoints(c.x, c.y, R)}
-						stroke="#B8860B"
+						stroke="#8B6914"
 						strokeWidth={0.5}
 						fill="none"
 						opacity={0.04}
@@ -251,7 +251,7 @@ const _BrokenHex: React.FC<{ className?: string }> = ({ className }) => {
 			>
 				<polygon
 					points={hexPoints(0, 0, R)}
-					stroke="#B8860B"
+					stroke="#8B6914"
 					strokeWidth={0.5}
 					fill="none"
 					opacity={0.08}
@@ -260,7 +260,7 @@ const _BrokenHex: React.FC<{ className?: string }> = ({ className }) => {
 			{/* Ghost of original position (faint outline) */}
 			<polygon
 				points={hexPoints(centres[brokenIndex].x, centres[brokenIndex].y, R)}
-				stroke="#B8860B"
+				stroke="#8B6914"
 				strokeWidth={0.3}
 				fill="none"
 				opacity={0.02}

@@ -22,12 +22,12 @@
   content: "";
   display: block;
   height: 1px;
-  background: #B8860B;
+  background: #8B6914;
   margin-top: 16px;
 }
 
 .dark .page-header::after {
-  background: linear-gradient(to right, #D4A030, rgba(184, 134, 11, 0.2), transparent);
+  background: linear-gradient(to right, #A8821C, rgba(184, 134, 11, 0.2), transparent);
 }
 
 .page-header__title {

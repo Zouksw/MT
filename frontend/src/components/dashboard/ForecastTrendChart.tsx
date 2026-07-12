@@ -117,8 +117,8 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
 							<LineChart data={displayData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
 								<defs>
 									<linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="5%" stopColor="#B8860B" stopOpacity={0.15} />
-										<stop offset="95%" stopColor="#B8860B" stopOpacity={0} />
+										<stop offset="5%" stopColor="#8B6914" stopOpacity={0.15} />
+										<stop offset="95%" stopColor="#8B6914" stopOpacity={0} />
 									</linearGradient>
 								</defs>
 								<CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
@@ -146,13 +146,13 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
 									type="monotone"
 									dataKey="count"
 									name="Forecasts"
-									stroke="#B8860B"
+									stroke="#8B6914"
 									strokeWidth={2.5}
 									dot={false}
 									activeDot={{
 										r: 5,
 										strokeWidth: 2,
-										stroke: "#B8860B",
+										stroke: "#8B6914",
 										fill: "#FFFFFF",
 									}}
 									fill="url(#forecastGradient)"
