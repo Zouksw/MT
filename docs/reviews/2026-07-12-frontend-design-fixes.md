@@ -103,6 +103,24 @@ Alert/LoadingState/ErrorDisplay 用 Unicode 字形 (`✓ ⚠ ✗ ℹ`) 作图标
 
 ---
 
+## 应用内页面视觉验证 (Playwright,修复 CORS 后)
+
+初次 Playwright 登录失败。根因排查发现是 **CORS 而非脚本问题**:
+- 后端 PM2 以 `production` 模式运行 (`ecosystem.config.cjs` 的 `env_production`)
+- `app.ts:82-98` 有安全守卫: production 模式下 **拒绝 localhost 源** (防生产环境误开放)
+- curl 不触发 CORS 所以之前 live-verify 都正常,但浏览器(Playwright=真 Chromium)触发
+- 修复: `pm2 start ecosystem.config.cjs --env development` 临时切开发模式 (localhost 守卫仅 production 生效),截图后恢复 production + `pm2 save`
+
+截图 3 个受保护页面 (ai/settings/dashboard),AI 视觉分析确认:
+- **ai 页**: "icon tiles now flat, subtle outline style — no rainbow gradients remain"
+- **settings 页**: "all 8 icon tiles consistently flat ring-1 outline with gold icons — rainbow blocks fully removed"
+- 金色在应用内页面一致可读
+
+> **CORS 本地开发注意**: 任何浏览器端测试 (Playwright / 手动浏览器) 都需后端以 development 模式运行。
+> 这是设计使然的安全守卫,不是 bug。生产部署时 `CORS_ORIGIN` 应设为真实域名。
+
+---
+
 ## 未做 (留后续轮次)
 
 - H1-H3: 手搓 Card/Button/StatCard 统一 (35 手搓 card + 28 手搓 button + 5 StatCard 实现) — 规模大,单独轮次
