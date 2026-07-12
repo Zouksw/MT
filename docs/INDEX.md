@@ -22,6 +22,7 @@
 - [CLAUDE.md](../CLAUDE.md) — AI assistant instructions (project root)
 
 ### Reviews & Audits (`reviews/`)
+- [**2026-07-12 前端设计审查**](reviews/2026-07-12-frontend-design-review.md) — design-review + 3 Explore agent + Playwright 截图;3 套颜色体系/Button 默认 primary/金色对比度/组件手搓绕过
 - [**2026-07-12 Round 27 多技能探查 + 后续开发计划**](reviews/2026-07-12-round-27-exploration.md) — 4 路 Explore agent + review + ops-check;覆盖 36.4%,瓶颈是数据源;R27-32 计划
 - [2026-07-12 Round 25-26](reviews/2026-07-12-round-25.md) — Storybook/phosphor/envelope 清理 + inference slug/UUID 修复(双向回归)
 - [**2026-07-06 多技能深度审计**](reviews/2026-07-06-multi-skill-audit.md) — 6 技能交叉验证的运行态/架构债/优化项总报告（已 review 二次验证）
