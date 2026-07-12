@@ -1,5 +1,6 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -72,7 +73,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
 				className="flex items-start gap-3 px-4 py-3 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200"
 				role="alert"
 			>
-				<span className="text-sm font-semibold mt-0.5">⚠</span>
+				<TriangleAlert className="size-4 mt-0.5 flex-shrink-0" />
 				<div className="flex-1">
 					<p className="font-semibold text-sm">Request Taking Longer Than Expected</p>
 					<div className="mt-2 text-sm">

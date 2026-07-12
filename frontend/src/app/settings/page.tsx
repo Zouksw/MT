@@ -59,35 +59,30 @@ export default function SettingsPage() {
 			title: "Profile Settings",
 			description: "Update your personal information and preferences",
 			icon: <User className="size-[18px]" />,
-			color: "from-primary to-blue-400",
 			path: "/settings/profile",
 		},
 		{
 			title: "Notifications",
 			description: "Configure how you receive alerts and notifications",
 			icon: <Bell className="size-[18px]" />,
-			color: "from-primary to-primary-hover",
 			path: "/settings/notifications",
 		},
 		{
 			title: "Session History",
 			description: "View your recent login history and active sessions",
 			icon: <Clock className="size-[18px]" />,
-			color: "from-emerald-500 to-teal-400",
 			path: "/settings/sessions",
 		},
 		{
 			title: "API Keys",
 			description: "Manage your API keys for programmatic access",
 			icon: <KeyRound className="size-[18px]" />,
-			color: "from-purple-500 to-indigo-400",
 			path: "/apikeys",
 		},
 		{
 			title: "Data Sources",
 			description: "Monitor data pipeline health and refresh sources",
 			icon: <Database className="size-[18px]" />,
-			color: "from-teal-500 to-cyan-400",
 			path: "/settings/data-sources",
 		},
 	];
@@ -165,9 +160,7 @@ export default function SettingsPage() {
 									onClick={() => router.push(section.path)}
 									className="w-full flex items-center gap-4 p-4 rounded-xl text-left transition-all duration-200 hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] group"
 								>
-									<div
-										className={`w-10 h-10 rounded-lg bg-gradient-to-br ${section.color} flex items-center justify-center text-white shadow-sm flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}
-									>
+									<div className="w-10 h-10 rounded-lg ring-1 ring-black/[0.06] dark:ring-white/[0.1] bg-muted/50 flex items-center justify-center text-primary flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
 										{section.icon}
 									</div>
 									<div className="flex-1 min-w-0">
@@ -290,28 +283,24 @@ export default function SettingsPage() {
 								title: "View Sessions",
 								desc: "See active sessions",
 								path: "/settings/sessions",
-								color: "from-emerald-500 to-teal-400",
 								icon: <Clock className="size-4" />,
 							},
 							{
 								title: "Notifications",
 								desc: "Configure alerts",
 								path: "/settings/notifications",
-								color: "from-primary to-primary-hover",
 								icon: <Bell className="size-4" />,
 							},
 							{
 								title: "API Keys",
 								desc: "Manage access tokens",
 								path: "/apikeys",
-								color: "from-purple-500 to-indigo-400",
 								icon: <KeyRound className="size-4" />,
 							},
 							{
 								title: "Profile",
 								desc: "Edit personal info",
 								path: "/settings/profile",
-								color: "from-primary to-blue-400",
 								icon: <User className="size-4" />,
 							},
 						].map((action, idx) => (
@@ -322,9 +311,7 @@ export default function SettingsPage() {
 								onClick={() => router.push(action.path)}
 								className="w-full p-4 rounded-xl text-left group transition-shadow duration-200 bg-card hover:shadow-md"
 							>
-								<div
-									className={`w-8 h-8 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white text-sm mb-3 transition-transform duration-200 group-hover:scale-110`}
-								>
+								<div className="w-8 h-8 rounded-lg ring-1 ring-black/[0.06] dark:ring-white/[0.1] bg-muted/50 flex items-center justify-center text-primary text-sm mb-3 transition-transform duration-200 group-hover:scale-110">
 									{action.icon}
 								</div>
 								<div className="font-semibold text-sm text-foreground">{action.title}</div>

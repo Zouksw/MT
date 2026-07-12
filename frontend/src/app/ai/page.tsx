@@ -9,28 +9,24 @@ const aiSections = [
 		title: "AI Models",
 		description: "Built-in AI models for time series forecasting and prediction",
 		icon: <FlaskConical className="size-5" />,
-		color: "from-primary to-blue-400",
 		href: "/ai/models",
 	},
 	{
 		title: "Anomaly Detection",
 		description: "Detect anomalies in your time series data with configurable rules",
 		icon: <AlertTriangle className="size-5" />,
-		color: "from-red-500 to-orange-400",
 		href: "/ai/anomalies",
 	},
 	{
 		title: "Predictions",
 		description: "Generate AI-powered price predictions with confidence scores",
 		icon: <Brain className="size-5" />,
-		color: "from-purple-500 to-indigo-400",
 		href: "/ai/predict",
 	},
 	{
 		title: "Model Accuracy",
 		description: "Track and compare AI model performance with MAPE metrics",
 		icon: <TrendingUp className="size-5" />,
-		color: "from-emerald-500 to-teal-400",
 		href: "/ai/accuracy",
 	},
 ];
@@ -61,9 +57,7 @@ export default function AIPage() {
 						href={section.href}
 						className="flex items-center gap-4 p-5 rounded-xl border bg-card transition-all duration-200 hover:shadow-card-hover group"
 					>
-						<div
-							className={`w-12 h-12 rounded-lg bg-gradient-to-br ${section.color} flex items-center justify-center text-white shadow-sm flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}
-						>
+						<div className="w-12 h-12 rounded-lg ring-1 ring-black/[0.06] dark:ring-white/[0.1] bg-muted/50 flex items-center justify-center text-primary flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
 							{section.icon}
 						</div>
 						<div className="flex-1 min-w-0">

@@ -3,10 +3,20 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import "dayjs/locale/zh-cn";
 
-import { Check, RefreshCw, Trash2 } from "lucide-react";
+import {
+	AlertCircle,
+	AlertTriangle,
+	Check,
+	Info,
+	RefreshCw,
+	Settings,
+	Siren,
+	Trash2,
+	TrendingUp,
+} from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -157,9 +167,9 @@ export default function AlertList() {
 	};
 
 	const getAlertIcon = (severity: string) => {
-		if (severity === "ERROR") return <span className="text-red-500">&#10060;</span>;
-		if (severity === "WARNING") return <span className="text-amber-500">&#9888;</span>;
-		return <span className="text-amber-600">&#8505;</span>;
+		if (severity === "ERROR") return <AlertCircle className="size-4 text-red-500" />;
+		if (severity === "WARNING") return <AlertTriangle className="size-4 text-amber-500" />;
+		return <Info className="size-4 text-amber-600" />;
 	};
 
 	const filteredAlerts = alerts.filter((alert) => {
@@ -202,14 +212,14 @@ export default function AlertList() {
 			width: 160,
 			render: (type: unknown) => {
 				const t = String(type);
-				const icons: Record<string, string> = {
-					ANOMALY: "\u{1F6A8}",
-					FORECAST_READY: "\u{1F4C8}",
-					SYSTEM: "⚙️",
+				const icons: Record<string, ReactNode> = {
+					ANOMALY: <Siren className="size-3 inline" />,
+					FORECAST_READY: <TrendingUp className="size-3 inline" />,
+					SYSTEM: <Settings className="size-3 inline" />,
 				};
 				return (
 					<Tag color={getAlertTypeTagColor(t)}>
-						{icons[t] || ""} {t.replace(/_/g, " ")}
+						{icons[t]} {t.replace(/_/g, " ")}
 					</Tag>
 				);
 			},

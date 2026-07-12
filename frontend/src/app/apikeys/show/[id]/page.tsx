@@ -261,7 +261,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					<CardBody className="text-center">
 						<h3 className="text-red-600 dark:text-red-400 text-lg font-semibold mb-4">Error</h3>
 						<p className="text-muted-foreground mb-6">{error || "API key not found"}</p>
-						<Button variant="primary" onClick={() => window.history.back()}>
+						<Button variant="ghost" onClick={() => window.history.back()}>
 							Go Back
 						</Button>
 					</CardBody>

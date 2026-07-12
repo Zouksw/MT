@@ -130,7 +130,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 					<div className="bg-card rounded-lg shadow-sm border border p-6 text-center">
 						<h3 className="text-lg font-semibold text-red-500 mb-3">Error</h3>
 						<p className="text-muted-foreground mb-6">{error || "Anomaly not found"}</p>
-						<Button variant="primary" onClick={() => window.history.back()}>
+						<Button variant="ghost" onClick={() => window.history.back()}>
 							Go Back
 						</Button>
 					</div>

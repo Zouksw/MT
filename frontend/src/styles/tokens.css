@@ -4,10 +4,14 @@
  */
 
 :root {
-  /* Primary Colors — Gold accent */
-  --color-primary: #B8860B;
-  --color-primary-hover: #9A7209;
-  --color-primary-active: #7D5D07;
+  /* Primary Colors — Gold accent
+   * Base darkened from #B8860B (3.2:1 on white, failed WCAG AA) to #8B6914
+   * (5.1:1 on white, passes AA for normal text AND white-on-gold buttons).
+   * The old #B8860B read as a mid-tone that couldn't serve both as text and
+   * as a button fill; #8B6914 passes both uses. See frontend-design-review. */
+  --color-primary: #8B6914;
+  --color-primary-hover: #7D5D07;
+  --color-primary-active: #6B4F04;
   --color-primary-light: #FDF6E3;
 
   /* Secondary Colors */

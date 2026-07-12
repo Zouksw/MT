@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertCircle } from "lucide-react";
 import type React from "react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
@@ -45,7 +46,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 			className={`flex items-start gap-3 px-4 py-3 rounded-lg border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 ${className || ""}`}
 			role="alert"
 		>
-			<span className="text-sm font-semibold mt-0.5">✗</span>
+			<AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
 			<div className="flex-1 min-w-0">
 				<p className="font-semibold text-sm">{safeError.message}</p>
 				<div className="mt-2">
