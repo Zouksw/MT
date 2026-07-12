@@ -24,6 +24,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
+import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tabs } from "@/components/ui/Tabs";
 import { Tag } from "@/components/ui/Tag";
@@ -341,34 +342,10 @@ export default function AlertList() {
 			{/* Statistics */}
 			{stats && (
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-					<Card>
-						<CardBody>
-							<p className="text-sm text-muted-foreground">Total Alerts</p>
-							<p className="text-2xl font-semibold text-foreground mt-1">{stats.total}</p>
-						</CardBody>
-					</Card>
-					<Card>
-						<CardBody>
-							<p className="text-sm text-muted-foreground">Unread</p>
-							<p className="text-2xl font-semibold text-foreground mt-1">{stats.unread}</p>
-						</CardBody>
-					</Card>
-					<Card>
-						<CardBody>
-							<p className="text-sm text-muted-foreground">Errors</p>
-							<p className="text-2xl font-semibold text-foreground mt-1">
-								{stats.bySeverity.ERROR || 0}
-							</p>
-						</CardBody>
-					</Card>
-					<Card>
-						<CardBody>
-							<p className="text-sm text-muted-foreground">Warnings</p>
-							<p className="text-2xl font-semibold text-foreground mt-1">
-								{stats.bySeverity.WARNING || 0}
-							</p>
-						</CardBody>
-					</Card>
+					<StatCard title="Total Alerts" value={stats.total} />
+					<StatCard title="Unread" value={stats.unread} variant="primary" />
+					<StatCard title="Errors" value={stats.bySeverity.ERROR || 0} variant="error" />
+					<StatCard title="Warnings" value={stats.bySeverity.WARNING || 0} variant="warning" />
 				</div>
 			)}
 

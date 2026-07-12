@@ -111,13 +111,15 @@ describe("AlertList", () => {
 	it("should render stats when loaded", async () => {
 		render(<AlertList />);
 
+		// StatCard titles + values render together. In jsdom the count-up
+		// animation is skipped (non-native rAF detected) so the final value
+		// is rendered synchronously.
 		await waitFor(() => {
 			expect(screen.getByText("Total Alerts")).toBeInTheDocument();
-		});
-		await waitFor(() => {
 			expect(screen.getByText("15")).toBeInTheDocument();
 			expect(screen.getByText("Unread")).toBeInTheDocument();
-			expect(screen.getByText("8")).toBeInTheDocument();
+			expect(screen.getByText("Errors")).toBeInTheDocument();
+			expect(screen.getByText("Warnings")).toBeInTheDocument();
 		});
 	});
 

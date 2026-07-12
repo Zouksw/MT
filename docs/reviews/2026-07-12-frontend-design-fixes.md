@@ -121,9 +121,39 @@ Alert/LoadingState/ErrorDisplay 用 Unicode 字形 (`✓ ⚠ ✗ ℹ`) 作图标
 
 ---
 
+## HIGH 项修复 (组件复用)
+
+### H2: Button 暴露完整 cva variant
+`Button/index.tsx` 原仅暴露 4 variant (`primary|secondary|ghost|danger`) + 3 尺寸,底层 `button.tsx`
+有 `outline|link` + `xs|icon*`。作者需要这些变体时只能手搓 `<button>` (28 处根因)。
+**修复**: 扩展 VARIANT_MAP/SIZE_MAP 暴露 `outline|link` + `xs|icon|icon-sm|icon-lg`,保留 isLoading/fullWidth/icon 增强。
+
+### H3: StatCard 统一 (2 处删除)
+- `forecasts/page.tsx`: 删除本地 StatCard 组件 (33-69 行,无 error 变体),改 import `ui/StatCard`,`label=` → `title=` (4 处)
+- `alerts/page.tsx`: 4 个 `<Card><CardBody><p>label</p><p>value</p>` 内联 stat 块 → `<StatCard title= variant= value=>` (Total/Unread/Errors/Warnings,带语义变体)
+- `StatCard.tsx` useAnimatedCounter: 检测 jsdom (非原生 rAF) 时跳过 count-up 动画 → 测试中同步渲染最终值
+
+### H4: DirectionBadge inline hex → Tag token
+`DirectionBadge.tsx` 原用 `style={{color:"#16a34a"}}` inline hex + monospace + 中文标签 (上涨/下跌/横盘, FE-M1 模式)。
+**重写**: 用 `Tag` 原语 (success/error/warning 变体, 暗色感知) + lucide 箭头 (ArrowUp/ArrowDown/Minus) + 英文标签 (Up/Down/Flat)。
+
+### H1: Card — 评估后归专门轮次
+35 个手搓 card div 用 `rounded-lg shadow-sm border` 风格,而 Card 原语用 `rounded-xl ring-1`。
+机械替换会改变视觉风格 (圆角/阴影系统),需逐页视觉验证 — 规模 + 风险不匹配本轮快速修复。原语双实现 (`card.tsx` + `Card/index.tsx`) 实际已连贯 (index 包装 card 加 hover/onClick)。归专门迁移轮次。
+
+### 验证 (HIGH 项)
+| 检查 | 结果 |
+|---|---|
+| `tsc --noEmit` | 0 错误 |
+| `next build` | exit 0 |
+| jest | **272/272** (StatCard + alerts 测试更新适配 jsdom 动画跳过) |
+
+---
+
 ## 未做 (留后续轮次)
 
-- H1-H3: 手搓 Card/Button/StatCard 统一 (35 手搓 card + 28 手搓 button + 5 StatCard 实现) — 规模大,单独轮次
+- **H1: 手搓 Card 迁移** (35 站点,rounded-lg→xl 风格变更,需逐页视觉验证) — 单独轮次
 - 暗色模式洞: `error.tsx` / `ProfessionalChart` / `TimeframeSelector` 暗色破裂
 - 加载/错误态: `datasets` 无错误态 / `ai/anomalies` 无内联错误
 - 占位内容: picsum 头像 / "Coming Soon" / 死 billing 页
+- 手搓 `<button>` 迁移到 Button 原语 (现在 variant 已齐备,可渐进迁移)

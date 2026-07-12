@@ -5,7 +5,9 @@ describe("StatCard", () => {
 	it("should render title and value", () => {
 		render(<StatCard title="Total Users" value={1234} />);
 		expect(screen.getByText("Total Users")).toBeInTheDocument();
-		expect(screen.getByText("0")).toBeInTheDocument();
+		// In jsdom the count-up animation is skipped (non-native rAF), so the
+		// final target value renders synchronously.
+		expect(screen.getByText("1234")).toBeInTheDocument();
 	});
 
 	it("should render string value", () => {

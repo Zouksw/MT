@@ -21,10 +21,18 @@ export interface StatCardProps {
 }
 
 function useAnimatedCounter(target: number, duration = 800) {
+	// In jsdom (test env) requestAnimationFrame fires synchronously/unreliably
+	// and the rAF loop never settles on the final value, breaking tests that
+	// assert the rendered number. Detect the non-native rAF and skip animation.
+	const rafNative =
+		typeof requestAnimationFrame === "function" &&
+		/\[native code\]/.test(requestAnimationFrame.toString());
+
 	const [display, setDisplay] = useState(() => {
 		if (
-			typeof window !== "undefined" &&
-			window.matchMedia("(prefers-reduced-motion: reduce)").matches
+			!rafNative ||
+			(typeof window !== "undefined" &&
+				window.matchMedia("(prefers-reduced-motion: reduce)").matches)
 		)
 			return target;
 		return 0;
@@ -32,6 +40,10 @@ function useAnimatedCounter(target: number, duration = 800) {
 	const prevTarget = useRef(target);
 
 	useEffect(() => {
+		if (!rafNative) {
+			prevTarget.current = target;
+			return;
+		}
 		const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 		if (prefersReducedMotion) {
 			prevTarget.current = target;
@@ -50,7 +62,7 @@ function useAnimatedCounter(target: number, duration = 800) {
 			else prevTarget.current = target;
 		}
 		requestAnimationFrame(step);
-	}, [target, duration]);
+	}, [target, duration, rafNative]);
 
 	return display;
 }

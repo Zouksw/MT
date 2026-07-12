@@ -2,11 +2,11 @@
 
 import { Clock, Download, Plus, TrendingUp, TriangleAlert, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type React from "react";
 import { useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
@@ -28,44 +28,6 @@ interface ForecastRecord {
 	createdAt: string;
 	model?: { algorithm: string };
 	timeseries?: { name: string; unit?: string };
-}
-
-// Stat card component
-function StatCard({
-	label,
-	value,
-	icon,
-	variant,
-	loading,
-}: {
-	label: string;
-	value: number | string;
-	icon?: React.ReactNode;
-	variant?: "primary" | "success" | "warning" | "default";
-	loading?: boolean;
-}) {
-	const variantStyles: Record<string, string> = {
-		primary: "border-primary/20 dark:border-primary/20 bg-primary/5 dark:bg-primary/10",
-		success: "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10",
-		warning: "border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10",
-		default: "",
-	};
-
-	return (
-		<div className={`rounded-lg p-5 shadow-sm border ${variant ? variantStyles[variant] : ""}`}>
-			<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-				{icon}
-				{label}
-			</div>
-			{loading ? (
-				<div className="h-8 w-16 bg-muted rounded animate-pulse" />
-			) : (
-				<div className="text-2xl font-semibold text-foreground">
-					{typeof value === "number" ? value.toLocaleString() : value}
-				</div>
-			)}
-		</div>
-	);
 }
 
 export default function ForecastList() {
@@ -388,27 +350,27 @@ export default function ForecastList() {
 			{/* Statistics Cards */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 				<StatCard
-					label="Total Forecasts"
+					title="Total Forecasts"
 					value={totalForecasts}
 					variant="primary"
 					loading={loading}
 					icon={<TrendingUp className="size-4" />}
 				/>
 				<StatCard
-					label="Active Models"
+					title="Active Models"
 					value={uniqueModels}
 					variant="success"
 					loading={loading}
 					icon={<Zap className="size-4" />}
 				/>
 				<StatCard
-					label="Time Series"
+					title="Time Series"
 					value={uniqueTimeseries}
 					loading={loading}
 					icon={<Clock className="size-4" />}
 				/>
 				<StatCard
-					label="Anomalies Detected"
+					title="Anomalies Detected"
 					value={anomalyCount}
 					variant={anomalyCount > 0 ? "warning" : "default"}
 					loading={loading}
