@@ -22,6 +22,8 @@
 - [CLAUDE.md](../CLAUDE.md) — AI assistant instructions (project root)
 
 ### Reviews & Audits (`reviews/`)
+- [**2026-07-12 前端提升计划 + 审查**](reviews/2026-07-12-frontend-plan-review.md) — web 研究(Stripe/Linear/Bloomberg)+ 3 agent(IA/数据可视化/品牌);3 CRITICAL(死导航/假WebSocket/数字矛盾);4 阶段计划经 review 审查
+- [**2026-07-12 前端提升计划正文**](../FRONTEND-IMPROVEMENT-PLAN.md) — 信任→可用→品质→品牌 4 阶段,17 任务,度量目标
 - [**2026-07-12 前端设计审查**](reviews/2026-07-12-frontend-design-review.md) — design-review + 3 Explore agent + Playwright 截图;3 套颜色体系/Button 默认 primary/金色对比度/组件手搓绕过
 - [**2026-07-12 Round 27 多技能探查 + 后续开发计划**](reviews/2026-07-12-round-27-exploration.md) — 4 路 Explore agent + review + ops-check;覆盖 36.4%,瓶颈是数据源;R27-32 计划
 - [2026-07-12 Round 25-26](reviews/2026-07-12-round-25.md) — Storybook/phosphor/envelope 清理 + inference slug/UUID 修复(双向回归)
