@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
 	useRouter: () => ({ push: jest.fn() }),
+	usePathname: () => "/alerts",
 }));
 
 // Mock dayjs — provide real dayjs with no-op extend/locale

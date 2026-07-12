@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { AppShell } from "@/components/layout/AppShell";
 import { PageTransition } from "@/components/ui/PageTransition";
 
 export interface PageContainerProps {
@@ -10,13 +11,13 @@ export interface PageContainerProps {
 
 export const PageContainer: React.FC<PageContainerProps> = ({ children, className = "" }) => {
 	return (
-		<div
-			className={`page-container bg-pattern-dots min-h-screen bg-white dark:bg-gray-950 p-6 ${className}`}
-		>
-			<PageTransition variant="slide-up">
-				<div className="mx-auto max-w-[1440px]">{children}</div>
-			</PageTransition>
-		</div>
+		<AppShell>
+			<div className={`page-container p-6 ${className}`}>
+				<PageTransition variant="slide-up">
+					<div className="mx-auto max-w-[1440px]">{children}</div>
+				</PageTransition>
+			</div>
+		</AppShell>
 	);
 };
 

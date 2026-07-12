@@ -12,10 +12,10 @@ export default function PricingPage() {
 	const plans = [
 		{
 			name: "Free",
-			description: "108 commodity prices, basic charts, 7-day history",
+			description: "85+ beef cut prices, basic charts, 7-day history",
 			price: { monthly: 0, yearly: 0 },
 			features: [
-				"108 commodity prices",
+				"85+ beef cut prices",
 				"5 watchlist items",
 				"3 of 7 AI models",
 				"Basic charts & OHLCV data",
@@ -29,7 +29,7 @@ export default function PricingPage() {
 			description: "7 AI models, multi-factor analysis, alerts, API access",
 			price: { monthly: 49, yearly: 39 },
 			features: [
-				"All 108 commodities",
+				"全部 85+ 牛肉部位",
 				"All 7 AI models with consensus signals",
 				"Multi-factor analysis (weather, forex, shipping)",
 				"Price alerts & anomaly detection",
@@ -46,7 +46,7 @@ export default function PricingPage() {
 			description: "Private deployment, custom model training, dedicated support",
 			price: { monthly: 199, yearly: 159 },
 			features: [
-				"All 108 commodities + custom sources",
+				"全部 85+ 牛肉部位 + custom sources",
 				"All AI models with priority inference",
 				"Advanced correlation & seasonality",
 				"Dedicated API endpoints",
@@ -110,7 +110,7 @@ export default function PricingPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-muted-foreground mb-10">
-							Free tier includes all 108 commodity prices. Paid tiers unlock AI signals and advanced
+							Free tier includes all 85+ beef cut prices. Paid tiers unlock AI signals and advanced
 							analytics.
 						</p>
 					</MotionReveal>
@@ -296,7 +296,7 @@ export default function PricingPage() {
 							},
 							{
 								q: "Is the free plan really free?",
-								a: "No time limit. All 108 commodity prices with OHLCV charts and 7-day history, permanently free. Upgrade for AI signals and extended history.",
+								a: "No time limit. All 85+ beef cut prices with OHLCV charts and 7-day history, permanently free. Upgrade for AI signals and extended history.",
 							},
 							{
 								q: "What payment methods do you accept?",

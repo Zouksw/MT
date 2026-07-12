@@ -48,7 +48,7 @@ const features = [
 	{
 		title: "Price Alerts",
 		description:
-			"Custom thresholds on any cut or market. Breakout and reversal detection via WebSocket with factor attribution.",
+			"Custom thresholds on any cut or market. Breakout and reversal detection with factor attribution, refreshed every few minutes.",
 		details: ["Cut thresholds", "Trend alerts", "Factor context"],
 		span: "",
 		visual: null,

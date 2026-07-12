@@ -39,7 +39,7 @@ const faqs: FAQItem[] = [
 	{
 		question: "Can I set up price alerts?",
 		answer:
-			"Yes. Custom price thresholds on any of the 85+ beef cuts. Breakout and trend reversal detection via WebSocket — alerts arrive in under 50ms. Severity levels (info/warning/critical) with factor attribution so you see what's driving the price move.",
+			"Yes. Custom price thresholds on any of the 85+ beef cuts. Breakout and trend reversal detection with factor attribution. Alerts refresh every few minutes with severity levels (info/warning/critical) so you see what's driving the price move.",
 	},
 ];
 

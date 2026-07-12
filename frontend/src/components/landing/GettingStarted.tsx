@@ -8,20 +8,19 @@ const steps = [
 	{
 		number: 1,
 		title: "Create Your Account",
-		description: "Free account. Pick from 108 commodities. No credit card.",
+		description: "免费账号。覆盖 85+ 牛肉部位。无需信用卡。",
 		preview: null,
 	},
 	{
 		number: 2,
 		title: "Explore Market Data",
-		description:
-			"108 commodities with OHLCV candlestick data, multi-source price overlay, and 30-day history.",
+		description: "85+ 牛肉部位,含 OHLCV K线数据、多数据源价格叠加、30 天历史走势。",
 		preview: (
 			<div className="space-y-2 mt-3">
 				{[
-					{ name: "Crude Oil WTI", price: "$78.42", chg: "+1.23%", up: true },
-					{ name: "Gold", price: "$2,341", chg: "+0.41%", up: true },
-					{ name: "Natural Gas", price: "$2.84", chg: "+2.17%", up: true },
+					{ name: "Chuck Roll (巴西)", price: "¥45.2/kg", chg: "-0.8%", up: false },
+					{ name: "Brisket (美国)", price: "¥52.1/kg", chg: "+1.1%", up: true },
+					{ name: "牛腩 (国产)", price: "¥68.5/kg", chg: "+0.3%", up: true },
 				].map((c) => (
 					<div
 						key={c.name}

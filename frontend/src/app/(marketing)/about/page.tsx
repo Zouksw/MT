@@ -1,6 +1,16 @@
 "use client";
 
-import { Building, Calendar, ChartColumn, Globe, ShieldCheck, Users, Zap } from "lucide-react";
+import {
+	Building,
+	Calendar,
+	ChartColumn,
+	Database,
+	Globe,
+	ShieldCheck,
+	TrendingUp,
+	Users,
+	Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
@@ -75,10 +85,10 @@ export default function AboutPage() {
 				<div className="max-w-5xl mx-auto">
 					<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 						{[
-							{ number: "2024", label: "Founded", Icon: Calendar },
-							{ number: "487", label: "Enterprise Users", Icon: Building },
-							{ number: "47", label: "Countries", Icon: Globe },
-							{ number: "1.2B", label: "Data Points/Day", Icon: ChartColumn },
+							{ number: "85+", label: "牛肉部位", Icon: ChartColumn },
+							{ number: "5", label: "进口来源国", Icon: Globe },
+							{ number: "6", label: "AI 预测模型", Icon: TrendingUp },
+							{ number: "7+", label: "数据源", Icon: Database },
 						].map((stat, idx) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
@@ -135,10 +145,10 @@ export default function AboutPage() {
 								<div className="rounded-xl p-8 bg-primary/5 dark:bg-gray-950 ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
 									<div className="grid grid-cols-2 gap-8">
 										{[
-											{ value: "99.94%", label: "Platform Uptime" },
-											{ value: "<1ms", label: "Query Latency" },
-											{ value: "10M+", label: "Points per Second" },
-											{ value: "24/7", label: "Expert Support" },
+											{ value: "85+", label: "牛肉部位覆盖" },
+											{ value: "6", label: "AI 预测模型" },
+											{ value: "5", label: "进口来源国" },
+											{ value: "24/7", label: "数据自动采集" },
 										].map((stat, idx) => (
 											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<div key={idx} className="text-center">
@@ -348,7 +358,7 @@ export default function AboutPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-gray-300 mb-10">
-							108 commodities. 7 models. 131 factors. Start free.
+							85+ 牛肉部位。6 个 AI 预测模型。5 个进口来源国。免费开始。
 						</p>
 					</MotionReveal>
 					<MotionReveal delay={0.2}>
