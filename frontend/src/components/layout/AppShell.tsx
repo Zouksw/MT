@@ -39,6 +39,10 @@ const NAV_SECTIONS: NavSection[] = [
 		],
 	},
 	{
+		label: "资讯",
+		items: [{ label: "市场动态", href: "/market-news", icon: Newspaper }],
+	},
+	{
 		label: "分析",
 		items: [
 			{ label: "价格走势", href: "/trading", icon: ChartLine },

@@ -8,32 +8,33 @@ datasource db {
 }
 
 model User {
-  id                   String                 @id @default(uuid())
-  email                String                 @unique
-  passwordHash         String                 @map("password_hash")
-  name                 String
-  avatarUrl            String?                @map("avatar_url")
-  role                 UserRole               @default(VIEWER)
-  is_mfa_enabled       Boolean                @default(false)
-  mfa_secret           String?
-  preferences          Json?
-  lastLoginAt          DateTime?              @map("last_login_at")
-  createdAt            DateTime               @default(now()) @map("created_at")
-  updatedAt            DateTime?              @updatedAt @map("updated_at")
-  failedLoginAttempts  Int?                   @default(0) @map("failed_login_attempts")
-  lockedUntil          DateTime?              @map("locked_until") @db.Timestamp(6)
-  alerts               Alert[]
-  alertRules           AlertRule[]
-  apiKeys              ApiKey[]
-  auditLogs            AuditLog[]
-  datasets             Dataset[]
-  models               ForecastingModel[]
-  organizations        organizations[]
-  securityAuditLogs    SecurityAuditLog[]     @relation("SecurityAuditLogs")
-  sessions             Session[]
-  watchlists           Watchlist[]
-  portfolios           Portfolio[]
-  subscription         Subscription?
+  id                  String             @id @default(uuid())
+  email               String             @unique
+  passwordHash        String             @map("password_hash")
+  name                String
+  avatarUrl           String?            @map("avatar_url")
+  role                UserRole           @default(VIEWER)
+  is_mfa_enabled      Boolean            @default(false)
+  mfa_secret          String?
+  preferences         Json?
+  lastLoginAt         DateTime?          @map("last_login_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime?          @updatedAt @map("updated_at")
+  failedLoginAttempts Int?               @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?          @map("locked_until") @db.Timestamp(6)
+  alerts              Alert[]
+  alertRules          AlertRule[]
+  apiKeys             ApiKey[]
+  auditLogs           AuditLog[]
+  datasets            Dataset[]
+  models              ForecastingModel[]
+  organizations       organizations[]
+  securityAuditLogs   SecurityAuditLog[] @relation("SecurityAuditLogs")
+  sessions            Session[]
+  watchlists          Watchlist[]
+  portfolios          Portfolio[]
+  subscription        Subscription?
+  news                MarketNews[]
 
   @@index([email])
   @@index([createdAt(sort: Desc)])
@@ -202,22 +203,22 @@ model Alert {
 }
 
 model AlertRule {
-  id                String              @id @default(uuid())
-  userId            String              @map("user_id")
-  timeseriesId      String              @map("timeseries_id")
-  name              String
-  description       String?
-  type              String              @default("ANOMALY")
-  enabled           Boolean             @default(true)
-  conditions        Json                @map("conditions")
-  severity          String              @default("WARNING")
-  channels          Json                @map("channels")
-  cooldownMinutes   Int                 @default(5) @map("cooldown_minutes")
-  lastTriggeredAt   DateTime?           @map("last_triggered_at")
-  createdAt         DateTime            @default(now()) @map("created_at")
-  updatedAt         DateTime?           @updatedAt @map("updated_at")
-  alerts            Alert[]
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  timeseriesId    String    @map("timeseries_id")
+  name            String
+  description     String?
+  type            String    @default("ANOMALY")
+  enabled         Boolean   @default(true)
+  conditions      Json      @map("conditions")
+  severity        String    @default("WARNING")
+  channels        Json      @map("channels")
+  cooldownMinutes Int       @default(5) @map("cooldown_minutes")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime? @updatedAt @map("updated_at")
+  alerts          Alert[]
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([timeseriesId])
@@ -304,24 +305,23 @@ model SecurityAuditLog {
 }
 
 model organizations {
-  id                   String                 @id
-  owner_id             String
-  name                 String
-  slug                 String                 @unique
-  description          String?
-  logo_url             String?
-  settings             Json?
-  is_archived          Boolean                @default(false)
-  created_at           DateTime               @default(now())
-  updated_at           DateTime?
-  datasets             Dataset[]
-  users                User                   @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  id          String    @id
+  owner_id    String
+  name        String
+  slug        String    @unique
+  description String?
+  logo_url    String?
+  settings    Json?
+  is_archived Boolean   @default(false)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime?
+  datasets    Dataset[]
+  users       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   @@index([created_at(sort: Desc)])
   @@index([owner_id])
   @@index([slug])
 }
-
 
 model PredictionLog {
   id              String    @id @default(uuid())
@@ -407,27 +407,35 @@ enum AuditAction {
   LOGIN
 }
 
+enum NewsCategory {
+  PRICE_MOVE
+  SUPPLY
+  TRADE_POLICY
+  MARKET_INSIGHT
+  COMPANY
+}
+
 // ─── TradeMind AI: Commodity Trading Models ───
 
 model Commodity {
-  id            String   @id @default(uuid())
-  slug          String   @unique
-  name          String
-  nameCn        String?  @map("name_cn")
-  category      String   // beef_cuts, live_cattle, grain, feed, forex, etc.
-  subcategory   String?  // brisket, shin, sirloin, thick_flank, etc.
-  grade         String?  // Prime, Choice, Select, M9, M7, etc.
-  originCountry String?  @map("origin_country") // AUS, BRA, ARG, URY, USA, CN
-  factoryCode   String?  @map("factory_code")
-  unit          String   // USD/kg, CNY/kg, USD/ton, etc.
-  currency      String   @default("USD")
-  isActive      Boolean  @default(true) @map("is_active")
-  metadata      Json?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime? @updatedAt @map("updated_at")
-  prices        CommodityPrice[]
+  id             String           @id @default(uuid())
+  slug           String           @unique
+  name           String
+  nameCn         String?          @map("name_cn")
+  category       String // beef_cuts, live_cattle, grain, feed, forex, etc.
+  subcategory    String? // brisket, shin, sirloin, thick_flank, etc.
+  grade          String? // Prime, Choice, Select, M9, M7, etc.
+  originCountry  String?          @map("origin_country") // AUS, BRA, ARG, URY, USA, CN
+  factoryCode    String?          @map("factory_code")
+  unit           String // USD/kg, CNY/kg, USD/ton, etc.
+  currency       String           @default("USD")
+  isActive       Boolean          @default(true) @map("is_active")
+  metadata       Json?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime?        @updatedAt @map("updated_at")
+  prices         CommodityPrice[]
   watchlistItems WatchlistItem[]
-  groupMembers  GroupMember[]
+  groupMembers   GroupMember[]
 
   @@index([category])
   @@index([originCountry])
@@ -436,19 +444,19 @@ model Commodity {
 }
 
 model CommodityPrice {
-  id           String    @id @default(uuid())
-  commodityId  String    @map("commodity_id")
-  date         DateTime
-  interval     String    // daily, weekly, monthly
-  open         Decimal?  @db.Decimal(18, 6)
-  high         Decimal?  @db.Decimal(18, 6)
-  low          Decimal?  @db.Decimal(18, 6)
-  close        Decimal   @db.Decimal(18, 6)
-  volume       Decimal?  @db.Decimal(18, 4)
-  source       String    // usda_ams, fao, cme, china_mara, china_customs, manual
-  metadata     Json?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  commodity    Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  commodityId String    @map("commodity_id")
+  date        DateTime
+  interval    String // daily, weekly, monthly
+  open        Decimal?  @db.Decimal(18, 6)
+  high        Decimal?  @db.Decimal(18, 6)
+  low         Decimal?  @db.Decimal(18, 6)
+  close       Decimal   @db.Decimal(18, 6)
+  volume      Decimal?  @db.Decimal(18, 4)
+  source      String // usda_ams, fao, cme, china_mara, china_customs, manual
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  commodity   Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
 
   @@unique([commodityId, interval, date, source])
   @@index([commodityId, interval, date(sort: Desc)])
@@ -457,15 +465,15 @@ model CommodityPrice {
 }
 
 model MarketFactor {
-  id         String   @id @default(uuid())
-  type       String   // weather, exchange_rate, tariff, shipping_cost, quota, policy
-  region     String?
-  date       DateTime
-  value      Decimal  @db.Decimal(18, 6)
-  unit       String
-  source     String
-  metadata   Json?
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  type      String // weather, exchange_rate, tariff, shipping_cost, quota, policy
+  region    String?
+  date      DateTime
+  value     Decimal  @db.Decimal(18, 6)
+  unit      String
+  source    String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([type, region, date])
   @@index([type, date(sort: Desc)])
@@ -476,13 +484,13 @@ model MarketFactor {
 // ─── Phase 2: Watchlist & Portfolio ───
 
 model Watchlist {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String          @id @default(uuid())
+  userId    String          @map("user_id")
   name      String
-  isDefault Boolean  @default(false) @map("is_default")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime? @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDefault Boolean         @default(false) @map("is_default")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime?       @updatedAt @map("updated_at")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     WatchlistItem[]
 
   @@unique([userId, name])
@@ -491,13 +499,13 @@ model Watchlist {
 }
 
 model WatchlistItem {
-  id           String    @id @default(uuid())
-  watchlistId  String    @map("watchlist_id")
-  commodityId  String    @map("commodity_id")
-  addedAt      DateTime  @default(now()) @map("added_at")
-  notes        String?
-  watchlist    Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
-  commodity    Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  watchlistId String    @map("watchlist_id")
+  commodityId String    @map("commodity_id")
+  addedAt     DateTime  @default(now()) @map("added_at")
+  notes       String?
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  commodity   Commodity @relation(fields: [commodityId], references: [id], onDelete: Cascade)
 
   @@unique([watchlistId, commodityId])
   @@index([watchlistId])
@@ -506,14 +514,14 @@ model WatchlistItem {
 }
 
 model Portfolio {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
   name        String
   description String?
-  isDefault   Boolean  @default(false) @map("is_default")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime? @updatedAt @map("updated_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDefault   Boolean       @default(false) @map("is_default")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime?     @updatedAt @map("updated_at")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   members     GroupMember[]
 
   @@unique([userId, name])
@@ -542,15 +550,15 @@ model GroupMember {
 // ─── Phase 7: Monetization ───
 
 model Subscription {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  plan              String   @default("free") // free, pro, enterprise
-  status            String   @default("active") // active, past_due, canceled
-  currentPeriodEnd  DateTime? @map("current_period_end")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime? @updatedAt @map("updated_at")
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  usageRecords      UsageRecord[]
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  plan             String        @default("free") // free, pro, enterprise
+  status           String        @default("active") // active, past_due, canceled
+  currentPeriodEnd DateTime?     @map("current_period_end")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime?     @updatedAt @map("updated_at")
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageRecords     UsageRecord[]
 
   @@unique([userId])
   @@index([plan])
@@ -560,7 +568,7 @@ model Subscription {
 model UsageRecord {
   id             String       @id @default(uuid())
   subscriptionId String       @map("subscription_id")
-  feature        String       // signals, watchlists, api_calls, etc.
+  feature        String // signals, watchlists, api_calls, etc.
   count          Int          @default(0)
   periodStart    DateTime     @map("period_start")
   periodEnd      DateTime     @map("period_end")
@@ -574,20 +582,20 @@ model UsageRecord {
 // ─── Beef Data: Factory-Level, Cut-Level Trading Data ───
 
 model Factory {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  name        String
-  nameLocal   String?
-  country     String
-  region      String?
-  capacity    Int?
-  accredited  String[]
-  active      Boolean  @default(true)
-  metadata    Json?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  code       String   @unique
+  name       String
+  nameLocal  String?
+  country    String
+  region     String?
+  capacity   Int?
+  accredited String[]
+  active     Boolean  @default(true)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  prices      BeefCutPrice[]
+  prices BeefCutPrice[]
 
   @@index([country])
   @@index([active])
@@ -595,41 +603,41 @@ model Factory {
 }
 
 model BeefCutTaxonomy {
-  id            String   @id @default(cuid())
-  cutCode       String   @unique
-  nameEn        String
-  nameZh        String?
-  nameEs        String?
-  namePt        String?
-  primal        String?
-  subprimal     String?
-  impsCode      String?
-  hsCode        String?
-  metadata      Json?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  cutCode   String   @unique
+  nameEn    String
+  nameZh    String?
+  nameEs    String?
+  namePt    String?
+  primal    String?
+  subprimal String?
+  impsCode  String?
+  hsCode    String?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([primal])
   @@map("beef_cut_taxonomy")
 }
 
 model BeefCutPrice {
-  id            String   @id @default(cuid())
-  factoryId     String
-  cutCode       String
-  price         Float
-  currency      String   @default("USD")
-  unit          String   @default("USD/kg")
-  source        String
-  sourceRef     String?
-  date          DateTime
-  volume        Float?
-  grade         String?
-  metadata      Json?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  factoryId String
+  cutCode   String
+  price     Float
+  currency  String   @default("USD")
+  unit      String   @default("USD/kg")
+  source    String
+  sourceRef String?
+  date      DateTime
+  volume    Float?
+  grade     String?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  factory       Factory  @relation(fields: [factoryId], references: [id], onDelete: Cascade)
+  factory Factory @relation(fields: [factoryId], references: [id], onDelete: Cascade)
 
   @@unique([factoryId, cutCode, date, source])
   @@index([cutCode, date])
@@ -639,16 +647,16 @@ model BeefCutPrice {
 }
 
 model WeeklyKill {
-  id          String   @id @default(cuid())
-  factoryId   String?
-  country     String
-  region      String?
-  headCount   Int
-  avgWeight   Float?
-  weekEnding  DateTime
-  source      String
-  metadata    Json?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid())
+  factoryId  String?
+  country    String
+  region     String?
+  headCount  Int
+  avgWeight  Float?
+  weekEnding DateTime
+  source     String
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@unique([country, region, weekEnding, source])
   @@index([weekEnding])
@@ -656,14 +664,14 @@ model WeeklyKill {
 }
 
 model ColdStorage {
-  id          String   @id @default(cuid())
-  country     String
-  totalLbs    Float
-  category    String
-  date        DateTime
-  source      String
-  metadata    Json?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  country   String
+  totalLbs  Float
+  category  String
+  date      DateTime
+  source    String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([country, category, date, source])
   @@map("cold_storage")
@@ -672,7 +680,7 @@ model ColdStorage {
 model IngestionLog {
   id           String   @id @default(cuid())
   source       String
-  status       String   // "success" | "error"
+  status       String // "success" | "error"
   inserted     Int      @default(0)
   updated      Int      @default(0)
   errorMessage String?  @map("error_message")
@@ -682,4 +690,34 @@ model IngestionLog {
   @@index([source, createdAt])
   @@index([status, createdAt])
   @@map("ingestion_logs")
+}
+
+// ─── 资讯 / Market News (牧集网-style market dynamics feed) ───
+
+model MarketNews {
+  id            String       @id @default(uuid())
+  title         String
+  slug          String       @unique
+  summary       String
+  body          String
+  category      NewsCategory
+  source        String
+  sourceUrl     String?      @map("source_url")
+  commoditySlug String?      @map("commodity_slug")
+  relatedSlugs  Json?        @map("related_slugs")
+  coverImageUrl String?      @map("cover_image_url")
+  tags          String[]
+  status        String       @default("published") // published | draft
+  viewCount     Int          @default(0) @map("view_count")
+  publishedAt   DateTime     @default(now()) @map("published_at")
+  authorId      String       @map("author_id")
+  author        User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime?    @updatedAt @map("updated_at")
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([category, publishedAt(sort: Desc)])
+  @@index([commoditySlug])
+  @@index([authorId])
+  @@map("market_news")
 }

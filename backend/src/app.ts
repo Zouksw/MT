@@ -14,7 +14,7 @@ import { createServer, type Server } from "node:http";
 import compression from "compression";
 import cors from "cors";
 import express, { type Express } from "express";
-import { Server as SocketIOServer, type Server as SocketIOInstance } from "socket.io";
+import { type Server as SocketIOInstance, Server as SocketIOServer } from "socket.io";
 
 import { config, jwtUtils, logger } from "@/lib";
 import { errorHandler } from "@/middleware/errorHandler";
@@ -33,6 +33,7 @@ import docsRouter from "@/routes/docs";
 import healthRouter from "@/routes/health";
 import { inferenceRouter } from "@/routes/inference";
 import { marketDataRouter } from "@/routes/marketData";
+import { marketNewsRouter } from "@/routes/marketNews";
 import { metricsRouter } from "@/routes/metrics";
 import { modelsRouter } from "@/routes/models";
 import { portfolioRouter } from "@/routes/portfolios";
@@ -179,6 +180,7 @@ export function createApp(): AppInstance {
 	app.use("/api/alerts", alertsRouter);
 	app.use("/api/signals", signalsRouter);
 	app.use("/api/market", marketDataRouter);
+	app.use("/api/news", marketNewsRouter);
 	app.use("/api/watchlists", watchlistRouter);
 	app.use("/api/portfolios", portfolioRouter);
 	app.use("/api/analytics", analyticsRouter);
