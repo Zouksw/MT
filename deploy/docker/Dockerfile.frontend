@@ -1,5 +1,6 @@
-# Frontend Dockerfile — Next.js standalone build
-# Requires `output: 'standalone'` in next.config.mjs (set).
+# Frontend Dockerfile — Next.js production build
+# Uses `next start` (not standalone). The PM2 deployment also runs `next start`,
+# so both paths stay consistent.
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -28,9 +29,11 @@ ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# `next start` needs the full .next build, package.json, and node_modules.
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
 
 USER nextjs
 
@@ -40,4 +43,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:3000/ || exit 1
 
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+CMD ["pnpm", "start"]

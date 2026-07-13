@@ -6,10 +6,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standalone output — produces a self-contained .next/standalone bundle so
-  // the Docker production image can run `node server.js` without node_modules
-  // (matches Dockerfile.frontend's COPY .next/standalone).
-  output: 'standalone',
   outputFileTracingRoot: path.join(__dirname),
   eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
