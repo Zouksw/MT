@@ -2,12 +2,12 @@
 
 # MT
 
-**大宗商品市场信息与分析平台**
+**牛肉贸易价格数据与分析平台**
 
-AI 驱动的多模型价格预测 · 多因素市场分析 · 108 种大宗商品实时追踪
+进口/国产牛肉价格采集 · 行情展示 · 多维分析 · AI 模型价格预测
 
-[![Tests](https://img.shields.io/badge/backend-~420%20tests%20(Vitest)-brightgreen)]()
-[![Tests](https://img.shields.io/badge/frontend-305%20tests%20(Jest)-brightgreen)]()
+[![Tests](https://img.shields.io/badge/backend-431%20tests%20(Vitest)-brightgreen)]()
+[![Tests](https://img.shields.io/badge/frontend-307%20tests%20(Jest)-brightgreen)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)]()
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-gray)]()
@@ -18,22 +18,22 @@ AI 驱动的多模型价格预测 · 多因素市场分析 · 108 种大宗商�
 
 ## MT 是什么
 
-MT 是一个**信息和分析平台**，为分析师、交易员和决策者提供大宗商品市场的深度洞察。
+MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易商和分析师提供牛肉切割部位价格、市场动态和 AI 价格预测。
 
-> **不是交易平台。** 不涉及下单、账户余额或实际支付。
-> 核心价值：数据展示 + 多因素分析 + AI 自动预测。
+> **对标** [牧集网](https://web.mooket.com/)（数据+资讯+展示）× IoTDB AINode（预训练模型预测）。
+> **不做交易撮合** — 只做数据采集、行情展示、多维分析和 AI 预测。
 
 ### 一句话概括
 
-> 6 个 AI 模型并行预测大宗商品价格走势，结合天气、汇率、运费、关税等多维因素，给出买入/卖出/持有信号。
+> 85+ 牛肉切割部位价格，跨 5 个进口来源国（US/BR/AUS/URY/ARG），AI 模型预测 7 天价格走势，市场资讯每日更新。
 
 ---
 
 ## 核心功能
 
-### AI 信号引擎
+### AI 价格预测（融入行情）
 
-6 个独立预测模型并行运行，自动计算共识信号：
+基于 IoTDB AINode 架构的预训练模型，在行情页面直接展示 7 天价格预测：
 
 | 模型 | 方法 | 用途 |
 |------|------|------|
@@ -42,27 +42,19 @@ MT 是一个**信息和分析平台**，为分析师、交易员和决策者提�
 | Exp. Smoothing | 二次指数平滑 | 平滑趋势 |
 | STL | 季节分解 | 周期分离 |
 | Naive | 朴素基线 | 对比基准 |
-| Chronos | 预训练时序基础模型 | 零样本预测 |
 
-每个模型独立产出信号，引擎汇总后输出 MAPE 精度、置信区间和趋势判断。
+每个模型独立预测，输出预测值、95% 置信区间和 MAPE 精度。预测结果**直接编织进行情行**（MarketForecastBoard），而非藏在子页面。
 
-### 多因素分析
+### 资讯模块
 
-市场不只是价格。MT 追踪影响价格的底层因素：
-
-- **供需** — 库存、产量、消费量
-- **经济** — 利率、通胀、GDP
-- **天气** — 降雨、温度、干旱指数
-- **汇率** — 主要货币对
-- **运费** — 波罗的海干散货指数
-- **关税** — 贸易政策变动
+类牧集的市场动态 feed，覆盖价格异动、供应产能、贸易政策、市场分析、企业动态，每条资讯关联相关牛肉部位。
 
 ### 数据覆盖
 
-- **108 种大宗商品** — 谷物、能源、金属、软商品、外汇、牛肉等 13 个品类
-- **18 个数据源** — ABARES、USDA、FAO、世界银行、FRED、CME、DCE 等
-- **2,400 条牛肉切割价格** — 工厂级别、按切割部位（74 部位 × 21 工厂）
-- **48 个市场因子** — 汇率类，实时关联分析
+- **85+ 牛肉切割部位** — 进口（US/BR/AUS/URY/ARG）+ 国产
+- **21 个工厂** — 工厂级别价格溯源
+- **2,400+ 牛肉切割价格** — 按部位 × 工厂 × 来源
+- **7+ 数据源** — USDA、CEPEA、MLA、INAC、ABARES、World Bank 等
 
 ---
 
@@ -91,8 +83,7 @@ MT
 | 后端 | Express, TypeScript 5.8, Prisma ORM |
 | 数据库 | PostgreSQL 15 |
 | 缓存 | Redis 7 |
-| 实时 | Socket.IO (JWT 认证) |
-| 测试 | Vitest (后端 ~420 tests), Jest (前端 305 tests) |
+| 测试 | Vitest (后端 431 tests), Jest (前端 307 tests) |
 | 安全 | JWT, bcrypt, CSRF, Helmet, rate limiting |
 
 ---
@@ -174,14 +165,13 @@ docker compose up -d postgres redis
 
 | 页面 | 路径 | 功能 |
 |------|------|------|
-| Dashboard | `/dashboard` | 数据概览、AI 模型状态、图表 |
-| Market Intelligence | `/trading` | 价格图表、AI 信号、因素面板 |
-| AI Models | `/ai/models` | 7 模型对比、MAPE、趋势分析 |
+| Dashboard | `/dashboard` | 牛肉均价 KPI hero、AI 预测、图表 |
+| Beef Market | `/beef` | 牛肉行情 + AI 7天预测板（融入行情行） |
+| Market News | `/market-news` | 资讯 feed（价格异动/政策/供应） |
+| Price Trends | `/trading` | 价格图表、AI 信号、因素面板 |
+| AI Models | `/ai/models` | 模型对比、MAPE、趋势分析 |
 | Prediction Accuracy | `/ai/accuracy` | 精度仪表盘、模型排行 |
-| Backtest Reports | `/ai/backtest` | 历史回测、窗口分析 |
-| Beef Data | `/beef` | 牛肉切割数据、工厂目录 |
-| Watchlists | `/trading/watchlist` | 自选商品追踪 |
-| Analysis Groups | `/trading/portfolio` | 品种分组对比 |
+| Beef Cuts | `/beef/cuts/[code]` | 单部位详情、价格历史 |
 | Pricing | `/pricing` | AI 功能分档定价 |
 
 ---
@@ -195,19 +185,25 @@ curl -X POST http://localhost:8000/api/auth/login \
   -d '{"email":"admin@trademind.com","password":"<your-seed-password>"}'
 
 # 获取 AI 信号
-curl http://localhost:8000/api/signals/wheat \
+curl http://localhost:8000/api/signals/aus_cube_roll_m9 \
   -H "Authorization: Bearer <token>"
 
 # 模型精度
 curl http://localhost:8000/api/signals/models/accuracy \
   -H "Authorization: Bearer <token>"
 
-# 商品相关性
-curl "http://localhost:8000/api/signals/correlation?a=wheat&a2=corn" \
-  -H "Authorization: Bearer <token>"
+# AI 7天价格预测
+curl -X POST http://localhost:8000/api/inference/predict \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"commodityId":"aus_cube_roll_m9","horizon":7}'
 
 # 牛肉切割价格
 curl http://localhost:8000/api/beef/cuts \
+  -H "Authorization: Bearer <token>"
+
+# 资讯 feed
+curl http://localhost:8000/api/news?pageSize=5 \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -217,10 +213,10 @@ curl http://localhost:8000/api/beef/cuts \
 
 ```bash
 # 后端 (Vitest)
-cd backend && pnpm test              # ~420 tests
+cd backend && pnpm test              # 431 tests
 
 # 前端 (Jest)
-cd frontend && pnpm test             # 305 tests
+cd frontend && pnpm test             # 307 tests
 
 # 类型检查
 cd backend && npx tsc --noEmit

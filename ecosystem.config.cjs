@@ -21,7 +21,6 @@ module.exports = {
       args: '-r dotenv/config dist/server.js',
       // dotenv/config reads cwd/.env, so cwd must be the backend dir
       cwd: path.join(ROOT, 'backend'),
-      dotenv_config_path: path.join(ROOT, 'backend/.env'),
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,

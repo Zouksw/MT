@@ -6,22 +6,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@refinedev/antd"],
+  // Standalone output — produces a self-contained .next/standalone bundle so
+  // the Docker production image can run `node server.js` without node_modules
+  // (matches Dockerfile.frontend's COPY .next/standalone).
+  output: 'standalone',
   outputFileTracingRoot: path.join(__dirname),
   eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
 
   experimental: {
-    // Optimize barrel imports — dramatically reduces module count
+    // Optimize barrel imports — dramatically reduces module count.
+    // Only packages actually installed in the project (antd/refinedev were
+    // removed during the product repositioning — left-overs caused dead config).
     optimizePackageImports: [
-      "@ant-design/icons",
-      "antd",
-      "@phosphor-icons/react",
       "framer-motion",
       "recharts",
       "lodash",
-      "@refinedev/antd",
-      "@refinedev/core",
       "dayjs",
     ],
   },
@@ -144,11 +144,6 @@ const nextConfig = {
               name: 'recharts',
               chunks: 'all',
               test: /[\\/]node_modules[\\/](recharts|d3[-a-z]*|victory|internmap|delaunator|robust-predicates)[\\/]/,
-            },
-            antd: {
-              name: 'antd',
-              chunks: 'all',
-              test: /[\\/]node_modules[\\/](@ant-design|antd)[\\/]/,
             },
           },
         },

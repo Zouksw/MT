@@ -33,16 +33,26 @@
 - [CLAUDE.md](../CLAUDE.md) — AI assistant instructions (project root)
 
 ### Reviews & Audits (`reviews/`)
-- [**2026-07-12 前端提升计划 + 审查**](reviews/2026-07-12-frontend-plan-review.md) — web 研究(Stripe/Linear/Bloomberg)+ 3 agent(IA/数据可视化/品牌);3 CRITICAL(死导航/假WebSocket/数字矛盾);4 阶段计划经 review 审查
-- [**2026-07-12 前端提升计划正文**](../FRONTEND-IMPROVEMENT-PLAN.md) — 信任→可用→品质→品牌 4 阶段,17 任务,度量目标
-- [**2026-07-12 前端设计审查**](reviews/2026-07-12-frontend-design-review.md) — design-review + 3 Explore agent + Playwright 截图;3 套颜色体系/Button 默认 primary/金色对比度/组件手搓绕过
-- [**2026-07-12 Round 27 多技能探查 + 后续开发计划**](reviews/2026-07-12-round-27-exploration.md) — 4 路 Explore agent + review + ops-check;覆盖 36.4%,瓶颈是数据源;R27-32 计划
-- [2026-07-12 Round 25-26](reviews/2026-07-12-round-25.md) — Storybook/phosphor/envelope 清理 + inference slug/UUID 修复(双向回归)
-- [**2026-07-06 多技能深度审计**](reviews/2026-07-06-multi-skill-audit.md) — 6 技能交叉验证的运行态/架构债/优化项总报告（已 review 二次验证）
-- [**2026-07-06 Round 17-19 执行收尾**](reviews/2026-07-06-round-17-19.md) — 前端 build 修复 + 静默吞错修复 + 数据停摆根因 + 索引
-- [2026-07-05 核心价值链审计](reviews/2026-07-05-core-value-chain-audit.md) — AI 预测/数据/分析链断裂点定位（上一轮基线）
-- [2026-07-05 Round 7-12](reviews/) — AI 恢复 / 重构 / 链路打通的逐轮记录
-- [2026-06-14 全量审查集](reviews/2026-06-14-full-review.md) — bugfix / design / devex / performance
+
+> Pre-2026-07-12 reviews (rounds 1–24, sarimax experiment, overengineering audit, etc.) archived under `docs/archive/`.
+
+**Current milestone work (M1 → M3):**
+- [**M3-A 资讯模块**](reviews/2026-07-13-m3a-market-news.md) — market news feed full stack (model + service + route + 3 frontend pages)
+- [**M2 AI 预测融入主流程**](reviews/2026-07-12-m2-ai-in-market.md) — lib/format + 颜色语义 + dashboard KPI hero + MarketForecastBoard
+- [**M1 应用 Shell + 信任修复**](reviews/2026-07-12-m1-shell-and-trust.md) — AppShell + WebSocket 假声明删除 + beef-only 统一
+
+**Recent rounds (25–29):**
+- [Round 29](reviews/2026-07-12-round-29.md) — watchlistService extraction (312→100 lines)
+- [Round 28](reviews/2026-07-12-round-28.md) — data quality (upsertFactor, scraperManager error reporting)
+- [Round 27 exploration](reviews/2026-07-12-round-27-exploration.md) — multi-skill探查 + R27-32 计划
+- [Round 26](reviews/2026-07-12-round-26.md) — inference slug/UUID fix (双向回归)
+- [Round 25](reviews/2026-07-12-round-25.md) — Storybook/phosphor/envelope 清理
+
+**Frontend design:**
+- [设计审查](reviews/2026-07-12-frontend-design-review.md) — CRITICAL/HIGH/AI-slop 分级
+- [设计修复](reviews/2026-07-12-frontend-design-fixes.md) — gold 统一 + Button cva + emoji→lucide
+- [提升计划 review](reviews/2026-07-12-frontend-plan-review.md) — 4 阶段计划审查
+- [深度行动项](reviews/2026-07-12-deep-dive-actionable-items.md) — actionable 整理
 
 ### Domain Reference
 - [数据源全链路审计报告](数据源全链路审计报告.md) — Data source audit
@@ -73,8 +83,8 @@ pnpm stop             # Stop all services
 
 **Run Tests**:
 ```bash
-cd backend && npx vitest run    # ~465 backend tests (464 pass, 1 live-DB data-dependent)
-cd frontend && npx jest --forceExit  # 272 frontend tests
+cd backend && npx vitest run    # ~431 backend tests
+cd frontend && npx jest         # 307 frontend tests
 ```
 
 **Health Check**:
@@ -86,4 +96,4 @@ cd frontend && npx tsc --noEmit -p tsconfig.json && npx next build  # build = th
 ---
 
 **Maintainer**: MT Team
-**Last Review**: 2026-07-06
+**Last Review**: 2026-07-13

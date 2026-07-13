@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { limitSchema, paginationSchema } from "./common";
+import { paginationSchema } from "./common";
 
 export const modelsQuerySchema = paginationSchema.extend({
 	timeseriesId: z.string().uuid().optional(),
@@ -11,9 +11,7 @@ export const modelsQuerySchema = paginationSchema.extend({
 		.enum(["true", "false"])
 		.transform((val) => val === "true")
 		.optional(),
-	algorithm: z
-		.enum(["ARIMA", "PROPHET", "LSTM", "TRANSFORMER", "ENSEMBLE"])
-		.optional(),
+	algorithm: z.enum(["ARIMA", "PROPHET", "LSTM", "TRANSFORMER", "ENSEMBLE"]).optional(),
 });
 
 export const trainModelSchema = z.object({
@@ -27,9 +25,4 @@ export const trainModelSchema = z.object({
 export const predictSchema = z.object({
 	horizon: z.coerce.number().min(1).max(10000).default(100),
 	confidenceLevel: z.coerce.number().min(0).max(1).default(0.95),
-});
-
-export const forecastsQuerySchema = limitSchema.extend({
-	start: z.string().datetime().optional(),
-	end: z.string().datetime().optional(),
 });

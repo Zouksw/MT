@@ -102,32 +102,6 @@ export function validationError(res: Response, details: ErrorDetail): void {
 }
 
 /**
- * Send a not found error response
- */
-export function notFound(res: Response, resource: string = "Resource"): void {
-	res.status(404).json({
-		success: false,
-		error: {
-			message: `${resource} not found`,
-			code: "NOT_FOUND",
-		},
-	});
-}
-
-/**
- * Send an unauthorized error response
- */
-export function unauthorized(res: Response, message: string = "Unauthorized"): void {
-	res.status(401).json({
-		success: false,
-		error: {
-			message,
-			code: "UNAUTHORIZED",
-		},
-	});
-}
-
-/**
  * Send a forbidden error response
  */
 export function forbidden(res: Response, message: string = "Forbidden"): void {
@@ -136,19 +110,6 @@ export function forbidden(res: Response, message: string = "Forbidden"): void {
 		error: {
 			message,
 			code: "FORBIDDEN",
-		},
-	});
-}
-
-/**
- * Send a conflict error response
- */
-export function conflict(res: Response, message: string): void {
-	res.status(409).json({
-		success: false,
-		error: {
-			message,
-			code: "CONFLICT",
 		},
 	});
 }
@@ -178,18 +139,3 @@ export function paginated<T>(
 		pagination: meta,
 	});
 }
-
-// Export as a grouped utility object
-export const responseUtils = {
-	success,
-	successWithMessage,
-	error,
-	validationError,
-	notFound,
-	unauthorized,
-	forbidden,
-	conflict,
-	paginated,
-};
-
-export default responseUtils;

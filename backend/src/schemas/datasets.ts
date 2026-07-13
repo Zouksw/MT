@@ -3,11 +3,6 @@
  */
 
 import { z } from "zod";
-import { paginationSchema } from "./common";
-
-export const datasetsQuerySchema = paginationSchema.extend({
-	search: z.string().optional(),
-});
 
 export const createDatasetSchema = z.object({
 	name: z.string().min(1).max(255),

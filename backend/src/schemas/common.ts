@@ -25,16 +25,13 @@ export const limitSchema = z.object({
  * Parse and validate pagination params from query
  * Returns skip/take values for Prisma queries
  */
-export type PaginationParams = z.infer<typeof paginationSchema>;
 
 /**
  * Extract pagination with proper typing for Prisma queries
  * @param query - Request query object
  * @returns Object with skip and take properties
  */
-export const getPagination = (
-	query: unknown,
-): { skip: number; take: number } => {
+export const getPagination = (query: unknown): { skip: number; take: number } => {
 	const safeQuery = typeof query === "object" && query !== null ? query : {};
 	const params = paginationSchema.parse(safeQuery);
 	return {
