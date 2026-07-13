@@ -5,11 +5,7 @@
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, isDbAvailable } from "@/test/helpers/testApp";
 
 let app: Express;
 let dbAvailable = false;
@@ -71,18 +67,19 @@ describe("Billing Routes (Integration)", () => {
 	});
 
 	describe("POST /api/billing/cancel", () => {
-		it("should reject cancel for free plan", async () => {
+		it("rejects cancel with 400 when the user has no paid subscription", async () => {
+			// Previously this test was a tautology — it accepted BOTH the success
+			// branch (200 + message) and the failure branch (400), so it could
+			// never fail. The seed creates no Subscription row for the admin
+			// user, so the cancel route's `!sub` guard reliably fires and throws
+			// BadRequestError → 400. Assert that deterministically.
 			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/billing/cancel")
 				.set({ Authorization: `Bearer ${token}` });
 
-			// Admin user might be on free plan
-			if (res.body.success) {
-				expect(res.body.data.message).toBe("Subscription cancelled");
-			} else {
-				expect(res.status).toBe(400);
-			}
+			expect(res.status).toBe(400);
+			expect(res.body.success).toBe(false);
 		});
 	});
 

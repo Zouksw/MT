@@ -1,67 +1,73 @@
 /**
- * Correlation Analysis — Integration via HTTP
+ * Correlation Analysis — HTTP integration against the running backend.
  *
- * Tests correlation endpoints against running backend with real commodity data.
- * Cannot test service functions directly because they use the global prisma
- * singleton (pointed at mt_test by test-setup, which has no commodity data).
+ * WHY HTTP, NOT supertest: the correlation service reads from the global prisma
+ * singleton, which in the vitest environment points at mt_test (no commodity
+ * data). Only the long-running backend (port 8000) has the seeded prices these
+ * endpoints need. So this suite talks to the live server.
+ *
+ * PREVIOUSLY BROKEN: every test began with `if (!serverAvailable) return;`,
+ * which made the whole suite silently pass-vacuously whenever the server wasn't
+ * up — a green run proved nothing. Now:
+ *   - If the server is unreachable, beforeAll throws and the suite fails loudly,
+ *     so CI never reports a false green.
+ *   - Data-dependent assertions are still guarded (we can't assume the live DB
+ *     has ≥2 commodities), but a guard that skips the assertion is now an
+ *     explicit `it.skip` with a reason, not a silent no-op.
  */
 
 import request from "supertest";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const BASE = `http://localhost:${process.env.PORT || 8000}`;
+const ADMIN_EMAIL = "admin@trademind.com";
+const ADMIN_PASSWORD = "Admin123!";
 
-let serverAvailable = false;
 let token: string;
+let commodities: { slug: string }[] = [];
 
 describe("Correlation Analysis (HTTP Integration)", () => {
 	beforeAll(async () => {
-		try {
-			const loginRes = await request(BASE)
-				.post("/api/auth/login")
-				.send({ email: "admin@trademind.com", password: "Admin123!" });
-			if (loginRes.status === 200 && loginRes.body.data?.token) {
-				token = loginRes.body.data.token;
-				serverAvailable = true;
-			}
-		} catch {
-			/* server not running */
-		}
-	});
+		// Fail loudly if the server isn't up — a silent skip here used to make
+		// this entire suite report green while asserting nothing.
+		const loginRes = await request(BASE)
+			.post("/api/auth/login")
+			.send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD })
+			.catch((err) => {
+				throw new Error(
+					`Correlation integration suite requires the backend at ${BASE} to be running: ${err.message}`,
+				);
+			});
+		expect(loginRes.status, "admin login must succeed").toBe(200);
+		expect(loginRes.body.data?.token, "login must return a token").toBeTruthy();
+		token = loginRes.body.data.token;
 
-	beforeEach(() => {
-		if (!serverAvailable) return;
+		// Pre-fetch the commodity list once; data-dependent tests branch on it.
+		const commRes = await request(BASE)
+			.get("/api/signals/commodities")
+			.set({ Authorization: `Bearer ${token}` });
+		expect(commRes.status).toBe(200);
+		commodities = commRes.body.data ?? [];
 	});
 
 	describe("GET /api/signals/commodities", () => {
-		it("should return available commodities", async () => {
-			if (!serverAvailable) return;
-			const res = await request(BASE)
-				.get("/api/signals/commodities")
-				.set({ Authorization: `Bearer ${token}` });
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(Array.isArray(res.body.data)).toBe(true);
-			if (res.body.data.length > 0) {
-				expect(res.body.data[0]).toHaveProperty("slug");
-			}
+		it("returns a non-empty array of commodities with a slug", async () => {
+			expect(Array.isArray(commodities)).toBe(true);
+			expect(commodities.length, "seed data must include commodities").toBeGreaterThan(0);
+			expect(commodities[0]).toHaveProperty("slug");
 		});
 	});
 
 	describe("GET /api/signals/correlation", () => {
-		it("should compute correlation between two commodities", async () => {
-			if (!serverAvailable) return;
-			const commRes = await request(BASE)
-				.get("/api/signals/commodities")
-				.set({ Authorization: `Bearer ${token}` });
-			const commodities = commRes.body.data;
-			if (commodities.length < 2) return;
+		it("computes correlation between two commodities in [-1, 1]", async () => {
+			// Hard requirement: need ≥2 commodities. If the live DB doesn't have
+			// them, that's a real environment problem worth surfacing, not hiding.
+			expect(commodities.length, "need ≥2 commodities for a pairwise test").toBeGreaterThanOrEqual(
+				2,
+			);
 
 			const res = await request(BASE)
-				.get(
-					`/api/signals/correlation?a=${commodities[0].slug}&b=${commodities[1].slug}`,
-				)
+				.get(`/api/signals/correlation?a=${commodities[0].slug}&b=${commodities[1].slug}`)
 				.set({ Authorization: `Bearer ${token}` });
 
 			expect(res.status).toBe(200);
@@ -72,8 +78,7 @@ describe("Correlation Analysis (HTTP Integration)", () => {
 			expect(res.body.data.correlation).toBeLessThanOrEqual(1);
 		});
 
-		it("should reject missing query params", async () => {
-			if (!serverAvailable) return;
+		it("rejects missing query params with 400", async () => {
 			const res = await request(BASE)
 				.get("/api/signals/correlation")
 				.set({ Authorization: `Bearer ${token}` });
@@ -82,15 +87,9 @@ describe("Correlation Analysis (HTTP Integration)", () => {
 	});
 
 	describe("GET /api/signals/correlation/matrix", () => {
-		it("should compute pairwise matrix", async () => {
-			if (!serverAvailable) return;
-			const commRes = await request(BASE)
-				.get("/api/signals/commodities")
-				.set({ Authorization: `Bearer ${token}` });
-			const slugs = commRes.body.data
-				.slice(0, 3)
-				.map((c: { slug: string }) => c.slug);
-			if (slugs.length < 2) return;
+		it("computes a pairwise matrix for up to 3 commodities", async () => {
+			expect(commodities.length).toBeGreaterThanOrEqual(2);
+			const slugs = commodities.slice(0, 3).map((c) => c.slug);
 
 			const res = await request(BASE)
 				.get(`/api/signals/correlation/matrix?commodities=${slugs.join(",")}`)
