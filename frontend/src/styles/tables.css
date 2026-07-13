@@ -61,11 +61,11 @@
 
 /* Table row hover */
 .ant-table-tbody > tr.ant-table-row:hover > td {
-  background-color: rgba(184, 134, 11, 0.04);
+  background-color: rgba(139, 105, 20, 0.04);
 }
 
 .dark .ant-table-tbody > tr.ant-table-row:hover > td {
-  background-color: rgba(184, 134, 11, 0.08);
+  background-color: rgba(139, 105, 20, 0.08);
 }
 
 /* Table header */
@@ -160,7 +160,7 @@
 }
 
 .data-table tr:hover td {
-  background: rgba(184, 134, 11, 0.04);
+  background: rgba(139, 105, 20, 0.04);
 }
 
 .dark .data-table th {
@@ -173,5 +173,5 @@
 }
 
 .dark .data-table tr:hover td {
-  background: rgba(184, 134, 11, 0.08);
+  background: rgba(139, 105, 20, 0.08);
 }

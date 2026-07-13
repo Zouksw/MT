@@ -76,7 +76,7 @@ const steps = [
 		number: 4,
 		title: "Track & Decide",
 		description:
-			"7 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
+			"5 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
 		preview: (
 			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-white/[0.05]">
 				<Brain size={20} className="text-primary shrink-0" />
@@ -93,8 +93,8 @@ const steps = [
 const features = [
 	"Under 5 min to first signal",
 	"OHLCV candlestick charts",
-	"7-model consensus signals",
-	"108 commodities with live data",
+	"5-model consensus signals",
+	"85+ beef cuts with live data",
 	"Model backtest comparison",
 	"REST API access",
 ];

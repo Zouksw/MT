@@ -99,8 +99,8 @@ describe("AuthPage", () => {
 	it("should render feature highlights on left panel", () => {
 		render(<AuthPage type="login" />);
 
-		expect(screen.getByText(/108 commodities/)).toBeInTheDocument();
-		expect(screen.getByText(/7 AI models/)).toBeInTheDocument();
+		expect(screen.getByText(/85\+ beef cuts/)).toBeInTheDocument();
+		expect(screen.getByText(/5 AI models/)).toBeInTheDocument();
 		expect(screen.getByText("One signal.")).toBeInTheDocument();
 	});
 

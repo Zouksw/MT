@@ -49,12 +49,12 @@
   }
 
   .desktop-nav-item:hover {
-    background: rgba(184, 134, 11, 0.08);
+    background: rgba(139, 105, 20, 0.08);
     color: #8B6914;
   }
 
   .dark .desktop-nav-item:hover {
-    background: rgba(184, 134, 11, 0.15);
+    background: rgba(139, 105, 20, 0.15);
     color: #D4A843;
   }
 
@@ -125,7 +125,7 @@
   /* Button hover enhancement */
   .ant-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(184, 134, 11, 0.2);
+    box-shadow: 0 4px 8px rgba(139, 105, 20, 0.2);
   }
 
   .ant-btn-primary:hover {
@@ -327,7 +327,7 @@
   .ant-input:focus,
   .ant-select-focused .ant-select-selector,
   .ant-picker-focused {
-    box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.1);
+    box-shadow: 0 0 0 3px rgba(139, 105, 20, 0.1);
     border-color: #8B6914;
   }
 

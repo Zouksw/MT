@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 import { ShimmerCard } from "@/components/ui/ShimmerCard";
+import { SITE_STATS } from "@/lib/site-stats";
 
 export default function AboutPage() {
 	return (
@@ -85,10 +86,10 @@ export default function AboutPage() {
 				<div className="max-w-5xl mx-auto">
 					<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 						{[
-							{ number: "85+", label: "牛肉部位", Icon: ChartColumn },
-							{ number: "5", label: "进口来源国", Icon: Globe },
-							{ number: "6", label: "AI 预测模型", Icon: TrendingUp },
-							{ number: "7+", label: "数据源", Icon: Database },
+							{ number: `${SITE_STATS.beefCuts}+`, label: "Beef Cuts", Icon: ChartColumn },
+							{ number: `${SITE_STATS.sourceCountries}`, label: "Source Countries", Icon: Globe },
+							{ number: `${SITE_STATS.aiModels}`, label: "AI Models", Icon: TrendingUp },
+							{ number: `${SITE_STATS.dataSources}+`, label: "Data Sources", Icon: Database },
 						].map((stat, idx) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 							<StaggerChild key={idx}>
@@ -145,10 +146,10 @@ export default function AboutPage() {
 								<div className="rounded-xl p-8 bg-primary/5 dark:bg-gray-950 ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
 									<div className="grid grid-cols-2 gap-8">
 										{[
-											{ value: "85+", label: "牛肉部位覆盖" },
-											{ value: "6", label: "AI 预测模型" },
-											{ value: "5", label: "进口来源国" },
-											{ value: "24/7", label: "数据自动采集" },
+											{ value: `${SITE_STATS.beefCuts}+`, label: "Beef Cuts" },
+											{ value: `${SITE_STATS.aiModels}`, label: "AI Models" },
+											{ value: `${SITE_STATS.sourceCountries}`, label: "Source Countries" },
+											{ value: `${SITE_STATS.dataSources}+`, label: "Data Sources" },
 										].map((stat, idx) => (
 											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 											<div key={idx} className="text-center">
@@ -238,7 +239,7 @@ export default function AboutPage() {
 				</div>
 			</section>
 
-			{/* Team Section — asymmetric layout */}
+			{/* Data & Methodology — factual, no fabricated people */}
 			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8">
 				<div className="max-w-7xl mx-auto">
 					<div className="mb-12 max-w-2xl">
@@ -247,98 +248,51 @@ export default function AboutPage() {
 								className="text-h1 font-display text-foreground mb-4"
 								style={{ letterSpacing: "-0.04em" }}
 							>
-								Leadership Team
+								Data &amp; Methodology
 							</h2>
 						</MotionReveal>
 						<MotionReveal delay={0.1}>
 							<p className="text-body-lg text-muted-foreground">
-								Commodity markets + time-series ML + high-throughput data pipelines
+								How we collect, structure, and predict on beef trade data.
 							</p>
 						</MotionReveal>
 					</div>
 
-					<StaggerContainer className="grid grid-cols-1 md:grid-cols-5 md:grid-rows-2 gap-6">
-						{/* CEO — featured card, spans left 3 cols and 2 rows */}
-						<StaggerChild className="md:col-span-3 md:row-span-2">
-							<div className="bg-white dark:bg-background rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex flex-col md:flex-row">
-								<div className="md:w-2/5 bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-8 md:p-12">
-									<div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
-										{/* eslint-disable-next-line @next/next/no-img-element */}
-										{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
-										<img
-											src="https://picsum.photos/seed/marcus-chen/200/200"
-											alt="Marcus Chen"
-											width={200}
-											height={200}
-											className="w-full h-full object-cover"
-										/>
-									</div>
-								</div>
-								<div className="md:w-3/5 px-8 py-8 md:px-10 md:py-12 flex flex-col justify-center">
-									<h3 className="text-h2 font-display font-semibold text-foreground mb-1">
-										Marcus Chen
-									</h3>
-									<p className="text-body font-medium text-primary mb-4">CEO & Co-Founder</p>
-									<p className="text-body text-muted-foreground leading-relaxed">
-										Former head of commodity analytics at a top-5 agricultural trading firm. 12
-										years of experience bridging quantitative analysis with commercial strategy.
-									</p>
-								</div>
+					<StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6">
+						<StaggerChild>
+							<div className="bg-white dark:bg-background rounded-2xl p-8 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full">
+								<h3 className="text-h4 font-display font-semibold text-foreground mb-3">
+									Source-first collection
+								</h3>
+								<p className="text-body text-muted-foreground leading-relaxed">
+									Prices are ingested directly from official sources — USDA, CEPEA, MLA, INAC,
+									ABARES, World Bank — on tiered schedules (hourly to daily). No manual price entry
+									for live data; every number is traceable to its source and timestamp.
+								</p>
 							</div>
 						</StaggerChild>
-
-						{/* CTO — stacked on right */}
-						<StaggerChild className="md:col-span-2">
-							<div className="bg-white dark:bg-background rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex items-start gap-5 p-6">
-								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
-									{/* eslint-disable-next-line @next/next/no-img-element */}
-									{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
-									<img
-										src="https://picsum.photos/seed/elena-vasquez/200/200"
-										alt="Elena Vasquez"
-										width={200}
-										height={200}
-										className="w-full h-full object-cover"
-									/>
-								</div>
-								<div className="min-w-0">
-									<h3 className="text-h4 font-display font-semibold text-foreground mb-0.5">
-										Elena Vasquez
-									</h3>
-									<p className="text-body-sm font-medium text-primary mb-2">CTO & Co-Founder</p>
-									<p className="text-body-sm text-muted-foreground leading-relaxed">
-										PhD in time-series forecasting from ETH Zurich. Previously built ML
-										infrastructure at a Series-C climate analytics startup serving 200+ enterprise
-										clients.
-									</p>
-								</div>
+						<StaggerChild>
+							<div className="bg-white dark:bg-background rounded-2xl p-8 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full">
+								<h3 className="text-h4 font-display font-semibold text-foreground mb-3">
+									Pretrained models, not black-box AI
+								</h3>
+								<p className="text-body text-muted-foreground leading-relaxed">
+									Predictions use interpretable statistical models (ARIMA, Holt-Winters, Exponential
+									Smoothing, STL, Naive baseline). Every forecast ships with a 95% confidence
+									interval and is auto-verified against actuals via MAPE once the horizon elapses.
+								</p>
 							</div>
 						</StaggerChild>
-
-						{/* VP of Engineering — stacked on right */}
-						<StaggerChild className="md:col-span-2">
-							<div className="bg-white dark:bg-background rounded-2xl overflow-hidden group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full flex items-start gap-5 p-6">
-								<div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-transform duration-200 group-hover:scale-105">
-									{/* eslint-disable-next-line @next/next/no-img-element */}
-									{/* biome-ignore lint/performance/noImgElement: external placeholder images */}
-									<img
-										src="https://picsum.photos/seed/david-okonkwo/200/200"
-										alt="David Okonkwo"
-										width={200}
-										height={200}
-										className="w-full h-full object-cover"
-									/>
-								</div>
-								<div className="min-w-0">
-									<h3 className="text-h4 font-display font-semibold text-foreground mb-0.5">
-										David Okonkwo
-									</h3>
-									<p className="text-body-sm font-medium text-primary mb-2">VP of Engineering</p>
-									<p className="text-body-sm text-muted-foreground leading-relaxed">
-										Former principal engineer at Bloomberg, responsible for real-time data pipeline
-										architecture handling 500k+ events per second across 40 markets.
-									</p>
-								</div>
+						<StaggerChild>
+							<div className="bg-white dark:bg-background rounded-2xl p-8 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full">
+								<h3 className="text-h4 font-display font-semibold text-foreground mb-3">
+									Honest about coverage
+								</h3>
+								<p className="text-body text-muted-foreground leading-relaxed">
+									We surface real coverage rates, not marketing numbers. When a data source is
+									unconfigured or a commodity lacks sufficient price history, the UI shows an honest
+									empty state rather than fabricated values.
+								</p>
 							</div>
 						</StaggerChild>
 					</StaggerContainer>
@@ -358,7 +312,8 @@ export default function AboutPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-gray-300 mb-10">
-							85+ 牛肉部位。6 个 AI 预测模型。5 个进口来源国。免费开始。
+							{SITE_STATS.beefCuts}+ beef cuts. {SITE_STATS.aiModels} AI prediction models.{" "}
+							{SITE_STATS.sourceCountries} source countries. Get started free.
 						</p>
 					</MotionReveal>
 					<MotionReveal delay={0.2}>

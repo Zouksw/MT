@@ -104,7 +104,7 @@ export const buttonStyle = {
 	fontWeight: 600,
 	background: "#171717",
 	border: "none",
-	boxShadow: "0 1px 3px rgba(184, 134, 11, 0.2)",
+	boxShadow: "0 1px 3px rgba(139, 105, 20, 0.2)",
 	transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
 };
 

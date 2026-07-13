@@ -121,7 +121,7 @@ export function AuthPage(props: AuthPageProps) {
 					className="pointer-events-none absolute inset-0"
 					style={{
 						background:
-							"radial-gradient(ellipse 60% 40% at 50% 80%, rgba(184, 134, 11, 0.07), transparent)",
+							"radial-gradient(ellipse 60% 40% at 50% 80%, rgba(139, 105, 20, 0.07), transparent)",
 					}}
 				/>
 
@@ -146,12 +146,12 @@ export function AuthPage(props: AuthPageProps) {
 						MT
 					</h1>
 					<p className="mt-6 max-w-xs text-xl font-medium leading-relaxed text-white/80">
-						108 commodities.
-						<br />7 AI models.
+						85+ beef cuts.
+						<br />5 AI models.
 						<br />
 						<span className="text-primary">One signal.</span>
 					</p>
-					<p className="mt-4 text-sm text-white/40">AI-powered commodity market analytics</p>
+					<p className="mt-4 text-sm text-white/40">AI-powered beef trade price intelligence</p>
 				</motion.div>
 
 				{/* Footer */}

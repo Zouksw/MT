@@ -27,7 +27,7 @@
 }
 
 .dark .page-header::after {
-  background: linear-gradient(to right, #A8821C, rgba(184, 134, 11, 0.2), transparent);
+  background: linear-gradient(to right, #A8821C, rgba(139, 105, 20, 0.2), transparent);
 }
 
 .page-header__title {
@@ -59,12 +59,12 @@
 
 /* Background patterns */
 .bg-pattern-dots {
-  background-image: radial-gradient(circle, rgba(184, 134, 11, 0.04) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(139, 105, 20, 0.04) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .dark .bg-pattern-dots {
-  background-image: radial-gradient(circle, rgba(184, 134, 11, 0.03) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(139, 105, 20, 0.03) 1px, transparent 1px);
 }
 
 .bg-mesh-gradient {
@@ -77,12 +77,12 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(184, 134, 11, 0.06), transparent),
-    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(184, 134, 11, 0.04), transparent);
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(139, 105, 20, 0.06), transparent),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(139, 105, 20, 0.04), transparent);
 }
 
 .dark .bg-mesh-gradient::before {
   background:
-    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(184, 134, 11, 0.08), transparent),
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(139, 105, 20, 0.08), transparent),
     radial-gradient(ellipse 50% 60% at 80% 80%, rgba(212, 160, 48, 0.05), transparent);
 }

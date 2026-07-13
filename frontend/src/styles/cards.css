@@ -161,12 +161,12 @@
 .stat-card--default::before { background: linear-gradient(90deg, #64748B, #94A3B8); }
 
 /* Stat card subtle background tint */
-.stat-card--primary { background-color: rgba(184, 134, 11, 0.04); }
+.stat-card--primary { background-color: rgba(139, 105, 20, 0.04); }
 .stat-card--success { background-color: rgba(16, 185, 129, 0.04); }
 .stat-card--warning { background-color: rgba(245, 158, 11, 0.04); }
 .stat-card--error { background-color: rgba(239, 68, 68, 0.04); }
 
-.dark .stat-card--primary { background-color: rgba(184, 134, 11, 0.06); }
+.dark .stat-card--primary { background-color: rgba(139, 105, 20, 0.06); }
 .dark .stat-card--success { background-color: rgba(52, 211, 153, 0.06); }
 .dark .stat-card--warning { background-color: rgba(251, 191, 36, 0.06); }
 .dark .stat-card--error { background-color: rgba(248, 113, 113, 0.06); }

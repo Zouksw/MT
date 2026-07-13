@@ -5,6 +5,7 @@ import type React from "react";
 import { useEffect, useRef } from "react";
 import { HexGrid } from "@/components/ui/GeometricArt";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const DATA_STREAM = [
 	12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45, 42, 50, 48, 55, 52, 60, 58, 65, 62, 70, 68, 75,
@@ -42,13 +43,13 @@ function MiniSparkline() {
 			const step = W / visiblePoints;
 
 			const lines = [
-				{ data: DATA_STREAM, color: "rgba(184, 134, 11, 0.5)", width: 2 },
+				{ data: DATA_STREAM, color: "rgba(139, 105, 20, 0.5)", width: 2 },
 				{
 					data: DATA_STREAM.map((v) => v * 0.7 + 10),
-					color: "rgba(184, 134, 11, 0.25)",
+					color: "rgba(139, 105, 20, 0.25)",
 					width: 1.5,
 				},
-				{ data: DATA_STREAM.map((v) => v * 0.5 + 20), color: "rgba(184, 134, 11, 0.1)", width: 1 },
+				{ data: DATA_STREAM.map((v) => v * 0.5 + 20), color: "rgba(139, 105, 20, 0.1)", width: 1 },
 			];
 
 			lines.forEach(({ data, color, width: lw }) => {
@@ -73,11 +74,11 @@ function MiniSparkline() {
 			const lastX = (visiblePoints - 1) * step;
 			ctx.beginPath();
 			ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
-			ctx.fillStyle = "rgba(184, 134, 11, 0.8)";
+			ctx.fillStyle = "rgba(139, 105, 20, 0.8)";
 			ctx.fill();
 			ctx.beginPath();
 			ctx.arc(lastX, lastY, 8, 0, Math.PI * 2);
-			ctx.fillStyle = "rgba(184, 134, 11, 0.15)";
+			ctx.fillStyle = "rgba(139, 105, 20, 0.15)";
 			ctx.fill();
 
 			if (prefersReducedMotion) return;
@@ -106,9 +107,9 @@ const features = [
 		span: "md:col-span-2",
 	},
 	{
-		title: "6 AI Price Models",
+		title: `${SITE_STATS.aiModels} AI Price Models`,
 		description:
-			"ARIMA, Holt-Winters, STL, Chronos-2 — each producing independent price forecasts with confidence intervals",
+			"ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive — each producing independent price forecasts with confidence intervals",
 		span: "",
 	},
 	{
@@ -138,7 +139,7 @@ export const Hero: React.FC = () => {
 					<div className="lg:col-span-3">
 						<MotionReveal>
 							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-primary">
-								85+ beef cuts &middot; 6 AI models &middot; 5 export markets
+								{`85+ beef cuts · ${SITE_STATS.aiModels} AI models · ${SITE_STATS.sourceCountries} export markets`}
 							</p>
 						</MotionReveal>
 
@@ -186,7 +187,9 @@ export const Hero: React.FC = () => {
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-primary font-semibold text-base">8</span>
+									<span className="text-primary font-semibold text-base">
+										{SITE_STATS.aiModels}
+									</span>
 									<span>AI Price Models</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
@@ -218,8 +221,8 @@ export const Hero: React.FC = () => {
 										</span>
 									</div>
 									<div className="flex items-center gap-2">
-										<div className="size-1.5 rounded-full bg-green-500" />
-										<span className="text-xs text-green-400 font-medium">Live</span>
+										<div className="size-1.5 rounded-full bg-muted-foreground/40" />
+										<span className="text-xs text-muted-foreground font-medium">Sample</span>
 									</div>
 								</div>
 

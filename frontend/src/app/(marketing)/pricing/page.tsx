@@ -17,7 +17,7 @@ export default function PricingPage() {
 			features: [
 				"85+ beef cut prices",
 				"5 watchlist items",
-				"3 of 7 AI models",
+				"3 of 5 AI models",
 				"Basic charts & OHLCV data",
 				"7-day price history",
 			],
@@ -26,11 +26,11 @@ export default function PricingPage() {
 		},
 		{
 			name: "Professional",
-			description: "7 AI models, multi-factor analysis, alerts, API access",
+			description: "5 AI models, multi-factor analysis, alerts, API access",
 			price: { monthly: 49, yearly: 39 },
 			features: [
 				"全部 85+ 牛肉部位",
-				"All 7 AI models with consensus signals",
+				"All 5 AI models with consensus signals",
 				"Multi-factor analysis (weather, forex, shipping)",
 				"Price alerts & anomaly detection",
 				"Email notifications",

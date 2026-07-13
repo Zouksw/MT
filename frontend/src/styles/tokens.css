@@ -72,8 +72,8 @@
   --shadow-elevated: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.08);
 
   /* Gold authority tokens */
-  --color-gold-tint: rgba(184, 134, 11, 0.06);
-  --color-gold-tint-strong: rgba(184, 134, 11, 0.10);
+  --color-gold-tint: rgba(139, 105, 20, 0.06);
+  --color-gold-tint-strong: rgba(139, 105, 20, 0.10);
 
   /* Trading direction colors — match tailwind success (#16A34A) / error (#DC2626) */
   --color-up: #16A34A;
@@ -95,7 +95,7 @@
 
 /* Dark mode overrides */
 .dark {
-  --color-primary-light: rgba(184, 134, 11, 0.15);
+  --color-primary-light: rgba(139, 105, 20, 0.15);
 
   /* Background tokens — spec: page #0a0a0a, surface #171717, elevated #1f1f1f */
   --bg-page: #0a0a0a;
@@ -119,5 +119,5 @@
   --shadow-elevated: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 16px -4px rgba(0, 0, 0, 0.3);
 
   /* Focus — gold-tinted accessibility ring */
-  --focus-ring: 0 0 0 2px hsla(45, 88%, 39%, 0.8);
+  --focus-ring: 0 0 0 2px hsla(45, 76%, 30%, 0.8);
 }

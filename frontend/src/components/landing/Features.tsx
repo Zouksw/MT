@@ -15,8 +15,8 @@ const features = [
 	{
 		title: "AI Price Forecasting",
 		description:
-			"6 independent models — ARIMA, Holt-Winters, STL, Chronos-2 — each producing price forecasts with confidence intervals and MAPE verification.",
-		details: ["6 AI models", "Confidence intervals", "MAPE tracking"],
+			"5 independent models — ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive — each producing price forecasts with confidence intervals and MAPE verification.",
+		details: ["5 AI models", "Confidence intervals", "MAPE tracking"],
 		span: "",
 		visual: null,
 		goldAccent: true,
@@ -180,7 +180,7 @@ export const Features: React.FC = () => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index} className={feature.span}>
 							<div
-								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(184,134,11,0.03)] dark:bg-[rgba(184,134,11,0.06)]" : ""}`}
+								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(139, 105, 20,0.03)] dark:bg-[rgba(139, 105, 20,0.06)]" : ""}`}
 							>
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 									{feature.title}
