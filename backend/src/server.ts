@@ -10,6 +10,7 @@
 
 import { logger, prisma } from "@/lib";
 import { MS_PER_HOUR } from "@/lib/constants";
+import { evaluateAlertRules } from "@/services/alert-rules";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import { verifyDuePredictions } from "@/services/mapeTracking";
@@ -194,6 +195,22 @@ function start(): void {
 	};
 	setTimeout(runVerification, 15000); // 15s delay lets scrapers finish first
 	setInterval(runVerification, DAILY_MS);
+
+	// Every 10 minutes: evaluate user-defined alert rules against latest prices.
+	// This closes the loop that previously made alert rules a dead-end feature
+	// (rules could be created but nothing evaluated them). Runs on a shorter
+	// cadence than verification because price thresholds are time-sensitive.
+	const ALERT_EVAL_INTERVAL = 10 * MS_PER_HOUR; // 10 min
+	const runAlertEvaluation = async () => {
+		try {
+			const n = await evaluateAlertRules();
+			if (n > 0) logger.info(`🔔 Alert rules: ${n} triggered this cycle`);
+		} catch (err) {
+			logger.warn(`🔔 Alert rule evaluation failed: ${err}`);
+		}
+	};
+	setTimeout(runAlertEvaluation, 30000); // 30s delay lets scrapers finish first
+	setInterval(runAlertEvaluation, ALERT_EVAL_INTERVAL);
 }
 
 start();

@@ -236,19 +236,43 @@ export async function invalidateCommodityCache(
 }
 
 /**
- * Schedule predictions for all active commodities
+ * Schedule predictions for active commodities that actually have price data.
+ *
+ * Previously this subscribed ALL active commodities (111), but 64% had zero
+ * CommodityPrice rows — every 30-min refresh fired 5 model predictions that
+ * all failed with "Insufficient price data", wasting inference-service work
+ * and polluting logs. Now we only subscribe commodities with ≥2 daily prices
+ * (the inference engine's minimum for fitting a model).
  */
 export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
+	// Sub-query: commodities that have at least 2 daily price rows. The
+	// inference engine needs ≥2 points to fit any model; fewer is guaranteed
+	// to fail, so we exclude them upfront.
 	const commodities = await prisma.commodity.findMany({
-		where: { isActive: true },
-		select: { id: true },
+		where: {
+			isActive: true,
+			prices: { some: { interval: "daily" } },
+		},
+		select: {
+			id: true,
+			_count: { select: { prices: { where: { interval: "daily" } } } },
+		},
 	});
 
 	const MODELS = getAllModels();
-
+	let subscribed = 0;
 	for (const commodity of commodities) {
-		subscribeCommodity(commodity.id, MODELS, 10);
+		// _count.prices is the daily-price count for this commodity
+		if (commodity._count.prices >= 2) {
+			subscribeCommodity(commodity.id, MODELS, 10);
+			subscribed++;
+		}
 	}
 
-	return commodities.length;
+	const skipped = commodities.length - subscribed;
+	logger.info(
+		`[PREDICT] Subscribed ${subscribed} commodities to prediction refresh (${skipped} had <2 daily prices, skipped)`,
+	);
+
+	return subscribed;
 }

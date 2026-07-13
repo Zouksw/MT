@@ -103,19 +103,26 @@ export async function verifyPrediction(
  * Designed to run on a schedule (called from server.ts). Idempotent — only
  * touches status='completed' rows whose predictedAt + horizon has passed.
  *
+ * Root-cause note (2026-07-13): the old version used a hardcoded 7-day cutoff
+ * for the SQL pre-filter AND `take: 500 orderBy: predictedAt DESC`. With
+ * predictions generated every 30 min (horizon=10), fresh predictions are always
+ * <10d old → never eligible → beef_carcass_us showed 365 completed / 0 verified
+ * indefinitely. Meanwhile the 3270-row backlog (frozen-data commodities) was
+ * starved by the 500-cap DESC sort. Fixed by: (1) using the true max horizon as
+ * the SQL cutoff so the pre-filter matches the per-row check, (2) raising the
+ * batch + processing OLDEST-first so backlog drains, (3) logging which
+ * commodities are stuck on no-actuals so operators can see data gaps.
+ *
  * @returns number of predictions verified this run
  */
 export async function verifyDuePredictions(): Promise<number> {
-	// Completed predictions whose forecast window has fully elapsed.
-	// horizon is in steps; each step ~= 1 day for daily prices.
-	//
-	// We can't express "predictedAt + horizon <= now" as a single SQL filter
-	// (horizon varies per row), so we fetch candidates older than the minimum
-	// plausible horizon (7 days) and then check per-row in code. Ordered by
-	// predictedAt DESC so newer predictions (which are more likely to have
-	// fresh actuals) are processed first — older seed-era predictions whose
-	// commodities have no live data don't starve the queue.
-	const cutoff = new Date(Date.now() - 7 * 86400000);
+	// SQL pre-filter: older than the longest horizon we use (10 days). The
+	// per-row check below still applies the exact horizon. This is a superset
+	// filter — it may include rows whose horizon hasn't elapsed, but those are
+	// skipped in-loop. Using the max horizon (not a hardcoded 7d) ensures we
+	// don't miss horizon=10 rows that became eligible at day 10.
+	const MAX_HORIZON_DAYS = 10;
+	const cutoff = new Date(Date.now() - MAX_HORIZON_DAYS * 86400000);
 	const now = Date.now();
 	const due = await prisma.predictionLog.findMany({
 		where: {
@@ -123,13 +130,18 @@ export async function verifyDuePredictions(): Promise<number> {
 			predictedAt: { lte: cutoff },
 		},
 		select: { id: true, commodityId: true, horizon: true, predictedAt: true },
-		orderBy: { predictedAt: "desc" },
-		take: 500,
+		// OLDEST first so the backlog drains. DESC kept re-sampling the same
+		// near-cutoff rows every run, starving older verifiable candidates.
+		orderBy: { predictedAt: "asc" },
+		take: 2000,
 	});
 
 	let verified = 0;
 	let skippedNoActuals = 0;
 	let skippedHorizon = 0;
+	// Track which commodities are stuck on no-actuals (data gap signal).
+	const noActualsByCommodity = new Map<string, number>();
+
 	for (const log of due) {
 		try {
 			// Per-row horizon check: predictedAt + horizon days must have elapsed
@@ -154,6 +166,10 @@ export async function verifyDuePredictions(): Promise<number> {
 			// Need enough actuals to compute a meaningful MAPE
 			if (actualPrices.length < Math.min(log.horizon, 3)) {
 				skippedNoActuals++;
+				noActualsByCommodity.set(
+					log.commodityId,
+					(noActualsByCommodity.get(log.commodityId) ?? 0) + 1,
+				);
 				continue;
 			}
 
@@ -167,8 +183,14 @@ export async function verifyDuePredictions(): Promise<number> {
 
 	// imported lazily to avoid circular import at module load
 	const { logger } = await import("@/lib");
+	const stuckCommodities = [...noActualsByCommodity.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, 5)
+		.map(([id, count]) => `${id.slice(0, 8)}:${count}`)
+		.join(", ");
 	logger.info(
-		`[MAPE] Verified ${verified} of ${due.length} due predictions (${skippedNoActuals} no actuals, ${skippedHorizon} horizon not elapsed)`,
+		`[MAPE] Verified ${verified} of ${due.length} due predictions (${skippedNoActuals} no actuals, ${skippedHorizon} horizon not elapsed)` +
+			(stuckCommodities ? ` | stuck-no-actuals: ${stuckCommodities}` : ""),
 	);
 
 	return verified;
