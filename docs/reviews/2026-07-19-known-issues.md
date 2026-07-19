@@ -180,6 +180,23 @@ restructure, (4) data-fill as keys arrive.
 
 ---
 
+## 2026-07-19 M3 增量 — 资讯/分析完善 (commit 031a109)
+
+M3 三项交付 (PRODUCT-SPEC §M3):
+
+| 项 | 内容 | 状态 |
+|---|---|---|
+| **M3-A** | news→cut 断链修复 (commoditySlug 错当 cutCode → 全部 404) | ✅ shipped |
+| **M3-B** | 产地对比页 `/dashboard/analysis/origin` + `GET /api/beef/by-country` + NAV 入口 | ✅ shipped |
+| **M3-C** | news 列表 stats endpoint (替代 pageSize=1000 双拉) + 搜索 300ms debounce | ✅ shipped |
+
+**M3 剩余** (deferred, 低优先):
+- news Edit UI (PATCH `/api/news/:id` 端点存在但前端无 edit 页/按钮)
+- news 详情页嵌入相关商品价格图 (现仅文字链接到 /beef)
+- 这些不影响 M3 sign-off 的核心可用性, 留作后续打磨
+
+---
+
 ## Out of scope (per PRODUCT-SPEC §九, do not pursue)
 
 - Trade matching / order execution / payments
