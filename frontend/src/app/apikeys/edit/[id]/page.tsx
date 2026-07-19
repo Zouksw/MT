@@ -211,7 +211,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 										type="button"
 										onClick={() => setIsActive(!isActive)}
 										className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-											isActive ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+											isActive ? "bg-success" : "bg-gray-300 dark:bg-gray-600"
 										}`}
 									>
 										<span

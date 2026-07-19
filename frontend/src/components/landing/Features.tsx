@@ -85,7 +85,7 @@ function CutsVisual() {
 							{c.price}
 						</span>
 						<span
-							className={`text-xs font-mono tabular-nums ${c.up ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
+							className={`text-xs font-mono tabular-nums ${c.up ? "text-success" : "text-destructive"}`}
 						>
 							{c.change}
 						</span>
@@ -117,9 +117,7 @@ function TradeVisual() {
 						<span className="text-xs font-mono text-gray-900 dark:text-white tabular-nums">
 							{f.volume}
 						</span>
-						<span className="text-xs font-mono text-green-600 dark:text-green-400 tabular-nums">
-							{f.trend}
-						</span>
+						<span className="text-xs font-mono text-success tabular-nums">{f.trend}</span>
 					</div>
 				</div>
 			))}

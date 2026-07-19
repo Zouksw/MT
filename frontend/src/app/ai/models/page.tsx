@@ -18,6 +18,7 @@ import {
 	MODEL_COLORS,
 	MODEL_NAME_MAP,
 } from "@/lib/ai-utils";
+import { formatPercentValue } from "@/lib/format";
 
 interface ModelAccuracy {
 	modelId: string;
@@ -48,7 +49,9 @@ interface EnrichedModel extends ModelAccuracy {
 function mapeBadge(mape: number | null) {
 	if (mape === null) return <span className="text-muted-foreground">--</span>;
 	return (
-		<span className={`font-mono font-medium ${getMapeTextColor(mape)}`}>{mape.toFixed(2)}%</span>
+		<span className={`font-mono font-medium ${getMapeTextColor(mape)}`}>
+			{formatPercentValue(mape, 2)}
+		</span>
 	);
 }
 
@@ -56,13 +59,13 @@ function trendBadge(trend: string) {
 	switch (trend) {
 		case "improving":
 			return (
-				<span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+				<span className="inline-flex items-center gap-1 text-xs text-success">
 					<TrendingUp className="size-3" /> Improving
 				</span>
 			);
 		case "degrading":
 			return (
-				<span className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+				<span className="inline-flex items-center gap-1 text-xs text-destructive">
 					<TrendingDown className="size-3" /> Degrading
 				</span>
 			);
@@ -291,13 +294,13 @@ export default function AIModelsPage() {
 												<span
 													className={`text-sm font-mono font-medium w-20 text-right ${
 														(m.avgMape ?? 0) < 5
-															? "text-green-600 dark:text-green-400"
+															? "text-success"
 															: (m.avgMape ?? 0) < 10
 																? "text-primary"
-																: "text-red-600 dark:text-red-400"
+																: "text-destructive"
 													}`}
 												>
-													{m.avgMape !== null ? `${m.avgMape.toFixed(2)}%` : "--"}
+													{m.avgMape !== null ? formatPercentValue(m.avgMape, 2) : "--"}
 												</span>
 											</div>
 										))}

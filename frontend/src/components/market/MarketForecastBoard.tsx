@@ -58,9 +58,9 @@ export function MarketForecastBoard() {
 								const up = (r.changePct ?? 0) > 0.05;
 								const down = (r.changePct ?? 0) < -0.05;
 								const changeColor = up
-									? "text-green-600 dark:text-green-400"
+									? "text-success"
 									: down
-										? "text-red-600 dark:text-red-400"
+										? "text-destructive"
 										: "text-muted-foreground";
 								const Arrow = up ? ArrowUpRight : down ? ArrowDownRight : Minus;
 								return (

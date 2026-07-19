@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
+import { formatDecimal, formatPercentValue } from "@/lib/format";
 import { authFetch } from "@/utils/auth";
 
 interface ForecastDetailParams {
@@ -119,7 +120,7 @@ export default function ForecastDetailPage() {
 			<PageContainer>
 				<div className="max-w-md mx-auto mt-20">
 					<div className="bg-card rounded-lg shadow-sm border border p-6 text-center">
-						<h3 className="text-lg font-semibold text-red-500 mb-3">Error</h3>
+						<h3 className="text-lg font-semibold text-destructive mb-3">Error</h3>
 						<p className="text-muted-foreground mb-6">{error || "Forecast not found"}</p>
 						<Button variant="ghost" onClick={() => window.history.back()}>
 							Go Back
@@ -154,7 +155,9 @@ export default function ForecastDetailPage() {
 			title: "Predicted Value",
 			dataIndex: "value",
 			render: (value: unknown) => (
-				<span style={{ fontVariantNumeric: "tabular-nums" }}>{(value as number).toFixed(4)}</span>
+				<span style={{ fontVariantNumeric: "tabular-nums" }}>
+					{formatDecimal(value as number, 4)}
+				</span>
 			),
 		},
 		{
@@ -164,7 +167,7 @@ export default function ForecastDetailPage() {
 			render: (lower: unknown) => {
 				const l = lower as number | undefined;
 				return l !== undefined ? (
-					<span style={{ fontVariantNumeric: "tabular-nums" }}>{l.toFixed(4)}</span>
+					<span style={{ fontVariantNumeric: "tabular-nums" }}>{formatDecimal(l, 4)}</span>
 				) : (
 					"-"
 				);
@@ -177,7 +180,7 @@ export default function ForecastDetailPage() {
 			render: (upper: unknown) => {
 				const u = upper as number | undefined;
 				return u !== undefined ? (
-					<span style={{ fontVariantNumeric: "tabular-nums" }}>{u.toFixed(4)}</span>
+					<span style={{ fontVariantNumeric: "tabular-nums" }}>{formatDecimal(u, 4)}</span>
 				) : (
 					"-"
 				);
@@ -281,7 +284,7 @@ export default function ForecastDetailPage() {
 										color: forecast.accuracy > 80 ? "#16A34A" : "#f59e0b",
 									}}
 								>
-									{forecast.accuracy.toFixed(2)}%
+									{formatPercentValue(forecast.accuracy, 2)}
 								</div>
 							</div>
 						)}
@@ -296,8 +299,8 @@ export default function ForecastDetailPage() {
 					<Alert variant="info" title="Forecast chart will be displayed here" className="mb-4">
 						This will show the predicted values with confidence intervals
 					</Alert>
-					<div className="h-75 flex items-center justify-center bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-dashed border-blue-200 dark:border-blue-800/30">
-						<TrendingUp className="size-12 text-blue-500 mr-4" />
+					<div className="h-75 flex items-center justify-center bg-primary/10 rounded-lg border border-dashed border-primary/30">
+						<TrendingUp className="size-12 text-primary mr-4" />
 						<span className="text-muted-foreground">Chart visualization</span>
 					</div>
 				</div>
@@ -338,10 +341,10 @@ export default function ForecastDetailPage() {
 						<h4 className="text-sm font-semibold text-foreground mb-2">Performance Metrics</h4>
 						<div className="space-y-1 text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
 							{forecast.mae !== undefined && (
-								<div className="text-muted-foreground">MAE: {forecast.mae.toFixed(4)}</div>
+								<div className="text-muted-foreground">MAE: {formatDecimal(forecast.mae, 4)}</div>
 							)}
 							{forecast.rmse !== undefined && (
-								<div className="text-muted-foreground">RMSE: {forecast.rmse.toFixed(4)}</div>
+								<div className="text-muted-foreground">RMSE: {formatDecimal(forecast.rmse, 4)}</div>
 							)}
 							{forecast.mae === undefined && forecast.rmse === undefined && (
 								<div className="text-gray-400">No metrics available</div>

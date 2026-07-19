@@ -11,6 +11,7 @@ import {
 	chartGridStyles,
 	chartTooltipStyles,
 } from "@/lib/chart-config";
+import { formatPercentValue } from "@/lib/format";
 import type { ModelWithBacktest } from "@/types/accuracy";
 
 // biome-ignore lint/suspicious/noExplicitAny: third-party library type
@@ -78,7 +79,7 @@ function CustomTooltip({
 		>
 			<p className="text-xs font-medium text-foreground mb-1">{data.name}</p>
 			<p className="text-xs text-muted-foreground">
-				MAPE: {data.mape !== null ? `${data.mape.toFixed(1)}%` : "N/A"}
+				MAPE: {data.mape !== null ? formatPercentValue(data.mape, 1) : "N/A"}
 			</p>
 			<p className="text-xs text-muted-foreground">Predictions: {data.predictions}</p>
 		</div>
@@ -160,7 +161,7 @@ export function ModelPerformanceBarChart({ models }: ModelPerformanceBarChartPro
 								strokeDasharray="5 5"
 								strokeWidth={1.5}
 								label={{
-									value: `Avg: ${avgMape.toFixed(1)}%`,
+									value: `Avg: ${formatPercentValue(avgMape, 1)}`,
 									position: "top",
 									fill: "#EF4444",
 									fontSize: 11,

@@ -18,6 +18,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tag } from "@/components/ui/Tag";
+import { formatPercent, formatPercentValue, formatPrice, formatPriceRange } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 import { useTradingData } from "./useTradingData";
 
@@ -228,13 +229,13 @@ export default function TradingPage() {
 									<div className="flex justify-between">
 										<span className="text-gray-500">Latest Price</span>
 										<span className="font-mono font-medium">
-											${d.beefCutInfo.latestPrice.toFixed(2)}/kg
+											{formatPrice(d.beefCutInfo.latestPrice)}
 										</span>
 									</div>
 									<div className="flex justify-between">
 										<span className="text-gray-500">Range (90d)</span>
 										<span className="font-mono">
-											${d.beefCutInfo.minPrice.toFixed(2)} — ${d.beefCutInfo.maxPrice.toFixed(2)}
+											{formatPriceRange(d.beefCutInfo.minPrice, d.beefCutInfo.maxPrice)}
 										</span>
 									</div>
 									<div className="flex justify-between">
@@ -332,7 +333,9 @@ export default function TradingPage() {
 															<td>
 																{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}
 															</td>
-															<td className="text-right font-mono">${p.price.toFixed(2)}</td>
+															<td className="text-right font-mono">
+																{formatPrice(p.price, false)}
+															</td>
 															<td className="text-gray-400">
 																{new Date(p.date).toLocaleDateString()}
 															</td>
@@ -429,30 +432,30 @@ export default function TradingPage() {
 														{MODEL_NAME_MAP[p.modelId] || p.modelId}
 													</td>
 													<td className="px-4 py-2.5 text-xs font-mono text-right">
-														{predicted !== undefined ? `$${predicted.toFixed(2)}` : "--"}
+														{predicted !== undefined ? formatPrice(predicted, false) : "--"}
 													</td>
 													<td className="px-4 py-2.5 text-xs font-mono text-right">
-														{actual !== undefined ? `$${actual.toFixed(2)}` : "--"}
+														{actual !== undefined ? formatPrice(actual, false) : "--"}
 													</td>
 													<td className="px-4 py-2.5 text-xs font-mono font-medium text-right">
 														{p.mape !== null ? (
 															<span
 																className={
 																	p.mape < 5
-																		? "text-green-600 dark:text-green-400"
+																		? "text-success"
 																		: p.mape < 10
 																			? "text-primary"
-																			: "text-red-600 dark:text-red-400"
+																			: "text-destructive"
 																}
 															>
-																{p.mape.toFixed(1)}%
+																{formatPercentValue(p.mape, 1)}
 															</span>
 														) : (
 															"--"
 														)}
 													</td>
 													<td className="px-4 py-2.5 text-xs text-right text-muted-foreground">
-														{p.confidence !== null ? `${(p.confidence * 100).toFixed(0)}%` : "--"}
+														{p.confidence !== null ? formatPercent(p.confidence, 0) : "--"}
 													</td>
 												</tr>
 											);

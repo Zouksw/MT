@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
+import { formatDecimal } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
 import type { Dataset, TimeSeries } from "@/types/api";
 import { authFetch } from "@/utils/auth";
@@ -142,7 +143,7 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 		return (
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 lg:p-6">
 				<div className="mx-auto max-w-[1440px]">
-					<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-lg px-4 py-3">
+					<div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg px-4 py-3">
 						{error || "Dataset not found"}
 					</div>
 				</div>
@@ -305,7 +306,7 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 									{dataset.sizeMB !== undefined && (
 										<StatDisplay
 											label="Storage Size"
-											value={dataset.sizeMB.toFixed(2)}
+											value={formatDecimal(dataset.sizeMB, 2)}
 											suffix="MB"
 										/>
 									)}
@@ -381,7 +382,7 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 									<StatDisplay label="Time Series" value={`${tsCount} / 100`} />
 									<StatDisplay
 										label="Storage Used"
-										value={`${(dataset.sizeMB || 0).toFixed(2)} MB`}
+										value={`${formatDecimal(dataset.sizeMB || 0, 2)} MB`}
 									/>
 									<StatDisplay
 										label="Last Import"

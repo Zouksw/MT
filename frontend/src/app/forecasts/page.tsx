@@ -267,7 +267,7 @@ export default function ForecastList() {
 				if (isAnomaly as boolean) {
 					return (
 						<div>
-							<span className="text-sm font-medium text-amber-600 dark:text-amber-400">Yes</span>
+							<span className="text-sm font-medium text-warning">Yes</span>
 							{probability > 0 && (
 								<div
 									className="text-[11px] text-muted-foreground"

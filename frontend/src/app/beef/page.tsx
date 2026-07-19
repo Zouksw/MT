@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { beefFetcher } from "@/lib/beef";
+import { formatDecimal, formatPrice } from "@/lib/format";
 
 export default function BeefOverview() {
 	const {
@@ -42,10 +43,11 @@ export default function BeefOverview() {
 	// Compute summary stats
 	const avgPrice =
 		latestPrices.length > 0
-			? (
+			? formatPrice(
 					latestPrices.reduce((s: number, p: { price: number }) => s + p.price, 0) /
-					latestPrices.length
-				).toFixed(2)
+						latestPrices.length,
+					false,
+				)
 			: "--";
 	const totalKills = weeklyKills.reduce(
 		(s: number, k: { headCount: number }) => s + k.headCount,
@@ -164,12 +166,12 @@ export default function BeefOverview() {
 													<td>
 														<a
 															href={`/beef/cuts/${p.cutCode}`}
-															className="text-blue-600 dark:text-blue-400 hover:underline"
+															className="text-primary hover:underline"
 														>
 															{p.cutCode.replace(/_/g, " ")}
 														</a>
 													</td>
-													<td className="text-right font-mono">{p.price.toFixed(2)}</td>
+													<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
 													<td className="text-gray-500 text-xs">{p.source}</td>
 													<td className="text-xs">
 														{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}
@@ -200,7 +202,7 @@ export default function BeefOverview() {
 										<a
 											key={cut.cutCode}
 											href={`/beef/cuts/${cut.cutCode}`}
-											className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+											className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-primary/10 hover:text-primary transition-colors"
 										>
 											{cut.nameZh || cut.nameEn}
 										</a>
@@ -251,7 +253,7 @@ export default function BeefOverview() {
 													<td>{k.country}</td>
 													<td className="text-right font-mono">{k.headCount.toLocaleString()}</td>
 													<td className="text-right font-mono text-gray-500">
-														{k.avgWeight?.toFixed(0) || "--"}
+														{formatDecimal(k.avgWeight, 0) || "--"}
 													</td>
 												</tr>
 											),
@@ -292,7 +294,7 @@ export default function BeefOverview() {
 													{new Date(s.date).toLocaleDateString()}
 												</td>
 												<td>{s.country}</td>
-												<td className="text-right font-mono">{s.totalLbs.toFixed(1)}</td>
+												<td className="text-right font-mono">{formatDecimal(s.totalLbs, 1)}</td>
 											</tr>
 										))}
 									</tbody>
@@ -350,24 +352,24 @@ export default function BeefOverview() {
 													<div className="flex-1 relative h-6">
 														<div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded" />
 														<div
-															className="absolute h-full bg-blue-200 dark:bg-blue-900/40 rounded"
+															className="absolute h-full bg-primary/30 rounded"
 															style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
 														/>
 														<div
-															className="absolute w-1 h-full bg-blue-600 dark:bg-blue-400 rounded"
+															className="absolute w-1 h-full bg-primary rounded"
 															style={{ left: `${avgPct}%` }}
 														/>
 													</div>
 													<div className="w-32 text-xs text-right shrink-0">
-														<span className="font-mono">${avg.toFixed(2)}</span>
+														<span className="font-mono">{formatPrice(avg, false)}</span>
 														<span className="text-gray-400 ml-1">avg</span>
 													</div>
 												</div>
 											);
 										})}
 									<div className="flex justify-between text-xs text-gray-400 mt-1">
-										<span>${globalMin.toFixed(2)}</span>
-										<span>${globalMax.toFixed(2)}</span>
+										<span>{formatPrice(globalMin, false)}</span>
+										<span>{formatPrice(globalMax, false)}</span>
 									</div>
 								</div>
 							);

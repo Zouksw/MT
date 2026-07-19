@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
 			return (
 				<div className="min-h-screen flex items-center justify-center p-6">
 					<div className="text-center max-w-lg">
-						<TriangleAlert className="size-16 text-amber-600 mx-auto mb-4" strokeWidth={1.5} />
+						<TriangleAlert className="size-16 text-warning mx-auto mb-4" strokeWidth={1.5} />
 						<h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 							Something went wrong
 						</h2>
@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
 							<button
 								type="button"
 								onClick={this.handleReset}
-								className="px-5 py-2.5 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors"
+								className="px-5 py-2.5 rounded-lg bg-warning text-white font-medium hover:bg-warning/90 transition-colors"
 							>
 								Try Again
 							</button>

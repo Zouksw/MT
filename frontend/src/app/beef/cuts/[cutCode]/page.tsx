@@ -6,6 +6,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { beefFetcher } from "@/lib/beef";
+import { formatPrice, formatPriceRange } from "@/lib/format";
 
 export default function CutDetail() {
 	const params = useParams();
@@ -64,7 +65,7 @@ export default function CutDetail() {
 						<CardBody>
 							<p className="text-xs text-gray-500">Price Range (90d)</p>
 							<p className="font-medium mt-1">
-								{minPrice.toFixed(2)} — {maxPrice.toFixed(2)}{" "}
+								{formatPriceRange(minPrice, maxPrice, false)}{" "}
 								<span className="text-xs text-gray-400">USD/kg</span>
 							</p>
 						</CardBody>
@@ -73,7 +74,7 @@ export default function CutDetail() {
 						<CardBody>
 							<p className="text-xs text-gray-500">Latest Price</p>
 							<p className="text-2xl font-semibold mt-1">
-								{latestPrice.toFixed(2)}{" "}
+								{formatPrice(latestPrice, false)}{" "}
 								<span className="text-sm font-normal text-gray-400">USD/kg</span>
 							</p>
 						</CardBody>
@@ -103,7 +104,7 @@ export default function CutDetail() {
 			)}
 
 			{/* Price History by Source */}
-			{priceErr && <p className="text-sm text-red-500 mb-4">Failed to load price history</p>}
+			{priceErr && <p className="text-sm text-destructive mb-4">Failed to load price history</p>}
 
 			{Object.entries(bySource).map(([source, sourcePrices]) => {
 				const spMin = Math.min(...sourcePrices.map((p: { price: number }) => p.price));
@@ -146,12 +147,12 @@ export default function CutDetail() {
 															{new Date(p.date).toLocaleDateString()}
 														</td>
 														<td className="text-xs">{p.factory ? `${p.factory.name}` : "--"}</td>
-														<td className="text-right font-mono">{p.price.toFixed(2)}</td>
+														<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
 														<td className="text-xs text-gray-500">{p.grade || "--"}</td>
 														<td>
 															<div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
 																<div
-																	className="bg-blue-500 h-1.5 rounded-full"
+																	className="bg-primary h-1.5 rounded-full"
 																	style={{ width: `${Math.max(pct, 3)}%` }}
 																/>
 															</div>

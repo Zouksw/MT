@@ -18,6 +18,7 @@ import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { formatDecimal } from "@/lib/format";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -417,7 +418,7 @@ export default function DataSourcesPage() {
 																	<td className="py-1 text-right">{log.updated}</td>
 																	<td className="py-1 text-right text-muted-foreground">
 																		{log.durationMs > 0
-																			? `${(log.durationMs / 1000).toFixed(1)}s`
+																			? `${formatDecimal(log.durationMs / 1000, 1)}s`
 																			: "--"}
 																	</td>
 																</tr>
@@ -435,80 +436,80 @@ export default function DataSourcesPage() {
 								);
 							})}
 						</div>
-						</CardBody>
-					</Card>
+					</CardBody>
+				</Card>
 
-					{commoditySummary && (
-						<Card className="mt-6">
-							<CardBody>
-								<div className="flex items-center justify-between mb-4">
-									<div>
-										<h2 className="text-lg font-semibold">Commodity Freshness</h2>
-										<p className="text-xs text-muted-foreground mt-0.5">
-											Last price update per commodity — stale means no daily price in 7 days
-										</p>
+				{commoditySummary && (
+					<Card className="mt-6">
+						<CardBody>
+							<div className="flex items-center justify-between mb-4">
+								<div>
+									<h2 className="text-lg font-semibold">Commodity Freshness</h2>
+									<p className="text-xs text-muted-foreground mt-0.5">
+										Last price update per commodity — stale means no daily price in 7 days
+									</p>
+								</div>
+								<div className="flex items-center gap-4 text-sm">
+									<div className="text-center">
+										<div className="text-xl font-bold text-foreground">
+											{commoditySummary.coverage}%
+										</div>
+										<div className="text-xs text-muted-foreground">coverage</div>
 									</div>
-									<div className="flex items-center gap-4 text-sm">
-										<div className="text-center">
-											<div className="text-xl font-bold text-foreground">
-												{commoditySummary.coverage}%
-											</div>
-											<div className="text-xs text-muted-foreground">coverage</div>
+									<div className="text-center">
+										<div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+											{commoditySummary.withData}
 										</div>
-										<div className="text-center">
-											<div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-												{commoditySummary.withData}
-											</div>
-											<div className="text-xs text-muted-foreground">with data</div>
+										<div className="text-xs text-muted-foreground">with data</div>
+									</div>
+									<div className="text-center">
+										<div className="text-xl font-bold text-red-600 dark:text-red-400">
+											{commoditySummary.stale}
 										</div>
-										<div className="text-center">
-											<div className="text-xl font-bold text-red-600 dark:text-red-400">
-												{commoditySummary.stale}
-											</div>
-											<div className="text-xs text-muted-foreground">stale</div>
-										</div>
+										<div className="text-xs text-muted-foreground">stale</div>
 									</div>
 								</div>
-								{commodityFreshness.length > 0 ? (
-									<div className="max-h-80 overflow-y-auto border border-border/50 rounded-lg">
-										<table className="w-full text-xs">
-											<thead className="sticky top-0 bg-muted">
-												<tr className="text-muted-foreground">
-													<th className="text-left py-2 px-3 font-medium">Commodity</th>
-													<th className="text-left py-2 px-3 font-medium">Category</th>
-													<th className="text-left py-2 px-3 font-medium">Status</th>
-													<th className="text-right py-2 px-3 font-medium">Last Price</th>
+							</div>
+							{commodityFreshness.length > 0 ? (
+								<div className="max-h-80 overflow-y-auto border border-border/50 rounded-lg">
+									<table className="w-full text-xs">
+										<thead className="sticky top-0 bg-muted">
+											<tr className="text-muted-foreground">
+												<th className="text-left py-2 px-3 font-medium">Commodity</th>
+												<th className="text-left py-2 px-3 font-medium">Category</th>
+												<th className="text-left py-2 px-3 font-medium">Status</th>
+												<th className="text-right py-2 px-3 font-medium">Last Price</th>
+											</tr>
+										</thead>
+										<tbody>
+											{commodityFreshness.map((c) => (
+												<tr key={c.id} className="border-t border-border/50">
+													<td className="py-1.5 px-3 font-medium">{c.name}</td>
+													<td className="py-1.5 px-3 text-muted-foreground">{c.category}</td>
+													<td className="py-1.5 px-3">
+														{c.lastUpdated === null ? (
+															<span className="text-gray-500">no data</span>
+														) : c.stale ? (
+															<span className="text-red-600 dark:text-red-400">stale</span>
+														) : (
+															<span className="text-emerald-600 dark:text-emerald-400">fresh</span>
+														)}
+													</td>
+													<td className="py-1.5 px-3 text-right text-muted-foreground">
+														{c.lastUpdated ? timeAgo(c.lastUpdated) : "—"}
+													</td>
 												</tr>
-											</thead>
-											<tbody>
-												{commodityFreshness.map((c) => (
-													<tr key={c.id} className="border-t border-border/50">
-														<td className="py-1.5 px-3 font-medium">{c.name}</td>
-														<td className="py-1.5 px-3 text-muted-foreground">{c.category}</td>
-														<td className="py-1.5 px-3">
-															{c.lastUpdated === null ? (
-																<span className="text-gray-500">no data</span>
-															) : c.stale ? (
-																<span className="text-red-600 dark:text-red-400">stale</span>
-															) : (
-																<span className="text-emerald-600 dark:text-emerald-400">fresh</span>
-															)}
-														</td>
-														<td className="py-1.5 px-3 text-right text-muted-foreground">
-															{c.lastUpdated ? timeAgo(c.lastUpdated) : "—"}
-														</td>
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								) : (
-									<p className="text-sm text-muted-foreground">No commodity freshness data</p>
-								)}
-							</CardBody>
-						</Card>
-					)}
-				</LoadingState>
+											))}
+										</tbody>
+									</table>
+								</div>
+							) : (
+								<p className="text-sm text-muted-foreground">No commodity freshness data</p>
+							)}
+						</CardBody>
+					</Card>
+				)}
+			</LoadingState>
 		</PageContainer>
 	);
 }

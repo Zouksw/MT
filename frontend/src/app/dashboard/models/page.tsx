@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { getMapeFillColor } from "@/lib/ai-utils";
+import { formatPercentValue } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 
 interface ModelAccuracy {
@@ -118,7 +119,7 @@ export default function ModelsComparisonPage() {
 						className="font-semibold font-mono text-base"
 						style={{ color: getMapeFillColor(row.mape) }}
 					>
-						{row.mape !== null ? `${row.mape.toFixed(2)}%` : "—"}
+						{row.mape !== null ? formatPercentValue(row.mape, 2) : "—"}
 					</span>
 					<Tag color={getMapeVariant(row.mape)}>{getMapeLabel(row.mape)}</Tag>
 				</div>
@@ -191,7 +192,7 @@ export default function ModelsComparisonPage() {
 				</div>
 				{bestModel && bestModel.avgMape !== null && (
 					<Tag color="success">
-						{MODEL_NAME_MAP[bestModel.modelId]} (MAPE {bestModel.avgMape.toFixed(2)}%)
+						{MODEL_NAME_MAP[bestModel.modelId]} (MAPE {formatPercentValue(bestModel.avgMape, 2)})
 					</Tag>
 				)}
 			</div>

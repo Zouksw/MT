@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatSignedPercent } from "@/lib/format";
 
 interface FactorItem {
 	id: string;
@@ -69,9 +70,7 @@ function FactorGroup({
 	if (!latest) return null;
 
 	const trend =
-		factors.length >= 2
-			? (((latest.value - factors[1].value) / factors[1].value) * 100).toFixed(1)
-			: null;
+		factors.length >= 2 ? ((latest.value - factors[1].value) / factors[1].value) * 100 : null;
 
 	return (
 		<div className="border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
@@ -89,12 +88,9 @@ function FactorGroup({
 					<div className="text-right">
 						<span className="text-sm font-semibold">{Number(latest.value).toLocaleString()}</span>
 						<span className="text-xs text-muted-foreground ml-1">{latest.unit}</span>
-						{trend && (
-							<span
-								className={`text-xs ml-2 ${Number(trend) >= 0 ? "text-green-500" : "text-red-500"}`}
-							>
-								{Number(trend) >= 0 ? "+" : ""}
-								{trend}%
+						{trend !== null && trend !== 0 && (
+							<span className={`text-xs ml-2 ${trend >= 0 ? "text-green-500" : "text-red-500"}`}>
+								{formatSignedPercent(trend, 1)}
 							</span>
 						)}
 					</div>

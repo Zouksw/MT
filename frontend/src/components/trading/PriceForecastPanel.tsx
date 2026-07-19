@@ -1,6 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
+import { formatPrice, formatPriceRange, formatSignedPercent } from "@/lib/format";
 import { TRADING_COLORS } from "@/lib/trading-chart-config";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 import DirectionBadge from "./DirectionBadge";
@@ -122,11 +123,11 @@ export default function PriceForecastPanel({
 					<div className="mt-3">
 						<span className="text-xs text-gray-500">预测价格</span>
 						<div className="text-3xl font-bold font-mono text-gray-900 dark:text-white">
-							${predictedPrice?.toFixed(2)}
+							{formatPrice(predictedPrice, false)}
 						</div>
 						<div className="text-xs text-gray-500 mt-1">
-							当前 ${currentPrice?.toFixed(2)} → 区间 ${range.lower?.toFixed(2)} – $
-							{range.upper?.toFixed(2)}
+							当前 {formatPrice(currentPrice, false)} → 区间 {formatPrice(range.lower, false)} –{" "}
+							{formatPrice(range.upper, false)}
 						</div>
 					</div>
 				</div>
@@ -169,7 +170,7 @@ export default function PriceForecastPanel({
 						<span className="text-xs text-gray-500">支撑位</span>
 						<br />
 						<span className="font-semibold font-mono" style={{ color: TRADING_COLORS.supportLine }}>
-							${supportLevel?.toFixed(2)}
+							{formatPrice(supportLevel, false)}
 						</span>
 					</div>
 					<div>
@@ -179,7 +180,7 @@ export default function PriceForecastPanel({
 							className="font-semibold font-mono"
 							style={{ color: TRADING_COLORS.resistanceLine }}
 						>
-							${resistanceLevel?.toFixed(2)}
+							{formatPrice(resistanceLevel, false)}
 						</span>
 					</div>
 				</div>
@@ -214,7 +215,7 @@ export default function PriceForecastPanel({
 											{style.symbol} {MODEL_NAME_MAP[forecast.modelId] || forecast.modelId}
 										</span>
 										{bestModelId === forecast.modelId && !isUnavailable && (
-											<span className="ml-1 px-1 py-px text-[9px] font-semibold rounded bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 leading-none">
+											<span className="ml-1 px-1 py-px text-[9px] font-semibold rounded bg-success/15 text-success leading-none">
 												最佳
 											</span>
 										)}
@@ -239,8 +240,7 @@ export default function PriceForecastPanel({
 												/>
 											</div>
 											<span className="text-[10px] font-mono text-gray-500 w-12 text-right">
-												{forecast.predictedChange > 0 ? "+" : ""}
-												{forecast.predictedChange.toFixed(1)}%
+												{formatSignedPercent(forecast.predictedChange, 1)}
 											</span>
 										</div>
 									)}
@@ -298,7 +298,7 @@ export default function PriceForecastPanel({
 												/>
 											</div>
 											<span className="text-[10px] font-mono text-muted-foreground w-32 text-right shrink-0">
-												${lower.toFixed(2)} — ${upper.toFixed(2)}
+												{formatPriceRange(lower, upper)}
 											</span>
 										</div>
 									);

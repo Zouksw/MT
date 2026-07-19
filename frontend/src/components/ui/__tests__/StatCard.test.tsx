@@ -49,4 +49,16 @@ describe("StatCard", () => {
 		card?.click();
 		expect(handleClick).toHaveBeenCalledTimes(1);
 	});
+
+	it("should render suffix after the value when provided", () => {
+		render(<StatCard title="Detection Rate" value="98.5" suffix="%" />);
+		expect(screen.getByText("98.5")).toBeInTheDocument();
+		expect(screen.getByText("%")).toBeInTheDocument();
+	});
+
+	it("should omit suffix when not provided", () => {
+		render(<StatCard title="Count" value={42} />);
+		expect(screen.getByText("42")).toBeInTheDocument();
+		expect(screen.queryByText("%")).not.toBeInTheDocument();
+	});
 });

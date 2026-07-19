@@ -21,19 +21,20 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { useAccuracyData } from "@/hooks/useAccuracyData";
+import { formatPercentValue } from "@/lib/format";
 import type { ModelWithBacktest } from "@/types/accuracy";
 
 function TrendIcon({ trend }: { trend: string }) {
 	switch (trend) {
 		case "improving":
 			return (
-				<span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+				<span className="inline-flex items-center gap-1 text-xs text-success">
 					<TrendingUp className="size-3.5" /> Improving
 				</span>
 			);
 		case "degrading":
 			return (
-				<span className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+				<span className="inline-flex items-center gap-1 text-xs text-destructive">
 					<TrendingDown className="size-3.5" /> Degrading
 				</span>
 			);
@@ -58,15 +59,15 @@ function MapeBadge({ mape }: { mape: number | null }) {
 		<span
 			className={`text-sm font-medium ${
 				variant === "success"
-					? "text-green-600 dark:text-green-400"
+					? "text-success"
 					: variant === "warning"
 						? "text-primary"
 						: variant === "error"
-							? "text-red-600 dark:text-red-400"
+							? "text-destructive"
 							: "text-primary"
 			}`}
 		>
-			{mape.toFixed(1)}%
+			{formatPercentValue(mape, 1)}
 		</span>
 	);
 }

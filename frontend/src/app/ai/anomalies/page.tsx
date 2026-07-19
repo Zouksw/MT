@@ -11,6 +11,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
+import { formatDecimal } from "@/lib/format";
 
 // Dynamic import for heavy chart component
 const AnomalyChart = dynamic(
@@ -150,7 +151,9 @@ export default function AIAnomaliesPage() {
 			dataIndex: "value" as keyof Anomaly,
 			align: "right" as const,
 			render: (val: unknown) => (
-				<span className="data-text text-[13px] text-foreground">{(val as number).toFixed(2)}</span>
+				<span className="data-text text-[13px] text-foreground">
+					{formatDecimal(val as number, 2)}
+				</span>
 			),
 		},
 		{
@@ -167,7 +170,7 @@ export default function AIAnomaliesPage() {
 							color: s > 4 ? "#DC2626" : s > 3 ? "#F59E0B" : s > 2 ? "#8B6914" : "#16A34A",
 						}}
 					>
-						{s.toFixed(4)}
+						{formatDecimal(s, 4)}
 					</span>
 				);
 			},

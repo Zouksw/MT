@@ -70,7 +70,7 @@ export default function CommoditySelector({
 					type="button"
 					key={c.id}
 					onClick={() => onSelect(c.id)}
-					className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selected === c.id ? "border-amber-500 text-amber-600" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+					className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selected === c.id ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
 				>
 					{renderLabel ? renderLabel(c) : defaultLabel(c)}
 				</button>

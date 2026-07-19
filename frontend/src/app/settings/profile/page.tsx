@@ -176,7 +176,7 @@ export default function ProfileSettingsPage() {
 								<div className="text-xs text-gray-500">Models</div>
 							</div>
 							<div>
-								<div className="text-xl font-semibold text-purple-500">
+								<div className="text-xl font-semibold text-info">
 									{user?._count.ownedOrganizations || 0}
 								</div>
 								<div className="text-xs text-gray-500">Orgs</div>

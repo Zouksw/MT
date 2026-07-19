@@ -15,6 +15,7 @@ import {
 	chartTooltipStyles,
 	lineChartStyles,
 } from "@/lib/chart-config";
+import { formatDecimal } from "@/lib/format";
 
 // Spinner for loading states
 const Spinner = () => (
@@ -208,7 +209,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 
 	// Format value for display
 	const formatValue = (val: number) => {
-		return typeof val === "number" ? val.toFixed(2) : val;
+		return typeof val === "number" ? formatDecimal(val, 2) : val;
 	};
 
 	// Export chart as PNG
@@ -325,7 +326,7 @@ export const AnomalyChart: React.FC<AnomalyChartProps> = ({
 								</Tag>
 							</p>
 							<p style={{ margin: "4px 0 0 0", fontSize: 11, color: chartColors.gray600 }}>
-								Anomaly Score: {data.anomalyScore?.toFixed(4)}
+								Anomaly Score: {formatDecimal(data.anomalyScore, 4)}
 							</p>
 						</>
 					)}

@@ -52,7 +52,7 @@ export default function ChartToolbar({
 							onClick={() => onChartTypeChange(opt.key)}
 							className={`
                 px-2.5 py-1 text-xs font-medium rounded transition-colors
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
                 ${
 									isActive
 										? "bg-gray-900 text-white"
@@ -98,7 +98,7 @@ export default function ChartToolbar({
 					onClick={onFullscreenToggle}
 					className="
             p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50
-            transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+            transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
           "
 					aria-label="Toggle fullscreen"
 					title="Fullscreen"

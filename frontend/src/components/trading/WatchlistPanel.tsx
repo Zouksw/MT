@@ -3,6 +3,7 @@
 import { Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { formatPrice } from "@/lib/format";
 import { useWatchlists } from "@/lib/watchlist";
 
 export default function WatchlistPanel() {
@@ -40,14 +41,14 @@ export default function WatchlistPanel() {
 				>
 					<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 flex items-center justify-between">
 						<span className="flex items-center gap-2 font-semibold">
-							<Star className="size-4 text-amber-500" fill="currentColor" />
+							<Star className="size-4 text-primary" fill="currentColor" />
 							{wl.name}
 							<span className="text-xs text-gray-400 font-normal">({wl.itemCount})</span>
 						</span>
 						{!wl.isDefault && (
 							<button
 								type="button"
-								className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+								className="p-1 text-gray-400 hover:text-destructive transition-colors"
 								title="Delete watchlist"
 								onClick={async () => {
 									if (!confirm("Delete this watchlist?")) return;
@@ -67,7 +68,7 @@ export default function WatchlistPanel() {
 						{wl.items.length === 0 ? (
 							<p className="text-xs text-gray-400 text-center py-4">
 								No items.{" "}
-								<Link href="/trading" className="text-amber-600">
+								<Link href="/trading" className="text-primary">
 									Browse commodities
 								</Link>
 							</p>
@@ -88,7 +89,7 @@ export default function WatchlistPanel() {
 										<div className="text-right">
 											{item.latestPrice != null ? (
 												<div className="text-sm font-mono">
-													{Number(item.latestPrice).toFixed(2)}
+													{formatPrice(item.latestPrice, false)}
 												</div>
 											) : (
 												<div className="text-xs text-gray-400">--</div>

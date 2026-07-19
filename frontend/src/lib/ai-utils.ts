@@ -7,6 +7,8 @@
 
 export { MODEL_COLORS, MODEL_NAME_MAP } from "@/types/accuracy";
 
+import { formatPercentValue } from "@/lib/format";
+
 // ── MAPE color helpers ──
 
 export function getMapeTextColor(mape: number): string {
@@ -25,7 +27,7 @@ export function getMapeFillColor(mape: number | null): string {
 
 export function formatMape(mape: number | null): string {
 	if (mape === null) return "--";
-	return `${mape.toFixed(1)}%`;
+	return formatPercentValue(mape, 1);
 }
 
 // ── Auth-aware fetch helper ──

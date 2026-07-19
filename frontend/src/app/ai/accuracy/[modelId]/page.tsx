@@ -13,19 +13,20 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useModelDetail } from "@/hooks/useModelDetail";
+import { formatPercent, formatPercentValue } from "@/lib/format";
 import { MODEL_COLORS, MODEL_NAME_MAP } from "@/types/accuracy";
 
 function TrendBadge({ trend }: { trend: string }) {
 	switch (trend) {
 		case "improving":
 			return (
-				<span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+				<span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
 					<TrendingUp className="size-3.5" /> Improving
 				</span>
 			);
 		case "degrading":
 			return (
-				<span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+				<span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
 					<TrendingDown className="size-3.5" /> Degrading
 				</span>
 			);
@@ -160,7 +161,7 @@ export default function ModelDetailPage() {
 									<div key={w.days} className="bg-muted/50 rounded-lg p-4 text-center">
 										<p className="text-xs text-muted-foreground mb-1">{w.days}-Day Window</p>
 										<p className="text-2xl font-semibold" style={{ color: modelColor }}>
-											{w.mape !== null ? `${w.mape.toFixed(1)}%` : "N/A"}
+											{w.mape !== null ? formatPercentValue(w.mape, 1) : "N/A"}
 										</p>
 										<div className="mt-2 flex justify-center gap-3 text-xs text-muted-foreground">
 											<span>{w.predictionCount} predictions</span>
@@ -216,17 +217,17 @@ export default function ModelDetailPage() {
 													<span
 														className={`text-sm font-medium ${
 															pred.mape < 5
-																? "text-green-600 dark:text-green-400"
+																? "text-success"
 																: pred.mape < 10
-																	? "text-amber-600 dark:text-amber-400"
-																	: "text-red-600 dark:text-red-400"
+																	? "text-warning"
+																	: "text-destructive"
 														}`}
 													>
-														MAPE: {pred.mape.toFixed(1)}%
+														MAPE: {formatPercentValue(pred.mape, 1)}
 													</span>
 												)}
 												{pred.confidence !== null && (
-													<Badge variant="info">{(pred.confidence * 100).toFixed(0)}% conf.</Badge>
+													<Badge variant="info">{formatPercent(pred.confidence, 0)} conf.</Badge>
 												)}
 												<span className="text-xs text-muted-foreground">
 													{new Date(pred.predictedAt).toLocaleDateString()}

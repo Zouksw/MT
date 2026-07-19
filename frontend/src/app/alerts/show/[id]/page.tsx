@@ -196,7 +196,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 										</dt>
 										<dd className="flex items-center gap-2">
 											<span
-												className={`inline-block w-2 h-2 rounded-full ${alert.isRead ? "bg-gray-300" : "bg-blue-500 animate-pulse"}`}
+												className={`inline-block w-2 h-2 rounded-full ${alert.isRead ? "bg-gray-300" : "bg-primary animate-pulse"}`}
 											/>
 											<span className="text-sm text-foreground">
 												{alert.isRead ? "Read" : "Unread"}

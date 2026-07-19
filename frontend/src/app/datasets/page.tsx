@@ -7,22 +7,12 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { deleteRecord, useList } from "@/lib/api";
 import { useIsMobile } from "@/lib/responsive-utils";
-
-/* ── stat card ──────────────────────────────────────────────────────────── */
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-	return (
-		<div className="bg-card rounded-lg shadow-sm border border px-5 py-4">
-			<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
-			<p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
-		</div>
-	);
-}
 
 // Row type for column render functions
 interface DsRow {
@@ -220,9 +210,9 @@ export default function DatasetsList() {
 
 			{/* Statistics */}
 			<div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
-				<StatCard label="Total Datasets" value={totalDatasets} />
-				<StatCard label="Public" value={publicDatasets} />
-				<StatCard label="Imported" value={importedDatasets} />
+				<StatCard title="Total Datasets" value={totalDatasets} />
+				<StatCard title="Public" value={publicDatasets} />
+				<StatCard title="Imported" value={importedDatasets} />
 			</div>
 
 			{/* Table */}

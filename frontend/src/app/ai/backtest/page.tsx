@@ -136,9 +136,9 @@ export default function BacktestPage() {
 				<span
 					className={`text-sm font-medium ${
 						record.trend === "improving"
-							? "text-green-600 dark:text-green-400"
+							? "text-success"
 							: record.trend === "degrading"
-								? "text-red-600 dark:text-red-400"
+								? "text-destructive"
 								: "text-muted-foreground"
 					}`}
 				>
@@ -261,10 +261,10 @@ export default function BacktestPage() {
 													<div
 														className={`h-full rounded-md transition-all duration-500 ${
 															w.mape < 5
-																? "bg-green-500/80 dark:bg-green-600/80"
+																? "bg-success/80"
 																: w.mape < 10
 																	? "bg-primary/80"
-																	: "bg-red-500/80 dark:bg-red-600/80"
+																	: "bg-destructive/80"
 														}`}
 														style={{ width: `${Math.min(100, (w.mape / 20) * 100)}%` }}
 													/>

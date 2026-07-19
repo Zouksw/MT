@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
+import { formatDecimal } from "@/lib/format";
 import { authFetch } from "@/utils/auth";
 
 interface AnomalyDetailParams {
@@ -128,7 +129,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
 				<div className="max-w-md mx-auto mt-20">
 					<div className="bg-card rounded-lg shadow-sm border border p-6 text-center">
-						<h3 className="text-lg font-semibold text-red-500 mb-3">Error</h3>
+						<h3 className="text-lg font-semibold text-destructive mb-3">Error</h3>
 						<p className="text-muted-foreground mb-6">{error || "Anomaly not found"}</p>
 						<Button variant="ghost" onClick={() => window.history.back()}>
 							Go Back
@@ -258,7 +259,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 										color: anomaly.severity === "high" ? "#DC2626" : "#f59e0b",
 									}}
 								>
-									{anomaly.actualValue.toFixed(4)}
+									{formatDecimal(anomaly.actualValue, 4)}
 									{anomaly.threshold ? ` / ${anomaly.threshold}` : ""}
 								</div>
 							</div>
@@ -268,8 +269,8 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 							<div>
 								<span className="text-sm text-muted-foreground">Normal Range</span>
 								<div className="mt-1 flex gap-4 text-sm">
-									<span>Min: {anomaly.normalRange.min.toFixed(4)}</span>
-									<span>Max: {anomaly.normalRange.max.toFixed(4)}</span>
+									<span>Min: {formatDecimal(anomaly.normalRange.min, 4)}</span>
+									<span>Max: {formatDecimal(anomaly.normalRange.max, 4)}</span>
 								</div>
 							</div>
 						)}
@@ -285,8 +286,8 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 				<Alert variant="info" title="Chart showing the anomaly in context" className="mb-4">
 					The anomalous data point will be highlighted on the chart
 				</Alert>
-				<div className="h-[300px] flex items-center justify-center bg-red-50 dark:bg-red-900/10 rounded-lg border border-dashed border-red-200 dark:border-red-800/30">
-					<TriangleAlert className="size-12 text-red-500 mr-4" />
+				<div className="h-[300px] flex items-center justify-center bg-destructive/10 rounded-lg border border-dashed border-destructive/30">
+					<TriangleAlert className="size-12 text-destructive mr-4" />
 					<div>
 						<span className="font-semibold text-foreground">Anomaly Visualization</span>
 						<br />
@@ -308,7 +309,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 
 					{/* Detected event */}
 					<div className="relative mb-6">
-						<div className="absolute -left-4 top-1 w-4 h-4 rounded-full bg-red-500 border-2 border-white dark:border-gray-800" />
+						<div className="absolute -left-4 top-1 w-4 h-4 rounded-full bg-destructive border-2 border-white dark:border-gray-800" />
 						<div>
 							<span className="font-semibold text-foreground">Anomaly Detected</span>
 							<br />
@@ -321,7 +322,7 @@ export default function AnomalyDetailPage({ params }: { params: Promise<AnomalyD
 					{/* Resolved event */}
 					{anomaly.isResolved === true && (
 						<div className="relative">
-							<div className="absolute -left-4 top-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white dark:border-gray-800" />
+							<div className="absolute -left-4 top-1 w-4 h-4 rounded-full bg-success border-2 border-white dark:border-gray-800" />
 							<div>
 								<span className="font-semibold text-foreground">Anomaly Resolved</span>
 								<br />

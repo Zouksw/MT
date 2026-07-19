@@ -3,6 +3,7 @@
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { MarketingNav } from "@/components/landing/MarketingNav";
 import { Button } from "@/components/ui";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 
@@ -68,37 +69,12 @@ export default function PricingPage() {
 	return (
 		<div className="min-h-screen bg-card">
 			{/* Navigation */}
-			<nav className="border-b border-black/5 dark:border-white/10 bg-card sticky top-0 z-50">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="flex justify-between items-center h-16">
-						<Link href="/" className="flex items-center gap-2">
-							<div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
-								<span className="text-white dark:text-gray-900 font-semibold text-lg">T</span>
-							</div>
-							<span className="text-h4 font-display font-semibold text-foreground">MT</span>
-						</Link>
-						<div className="hidden md:flex items-center gap-8">
-							<Link
-								href="/"
-								className="text-body text-muted-foreground hover:text-primary transition-colors"
-							>
-								Home
-							</Link>
-							<a
-								href="/about"
-								className="text-body text-muted-foreground hover:text-primary transition-colors"
-							>
-								About
-							</a>
-							<Link href="/dashboard">
-								<Button variant="primary" size="sm">
-									Sign In
-								</Button>
-							</Link>
-						</div>
-					</div>
-				</div>
-			</nav>
+			<MarketingNav
+				links={[
+					{ label: "Home", href: "/" },
+					{ label: "About", href: "/about" },
+				]}
+			/>
 
 			{/* Hero Section */}
 			<section className="py-24 md:py-36 lg:py-48 px-4 sm:px-6 lg:px-8">

@@ -29,7 +29,7 @@ export default function TimeframeSelector({ value, onChange }: TimeframeSelector
 						onClick={() => onChange(opt.key)}
 						className={`
               px-4 py-1.5 text-xs font-medium transition-colors
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
               ${isActive ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}
             `}
 						aria-pressed={isActive}

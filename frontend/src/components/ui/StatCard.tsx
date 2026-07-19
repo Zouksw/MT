@@ -18,6 +18,8 @@ export interface StatCardProps {
 	variant?: StatCardVariant;
 	loading?: boolean;
 	onClick?: () => void;
+	/** Optional unit/percent suffix rendered after the value, e.g. "%" or "ms". */
+	suffix?: string;
 }
 
 function useAnimatedCounter(target: number, duration = 800) {
@@ -132,7 +134,17 @@ const variantColors: Record<StatCardVariant, { text: string }> = {
 };
 
 export const StatCard = React.memo<StatCardProps>(
-	({ title, value, icon, trend, sparklineData, variant = "default", loading = false, onClick }) => {
+	({
+		title,
+		value,
+		icon,
+		trend,
+		sparklineData,
+		variant = "default",
+		loading = false,
+		onClick,
+		suffix,
+	}) => {
 		const colors = variantColors[variant];
 		const numericValue = typeof value === "number" ? value : 0;
 		const animatedValue = useAnimatedCounter(numericValue);
@@ -172,6 +184,7 @@ export const StatCard = React.memo<StatCardProps>(
 						style={{ color: colors.text }}
 					>
 						{displayValue}
+						{suffix && <span className="text-base font-medium ml-1">{suffix}</span>}
 					</span>
 					{trend && (
 						<span

@@ -250,7 +250,7 @@ function DetailItem({
 		<div className="flex flex-col gap-0.5">
 			<span className="text-xs text-muted-foreground font-medium">{label}</span>
 			<span
-				className={`text-sm font-semibold font-mono ${warn ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-gray-100"}`}
+				className={`text-sm font-semibold font-mono ${warn ? "text-destructive" : "text-gray-900 dark:text-gray-100"}`}
 			>
 				{value}
 			</span>

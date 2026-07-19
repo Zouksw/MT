@@ -22,6 +22,7 @@ import {
 	LineStyle,
 } from "lightweight-charts";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatPrice } from "@/lib/format";
 
 // ── Props Types ────────────────────────────────────────────────────────────
 
@@ -522,19 +523,19 @@ export default function ProfessionalChart({
 					<span>
 						O{" "}
 						<span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>
-							{legend.open.toFixed(2)}
+							{formatPrice(legend.open, false)}
 						</span>
 					</span>
 					<span>
-						H <span className="text-foreground">{legend.high.toFixed(2)}</span>
+						H <span className="text-foreground">{formatPrice(legend.high, false)}</span>
 					</span>
 					<span>
-						L <span className="text-foreground">{legend.low.toFixed(2)}</span>
+						L <span className="text-foreground">{formatPrice(legend.low, false)}</span>
 					</span>
 					<span>
 						C{" "}
 						<span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>
-							{legend.close.toFixed(2)}
+							{formatPrice(legend.close, false)}
 						</span>
 					</span>
 					{legend.volume > 0 && (

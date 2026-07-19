@@ -211,7 +211,7 @@ export default function ApiKeyList() {
 				if (!d) return <span className="text-muted-foreground">Never</span>;
 				const isExpired = dayjs(d).isBefore(dayjs());
 				return (
-					<span className={isExpired ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}>
+					<span className={isExpired ? "text-destructive" : "text-muted-foreground"}>
 						{dayjs(d).format("YYYY-MM-DD")}
 					</span>
 				);
@@ -286,7 +286,7 @@ export default function ApiKeyList() {
 					title="Active Keys"
 					value={activeKeys}
 					icon={<CircleCheck className="size-3" />}
-					colorClass="text-green-600 dark:text-green-400"
+					colorClass="text-success"
 				/>
 				<StatBlock
 					title="Total Usage"

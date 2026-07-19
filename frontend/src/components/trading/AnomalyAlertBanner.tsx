@@ -40,12 +40,12 @@ export default function AnomalyAlertBanner({ anomalies, onViewDetails }: Anomaly
 
 	return (
 		<div
-			className={`mb-4 p-4 rounded-lg border ${isError ? "bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800" : "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800"}`}
+			className={`mb-4 p-4 rounded-lg border ${isError ? "bg-destructive/10 border-destructive/30" : "bg-warning/10 border-warning/30"}`}
 			role="alert"
 			aria-live="assertive"
 		>
 			<div className="flex items-center gap-2 mb-2">
-				<TriangleAlert className={`size-5 ${isError ? "text-red-500" : "text-amber-500"}`} />
+				<TriangleAlert className={`size-5 ${isError ? "text-destructive" : "text-warning"}`} />
 				<span className="font-semibold text-gray-900 dark:text-gray-100">
 					{anomalies.length} active anomaly{anomalies.length > 1 ? "ies" : "y"}
 				</span>
@@ -68,7 +68,7 @@ export default function AnomalyAlertBanner({ anomalies, onViewDetails }: Anomaly
 				<button
 					type="button"
 					onClick={onViewDetails}
-					className="mt-2 text-sm text-amber-600 hover:underline"
+					className="mt-2 text-sm text-warning hover:underline"
 				>
 					View details
 				</button>

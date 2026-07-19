@@ -1,6 +1,7 @@
 "use client";
 
 import { Table } from "@/components/ui/Table";
+import { formatSignedPercent } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 import DirectionBadge from "./DirectionBadge";
 
@@ -71,8 +72,7 @@ export default function ModelConsensusTable({
 							row.predictedChange > 0 ? "#16a34a" : row.predictedChange < 0 ? "#dc2626" : undefined,
 					}}
 				>
-					{row.predictedChange > 0 ? "+" : ""}
-					{row.predictedChange.toFixed(2)}%
+					{formatSignedPercent(row.predictedChange, 2)}
 				</span>
 			),
 		},

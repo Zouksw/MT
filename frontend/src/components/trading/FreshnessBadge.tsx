@@ -28,16 +28,16 @@ export default function FreshnessBadge({ date, compact }: FreshnessBadgeProps) {
 	let label: string;
 
 	if (days <= 1) {
-		color = "text-green-600 dark:text-green-400";
-		bg = "bg-green-500";
+		color = "text-success";
+		bg = "bg-success";
 		label = compact ? "Live" : "Updated today";
 	} else if (days <= 7) {
-		color = "text-amber-600 dark:text-amber-400";
-		bg = "bg-amber-500";
+		color = "text-warning";
+		bg = "bg-warning";
 		label = compact ? `${days}d ago` : `${days} day${days !== 1 ? "s" : ""} ago`;
 	} else {
-		color = "text-red-600 dark:text-red-400";
-		bg = "bg-red-500";
+		color = "text-destructive";
+		bg = "bg-destructive";
 		label = compact ? `${days}d old` : `Stale: ${days} days old`;
 	}
 

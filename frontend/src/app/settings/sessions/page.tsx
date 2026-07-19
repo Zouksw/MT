@@ -117,7 +117,7 @@ export default function SessionsSettingsPage() {
 				</div>
 				<div className="bg-card border rounded-xl p-6">
 					<div className="text-sm text-gray-500 mb-1">Total Sessions</div>
-					<div className="text-2xl font-semibold text-purple-500">{sessions.length}</div>
+					<div className="text-2xl font-semibold text-info">{sessions.length}</div>
 				</div>
 			</div>
 
@@ -165,7 +165,7 @@ export default function SessionsSettingsPage() {
 							{sessions.map((s) => (
 								<tr
 									key={s.id}
-									className={`hover:bg-accent/50 ${s.isCurrent ? "bg-green-50/50 dark:bg-green-900/10" : ""}`}
+									className={`hover:bg-accent/50 ${s.isCurrent ? "bg-success/5" : ""}`}
 								>
 									<td className="px-4 py-3 text-sm font-mono">{s.ipAddress}</td>
 									<td className="px-4 py-3 text-sm">

@@ -6,34 +6,13 @@ import { useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { deleteRecord, useList } from "@/lib/api";
+import { formatDecimal } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
-
-// Stat card component for this page
-function StatCard({
-	label,
-	value,
-	color,
-	suffix,
-}: {
-	label: string;
-	value: string | number;
-	color?: string;
-	suffix?: string;
-}) {
-	return (
-		<div className="bg-card border rounded-lg p-5 shadow-sm">
-			<div className="text-sm font-medium text-muted-foreground mb-2">{label}</div>
-			<div className="text-2xl font-semibold" style={{ color: color || "#111827" }}>
-				{typeof value === "number" ? value.toLocaleString() : value}
-				{suffix && <span className="text-base font-medium ml-1">{suffix}</span>}
-			</div>
-		</div>
-	);
-}
 
 export default function AnomalyList() {
 	const router = useRouter();
@@ -150,7 +129,9 @@ export default function AnomalyList() {
 			width: 120,
 			align: "right",
 			render: (val: unknown) => (
-				<span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(val || 0).toFixed(2)}</span>
+				<span style={{ fontVariantNumeric: "tabular-nums" }}>
+					{formatDecimal(Number(val || 0), 2)}
+				</span>
 			),
 		},
 		{
@@ -227,10 +208,10 @@ export default function AnomalyList() {
 
 			{/* Statistics */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-				<StatCard label="Total Anomalies" value={totalAnomalies} />
-				<StatCard label="Critical" value={criticalCount} color="#8B6914" />
-				<StatCard label="High" value={highCount} color="#EC4899" />
-				<StatCard label="Detection Rate" value="98.5" suffix="%" />
+				<StatCard title="Total Anomalies" value={totalAnomalies} />
+				<StatCard title="Critical" value={criticalCount} variant="primary" />
+				<StatCard title="High" value={highCount} variant="warning" />
+				<StatCard title="Detection Rate" value="98.5" suffix="%" />
 			</div>
 
 			{/* Table */}

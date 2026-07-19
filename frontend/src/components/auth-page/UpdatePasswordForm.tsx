@@ -34,7 +34,7 @@ export function UpdatePasswordForm({ token }: { token: string }) {
 	};
 
 	const strengthColor = (s: number) =>
-		s < 40 ? "bg-red-500" : s < 70 ? "bg-amber-500" : "bg-green-500";
+		s < 40 ? "bg-destructive" : s < 70 ? "bg-warning" : "bg-success";
 	const strengthText = (s: number) => (s < 40 ? "Weak" : s < 70 ? "Medium" : "Strong");
 
 	const validate = (): boolean => {
@@ -109,7 +109,7 @@ export function UpdatePasswordForm({ token }: { token: string }) {
 							/>
 						</div>
 						<p
-							className={`text-xs mt-1 ${passwordStrength < 40 ? "text-red-500" : passwordStrength < 70 ? "text-amber-500" : "text-green-500"}`}
+							className={`text-xs mt-1 ${passwordStrength < 40 ? "text-destructive" : passwordStrength < 70 ? "text-warning" : "text-success"}`}
 						>
 							Password strength: {strengthText(passwordStrength)}
 						</p>

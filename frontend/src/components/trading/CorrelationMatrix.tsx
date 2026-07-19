@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDecimal } from "@/lib/format";
 
 interface CorrelationMatrixProps {
 	commodities: string[];
@@ -114,14 +115,14 @@ export default function CorrelationMatrixChart({
 								}}
 								onMouseEnter={(e) =>
 									setTooltip({
-										text: `${commodities[i]} × ${commodities[j]}: r = ${value.toFixed(3)}`,
+										text: `${commodities[i]} × ${commodities[j]}: r = ${formatDecimal(value, 3)}`,
 										x: e.clientX + 10,
 										y: e.clientY - 30,
 									})
 								}
 								onMouseLeave={() => setTooltip(null)}
 							>
-								{value.toFixed(2)}
+								{formatDecimal(value, 2)}
 							</div>
 						))}
 					</div>

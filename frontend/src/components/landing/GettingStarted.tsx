@@ -32,7 +32,7 @@ const steps = [
 								{c.price}
 							</span>
 							<span
-								className={`text-xs font-mono tabular-nums ${c.up ? "text-green-600 dark:text-green-400" : "text-red-500"}`}
+								className={`text-xs font-mono tabular-nums ${c.up ? "text-success" : "text-destructive"}`}
 							>
 								{c.chg}
 							</span>
@@ -63,7 +63,7 @@ const steps = [
 							<div className="h-full rounded-full bg-primary/50" style={{ width: `${s.conf}%` }} />
 						</div>
 						<span
-							className={`text-xs font-mono tabular-nums ${s.signal === "Buy" ? "text-green-600 dark:text-green-400" : "text-amber-500"}`}
+							className={`text-xs font-mono tabular-nums ${s.signal === "Buy" ? "text-success" : "text-amber-500"}`}
 						>
 							{s.signal} {s.conf}%
 						</span>
@@ -84,7 +84,7 @@ const steps = [
 					<div className="text-xs font-medium text-foreground">AI Consensus</div>
 					<div className="text-xs text-muted-foreground">Strong Buy — 73% confidence</div>
 				</div>
-				<div className="text-sm font-semibold text-green-600 dark:text-green-400">+4.2%</div>
+				<div className="text-sm font-semibold text-success">+4.2%</div>
 			</div>
 		),
 	},
@@ -172,7 +172,7 @@ export default function GettingStarted() {
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={index}>
 							<div className="flex items-center gap-3 rounded-xl outline outline-black/5 dark:outline-white/10 px-5 py-4">
-								<CheckCircle2 size={20} className="text-green-500 flex-shrink-0" />
+								<CheckCircle2 size={20} className="text-success flex-shrink-0" />
 								<span className="text-sm font-medium text-foreground">{feature}</span>
 							</div>
 						</StaggerChild>

@@ -10,6 +10,7 @@ import {
 	chartGridStyles,
 	chartTooltipStyles,
 } from "@/lib/chart-config";
+import { formatPercentValue } from "@/lib/format";
 import type { ModelWithBacktest } from "@/types/accuracy";
 import { MODEL_COLORS } from "@/types/accuracy";
 
@@ -83,7 +84,7 @@ function CustomTooltip({
 			<p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
 			{payload.map((entry: { name: string; value: number | null; color: string }) => (
 				<p key={entry.name} className="text-xs" style={{ color: entry.color }}>
-					{entry.name}: {entry.value !== null ? `${entry.value.toFixed(1)}%` : "N/A"}
+					{entry.name}: {entry.value !== null ? formatPercentValue(entry.value, 1) : "N/A"}
 				</p>
 			))}
 		</div>

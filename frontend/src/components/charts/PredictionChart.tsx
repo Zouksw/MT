@@ -15,6 +15,7 @@ import {
 	chartTooltipStyles,
 	lineChartStyles,
 } from "@/lib/chart-config";
+import { formatDecimal } from "@/lib/format";
 
 // Spinner for loading states
 const Spinner = () => (
@@ -155,7 +156,7 @@ export const PredictionChart: React.FC<PredictionChartProps> = ({
 
 	// Format value for display
 	const formatValue = (val: number) => {
-		return typeof val === "number" ? val.toFixed(2) : val;
+		return typeof val === "number" ? formatDecimal(val, 2) : val;
 	};
 
 	// Export chart as PNG

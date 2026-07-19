@@ -239,7 +239,7 @@ export const Hero: React.FC = () => {
 													${item.price}
 												</span>
 												<span
-													className={`text-xs font-mono tabular-nums ${item.up ? "text-green-400" : "text-red-400"}`}
+													className={`text-xs font-mono tabular-nums ${item.up ? "text-success" : "text-destructive"}`}
 												>
 													{item.change}
 												</span>
@@ -255,7 +255,7 @@ export const Hero: React.FC = () => {
 								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
 									<Gauge size={14} className="text-primary" />
 									<span className="text-xs font-medium text-gray-400">AI Consensus</span>
-									<span className="text-xs font-semibold text-green-400 ml-auto">Price Up</span>
+									<span className="text-xs font-semibold text-success ml-auto">Price Up</span>
 									<span className="text-xs text-gray-500 font-mono tabular-nums">78%</span>
 								</div>
 							</div>

@@ -60,7 +60,7 @@ interface ApiUsageLog {
 // --- Progress bar sub-component ---
 
 function ProgressBar({ percent, status }: { percent: number; status: "exception" | "active" }) {
-	const barColor = status === "exception" ? "bg-red-500" : "bg-green-500";
+	const barColor = status === "exception" ? "bg-destructive" : "bg-success";
 	return (
 		<div className="w-full h-2 bg-muted rounded-full overflow-hidden">
 			<div
@@ -259,7 +259,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 			<div className="min-h-[400px] flex items-center justify-center p-6">
 				<Card className="max-w-[500px] w-full">
 					<CardBody className="text-center">
-						<h3 className="text-red-600 dark:text-red-400 text-lg font-semibold mb-4">Error</h3>
+						<h3 className="text-destructive text-lg font-semibold mb-4">Error</h3>
 						<p className="text-muted-foreground mb-6">{error || "API key not found"}</p>
 						<Button variant="ghost" onClick={() => window.history.back()}>
 							Go Back
@@ -516,7 +516,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 								<div>
 									<span className="text-xs text-muted-foreground">Expires</span>
 									<div
-										className={`text-sm mt-1 ${isExpired ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}
+										className={`text-sm mt-1 ${isExpired ? "text-destructive" : "text-muted-foreground"}`}
 									>
 										{new Date(apiKey.expiresAt).toLocaleString()}
 									</div>

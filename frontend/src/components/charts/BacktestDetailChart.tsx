@@ -8,6 +8,7 @@ import {
 	chartGridStyles,
 	chartTooltipStyles,
 } from "@/lib/chart-config";
+import { formatDecimal } from "@/lib/format";
 import type { PredictionLog } from "@/types/accuracy";
 
 const ResponsiveContainer = dynamic(
@@ -80,7 +81,7 @@ function CustomTooltip({
 			<p className="text-xs font-medium text-muted-foreground mb-1">Step {label}</p>
 			{payload.map((entry: { name: string; value: number | undefined; color: string }) => (
 				<p key={entry.name} className="text-xs" style={{ color: entry.color }}>
-					{entry.name}: {entry.value !== undefined ? entry.value.toFixed(2) : "N/A"}
+					{entry.name}: {entry.value !== undefined ? formatDecimal(entry.value, 2) : "N/A"}
 				</p>
 			))}
 		</div>

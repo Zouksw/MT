@@ -7,22 +7,12 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { deleteRecord, useList } from "@/lib/api";
 import { useIsMobile } from "@/lib/responsive-utils";
-
-/* ── stat card ──────────────────────────────────────────────────────────── */
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-	return (
-		<div className="bg-card rounded-lg shadow-sm border border px-5 py-4">
-			<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
-			<p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
-		</div>
-	);
-}
 
 // Row type for column render functions
 interface TsRow {
@@ -250,10 +240,10 @@ export default function TimeseriesList() {
 
 			{/* Statistics */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-				<StatCard label="Total Time Series" value={totalTimeseries} />
-				<StatCard label="Data Points" value={totalDataPoints} />
-				<StatCard label="Anomalies" value={totalAnomalies} />
-				<StatCard label="Storage" value="-" />
+				<StatCard title="Total Time Series" value={totalTimeseries} />
+				<StatCard title="Data Points" value={totalDataPoints} />
+				<StatCard title="Anomalies" value={totalAnomalies} />
+				<StatCard title="Storage" value="-" />
 			</div>
 
 			{/* Table */}

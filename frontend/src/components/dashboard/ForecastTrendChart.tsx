@@ -80,7 +80,7 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
 				<div className="p-4">
 					<div className="flex items-center justify-between mb-4">
 						<div className="flex items-center gap-2">
-							<div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+							<div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
 								<TrendingUp className="size-4 text-primary" />
 							</div>
 							<h5 className="text-base font-semibold mb-0!">Forecast Trend</h5>

@@ -41,7 +41,7 @@ export default function FactoryDirectory() {
 				description="Accredited beef processing plants by country"
 			/>
 
-			{error && <p className="text-sm text-red-500 mb-4">Failed to load factory data</p>}
+			{error && <p className="text-sm text-destructive mb-4">Failed to load factory data</p>}
 
 			{Object.entries(byCountry).map(([country, countryFactories]) => (
 				<div key={country} className="mb-6">
@@ -72,7 +72,7 @@ export default function FactoryDirectory() {
 												</p>
 											</div>
 											<span
-												className={`text-xs px-1.5 py-0.5 rounded ${f.active ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}
+												className={`text-xs px-1.5 py-0.5 rounded ${f.active ? "bg-success/10 text-success" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}
 											>
 												{f.active ? "Active" : "Inactive"}
 											</span>
@@ -87,7 +87,7 @@ export default function FactoryDirectory() {
 											{f.accredited.map((m: string) => (
 												<span
 													key={m}
-													className="inline-block text-xs px-1.5 py-0.5 mr-1 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+													className="inline-block text-xs px-1.5 py-0.5 mr-1 rounded bg-primary/10 text-primary"
 												>
 													{m}
 												</span>

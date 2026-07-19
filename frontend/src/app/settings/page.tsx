@@ -128,10 +128,8 @@ export default function SettingsPage() {
 								{user?.roles?.[0] || "User"}
 							</Tag>
 							<div className="flex items-center gap-2 mb-4">
-								<span className="h-2 w-2 rounded-full bg-green-500" />
-								<span className="text-body-sm text-green-600 dark:text-green-400 font-medium">
-									Active
-								</span>
+								<span className="h-2 w-2 rounded-full bg-success" />
+								<span className="text-body-sm text-success font-medium">Active</span>
 							</div>
 							<Button
 								variant="primary"
@@ -182,7 +180,7 @@ export default function SettingsPage() {
 				<div>
 					<div className="bg-card border rounded-xl p-6 text-center">
 						<div className="flex items-center gap-2 mb-4 justify-center">
-							<div className="w-1.5 h-5 rounded-full bg-green-500" />
+							<div className="w-1.5 h-5 rounded-full bg-success" />
 							<span className="font-display font-semibold">Security Score</span>
 						</div>
 						<div className="relative inline-flex items-center justify-center mb-4">
@@ -227,7 +225,7 @@ export default function SettingsPage() {
 				<div className="lg:col-span-2">
 					<div className="bg-card border rounded-xl p-6">
 						<div className="flex items-center gap-2 mb-4">
-							<Shield className="size-[18px] text-green-500" />
+							<Shield className="size-[18px] text-success" />
 							<span className="font-display font-semibold">Security Status</span>
 						</div>
 						<div className="space-y-3 mb-6">
@@ -235,7 +233,7 @@ export default function SettingsPage() {
 								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								<div key={idx} className="flex items-center gap-3">
 									{item.enabled ? (
-										<CircleCheck className="size-4 text-green-500" />
+										<CircleCheck className="size-4 text-success" />
 									) : (
 										<div className="w-4 h-4 rounded-full border-2 border-input" />
 									)}

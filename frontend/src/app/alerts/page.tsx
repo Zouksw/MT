@@ -168,9 +168,9 @@ export default function AlertList() {
 	};
 
 	const getAlertIcon = (severity: string) => {
-		if (severity === "ERROR") return <AlertCircle className="size-4 text-red-500" />;
-		if (severity === "WARNING") return <AlertTriangle className="size-4 text-amber-500" />;
-		return <Info className="size-4 text-amber-600" />;
+		if (severity === "ERROR") return <AlertCircle className="size-4 text-destructive" />;
+		if (severity === "WARNING") return <AlertTriangle className="size-4 text-warning" />;
+		return <Info className="size-4 text-info" />;
 	};
 
 	const filteredAlerts = alerts.filter((alert) => {
@@ -201,7 +201,7 @@ export default function AlertList() {
 					{record.isRead ? (
 						<span className="inline-block w-2 h-2 rounded-full bg-gray-300" />
 					) : (
-						<span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+						<span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
 					)}
 				</span>
 			),
