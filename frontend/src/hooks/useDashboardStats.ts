@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useMarketForecasts } from "@/hooks/useMarketForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import type { Alert, Forecast } from "@/types/api";
 import { getAuthToken } from "@/utils/auth";
@@ -51,7 +52,42 @@ export interface DashboardStats {
 		coverage: number | null;
 		/** ISO date of the most recent price record. */
 		latestDate: string | null;
+		/**
+		 * Average price split by factory.country per PRODUCT-SPEC §5.1
+		 * (进口均价 / 国产均价 hero cards). `null` when no rows on that side.
+		 * Domestic = country "CN"; imported = everything else.
+		 */
+		importedAvg: number | null;
+		domesticAvg: number | null;
+		/** Top-priced cuts for the 行情总览 hot-cuts table (max 6). */
+		hotCuts: Array<{
+			cutCode: string;
+			price: number;
+			country: string;
+			source: string;
+		}>;
 	};
+	/**
+	 * AI 7-day consensus for the headline cut (PRODUCT-SPEC §5.1 AI 7日预测 card).
+	 * Null when no predictable commodity exists. Sourced from useMarketForecasts.
+	 */
+	aiSummary: {
+		direction: "up" | "down" | "flat";
+		changePct: number;
+		confidence: number;
+		modelsAgree: number;
+		totalModels: number;
+		cutName: string;
+	} | null;
+	/** Latest 资讯 for the dashboard news strip (PRODUCT-SPEC §5.1 最新市场动态). */
+	recentNews: Array<{
+		id: string;
+		title: string;
+		slug: string;
+		category: string;
+		source: string;
+		publishedAt: string;
+	}>;
 	recentAlerts: Alert[];
 	recentForecasts: Forecast[];
 }
@@ -156,6 +192,14 @@ export const useDashboardStats = () => {
 		retryOpts,
 	);
 
+	// Latest 资讯 for the dashboard news strip (PRODUCT-SPEC §5.1 最新市场动态).
+	// Reuses the /api/news module — top 5 published, newest first.
+	const { data: newsData } = useRetryableFetch(
+		() => (isAuth ? `${API_BASE}/news?page=1&limit=5` : null),
+		authFetcher,
+		retryOpts,
+	);
+
 	const loading = !isAuth
 		? false
 		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
@@ -208,16 +252,30 @@ export const useDashboardStats = () => {
 	const beefPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
 
 	// Derived live beef-price board from /beef/prices/latest.
-	// Each record has { price, date, cutCode }. We aggregate to avg/min/max and
-	// compute coverage = priced cuts / total cuts. All null when no data so the
-	// UI can show an honest empty state instead of fabricated numbers.
+	// Each record has { price, date, cutCode, factory?: { country } }. We
+	// aggregate to avg/min/max, compute coverage = priced cuts / total cuts,
+	// and split by origin (进口 vs 国产) per PRODUCT-SPEC §5.1. All null when no
+	// data so the UI shows an honest empty state instead of fabricated numbers.
 	const pricedCuts = new Set<string>();
 	let priceSum = 0;
 	let priceCount = 0;
 	let minPrice = Number.POSITIVE_INFINITY;
 	let maxPrice = 0;
 	let latestDate: string | null = null;
-	for (const p of beefPrices as Array<{ price?: number; date?: string; cutCode?: string }>) {
+	// Origin split: domestic = factory.country === "CN", imported = everything
+	// else (BR/AU/AR/UY/US). The split powers the 进口均价 / 国产均价 hero cards.
+	let importedSum = 0;
+	let importedCount = 0;
+	let domesticSum = 0;
+	let domesticCount = 0;
+	const hotCutAccum = new Map<string, { price: number; country: string; source: string }>();
+	for (const p of beefPrices as Array<{
+		price?: number;
+		date?: string;
+		cutCode?: string;
+		source?: string;
+		factory?: { country?: string };
+	}>) {
 		const price = typeof p?.price === "number" ? p.price : Number(p?.price);
 		if (!Number.isFinite(price) || price <= 0) continue;
 		priceSum += price;
@@ -227,6 +285,24 @@ export const useDashboardStats = () => {
 		if (p?.cutCode) pricedCuts.add(p.cutCode);
 		const d = p?.date;
 		if (d && (!latestDate || d > latestDate)) latestDate = d;
+
+		const country = p?.factory?.country ?? "";
+		if (country === "CN") {
+			domesticSum += price;
+			domesticCount += 1;
+		} else if (country) {
+			importedSum += price;
+			importedCount += 1;
+		}
+		// Hot-cuts: keep the latest price per cutCode (first occurrence wins,
+		// which is the latest because the endpoint returns newest-first).
+		if (p?.cutCode && !hotCutAccum.has(p.cutCode)) {
+			hotCutAccum.set(p.cutCode, {
+				price,
+				country: country || "—",
+				source: p?.source || "",
+			});
+		}
 	}
 	const beefPriceStats = {
 		avgPrice: priceCount > 0 ? priceSum / priceCount : null,
@@ -234,6 +310,11 @@ export const useDashboardStats = () => {
 		maxPrice: priceCount > 0 ? maxPrice : null,
 		coverage: beefCuts.length > 0 ? pricedCuts.size / beefCuts.length : null,
 		latestDate,
+		importedAvg: importedCount > 0 ? importedSum / importedCount : null,
+		domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
+		hotCuts: Array.from(hotCutAccum.entries())
+			.slice(0, 6)
+			.map(([cutCode, v]) => ({ cutCode, ...v })),
 	};
 
 	// AI models — real count from the models registry (was hardcoded 8/8, a fake).
@@ -242,6 +323,43 @@ export const useDashboardStats = () => {
 	// `total`, fabricating 100%-active whenever any model existed.
 	const aiTotal = forecastsData?.total ?? forecastsData?.data?.length ?? 0;
 	const aiActive = activeModelsData?.total ?? activeModelsData?.pagination?.total ?? 0;
+
+	// AI 7-day summary for the dashboard hero (PRODUCT-SPEC §5.1 AI 7日预测 card).
+	// Takes the first forecastable row from the market forecast board (the
+	// headline cut) and surfaces its consensus direction + change + confidence +
+	// model agreement. Null when no cut is forecastable (no price data / no
+	// token) so the card shows an honest empty state instead of a fake arrow.
+	const marketForecasts = useMarketForecasts(7);
+	const aiSummary = useMemo(() => {
+		const row = marketForecasts.rows.find(
+			(r) => r.direction != null && r.changePct != null && r.confidence != null,
+		);
+		if (!row || !row.direction || row.confidence == null || row.modelsAgree == null) return null;
+		return {
+			direction: row.direction,
+			changePct: row.changePct ?? 0,
+			confidence: row.confidence,
+			modelsAgree: row.modelsAgree,
+			totalModels: row.totalModels ?? 0,
+			cutName: row.nameCn || row.name,
+		};
+	}, [marketForecasts.rows]);
+
+	// Latest 资讯 for the dashboard news strip (PRODUCT-SPEC §5.1 最新市场动态).
+	const recentNews = useMemo(() => {
+		const arr: Array<Record<string, unknown>> =
+			(newsData?.data as Array<Record<string, unknown>>) ??
+			(newsData?.data?.items as Array<Record<string, unknown>>) ??
+			[];
+		return arr.slice(0, 5).map((n) => ({
+			id: String(n.id ?? ""),
+			title: String(n.title ?? ""),
+			slug: String(n.slug ?? ""),
+			category: String(n.category ?? ""),
+			source: String(n.source ?? ""),
+			publishedAt: String(n.publishedAt ?? ""),
+		}));
+	}, [newsData]);
 
 	const stats: DashboardStats | null = isAuth
 		? datasetsData && timeseriesData && alertsData
@@ -273,6 +391,8 @@ export const useDashboardStats = () => {
 						prices: beefPrices.length,
 						...beefPriceStats,
 					},
+					aiSummary,
+					recentNews,
 					recentAlerts: Array.isArray(recentAlertsData?.data)
 						? recentAlertsData.data
 						: recentAlertsData?.data?.alerts || recentAlertsData?.items || [],
@@ -293,6 +413,8 @@ export const useDashboardStats = () => {
 					prices: beefPrices.length,
 					...beefPriceStats,
 				},
+				aiSummary,
+				recentNews,
 				recentAlerts: [],
 				recentForecasts: [],
 			};
