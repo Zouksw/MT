@@ -23,7 +23,8 @@
 - [Design System](DESIGN.md) — UI/UX design spec
 
 ### Core Documentation
-- [Roadmap](ROADMAP.md) — Development roadmap (含 Round 17-19 完成状态 + 实测指标表)
+- [Product Spec](PRODUCT-SPEC.md) — **Single source of truth** for product direction
+- [Roadmap](ROADMAP.md) — ⚠️ **DEPRECATED 2026-07-19** (pre-repositioning, numbers stale). See PRODUCT-SPEC instead.
 - [Security](SECURITY.md) — Security policies and best practices
 - [CHANGELOG](CHANGELOG.md) — Version history
 

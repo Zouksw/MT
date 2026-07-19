@@ -42,6 +42,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-07-19 — Project unification refactor (R1-R4)
+
+Four-batch refactor to unify project state: kill redundant tests, fix every
+broken route, merge duplicate modules, consolidate docs. Each batch was an
+independent commit with full tsc + test + live verification.
+
+**R1 — Test slimming + dead code** (`6c674fc`)
+- Deleted 5 tautological/over-mocked test files (EmptyState/PageHeader tests,
+  datasets page test that mocked PageHeader then asserted the mock, dashboard
+  page test that mocked every child, backend system.test triple-200). Kept all
+  CORE security/business-logic tests. Tests 840 → 796.
+- Deleted 2 dead-code modules with verified zero importers (useOnlineStatus,
+  useRetryableFetch/index.ts barrel).
+
+**R2 — Broken route cleanup** (`07c8534`)
+- Removed `/forecasts` (3 pages) — called `GET /api/forecasts` which doesn't
+  exist; duplicate of `/ai/predict` per PRODUCT-SPEC. Repointed RecentActivity
+  + not-found links to `/ai/predict`.
+- Removed `/forgot-password` + `/update-password` + their forms — both POSTed
+  to non-existent `/auth/forgot-password` / `/auth/reset-password`. LoginForm
+  "Forgot password?" → honest "Planned" disabled span.
+- Removed orphan `/anomalies` (nav uses `/ai/anomalies`).
+- Kept Forecast Prisma model + forecasts table (live: models.ts writes to it).
+
+**R3 — Duplicate/consistency merge** (`bde0d8e`)
+- Unified useDashboardStats fetcher pattern (was: raw useSWR + useRetryableFetch
+  mix; now all useRetryableFetch). Tests rewritten to URL-key indexing.
+- Merged dialog.tsx (10 granular exports, 0 external consumers) into Modal.tsx.
+- Extracted shared ErrorPageContent; error.tsx + global-error.tsx now thin wrappers.
+- Moved useTradingData.ts app/trading/ → hooks/ (was violating convention).
+- Distinct icons for the 4 AI nav items (was 3× TrendingUp).
+- Audit correction: `/ai/models` + `/ai/backtest` NOT duplicates (each hits a
+  real backend), kept. ErrorBoundaryWrapper NOT redundant (server/client boundary
+  boilerplate), kept.
+
+**R4 — Docs** (this commit)
+- Deprecated stale ROADMAP.md (pre-repositioning 2026-07-06 numbers; superseded
+  by PRODUCT-SPEC). Added deprecation banner.
+- Updated INDEX.md to point at PRODUCT-SPEC as single source of truth.
+- Updated known-issues doc with R1-R4 status + audit-correction log.
+
 ### Removed - Docker Dependency Removal
 
 - **Deleted Docker files** - Removed all Docker configuration

@@ -1,13 +1,23 @@
 # MT Platform — Roadmap
 
-**Last Updated**: 2026-07-06 | **Status**: Active
+> ⚠️ **DEPRECATED (2026-07-19).** This document is **superseded by
+> [PRODUCT-SPEC.md](PRODUCT-SPEC.md)** as the single source of truth for
+> product direction. The numbers and "110 商品 / 8 AI 模型 / 大宗商品"
+> framing below reflect a pre-repositioning state (2026-07-06) that no
+> longer matches the project. Per PRODUCT-SPEC the platform is now
+> **beef-only** (85+ cuts, 6 models). This file is retained only for
+> historical context — do not plan new work from it. Authoritative
+> status of open issues lives in
+> [reviews/2026-07-19-known-issues.md](reviews/2026-07-19-known-issues.md).
 
-> 大宗商品市场**信息与分析**平台(非交易平台)。本文档是后续开发的单一事实来源,
-> 替代 2026-06-06 旧版。所有数字均为 2026-06-29 实测,非估算。
+**Last Updated**: 2026-07-06 | **Status**: Deprecated — see PRODUCT-SPEC.md
+
+> ~~大宗商品市场**信息与分析**平台(非交易平台)。本文档是后续开发的单一事实来源,
+> 替代 2026-06-06 旧版。所有数字均为 2026-06-29 实测,非估算。~~
 
 ---
 
-## 当前基线 (2026-06-29 实测)
+## 当前基线 (2026-06-29 实测 — STALE, see PRODUCT-SPEC for current state)
 
 | 维度 | 数值 | 说明 |
 |------|------|------|

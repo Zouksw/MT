@@ -152,6 +152,34 @@ restructure, (4) data-fill as keys arrive.
 
 ---
 
+## 2026-07-19 大重构 (R1-R4) — 项目统一与瘦身
+
+独立于上面的 G-系列, 这次大重构目标是**项目状态统一**: 删冗余测试、修死链、
+合并重复、统一约定。详见 [reviews/2026-07-19-r1-r4-refactor.md](2026-07-19-r1-r4-refactor.md)
+(若存在) 或 git log。
+
+| 批次 | 内容 | 提交 | 结果 |
+|---|---|---|---|
+| **R1** | 删 44 冗余测试 + 2 个死代码模块 (useOnlineStatus、useRetryableFetch barrel) | `6c674fc` | 测试 840→796 |
+| **R2** | 修死链 (/forecasts 404、假密码重置、孤儿 /anomalies) | `07c8534` | 项目内每个入口真实可达 |
+| **R3** | fetcher 模式统一 + Modal/dialog 合并 + error UI 共享 + hook 归位 + NAV 图标 | `bde0d8e` | 单一约定, 无重复 |
+| **R4** | 文档统一 (废弃过时 ROADMAP, 更新 INDEX/known-issues, 加 CHANGELOG) | (本批) | PRODUCT-SPEC 单一事实来源 |
+
+**审计纠错记录** (审计有误的部分, 已独立验证后保留):
+- `/ai/models`、`/ai/backtest` 不是重复 — 各自连真实后端, 与 `/dashboard/models` 互补, 保留
+- `animations.ts` + `PageTransition.tsx` 不是死代码 — `PageContainer` (37 页用) 渲染它, 保留
+- `components/ui/index.ts` barrel 不是死代码 — 4 个 marketing 页面用, 保留
+- `ErrorBoundaryWrapper` 不是重复 — 必要的 server/client 边界样板, 保留
+
+**明确不在本次重构范围** (留待后续):
+- AI 推理引擎重写、Prisma 核心 schema 改动
+- SMTP 密码重置 / Stripe 计费实现 (删优先)
+- inference 引擎内部单元测试补齐 (用户明确少关注测试)
+- MLA/USDA-AMS 激活 (依赖用户 API key, 见 DATA-1)
+- beefCutNormalizer.ts (852 行) 等大文件拆分 (LOW, 不影响可运行性)
+
+---
+
 ## Out of scope (per PRODUCT-SPEC §九, do not pursue)
 
 - Trade matching / order execution / payments
