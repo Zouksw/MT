@@ -23,6 +23,16 @@ import {
 
 const router = Router();
 
+/**
+ * How directly a data source relates to the platform's beef-only focus.
+ * - direct:   source writes beef cut/carcass prices (the core asset)
+ * - adjacent: source writes cattle/livestock/feed/trade data (context for beef)
+ * - macro:    source writes non-beef data (FX, energy, metals, weather)
+ * Surfaced on /api/market/sources so the data-sources board can tell
+ * "beef data is flowing" apart from "some data is flowing".
+ */
+type BeefRelevance = "direct" | "adjacent" | "macro";
+
 /** Shape of a multer-augmented request (file property added by multer). */
 interface MulterFile {
 	buffer: Buffer;
@@ -145,108 +155,135 @@ router.get(
 	asyncHandler(async (_req, res) => {
 		const health = scraperManager.getHealth();
 
-		const sourceLabels: Record<string, { label: string; description: string; tier: string }> = {
+		// beefRelevance classifies each source against the platform's beef-only
+		// focus (PRODUCT-SPEC §九). This exists so the data-sources board can
+		// distinguish "a beef source is healthy" from "some source is healthy" —
+		// without it, the 2 healthy sources (commodity_prices = FX, world_bank =
+		// non-beef) make the board look like beef data is flowing when it isn't.
+		// See DATA-4 in docs/reviews/2026-07-19-known-issues.md.
+		const sourceLabels: Record<
+			string,
+			{ label: string; description: string; tier: string; beefRelevance: BeefRelevance }
+		> = {
 			commodity_prices: {
 				label: "Multi-Source Aggregator",
 				description: "Aggregated commodity prices from multiple public sources",
 				tier: "1",
+				beefRelevance: "macro",
 			},
 			weather: {
 				label: "Weather Data",
 				description: "Global weather data affecting commodity production",
 				tier: "1",
+				beefRelevance: "macro",
 			},
 			usda_ams: {
 				label: "USDA AMS",
 				description:
 					"US Department of Agriculture Agricultural Marketing Service — livestock, grain, dairy prices",
 				tier: "1",
+				beefRelevance: "direct",
 			},
 			fao_prices: {
 				label: "FAO",
 				description:
 					"UN Food and Agriculture Organization — global food price indices and commodity data",
 				tier: "1",
+				beefRelevance: "macro",
 			},
 			world_bank: {
 				label: "World Bank Pink Sheet",
 				description:
 					"World Bank monthly commodity prices — 70+ commodities, energy, metals, agriculture",
 				tier: "1",
+				beefRelevance: "macro",
 			},
 			usda_psd: {
 				label: "USDA FAS PSD",
 				description:
 					"USDA Foreign Agricultural Service — global production, supply, and distribution data",
 				tier: "1",
+				beefRelevance: "adjacent",
 			},
 			fred: {
 				label: "FRED",
 				description:
 					"Federal Reserve Economic Data — CPI, PPI, interest rates, commodity indices, exchange rates",
 				tier: "1",
+				beefRelevance: "macro",
 			},
 			cme_futures: {
 				label: "CME Group",
 				description: "CME Group futures settlement prices — live cattle, grain, oil, metals",
 				tier: "2",
+				beefRelevance: "adjacent",
 			},
 			abares: {
 				label: "ABARES",
 				description:
 					"Australian Bureau of Agricultural and Resource Economics — beef/lamb/grain production & exports",
 				tier: "2",
+				beefRelevance: "adjacent",
 			},
 			china_wholesale: {
 				label: "China MARA",
 				description:
 					"中国农业农村部批发市场价格 — daily wholesale prices for meat, vegetables, fruits",
 				tier: "2",
+				beefRelevance: "adjacent",
 			},
 			china_customs_stats: {
 				label: "China Customs",
 				description: "中国海关总署 — monthly import/export statistics by commodity and country",
 				tier: "3",
+				beefRelevance: "adjacent",
 			},
 			cepea: {
 				label: "CEPEA/B3",
 				description:
 					"Centro de Estudos Avançados em Economia Aplicada — Brazilian beef and commodity prices",
 				tier: "2",
+				beefRelevance: "direct",
 			},
 			inac: {
 				label: "INAC Uruguay",
 				description: "Instituto Nacional de Carnes — Uruguayan beef export prices and volumes",
 				tier: "2",
+				beefRelevance: "direct",
 			},
 			mla_nlrs: {
 				label: "MLA Australia",
 				description:
 					"Meat & Livestock Australia — National Livestock Reporting Service, saleyard prices",
 				tier: "2",
+				beefRelevance: "direct",
 			},
 			secex: {
 				label: "SECEX Brazil",
 				description:
 					"Secretaria de Comércio Exterior — Brazilian beef export statistics by HS code",
 				tier: "2",
+				beefRelevance: "adjacent",
 			},
 			shipping_index: {
 				label: "Shipping Indices",
 				description:
 					"Shanghai Container Freight Index (SCFI/CCFI) — global container shipping rates",
 				tier: "3",
+				beefRelevance: "macro",
 			},
 			dce_futures: {
 				label: "DCE/CZCE",
 				description:
 					"大商所/郑商所期货 — domestic Chinese futures prices for soybean meal, corn, cotton, etc.",
 				tier: "3",
+				beefRelevance: "macro",
 			},
 			baltic_dry: {
 				label: "Baltic Dry Index",
 				description: "Baltic Exchange dry bulk shipping cost index — global freight benchmark",
 				tier: "3",
+				beefRelevance: "macro",
 			},
 		};
 

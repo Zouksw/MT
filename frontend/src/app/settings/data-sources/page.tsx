@@ -3,6 +3,7 @@
 import {
 	Activity,
 	AlertCircle,
+	Beef,
 	CheckCircle,
 	ChevronDown,
 	ChevronUp,
@@ -28,6 +29,14 @@ interface SourceInfo {
 	label: string;
 	description: string;
 	tier: string;
+	/**
+	 * How directly this source relates to beef (PRODUCT-SPEC §九 beef-only focus).
+	 *   direct   — beef cut/carcass prices (core asset)
+	 *   adjacent — cattle/livestock/feed/trade (context)
+	 *   macro    — non-beef (FX, energy, metals, weather)
+	 * Lets the board distinguish "beef data flowing" from "some data flowing".
+	 */
+	beefRelevance?: "direct" | "adjacent" | "macro";
 	/**
 	 * Freshness status from /api/market/sources:
 	 *   healthy        — ran this cycle and wrote ≥1 row
@@ -115,6 +124,35 @@ function TierBadge({ tier }: { tier: string }) {
 			className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${colors[tier] || "bg-gray-100 text-gray-600"}`}
 		>
 			T{tier}
+		</span>
+	);
+}
+
+/**
+ * Beef-relevance badge — distinguishes beef price sources from context/macro
+ * sources on the data-sources board. Without this, a healthy FX source makes
+ * the board look like beef data is flowing. See DATA-4.
+ */
+function BeefRelevanceBadge({ relevance }: { relevance?: "direct" | "adjacent" | "macro" }) {
+	if (!relevance) return null;
+	const config = {
+		direct: {
+			label: "Beef",
+			className: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+		},
+		adjacent: {
+			label: "Cattle/Feed",
+			className: "bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300",
+		},
+		macro: {
+			label: "Macro",
+			className: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+		},
+	} as const;
+	const c = config[relevance];
+	return (
+		<span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${c.className}`}>
+			{c.label}
 		</span>
 	);
 }
@@ -244,6 +282,13 @@ export default function DataSourcesPage() {
 	// that ran but wrote 0 rows (silent failures) are counted separately as
 	// `emptyRuns` so they don't inflate the healthy count.
 	const healthy = sources.filter((s) => s.status === "healthy").length;
+	// Beef-specific health: of the sources that write beef cut/carcass
+	// prices (beefRelevance "direct"), how many are healthy right now?
+	// This is the number that actually matters for the platform's core
+	// value — a healthy FX source shouldn't make the board look like beef
+	// data is flowing. See DATA-4.
+	const beefDirectSources = sources.filter((s) => s.beefRelevance === "direct");
+	const beefSourcesHealthy = beefDirectSources.filter((s) => s.status === "healthy").length;
 	const emptyRuns = sources.filter((s) => s.status === "empty").length;
 	const staleSources = freshness.filter((f) => f.stale);
 	const avgSuccessRate =
@@ -299,7 +344,7 @@ export default function DataSourcesPage() {
 			/>
 
 			<LoadingState loading={loading} skeletonType="stats">
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+				<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
 					<StatCard
 						title="Total Sources"
 						value={sources.length}
@@ -311,6 +356,12 @@ export default function DataSourcesPage() {
 						value={healthy}
 						icon={<CheckCircle className="size-5" />}
 						variant="success"
+					/>
+					<StatCard
+						title="Beef sources healthy"
+						value={`${beefSourcesHealthy}/${beefDirectSources.length}`}
+						icon={<Beef className="size-5" />}
+						variant={beefSourcesHealthy > 0 ? "success" : "error"}
 					/>
 					<StatCard
 						title="Empty Runs"
@@ -373,6 +424,7 @@ export default function DataSourcesPage() {
 												</span>
 											)}
 											<TierBadge tier={source.tier} />
+											<BeefRelevanceBadge relevance={source.beefRelevance} />
 											<div className="flex-1 min-w-0">
 												<div className="text-sm font-medium text-foreground">{source.label}</div>
 												<div className="text-xs text-muted-foreground truncate">

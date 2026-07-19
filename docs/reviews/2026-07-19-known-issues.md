@@ -171,12 +171,16 @@ it") was downgraded on inspection: `runSourcesAndLog` catches per-source
 throws, so it logged an error daily rather than crashing — still wrong,
 now gone.
 
-**`healthy` classifier under-reports problems.** `scraperManager.ts:117`
+**`healthy` classifier under-reports problems.** ~~`scraperManager.ts:117`
 sets `emptyAfterRun = inserted===0 && updated===0`. But `commodity_prices`
 reports `5 updated` (FX) and `world_bank` reports `32 updated`, so both
-count as "healthy" despite contributing zero beef rows. A user reading
-the data-sources board sees "2 healthy" and assumes the platform has
-live data — it does not (for beef).
+count as "healthy" despite contributing zero beef rows.~~ **FIXED
+2026-07-19** — sources now carry a `beefRelevance` field
+(direct/adjacent/macro) and the data-sources board shows a dedicated
+"Beef sources healthy: N/M" StatCard. The "2 healthy" count was
+technically honest ("wrote ≥1 row") but user-misleading; the new beef
+breakdown makes the reality (0/4 beef sources producing) visible at a
+glance.
 
 **chronos exists but is NOT in the user-facing consensus.**
 inference-service `/models` returns 6 (5 statistical + chronos), but
@@ -189,8 +193,11 @@ entry records reality so future planning doesn't re-discover it. The
 actionable consequences:
 - G7 (prediction column) stays blocked until beef data flows (DATA-1).
 - ~~`argentina` ghost source is a latent bug~~ **FIXED 2026-07-19**.
-- `healthy` classifier should distinguish "producing beef" vs "producing
-  anything" — queued as a separate cleanup.
+- ~~`healthy` classifier should distinguish "producing beef" vs "producing
+  anything"~~ **FIXED 2026-07-19** — sources now carry a `beefRelevance`
+  field (direct/adjacent/macro); the data-sources board shows a separate
+  "Beef sources healthy: N/M" StatCard so a healthy FX source no longer
+  masks the fact that zero beef sources are producing.
 - chronos integration into backend consensus is a real enhancement
   opportunity (would make aiModels = 6 honest) — queued.
 
