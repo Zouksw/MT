@@ -106,38 +106,6 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
 }
 
 /**
- * Blacklist all tokens for a user
- *
- * @param userId - User ID to blacklist tokens for
- * @param reason - Reason for blacklisting
- * @param excludeToken - Optional token to exclude (e.g., current session)
- */
-export async function blacklistUserTokens(
-	userId: string,
-	reason: string = "security",
-	_excludeToken?: string,
-): Promise<number> {
-	try {
-		// Note: This requires sessions to be tracked
-		// Implementation depends on how you store active tokens/sessions
-		// For now, this is a placeholder that would need to be integrated
-		// with your session management
-
-		logger.info(`Blacklisting all user tokens for ${userId} (${reason})`);
-
-		// Placeholder: In a real implementation, you would:
-		// 1. Query all active sessions/tokens for the user
-		// 2. Add each token to the blacklist
-		// 3. Optionally invalidate sessions in the database
-
-		return 0; // Return count of blacklisted tokens
-	} catch (error) {
-		logger.error(`Failed to blacklist user tokens for ${userId}: ${error}`);
-		return 0;
-	}
-}
-
-/**
  * Remove a token from the blacklist (for testing/admin use)
  *
  * @param token - JWT token to remove from blacklist

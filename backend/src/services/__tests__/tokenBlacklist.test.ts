@@ -143,24 +143,12 @@ describe("tokenBlacklist service (real Redis)", () => {
 			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
 			await blacklistToken(token, "logout");
 
-			await expect(checkTokenBlacklist(token)).rejects.toThrow(
-				"Token has been revoked",
-			);
+			await expect(checkTokenBlacklist(token)).rejects.toThrow("Token has been revoked");
 		});
 
 		it("should not throw for valid token", async () => {
 			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
 			await expect(checkTokenBlacklist(token)).resolves.toBeUndefined();
-		});
-	});
-
-	describe("blacklistUserTokens", () => {
-		it("should return 0 (placeholder)", async () => {
-			const { blacklistUserTokens: blut } = await import(
-				"@/services/tokenBlacklist"
-			);
-			const result = await blut("user-123", "security");
-			expect(result).toBe(0);
 		});
 	});
 });

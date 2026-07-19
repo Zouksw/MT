@@ -7,11 +7,7 @@
  * queries and the detection algorithms (z-score / rule-based).
  */
 
-import type {
-	AnomalySeverity,
-	DetectionMethod,
-	Prisma,
-} from "@prisma/client";
+import type { AnomalySeverity, DetectionMethod, Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib";
 import { BadRequestError, NotFoundError } from "@/middleware/errorHandler";
@@ -175,8 +171,7 @@ function runDetection(
 	if (validatedData.method === "STATISTICAL") {
 		const values = dataPoints.map((dp) => Number(dp.valueJson) || 0);
 		const mean = values.reduce((a, b) => a + b, 0) / values.length;
-		const variance =
-			values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+		const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
 		const stdDev = Math.sqrt(variance);
 		const zThreshold = 3;
 
@@ -211,12 +206,9 @@ function runDetection(
 			const windowValues = dataPoints
 				.slice(i - windowSize, i)
 				.map((dp) => Number(dp.valueJson) || 0);
-			const windowMean =
-				windowValues.reduce((a, b) => a + b, 0) / windowSize;
+			const windowMean = windowValues.reduce((a, b) => a + b, 0) / windowSize;
 
-			const percentChange = Math.abs(
-				(currentValue - windowMean) / (windowMean || 1),
-			);
+			const percentChange = Math.abs((currentValue - windowMean) / (windowMean || 1));
 
 			if (percentChange > 1 - threshold) {
 				const severity = percentChangeSeverity(percentChange);
@@ -234,12 +226,6 @@ function runDetection(
 				});
 			}
 		}
-	} else {
-		throw new BadRequestError(
-			"ML_AUTOENCODER detection method is not yet implemented. " +
-				"Please use STATISTICAL or RULE_BASED methods. " +
-				"Contact administrator for AI feature availability.",
-		);
 	}
 
 	return detected;
@@ -259,10 +245,7 @@ function percentChangeSeverity(percentChange: number): AnomalySeverity {
 }
 
 /** Update an anomaly (typically to resolve it). */
-export async function updateAnomaly(
-	id: string,
-	data: z.infer<typeof updateAnomalySchema>,
-) {
+export async function updateAnomaly(id: string, data: z.infer<typeof updateAnomalySchema>) {
 	return prisma.anomaly.update({
 		where: { id },
 		data: {
@@ -311,8 +294,7 @@ export async function getAnomalyStats(
 		total,
 		resolved,
 		unresolved,
-		resolutionRate:
-			total > 0 ? `${((resolved / total) * 100).toFixed(1)}%` : "0%",
+		resolutionRate: total > 0 ? `${((resolved / total) * 100).toFixed(1)}%` : "0%",
 		severityBreakdown,
 	};
 }
@@ -322,14 +304,11 @@ export async function bulkResolveAnomalies(
 	validatedData: z.infer<typeof bulkResolveSchema>,
 ): Promise<number> {
 	const where: Prisma.AnomalyWhereInput = { isResolved: false };
-	if (validatedData.timeseriesId)
-		where.timeseriesId = validatedData.timeseriesId;
-	if (validatedData.severity)
-		where.severity = validatedData.severity as AnomalySeverity;
+	if (validatedData.timeseriesId) where.timeseriesId = validatedData.timeseriesId;
+	if (validatedData.severity) where.severity = validatedData.severity as AnomalySeverity;
 	if (validatedData.start || validatedData.end) {
 		where.createdAt = {};
-		if (validatedData.start)
-			where.createdAt.gte = new Date(validatedData.start);
+		if (validatedData.start) where.createdAt.gte = new Date(validatedData.start);
 		if (validatedData.end) where.createdAt.lte = new Date(validatedData.end);
 	}
 

@@ -24,8 +24,7 @@ import {
 const router = Router();
 
 // Get authenticated user ID, fallback to default for compatibility
-const getUser = (req: AuthRequest) =>
-	req.userId || "00000000-0000-0000-0000-000000000001";
+const getUser = (req: AuthRequest) => req.userId || "00000000-0000-0000-0000-000000000001";
 
 /**
  * @openapi
@@ -136,8 +135,8 @@ router.get(
  *                 description: Time series ID to analyze
  *               method:
  *                 type: string
- *                 enum: [STATISTICAL, RULE_BASED, ML_AUTOENCODER]
- *                 description: Detection method (ML_AUTOENCODER not yet implemented)
+ *                 enum: [STATISTICAL, RULE_BASED]
+ *                 description: Detection method
  *                 example: STATISTICAL
  *               windowSize:
  *                 type: integer
@@ -200,14 +199,11 @@ router.post(
 		const io = req.app.get("io");
 		if (io) {
 			try {
-				io.to(`timeseries:${validatedData.timeseriesId}`).emit(
-					"anomalies:detected",
-					{
-						timeseriesId: validatedData.timeseriesId,
-						count: anomalies.length,
-						method: validatedData.method,
-					},
-				);
+				io.to(`timeseries:${validatedData.timeseriesId}`).emit("anomalies:detected", {
+					timeseriesId: validatedData.timeseriesId,
+					count: anomalies.length,
+					method: validatedData.method,
+				});
 			} catch (wsError) {
 				logger.warn("WebSocket emit failed for anomalies:detected event", {
 					timeseriesId: validatedData.timeseriesId,

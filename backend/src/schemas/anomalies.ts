@@ -16,9 +16,7 @@ export const anomaliesQuerySchema = paginationSchema.extend({
 
 export const detectAnomaliesSchema = z.object({
 	timeseriesId: z.string().uuid(),
-	method: z
-		.enum(["STATISTICAL", "ML_AUTOENCODER", "RULE_BASED"])
-		.default("STATISTICAL"),
+	method: z.enum(["STATISTICAL", "RULE_BASED"]).default("STATISTICAL"),
 	start: z.string().datetime().optional(),
 	end: z.string().datetime().optional(),
 	threshold: z.coerce.number().min(0).max(1).default(0.95),

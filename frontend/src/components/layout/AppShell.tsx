@@ -1,14 +1,18 @@
 "use client";
 
 import {
+	Activity,
 	Bell,
+	Boxes,
 	ChartLine,
 	Database,
+	Layers,
 	LayoutGrid,
 	Menu,
 	Newspaper,
 	Search,
 	Settings,
+	Star,
 	TrendingUp,
 	X,
 } from "lucide-react";
@@ -46,6 +50,8 @@ const NAV_SECTIONS: NavSection[] = [
 		label: "分析",
 		items: [
 			{ label: "价格走势", href: "/trading", icon: ChartLine },
+			{ label: "自选清单", href: "/trading/watchlist", icon: Star },
+			{ label: "分析组", href: "/trading/portfolio", icon: Layers },
 			{ label: "相关性分析", href: "/dashboard/analysis", icon: TrendingUp },
 		],
 	},
@@ -54,6 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
 		items: [
 			{ label: "价格预测", href: "/ai/predict", icon: TrendingUp },
 			{ label: "模型准确率", href: "/ai/accuracy", icon: TrendingUp },
+			{ label: "模型列表", href: "/dashboard/models", icon: Boxes },
 			{ label: "异常检测", href: "/ai/anomalies", icon: Bell },
 		],
 	},
@@ -69,6 +76,7 @@ const NAV_SECTIONS: NavSection[] = [
 		label: "系统",
 		items: [
 			{ label: "告警", href: "/alerts", icon: Bell },
+			{ label: "性能监控", href: "/dashboard/performance", icon: Activity },
 			{ label: "设置", href: "/settings", icon: Settings },
 		],
 	},

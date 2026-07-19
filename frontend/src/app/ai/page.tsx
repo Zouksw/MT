@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, Brain, ChevronRight, FlaskConical, TrendingUp } from "lucide-react";
+import {
+	AlertTriangle,
+	Brain,
+	ChevronRight,
+	FlaskConical,
+	History,
+	TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/layout/PageContainer";
 
@@ -28,6 +35,12 @@ const aiSections = [
 		description: "Track and compare AI model performance with MAPE metrics",
 		icon: <TrendingUp className="size-5" />,
 		href: "/ai/accuracy",
+	},
+	{
+		title: "Backtesting",
+		description: "Validate model predictions against historical price outcomes",
+		icon: <History className="size-5" />,
+		href: "/ai/backtest",
 	},
 ];
 
