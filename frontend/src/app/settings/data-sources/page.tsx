@@ -2,6 +2,7 @@
 
 import {
 	Activity,
+	AlertCircle,
 	CheckCircle,
 	ChevronDown,
 	ChevronUp,
@@ -27,7 +28,15 @@ interface SourceInfo {
 	label: string;
 	description: string;
 	tier: string;
-	status: "healthy" | "error" | "pending";
+	/**
+	 * Freshness status from /api/market/sources:
+	 *   healthy        — ran this cycle and wrote ≥1 row
+	 *   empty          — ran but wrote 0 rows (silent failure: block/reformat/empty)
+	 *   skipped_no_key — gated, never ran (API key missing)
+	 *   error          — ran and threw
+	 *   pending        — never ran
+	 */
+	status: "healthy" | "empty" | "skipped_no_key" | "error" | "pending";
 	lastRun: string | null;
 	error: string | null;
 	lastResult: { inserted: number; updated: number } | null;
@@ -84,6 +93,12 @@ function timeAgo(date: string | null): string {
 function StatusDot({ status }: { status: string }) {
 	if (status === "healthy")
 		return <span className="inline-block w-2 h-2 rounded-full bg-green-500" />;
+	if (status === "empty")
+		// Amber, not green: the source is reachable enough to return but wrote
+		// zero rows. Distinct from `error` (threw) and `skipped_no_key` (gated).
+		return <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />;
+	if (status === "skipped_no_key")
+		return <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />;
 	if (status === "error") return <span className="inline-block w-2 h-2 rounded-full bg-red-500" />;
 	return <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />;
 }
@@ -225,7 +240,11 @@ export default function DataSourcesPage() {
 	};
 
 	const freshnessMap = new Map(freshness.map((f) => [f.source, f]));
+	// `healthy` now means "ran and wrote ≥1 row" — strictly honest. Sources
+	// that ran but wrote 0 rows (silent failures) are counted separately as
+	// `emptyRuns` so they don't inflate the healthy count.
 	const healthy = sources.filter((s) => s.status === "healthy").length;
+	const emptyRuns = sources.filter((s) => s.status === "empty").length;
 	const staleSources = freshness.filter((f) => f.stale);
 	const avgSuccessRate =
 		freshness.length > 0
@@ -280,7 +299,7 @@ export default function DataSourcesPage() {
 			/>
 
 			<LoadingState loading={loading} skeletonType="stats">
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
 					<StatCard
 						title="Total Sources"
 						value={sources.length}
@@ -288,10 +307,16 @@ export default function DataSourcesPage() {
 						variant="primary"
 					/>
 					<StatCard
-						title="Healthy"
+						title="Healthy (writing rows)"
 						value={healthy}
 						icon={<CheckCircle className="size-5" />}
 						variant="success"
+					/>
+					<StatCard
+						title="Empty Runs"
+						value={emptyRuns}
+						icon={<AlertCircle className="size-5" />}
+						variant={emptyRuns > 0 ? "warning" : "default"}
 					/>
 					<StatCard
 						title="Stale"
@@ -337,6 +362,16 @@ export default function DataSourcesPage() {
 									<div key={source.id}>
 										<div className="flex items-center gap-4 px-4 py-3 hover:bg-accent/30 transition-colors">
 											<StatusDot status={source.status} />
+											{source.status === "empty" && (
+												<span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+													Empty
+												</span>
+											)}
+											{source.status === "skipped_no_key" && (
+												<span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+													No key
+												</span>
+											)}
 											<TierBadge tier={source.tier} />
 											<div className="flex-1 min-w-0">
 												<div className="text-sm font-medium text-foreground">{source.label}</div>

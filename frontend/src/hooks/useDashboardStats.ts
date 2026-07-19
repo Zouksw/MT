@@ -13,15 +13,17 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL
 export interface DashboardStats {
 	datasets: {
 		total: number;
-		trend: number;
+		/** Period-over-period delta, or null when not computed (honest "no trend"
+		 * instead of the previous fake `0`). The UI hides the trend badge when null. */
+		trend: number | null;
 	};
 	timeseries: {
 		total: number;
-		trend: number;
+		trend: number | null;
 	};
 	forecasts: {
 		total: number;
-		trend: number;
+		trend: number | null;
 	};
 	alerts: {
 		total: number;
@@ -31,9 +33,10 @@ export interface DashboardStats {
 			medium: number;
 			low: number;
 		};
-		trend: number;
+		trend: number | null;
 	};
 	aiModels: {
+		/** Models with isActive=true in the registry (was forced equal to total — a fake). */
 		active: number;
 		total: number;
 	};
@@ -139,6 +142,16 @@ export const useDashboardStats = () => {
 		retryOpts,
 	);
 
+	// Active-model count — a separate lightweight count query (limit=1) so we
+	// report the real number of isActive=true models instead of forcing
+	// active==total. Previously this was `active: aiTotal` which always read
+	// 100% active whenever any models existed — a fabricated metric.
+	const { data: activeModelsData } = useRetryableFetch(
+		() => (isAuth ? `${API_BASE}/models?page=1&limit=1&isActive=true` : null),
+		authFetcher,
+		retryOpts,
+	);
+
 	const loading = !isAuth
 		? false
 		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
@@ -150,12 +163,17 @@ export const useDashboardStats = () => {
 			? (errors[0] as Error)
 			: null;
 
+	// Period-over-period trends are not computed by the backend today. Rather
+	// than fabricate `0` (which the UI rendered as a flat "0%" badge — a fake),
+	// we surface `null` and the StatCard hides its trend badge entirely. When
+	// a real trend source is wired (e.g. /stats/trends endpoint), replace
+	// these with the computed deltas.
 	const trends = useMemo(
 		() => ({
-			datasets: 0,
-			timeseries: 0,
-			forecasts: 0,
-			alerts: 0,
+			datasets: null,
+			timeseries: null,
+			forecasts: null,
+			alerts: null,
 		}),
 		[],
 	);
@@ -215,7 +233,11 @@ export const useDashboardStats = () => {
 	};
 
 	// AI models — real count from the models registry (was hardcoded 8/8, a fake).
+	// `total` is the registry total; `active` is the count of isActive=true
+	// models (separate count query). Previously `active` was forced equal to
+	// `total`, fabricating 100%-active whenever any model existed.
 	const aiTotal = forecastsData?.total ?? forecastsData?.data?.length ?? 0;
+	const aiActive = activeModelsData?.total ?? activeModelsData?.pagination?.total ?? 0;
 
 	const stats: DashboardStats | null = isAuth
 		? datasetsData && timeseriesData && alertsData
@@ -238,7 +260,7 @@ export const useDashboardStats = () => {
 						trend: trends.alerts,
 					},
 					aiModels: {
-						active: aiTotal,
+						active: aiActive,
 						total: aiTotal,
 					},
 					beef: {
@@ -256,11 +278,11 @@ export const useDashboardStats = () => {
 				}
 			: null
 		: {
-				datasets: { total: 0, trend: 0 },
-				timeseries: { total: 0, trend: 0 },
-				forecasts: { total: 0, trend: 0 },
-				alerts: { total: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0 }, trend: 0 },
-				aiModels: { active: aiTotal, total: aiTotal },
+				datasets: { total: 0, trend: null },
+				timeseries: { total: 0, trend: null },
+				forecasts: { total: 0, trend: null },
+				alerts: { total: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0 }, trend: null },
+				aiModels: { active: aiActive, total: aiTotal },
 				beef: {
 					cuts: beefCuts.length,
 					factories: beefFactories.length,

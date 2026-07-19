@@ -67,6 +67,72 @@ describe("ScraperManager", () => {
 			expect(health.fao.lastResult).toEqual({ inserted: 3, updated: 1 });
 		});
 
+		it("flags a 0-row run as emptyAfterRun (silent-failure detection — DATA-2)", async () => {
+			// A scraper that returns without throwing but writes 0 rows is the
+			// silent-failure case (e.g. Cloudflare block, page reformat). It
+			// must NOT be reported as a clean success — the freshness board
+			// needs to surface `empty` so operators see the source is
+			// effectively dormant.
+			// Mutation guard: flipping the result to {inserted:1} must fail
+			// this test (emptyAfterRun → false).
+			const scraper = createMockScraper("cepea", { inserted: 0, updated: 0 });
+			manager.registerSource("cepea", scraper);
+
+			await manager.runSource("cepea");
+
+			const health = manager.getHealth();
+			expect(health.cepea.success).toBe(true);
+			expect(health.cepea.emptyAfterRun).toBe(true);
+		});
+
+		it("does not flag a productive run as emptyAfterRun", async () => {
+			// Regression guard: a real refresh with rows must stay
+			// emptyAfterRun === false. Prevents the empty-classifier from
+			// over-triggering and mislabeling healthy sources.
+			const scraper = createMockScraper("fred", { inserted: 4, updated: 2 });
+			manager.registerSource("fred", scraper);
+
+			await manager.runSource("fred");
+
+			const health = manager.getHealth();
+			expect(health.fred.emptyAfterRun).toBe(false);
+			expect(health.fred.success).toBe(true);
+		});
+
+		it("a partial run (inserts only) is not empty", async () => {
+			// Edge case: inserted>0, updated=0 → productive, not empty.
+			const scraper = createMockScraper("partial", { inserted: 1, updated: 0 });
+			manager.registerSource("partial", scraper);
+
+			await manager.runSource("partial");
+
+			expect(manager.getHealth().partial.emptyAfterRun).toBe(false);
+		});
+
+		it("does not set emptyAfterRun for key-skipped sources", async () => {
+			// Key-skip path returns {0,0} but must NOT be classified as empty
+			// — it's a different state (skipped_no_key) and the status
+			// precedence in /sources handles it first. emptyAfterRun should
+			// be undefined here, not true.
+			process.env.TEST_MISSING_KEY = "";
+			try {
+				const scraper: Scraper = {
+					name: "gated",
+					fetch: vi.fn(),
+					requiresKey: "TEST_MISSING_KEY",
+				};
+				manager.registerSource("gated", scraper);
+
+				await manager.runSource("gated");
+
+				const health = manager.getHealth();
+				expect(health.gated.skippedNoKey).toBe(true);
+				expect(health.gated.emptyAfterRun).toBeUndefined();
+			} finally {
+				delete process.env.TEST_MISSING_KEY;
+			}
+		});
+
 		it("should throw for unknown source", async () => {
 			await expect(manager.runSource("unknown")).rejects.toThrow("Unknown source: unknown");
 		});

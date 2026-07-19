@@ -319,7 +319,66 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats?.aiModels.total).toBe(0);
 	});
 
-	it("should include trend data", async () => {
+	it("reports active != total when only some models are isActive=true (TRUST-1 honesty guard)", async () => {
+		// Mutation guard: the previous code set `active: aiTotal`, forcing
+		// active==total (always 100%). With a real isActive count, a registry
+		// of 4 models where only 1 is active must surface active=1, total=4.
+		// Flipping the hook back to `active: aiTotal` fails this test.
+		let callIdx = -1;
+		mockUseRetryableFetch.mockImplementation(() => {
+			callIdx++;
+			// 7th useRetryableFetch call (index 6) is the activeModels count
+			// (added by the TRUST-1 fix). Return total:1 for that one.
+			if (callIdx === 6) {
+				return {
+					data: { total: 1, pagination: { total: 1 } },
+					error: undefined,
+					isLoading: false,
+					isValidating: false,
+					isRetrying: false,
+					retryCount: 0,
+					manualRetry: jest.fn(),
+					mutate: jest.fn(),
+				};
+			}
+			// 3rd call (index 2) is the forecasts/models total. Return 4.
+			if (callIdx === 2) {
+				return {
+					data: { total: 4, data: [] },
+					error: undefined,
+					isLoading: false,
+					isValidating: false,
+					isRetrying: false,
+					retryCount: 0,
+					manualRetry: jest.fn(),
+					mutate: jest.fn(),
+				};
+			}
+			return {
+				data: { total: 0, data: [] },
+				error: undefined,
+				isLoading: false,
+				isValidating: false,
+				isRetrying: false,
+				retryCount: 0,
+				manualRetry: jest.fn(),
+				mutate: jest.fn(),
+			};
+		});
+
+		const { result } = renderHook(() => useDashboardStats());
+
+		await waitFor(() => {
+			expect(result.current.loading).toBe(false);
+		});
+
+		expect(result.current.stats?.aiModels.total).toBe(4);
+		expect(result.current.stats?.aiModels.active).toBe(1);
+		// The honesty invariant: active must NEVER be force-set to total.
+		expect(result.current.stats?.aiModels.active).not.toBe(result.current.stats?.aiModels.total);
+	});
+
+	it("surfaces trend as null when no trend source is wired (no fake 0 badge — TRUST-1)", async () => {
 		mockUseRetryableFetch.mockImplementation(() => ({
 			data: { total: 0, data: [] },
 			error: undefined,
@@ -337,9 +396,12 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(typeof result.current.stats?.datasets.trend).toBe("number");
-		expect(typeof result.current.stats?.timeseries.trend).toBe("number");
-		expect(typeof result.current.stats?.forecasts.trend).toBe("number");
-		expect(typeof result.current.stats?.alerts.trend).toBe("number");
+		// Previously trends were hardcoded 0 and rendered as a fake "0%" badge.
+		// Now they are null so the StatCard hides its trend badge entirely —
+		// an honest "no trend data" instead of a fabricated 0%.
+		expect(result.current.stats?.datasets.trend).toBeNull();
+		expect(result.current.stats?.timeseries.trend).toBeNull();
+		expect(result.current.stats?.forecasts.trend).toBeNull();
+		expect(result.current.stats?.alerts.trend).toBeNull();
 	});
 });

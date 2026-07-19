@@ -25,6 +25,16 @@ interface SourceHealth {
 	error: string | null;
 	lastResult?: ScraperResult;
 	skippedNoKey?: boolean;
+	/**
+	 * True when the scraper ran without throwing but wrote zero rows
+	 * (inserted=0 && updated=0) and was not a key-skip. This is the
+	 * "silent failure" case — the source is reachable enough to return,
+	 * but produced nothing (e.g. Cloudflare challenge, page format change,
+	 * upstream empty). Surfaced to the freshness board as `empty` so
+	 * operators can distinguish a real refresh from a no-op run instead
+	 * of both reading as `healthy`.
+	 */
+	emptyAfterRun?: boolean;
 }
 
 export class ScraperManager {
@@ -98,15 +108,25 @@ export class ScraperManager {
 			const result = await scraper.fetch();
 			const elapsed = Date.now() - start;
 
+			// A run that returns 0 rows is technically "successful" (no throw)
+			// but signals the source produced nothing this cycle — typically a
+			// silent failure (Cloudflare block, page reformat, upstream empty).
+			// Flag it so the freshness board can show `empty` instead of lying
+			// with `healthy`. Key-skips are already handled above and never
+			// reach here.
+			const emptyAfterRun = result.inserted === 0 && result.updated === 0;
+
 			this.health.set(name, {
 				lastRun: new Date(),
 				success: true,
 				error: null,
 				lastResult: result,
+				emptyAfterRun,
 			});
 
-			logger.info(
-				`[ScraperManager] ${name} completed in ${elapsed}ms: ${result.inserted} inserted, ${result.updated} updated`,
+			const level = emptyAfterRun ? "warn" : "info";
+			logger[level](
+				`[ScraperManager] ${name} completed in ${elapsed}ms: ${result.inserted} inserted, ${result.updated} updated${emptyAfterRun ? " (empty — possible silent failure)" : ""}`,
 			);
 			return result;
 		} catch (err) {

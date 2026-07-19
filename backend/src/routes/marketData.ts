@@ -258,13 +258,24 @@ router.get(
 
 		const sources = Object.entries(sourceLabels).map(([key, info]) => {
 			const h = health[key];
+			// Status precedence (most informative first):
+			//   skipped_no_key — gated, never ran this cycle
+			//   empty          — ran but wrote 0 rows (silent failure: block/reformat/empty)
+			//   healthy        — ran and wrote ≥1 row
+			//   error          — ran and threw
+			//   pending        — never ran
+			// The `empty` state exists so the freshness board stops reporting
+			// silently-failing sources (CEPEA behind Cloudflare, INAC network-
+			// blocked) as `healthy`. See DATA-2 in docs/reviews/2026-07-19-known-issues.md.
 			const status = h?.skippedNoKey
 				? "skipped_no_key"
-				: h?.success
-					? "healthy"
-					: h?.lastRun
-						? "error"
-						: "pending";
+				: h?.emptyAfterRun
+					? "empty"
+					: h?.success
+						? "healthy"
+						: h?.lastRun
+							? "error"
+							: "pending";
 			return {
 				id: key,
 				...info,
