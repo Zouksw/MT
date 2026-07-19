@@ -4,11 +4,9 @@ import { Check, Crown, Sparkles, Zap } from "lucide-react";
 import type React from "react";
 import useSWR from "swr";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tag } from "@/components/ui/Tag";
-import { useToast } from "@/components/ui/Toast";
 import { fetcher } from "@/lib/market-data";
 
 interface Plan {
@@ -25,38 +23,24 @@ const PLAN_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function BillingPage() {
-	const toast = useToast();
+	// Plans + the current subscription are real (GET /billing/plans,
+	// /billing/subscription). Checkout is NOT implemented — there is no
+	// /api/billing/checkout endpoint — so this page is informational only:
+	// it shows the plan tiers and which one the user is on. The previous
+	// "Upgrade" button POSTed to a non-existent route and always surfaced a
+	// "Payment not yet available" toast. Upgrade/checkout will return when
+	// payment integration (Stripe, etc.) is added.
 	const { data: plansData } = useSWR<{ success: boolean; data: { plans: Plan[] } }>(
 		"/billing/plans",
 		fetcher,
 	);
-	const { data: subData, mutate } = useSWR<{ success: boolean; data: { plan: string } }>(
+	const { data: subData } = useSWR<{ success: boolean; data: { plan: string } }>(
 		"/billing/subscription",
 		fetcher,
 	);
 
 	const plans = plansData?.data?.plans ?? [];
 	const currentPlan = subData?.data?.plan ?? "free";
-
-	const handleUpgrade = async (planId: string) => {
-		const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-		const headers: Record<string, string> = { "Content-Type": "application/json" };
-		if (token) headers.Authorization = `Bearer ${token}`;
-
-		const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-		const res = await fetch(`${base}/api/billing/checkout`, {
-			method: "POST",
-			headers,
-			body: JSON.stringify({ planId }),
-		});
-
-		if (res.ok) {
-			toast.showSuccess("Plan upgraded!");
-			mutate();
-		} else {
-			toast.showError("Payment not yet available — coming soon");
-		}
-	};
 
 	return (
 		<PageContainer>
@@ -91,19 +75,14 @@ export default function BillingPage() {
 										</li>
 									))}
 								</ul>
-								{plan.id === "free" ? (
-									<Button fullWidth disabled={isActive}>
-										{isActive ? "Current Plan" : "Downgrade"}
-									</Button>
+								{isActive ? (
+									<div className="text-center text-sm font-medium text-primary py-2">
+										Your current plan
+									</div>
 								) : (
-									<Button
-										fullWidth
-										variant="primary"
-										disabled={isActive}
-										onClick={() => handleUpgrade(plan.id)}
-									>
-										{isActive ? "Current Plan" : `Upgrade to ${plan.name}`}
-									</Button>
+									<div className="text-center text-sm text-muted-foreground py-2">
+										Contact us to switch
+									</div>
 								)}
 							</CardBody>
 						</Card>

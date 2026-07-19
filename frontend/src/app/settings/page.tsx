@@ -87,15 +87,20 @@ export default function SettingsPage() {
 		},
 	];
 
-	const securityItems = [
-		{ label: "JWT Authentication", enabled: true },
-		{ label: "API Key Management", enabled: true },
-		{ label: "Session Monitoring", enabled: true },
-		{ label: "Two-Factor Auth", enabled: false },
+	// Security features. `status` makes the state explicit:
+	//   - "enabled": shipped and active for this account
+	//   - "planned": on the roadmap, not yet implemented
+	// (Previously 2FA was `enabled: false` shown as "Coming Soon", which read as
+	// "shipped but disabled" — misleading. "Planned" states the intent honestly.)
+	const securityItems: { label: string; status: "enabled" | "planned" }[] = [
+		{ label: "JWT Authentication", status: "enabled" },
+		{ label: "API Key Management", status: "enabled" },
+		{ label: "Session Monitoring", status: "enabled" },
+		{ label: "Two-Factor Auth", status: "planned" },
 	];
 
 	const securityScore =
-		(securityItems.filter((i) => i.enabled).length / securityItems.length) * 100;
+		(securityItems.filter((i) => i.status === "enabled").length / securityItems.length) * 100;
 
 	return (
 		<PageContainer>
@@ -232,18 +237,21 @@ export default function SettingsPage() {
 							{securityItems.map((item, idx) => (
 								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 								<div key={idx} className="flex items-center gap-3">
-									{item.enabled ? (
+									{item.status === "enabled" ? (
 										<CircleCheck className="size-4 text-success" />
 									) : (
 										<div className="w-4 h-4 rounded-full border-2 border-input" />
 									)}
 									<span
-										className={`text-body ${item.enabled ? "text-foreground" : "text-muted-foreground"}`}
+										className={`text-body ${item.status === "enabled" ? "text-foreground" : "text-muted-foreground"}`}
 									>
 										{item.label}
 									</span>
-									<Tag color={item.enabled ? "success" : "default"} className="ml-auto">
-										{item.enabled ? "Enabled" : "Coming Soon"}
+									<Tag
+										color={item.status === "enabled" ? "success" : "default"}
+										className="ml-auto"
+									>
+										{item.status === "enabled" ? "Enabled" : "Planned"}
 									</Tag>
 								</div>
 							))}

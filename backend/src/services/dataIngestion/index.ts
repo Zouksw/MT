@@ -7,7 +7,6 @@
 
 import { scraperManager } from "./scraperManager";
 import { abaresScraper } from "./sources/abaresData";
-import { argentinaScraper } from "./sources/argentinaData";
 import { balticDryScraper } from "./sources/balticDry";
 import { cepeaScraper } from "./sources/cepeaData";
 import { chinaCustomsStatsScraper } from "./sources/chinaCustomsStats";
@@ -39,7 +38,6 @@ export function registerAllScrapers(): void {
 	scraperManager.registerSource("inac", inacScraper);
 	scraperManager.registerSource("mla_nlrs", mlaNlrsScraper);
 	scraperManager.registerSource("secex", secexScraper);
-	scraperManager.registerSource("argentina", argentinaScraper);
 	scraperManager.registerSource("abares", abaresScraper);
 	scraperManager.registerSource("usda_ams", usdaAmsScraper);
 	scraperManager.registerSource("usda_psd", usdaPsdScraper);

@@ -158,10 +158,15 @@ function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 				<Menu className="size-5" />
 			</button>
 
-			{/* Search (decorative — wired later) */}
-			<div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-				<Search className="size-4" />
-				<span>搜索部位 / 产地…</span>
+			{/* Global search — PLANNED, not yet wired. Rendered as a labeled badge
+			    (not a fake input) so it reads as a roadmap item, not a broken control.
+			    Implementation: commodity + news search over the backend (see roadmap). */}
+			<div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 text-xs text-muted-foreground">
+				<Search className="size-3.5" />
+				<span>搜索</span>
+				<span className="ml-1 px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium uppercase tracking-wide">
+					Planned
+				</span>
 			</div>
 
 			<div className="flex-1" />
