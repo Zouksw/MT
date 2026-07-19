@@ -127,9 +127,14 @@ The backend already returns the full consensus shape (`direction`,
 `GET /api/signals/:slug` — but `useMarketForecasts` calls the lighter
 `/inference/predict/batch` which lacks those fields.
 
-**Status:** **Actionable — queued (G5).** Two parts: (a) enrich the
-forecast hook to surface confidence/modelCount, (b) add a prediction
-column to the two main price tables.
+**Status:** **Partially shipped — part (a) done in G5 (1378e5a),
+part (b) still open.** Two parts: (a) enrich the forecast hook to
+surface confidence/modelCount — ✅ done (useMarketForecasts now calls
+`/api/signals/batch`, MarketForecastBoard shows Confidence + Models
+columns); (b) add a prediction column to the two main price tables
+("Latest Cut Prices" `beef/page.tsx:144`, "Prices by Source"
+`trading/page.tsx`) — ❌ still open, neither table has a prediction
+column yet. Re-queued as G7 below.
 
 ---
 
@@ -144,8 +149,9 @@ restructure, (4) data-fill as keys arrive.
 | **G2** | ~~MarketNews migration + seed~~ RESCINDED — table+seed already exist (DATA-3 invalid) | — | — | — | ❌ non-issue |
 | **G3** | Dashboard: kill fake trend-0 + forced 100% AI active (TRUST-1) | useDashboardStats.ts | M1 trust | S | ✅ shipped 2026-07-19 |
 | **G4** | Dashboard 行情总览 restructure (SCOPE-1) | dashboard/page.tsx, useDashboardStats.ts | M2 | M | ✅ shipped 2026-07-19 (dab785a) |
-| **G5** | Inline AI prediction in market board (SCOPE-2) | signals.ts (/batch), useMarketForecasts.ts, MarketForecastBoard.tsx | M2 | M | ✅ shipped 2026-07-19 (1378e5a) |
+| **G5** | Inline AI prediction in market board — part (a) only (SCOPE-2) | signals.ts (/batch), useMarketForecasts.ts, MarketForecastBoard.tsx | M2 | M | ✅ shipped 2026-07-19 (1378e5a) — SCOPE-2 part (a) |
 | **G6** | Wire MLA/USDA-AMS once keys provided (DATA-1) | .env only | M2 data | S | blocked on user credentials |
+| **G7** | Prediction column in the two main price tables — SCOPE-2 part (b) | beef/page.tsx (Latest Cut Prices), trading/page.tsx (Prices by Source) | M2 | M | open — deferred, not blocking |
 
 `S` ≈ half a day, `M` ≈ 1-2 days. **Next recommended batch: G4 + G5**
 (M2 restructure — both open, G5 unblocked, G4 structurally buildable).
