@@ -8,14 +8,12 @@ import {
 	Crosshair,
 	Database,
 	Globe,
-	Layers,
 	LayoutGrid,
 	Menu,
 	Newspaper,
 	Search,
 	Settings,
 	Sparkles,
-	Star,
 	TrendingUp,
 	X,
 } from "lucide-react";
@@ -53,8 +51,6 @@ const NAV_SECTIONS: NavSection[] = [
 		label: "分析",
 		items: [
 			{ label: "价格走势", href: "/trading", icon: ChartLine },
-			{ label: "自选清单", href: "/trading/watchlist", icon: Star },
-			{ label: "分析组", href: "/trading/portfolio", icon: Layers },
 			{ label: "产地对比", href: "/dashboard/analysis/origin", icon: Globe },
 			{ label: "相关性分析", href: "/dashboard/analysis", icon: TrendingUp },
 		],
