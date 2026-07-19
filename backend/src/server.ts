@@ -167,7 +167,11 @@ function start(): void {
 	];
 	setInterval(() => runSourcesAndLog(SIX_HOUR_SOURCES, "6-hour refresh"), SIX_HOURS);
 
-	// Daily: trade statistics, beef supply chain, official reports
+	// Daily: trade statistics, beef supply chain, official reports.
+	// NOTE: "argentina" removed 2026-07-19 — it was listed here but never
+	// registered in index.ts registerAllScrapers (no argentinaData.ts in src/,
+	// only a stale dist/ artifact), so every daily run threw
+	// "Unknown source: argentina". Re-add only alongside a real registration.
 	const DAILY_SOURCES = [
 		"world_bank",
 		"usda_psd",
@@ -177,7 +181,6 @@ function start(): void {
 		"abares",
 		"china_customs_stats",
 		"secex",
-		"argentina",
 		"usda_ams",
 	];
 	setInterval(() => runSourcesAndLog(DAILY_SOURCES, "Daily refresh"), DAILY);

@@ -231,12 +231,6 @@ router.get(
 					"Secretaria de Comércio Exterior — Brazilian beef export statistics by HS code",
 				tier: "2",
 			},
-			argentina: {
-				label: "INDEC Argentina",
-				description:
-					"Instituto Nacional de Estadística — Argentine agricultural production and export data",
-				tier: "3",
-			},
 			shipping_index: {
 				label: "Shipping Indices",
 				description:

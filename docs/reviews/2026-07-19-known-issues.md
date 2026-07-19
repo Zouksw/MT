@@ -162,13 +162,14 @@ but **neither feeds beef**:
 | Beef-adjacent (7) | usda_psd, abares, secex, china_customs_stats, china_wholesale, cme_futures, argentina | **ALL silent-fail**: API endpoints 404/403, regex patterns stale, geo-blocked |
 | Macro context (8) | commodity_prices, world_bank, fred, fao_prices, dce_futures, baltic_dry, shipping_index, weather | 2 healthy (FX + non-beef), 4 key-gated, 2 silent-fail |
 
-**`argentina` is a ghost source.** Listed in `server.ts:180` DAILY_SOURCES
-and `marketData.ts:234` sourceLabels, but **never registered** in
-`index.ts` `registerAllScrapers`. No `src/` file exists (only a stale
-`dist/.../argentinaData.js` from Jul 13). The running backend (older
-build) reports it "completing in 0ms"; current `src/` would throw
-`Unknown source: argentina`. **This is a latent bug** — rebuild will
-surface it.
+**`argentina` was a ghost source.** ~~Listed in `server.ts:180`
+DAILY_SOURCES and `marketData.ts:234` sourceLabels, but never registered
+in `index.ts`.~~ **FIXED 2026-07-19** — removed from both DAILY_SOURCES
+and sourceLabels. Source count dropped 19→18. No functionality lost
+(it never produced data). The original concern ("rebuild will break
+it") was downgraded on inspection: `runSourcesAndLog` catches per-source
+throws, so it logged an error daily rather than crashing — still wrong,
+now gone.
 
 **`healthy` classifier under-reports problems.** `scraperManager.ts:117`
 sets `emptyAfterRun = inserted===0 && updated===0`. But `commodity_prices`
@@ -187,8 +188,7 @@ correct for what the user sees, but the "6th model" is stranded.
 entry records reality so future planning doesn't re-discover it. The
 actionable consequences:
 - G7 (prediction column) stays blocked until beef data flows (DATA-1).
-- `argentina` ghost source is a latent bug (rebuild will break it) —
-  queued as a separate cleanup.
+- ~~`argentina` ghost source is a latent bug~~ **FIXED 2026-07-19**.
 - `healthy` classifier should distinguish "producing beef" vs "producing
   anything" — queued as a separate cleanup.
 - chronos integration into backend consensus is a real enhancement
