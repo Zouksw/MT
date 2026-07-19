@@ -18,6 +18,20 @@ import { tokenManager } from "@/lib/tokenManager";
  * Auth handling: forecasts require authentication. When there is no token (or
  * the request is denied), `permission` reflects that so the UI can show a
  * sign-in/upgrade affordance instead of an empty board.
+ *
+ * Fetcher convention (R3 unification): this hook intentionally uses raw
+ * `useSWR` rather than `useRetryableFetch`. Three concrete reasons it is the
+ * documented exception to the "GET → useRetryableFetch" rule:
+ *   1. Array keys — the latest-price and batch keys are `[tag, slugCsv]` /
+ *      `[tag, slugCsv, horizon]` tuples, not a single URL. useRetryableFetch's
+ *      fetcher signature is `(url: string) => Promise<T>`.
+ *   2. POST + custom body — the consensus call is a POST with a JSON body,
+ *      not a GET the shared fetcher can issue from a URL alone.
+ *   3. No-retry-on-auth — the batch call sets `shouldRetryOnError: false`
+ *      because 401/403 must surface as `permission: "denied"`, not trigger
+ *      three retries. useRetryableFetch's auto-retry would fight that.
+ * If a future change makes any of these a plain GET, switch that call to
+ * useRetryableFetch and shrink this exception list.
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";

@@ -1,31 +1,38 @@
 "use client";
 
 import { Beef, DollarSign, Target, Warehouse } from "lucide-react";
-import useSWR from "swr";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { MarketForecastBoard } from "@/components/market/MarketForecastBoard";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatDecimal, formatPrice } from "@/lib/format";
 
 export default function BeefOverview() {
+	// All four beef endpoints are simple GETs with URL keys → use the shared
+	// retryable fetcher (auto retry + backoff) rather than raw useSWR. This is
+	// the R3 fetcher-pattern unification: every page-level GET in the app goes
+	// through useRetryableFetch unless it has a specific reason not to.
 	const {
 		data: pricesData,
 		error: pricesErr,
 		isLoading: pricesLoading,
-	} = useSWR("/api/beef/prices/latest", beefFetcher);
-	const { data: killData, isLoading: killLoading } = useSWR(
+	} = useRetryableFetch("/api/beef/prices/latest", beefFetcher);
+	const { data: killData, isLoading: killLoading } = useRetryableFetch(
 		"/api/beef/weekly-kill?weeks=4",
 		beefFetcher,
 	);
-	const { data: storageData, isLoading: storageLoading } = useSWR(
+	const { data: storageData, isLoading: storageLoading } = useRetryableFetch(
 		"/api/beef/cold-storage?months=3",
 		beefFetcher,
 	);
-	const { data: cutsData, isLoading: cutsLoading } = useSWR("/api/beef/cuts", beefFetcher);
+	const { data: cutsData, isLoading: cutsLoading } = useRetryableFetch(
+		"/api/beef/cuts",
+		beefFetcher,
+	);
 
 	const latestPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
 	const weeklyKills = killData?.data?.kills ?? killData?.kills ?? [];
