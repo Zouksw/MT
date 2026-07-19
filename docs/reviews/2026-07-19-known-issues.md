@@ -191,9 +191,9 @@ M3 三项交付 (PRODUCT-SPEC §M3):
 | **M3-C** | news 列表 stats endpoint (替代 pageSize=1000 双拉) + 搜索 300ms debounce | ✅ shipped |
 
 **M3 剩余** (deferred, 低优先):
-- news Edit UI (PATCH `/api/news/:id` 端点存在但前端无 edit 页/按钮)
-- news 详情页嵌入相关商品价格图 (现仅文字链接到 /beef)
-- 这些不影响 M3 sign-off 的核心可用性, 留作后续打磨
+- ~~news Edit UI~~ ✅ shipped (commit 2f4ad82)
+- ~~news 详情页嵌入相关商品价格图~~ ✅ shipped (commit 2f4ad82)
+- **M3 资讯模块现已完整** (CRUD + 详情价格图 + stats + debounce + 断链修复)。剩余的只有 DATA-1 数据源激活 (待 API key)。
 
 ---
 
