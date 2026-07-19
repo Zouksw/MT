@@ -51,49 +51,33 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should fetch and parse stats successfully", async () => {
+		// Index the mock by URL key (not call order) so the test is robust to
+		// hook reordering — the 3 public beef calls and the authed calls can
+		// appear in any sequence without breaking this test.
 		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((_key: any, _fetcher: any) => {
-			// Return different data based on call order
-			const callIndex = mockUseRetryableFetch.mock.calls.length - 1;
-			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-			const _dataMap: any[] = [
-				{ total: 10, data: [] }, // datasets
-				{ total: 25, data: [] }, // timeseries
-				{ total: 5, data: [] }, // forecasts
-				{
-					total: 15,
-					data: [
-						{ severity: "critical" },
-						{ severity: "high" },
-						{ severity: "medium" },
-						{ severity: "low" },
-					],
-				}, // alerts
-				{ data: [{ id: 1 }] }, // recentAlerts
-				{ data: [{ id: 1 }] }, // recentForecasts
-			];
-
-			// Use a simple counter approach - return data based on how many calls so far
-			// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-			const dataByCallOrder: Record<number, any> = {
-				0: { total: 10, data: [] },
-				1: { total: 25, data: [] },
-				2: { total: 5, data: [] },
-				3: {
-					total: 15,
-					data: [
-						{ severity: "critical" },
-						{ severity: "high" },
-						{ severity: "medium" },
-						{ severity: "low" },
-					],
-				},
-				4: { data: [{ id: 1 }] },
-				5: { data: [{ id: 1 }] },
-			};
-
+		const byKey: Record<string, any> = {
+			"/beef/cuts": { data: { cuts: [{ cutCode: "X" }] } },
+			"/beef/factories": { data: { factories: [{ id: "f1" }] } },
+			"/beef/prices/latest": { data: { prices: [{ price: 5, cutCode: "X", date: "2026-07-19" }] } },
+			"/datasets?page=1&limit=1": { total: 10, data: [] },
+			"/timeseries?page=1&limit=1": { total: 25, data: [] },
+			"/models?page=1&limit=1": { total: 5, data: [] },
+			"/alerts?page=1&limit=100": {
+				total: 15,
+				data: [
+					{ severity: "critical" },
+					{ severity: "high" },
+					{ severity: "medium" },
+					{ severity: "low" },
+				],
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
 			return {
-				data: dataByCallOrder[callIndex] || { total: 0, data: [] },
+				data: matched ? matched[1] : { total: 0, data: [] },
 				error: undefined,
 				isLoading: false,
 				isValidating: false,
@@ -169,11 +153,12 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should count alerts by severity correctly", async () => {
-		let callCount = 0;
-		mockUseRetryableFetch.mockImplementation(() => {
-			callCount++;
-			if (callCount === 4) {
-				// alerts call (4th useRetryableFetch call)
+		// Key-indexed mock so the alerts payload is returned regardless of
+		// call ordering (was: callCount === 4, fragile to hook reordering).
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			if (url.includes("/alerts?page=1&limit=100")) {
 				return {
 					data: {
 						total: 8,
@@ -222,11 +207,13 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should handle responses with items instead of data", async () => {
-		let callCount = 0;
-		mockUseRetryableFetch.mockImplementation(() => {
-			callCount++;
-			if (callCount === 5) {
-				// recentAlerts
+		// Key-indexed mock so the recentAlerts/recentForecasts payloads land
+		// regardless of call order (was: callCount 5/6, fragile to reordering).
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			if (url.includes("/alerts?limit=5")) {
+				// recentAlerts — uses items[] shape
 				return {
 					data: { items: [{ id: 1, name: "Alert 1" }] },
 					error: undefined,
@@ -238,8 +225,8 @@ describe("useDashboardStats", () => {
 					mutate: jest.fn(),
 				};
 			}
-			if (callCount === 6) {
-				// recentForecasts
+			if (url.includes("/models?limit=5")) {
+				// recentForecasts — uses items[] shape
 				return {
 					data: { items: [{ id: 1, name: "Forecast 1" }] },
 					error: undefined,
@@ -324,12 +311,11 @@ describe("useDashboardStats", () => {
 		// active==total (always 100%). With a real isActive count, a registry
 		// of 4 models where only 1 is active must surface active=1, total=4.
 		// Flipping the hook back to `active: aiTotal` fails this test.
-		let callIdx = -1;
-		mockUseRetryableFetch.mockImplementation(() => {
-			callIdx++;
-			// 7th useRetryableFetch call (index 6) is the activeModels count
-			// (added by the TRUST-1 fix). Return total:1 for that one.
-			if (callIdx === 6) {
+		// Key-indexed (not call-order) so hook reordering doesn't break it.
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			if (url.includes("isActive=true")) {
 				return {
 					data: { total: 1, pagination: { total: 1 } },
 					error: undefined,
@@ -341,8 +327,7 @@ describe("useDashboardStats", () => {
 					mutate: jest.fn(),
 				};
 			}
-			// 3rd call (index 2) is the forecasts/models total. Return 4.
-			if (callIdx === 2) {
+			if (url.includes("/models?page=1&limit=1")) {
 				return {
 					data: { total: 4, data: [] },
 					error: undefined,

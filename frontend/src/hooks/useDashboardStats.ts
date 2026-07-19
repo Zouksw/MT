@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import useSWR from "swr";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import type { Alert, Forecast } from "@/types/api";
 import { getAuthToken } from "@/utils/auth";
@@ -82,16 +81,21 @@ export const useDashboardStats = () => {
 	const isAuth = !!getAuthToken();
 	const retryOpts = { maxRetries: 3, retryDelay: 1000, backoffMultiplier: 2 };
 
-	// Beef stats — public endpoints, always fetched
-	const { data: cutsData } = useSWR(`${API_BASE}/beef/cuts`, publicFetcher, {
-		revalidateOnFocus: false,
-	});
-	const { data: factoriesData } = useSWR(`${API_BASE}/beef/factories`, publicFetcher, {
-		revalidateOnFocus: false,
-	});
-	const { data: pricesData } = useSWR(`${API_BASE}/beef/prices/latest`, publicFetcher, {
-		revalidateOnFocus: false,
-	});
+	// Beef stats — public endpoints, always fetched. Uses the same
+	// useRetryableFetch wrapper as the authed calls below so the whole hook
+	// follows one fetcher pattern (was: a raw useSWR + publicFetcher mix that
+	// gave these three calls no retry/backoff while siblings had it).
+	const { data: cutsData } = useRetryableFetch(`${API_BASE}/beef/cuts`, publicFetcher, retryOpts);
+	const { data: factoriesData } = useRetryableFetch(
+		`${API_BASE}/beef/factories`,
+		publicFetcher,
+		retryOpts,
+	);
+	const { data: pricesData } = useRetryableFetch(
+		`${API_BASE}/beef/prices/latest`,
+		publicFetcher,
+		retryOpts,
+	);
 
 	// Authenticated stats
 	const {

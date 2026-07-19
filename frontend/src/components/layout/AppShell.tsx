@@ -5,6 +5,7 @@ import {
 	Bell,
 	Boxes,
 	ChartLine,
+	Crosshair,
 	Database,
 	Layers,
 	LayoutGrid,
@@ -12,6 +13,7 @@ import {
 	Newspaper,
 	Search,
 	Settings,
+	Sparkles,
 	Star,
 	TrendingUp,
 	X,
@@ -58,8 +60,8 @@ const NAV_SECTIONS: NavSection[] = [
 	{
 		label: "AI 预测",
 		items: [
-			{ label: "价格预测", href: "/ai/predict", icon: TrendingUp },
-			{ label: "模型准确率", href: "/ai/accuracy", icon: TrendingUp },
+			{ label: "价格预测", href: "/ai/predict", icon: Sparkles },
+			{ label: "模型准确率", href: "/ai/accuracy", icon: Crosshair },
 			{ label: "模型列表", href: "/dashboard/models", icon: Boxes },
 			{ label: "异常检测", href: "/ai/anomalies", icon: Bell },
 		],

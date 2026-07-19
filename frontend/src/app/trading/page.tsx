@@ -18,9 +18,9 @@ import { Alert } from "@/components/ui/Alert";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tag } from "@/components/ui/Tag";
+import { useTradingData } from "@/hooks/useTradingData";
 import { formatPercent, formatPercentValue, formatPrice, formatPriceRange } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
-import { useTradingData } from "./useTradingData";
 
 export default function TradingPage() {
 	const d = useTradingData();
