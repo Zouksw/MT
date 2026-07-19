@@ -11,6 +11,7 @@
 import { logger, prisma } from "@/lib";
 import { MS_PER_HOUR } from "@/lib/constants";
 import { evaluateAlertRules } from "@/services/alert-rules";
+import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import { verifyDuePredictions } from "@/services/mapeTracking";
@@ -211,6 +212,23 @@ function start(): void {
 	};
 	setTimeout(runAlertEvaluation, 30000); // 30s delay lets scrapers finish first
 	setInterval(runAlertEvaluation, ALERT_EVAL_INTERVAL);
+
+	// Every 6 hours: bridge fresh CommodityPrice closes into BeefCutPrice so the
+	// /beef page (which reads only BeefCutPrice) isn't stuck on stale seed data.
+	// The bridge is idempotent and scoped to slugs with unambiguous cutCode
+	// mappings — see services/beefPriceBridge.ts for the conservative scope and
+	// the source=bridge:commodity:<slug> convention.
+	const BEEF_BRIDGE_INTERVAL = 6 * MS_PER_HOUR;
+	const runBeefBridge = async () => {
+		try {
+			const { copied, skipped } = await bridgeBeefPrices();
+			logger.info(`🥩 Beef price bridge: ${copied} copied, ${skipped} skipped`);
+		} catch (err) {
+			logger.warn(`🥩 Beef price bridge failed: ${err}`);
+		}
+	};
+	setTimeout(runBeefBridge, 45000); // 45s — after scrapers + alerts settle
+	setInterval(runBeefBridge, BEEF_BRIDGE_INTERVAL);
 }
 
 start();
