@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Eye, Pencil, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { CommodityPriceChart } from "@/components/market-news/CommodityPriceChart";
 import { Button } from "@/components/ui/Button";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -101,10 +102,20 @@ export default function NewsDetailPage() {
 					{ label: article.category },
 				]}
 				actions={
-					<Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)}>
-						<Trash2 className="size-4 mr-1.5" />
-						Delete
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => router.push(`/market-news/edit/${article.id}`)}
+						>
+							<Pencil className="size-4 mr-1.5" />
+							Edit
+						</Button>
+						<Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)}>
+							<Trash2 className="size-4 mr-1.5" />
+							Delete
+						</Button>
+					</div>
 				}
 			/>
 
@@ -192,6 +203,11 @@ export default function NewsDetailPage() {
 						</a>
 					</div>
 				)}
+
+				{/* Inline price chart for the related commodity — closes the
+				 * news↔price loop on the same page (PRODUCT-SPEC §5.4 implies
+				 * news should carry price context, not just a text link). */}
+				{article.commoditySlug && <CommodityPriceChart commoditySlug={article.commoditySlug} />}
 			</article>
 
 			<Modal

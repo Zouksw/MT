@@ -130,11 +130,9 @@ export async function createRecord<T = Record<string, unknown>>(
 	// Invalidate every cached key for this resource — useList caches under
 	// `/${resource}?page=...&limit=...`, so the bare `/${resource}` key SWR used
 	// before never matched and lists never refreshed after create/edit/delete.
-	mutate(
-		(key) => typeof key === "string" && key.startsWith(`/${resource}`),
-		undefined,
-		{ revalidate: true },
-	);
+	mutate((key) => typeof key === "string" && key.startsWith(`/${resource}`), undefined, {
+		revalidate: true,
+	});
 	return json.data ?? json;
 }
 
@@ -143,8 +141,12 @@ export async function updateRecord<T = Record<string, unknown>>(
 	id: string,
 	payload: Partial<T>,
 ): Promise<T> {
+	// PATCH, not PUT — every backend resource route registers router.patch
+	// (alerts, anomalies, apiKeys, datasets, marketNews, models, portfolios,
+	// watchlist). The old PUT here 404'd against the PATCH-only routes,
+	// breaking every edit flow (timeseries/edit, and any future news edit).
 	const res = await authFetch(`/api/${resource}/${id}`, {
-		method: "PUT",
+		method: "PATCH",
 		body: JSON.stringify(payload),
 	});
 
@@ -154,11 +156,9 @@ export async function updateRecord<T = Record<string, unknown>>(
 	}
 
 	const json = await res.json();
-	mutate(
-		(key) => typeof key === "string" && key.startsWith(`/${resource}`),
-		undefined,
-		{ revalidate: true },
-	);
+	mutate((key) => typeof key === "string" && key.startsWith(`/${resource}`), undefined, {
+		revalidate: true,
+	});
 	return json.data ?? json;
 }
 
@@ -172,9 +172,7 @@ export async function deleteRecord(resource: string, id: string): Promise<void> 
 		throw new Error(body.message || `${res.status} ${res.statusText}`);
 	}
 
-	mutate(
-		(key) => typeof key === "string" && key.startsWith(`/${resource}`),
-		undefined,
-		{ revalidate: true },
-	);
+	mutate((key) => typeof key === "string" && key.startsWith(`/${resource}`), undefined, {
+		revalidate: true,
+	});
 }
