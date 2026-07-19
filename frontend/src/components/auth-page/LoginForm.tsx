@@ -124,9 +124,14 @@ export function LoginForm() {
 					/>
 					Remember me
 				</label>
-				<a href="/forgot-password" className="text-sm text-primary hover:text-primary-hover">
+				{/* Password reset requires SMTP infra (not built). Honest "Planned"
+				 * label instead of a dead link to a removed /forgot-password route. */}
+				<span
+					className="text-sm text-muted-foreground/60 cursor-not-allowed"
+					title="Password reset is not yet available"
+				>
 					Forgot password?
-				</a>
+				</span>
 			</div>
 
 			<Button

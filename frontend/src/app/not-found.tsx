@@ -64,7 +64,7 @@ export default function NotFound() {
 							{ href: "/dashboard", label: "Dashboard" },
 							{ href: "/timeseries", label: "Time Series" },
 							{ href: "/alerts", label: "Alerts" },
-							{ href: "/forecasts", label: "Forecasts" },
+							{ href: "/ai/predict", label: "Forecasts" },
 						].map((link) => (
 							<a
 								key={link.href}

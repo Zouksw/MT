@@ -2,7 +2,7 @@
  * Auth Page Types
  */
 
-export type AuthType = "login" | "register" | "forgotPassword" | "updatePassword";
+export type AuthType = "login" | "register";
 
 export interface AuthPageProps {
 	type: AuthType;
@@ -14,7 +14,6 @@ export interface AuthFormData {
 	password?: string;
 	confirmPassword?: string;
 	name?: string;
-	token?: string;
 }
 
 export interface AuthFormConfig {
@@ -23,5 +22,4 @@ export interface AuthFormConfig {
 	submitText: string;
 	showNameField?: boolean;
 	showConfirmPassword?: boolean;
-	showTokenField?: boolean;
 }

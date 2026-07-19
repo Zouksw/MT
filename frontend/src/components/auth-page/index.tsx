@@ -5,10 +5,8 @@ import { Code, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SPRING_DEFAULTS } from "@/lib/motion";
 import type { AuthPageProps } from "./auth-types";
-import { ForgotPasswordForm } from "./ForgotPasswordForm";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
-import { UpdatePasswordForm } from "./UpdatePasswordForm";
 
 export function AuthPage(props: AuthPageProps) {
 	const router = useRouter();
@@ -41,19 +39,6 @@ export function AuthPage(props: AuthPageProps) {
 						</button>
 					</p>
 				);
-			case "forgotPassword":
-			case "updatePassword":
-				return (
-					<div className="mt-6 text-center">
-						<button
-							type="button"
-							onClick={() => router.push("/login")}
-							className="text-sm text-gray-500 hover:text-gray-700"
-						>
-							← Back to login
-						</button>
-					</div>
-				);
 			default:
 				return null;
 		}
@@ -65,10 +50,6 @@ export function AuthPage(props: AuthPageProps) {
 				return "Welcome back";
 			case "register":
 				return "Create your account";
-			case "forgotPassword":
-				return "Reset your password";
-			case "updatePassword":
-				return "Create new password";
 			default:
 				return "Welcome";
 		}
@@ -80,10 +61,6 @@ export function AuthPage(props: AuthPageProps) {
 				return "Enter your credentials to access your account";
 			case "register":
 				return "Start your 14-day free trial. No credit card required.";
-			case "forgotPassword":
-				return "Enter your email and we'll send you a reset link";
-			case "updatePassword":
-				return "Create a strong password for your account";
 			default:
 				return "";
 		}
@@ -95,10 +72,6 @@ export function AuthPage(props: AuthPageProps) {
 				return <LoginForm />;
 			case "register":
 				return <RegisterForm />;
-			case "forgotPassword":
-				return <ForgotPasswordForm />;
-			case "updatePassword":
-				return <UpdatePasswordForm token={(props as { token?: string }).token || ""} />;
 			default:
 				return <LoginForm />;
 		}

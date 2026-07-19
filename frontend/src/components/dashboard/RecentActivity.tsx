@@ -67,7 +67,7 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 					<button
 						type="button"
 						className="text-sm text-amber-600 hover:opacity-70 flex items-center gap-1"
-						onClick={() => router.push(activeTab === "alerts" ? "/alerts" : "/forecasts")}
+						onClick={() => router.push(activeTab === "alerts" ? "/alerts" : "/ai/predict")}
 					>
 						View All <ChevronRight className="size-3" />
 					</button>
@@ -132,9 +132,9 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 								tabIndex={0}
 								className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors stagger-slide-up"
 								style={{ animationDelay: `${i * 50}ms` }}
-								onClick={() => router.push("/forecasts")}
+								onClick={() => router.push("/ai/predict")}
 								onKeyDown={(e) => {
-									if (e.key === "Enter" || e.key === " ") router.push("/forecasts");
+									if (e.key === "Enter" || e.key === " ") router.push("/ai/predict");
 								}}
 							>
 								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30">

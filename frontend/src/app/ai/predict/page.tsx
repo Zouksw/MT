@@ -402,22 +402,6 @@ export default function AIPredictPage() {
 										</div>
 									</div>
 								</div>
-
-								{/* Action Buttons */}
-								<Card className="mt-6">
-									<CardBody>
-										<Button
-											variant="primary"
-											size="lg"
-											fullWidth
-											onClick={() => {
-												window.location.href = "/forecasts/create";
-											}}
-										>
-											Save as Forecast
-										</Button>
-									</CardBody>
-								</Card>
 							</>
 						)}
 
