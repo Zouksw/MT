@@ -186,7 +186,13 @@ glance.
 inference-service `/models` returns 6 (5 statistical + chronos), but
 backend `tradingSignals.ts:25` `ALL_MODELS` lists only 5 (no chronos).
 So `signals/batch` consensus runs 5 models. SITE_STATS.aiModels = 5 is
-correct for what the user sees, but the "6th model" is stranded.
+correct for what the user sees, but the "6th model" is stranded. **Live
+test (2026-07-20): chronos is also non-functional** — a direct
+`/predict` call with model_id=chronos returns HTTP 500 because
+`amazon/chronos-t5-tiny` config can't load (huggingface.co unreachable,
+`[Errno 101] Network is unreachable`). So chronos is doubly stranded:
+not wired into backend AND can't actually predict. The `/models`
+listing is aspirational, not operational.
 
 **Status:** **OPEN — informational, not directly code-actionable.** This
 entry records reality so future planning doesn't re-discover it. The
@@ -198,8 +204,19 @@ actionable consequences:
   field (direct/adjacent/macro); the data-sources board shows a separate
   "Beef sources healthy: N/M" StatCard so a healthy FX source no longer
   masks the fact that zero beef sources are producing.
-- chronos integration into backend consensus is a real enhancement
-  opportunity (would make aiModels = 6 honest) — queued.
+- chronos integration into backend consensus: **BLOCKED on network, not
+  code.** inference `/models` lists chronos, but a live prediction attempt
+  (2026-07-20) returned HTTP 500 — `Can't load the configuration of
+  'amazon/chronos-t5-tiny'`. Root cause: huggingface.co is unreachable
+  from this environment (`[Errno 101] Network is unreachable`), so the
+  model weights never download. Adding "chronos" to backend ALL_MODELS
+  today would add a permanently-failing model call (500 → unavailable)
+  with no value and extra latency. Not queued for code work — unblocks
+  automatically if/when huggingface.co becomes reachable or the model is
+  pre-downloaded into the inference container. Note: `/models` listing
+  chronos as available is itself slightly dishonest (it's installed but
+  non-functional) — minor inference-layer honesty gap, not addressed
+  here.
 
 ---
 
