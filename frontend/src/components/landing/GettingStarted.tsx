@@ -3,18 +3,19 @@
 import { ArrowRight, Brain, CheckCircle2 } from "lucide-react";
 
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const steps = [
 	{
 		number: 1,
 		title: "Create Your Account",
-		description: "免费账号。覆盖 85+ 牛肉部位。无需信用卡。",
+		description: `免费账号。覆盖 ${SITE_STATS.beefCuts}+ 牛肉部位。无需信用卡。`,
 		preview: null,
 	},
 	{
 		number: 2,
 		title: "Explore Market Data",
-		description: "85+ 牛肉部位,含 OHLCV K线数据、多数据源价格叠加、30 天历史走势。",
+		description: `${SITE_STATS.beefCuts}+ 牛肉部位,含 OHLCV K线数据、多数据源价格叠加、30 天历史走势。`,
 		preview: (
 			<div className="space-y-2 mt-3">
 				{[
@@ -75,8 +76,7 @@ const steps = [
 	{
 		number: 4,
 		title: "Track & Decide",
-		description:
-			"5 models vote. See consensus, factor attribution, and backtested accuracy before deciding.",
+		description: `${SITE_STATS.aiModels} models vote. See consensus, factor attribution, and backtested accuracy before deciding.`,
 		preview: (
 			<div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-md bg-gray-50 dark:bg-white/[0.05]">
 				<Brain size={20} className="text-primary shrink-0" />
@@ -93,8 +93,8 @@ const steps = [
 const features = [
 	"Under 5 min to first signal",
 	"OHLCV candlestick charts",
-	"5-model consensus signals",
-	"85+ beef cuts with live data",
+	`${SITE_STATS.aiModels}-model consensus signals`,
+	`${SITE_STATS.beefCuts} beef cuts with factory-level pricing`,
 	"Model backtest comparison",
 	"REST API access",
 ];

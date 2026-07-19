@@ -4,6 +4,7 @@ import { ArrowUp, List, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { MotionReveal } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const Hero = dynamic(() => import("@/components/landing/Hero"), {
 	loading: () => (
@@ -217,7 +218,8 @@ export default function LandingPage() {
 								</span>
 							</div>
 							<p className="text-sm text-muted-foreground leading-relaxed">
-								85+ beef cuts. 6 AI price models. 5 export markets.
+								{SITE_STATS.beefCuts} beef cuts. {SITE_STATS.aiModels} AI price models.{" "}
+								{SITE_STATS.sourceCountries} export markets.
 							</p>
 						</div>
 

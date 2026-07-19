@@ -102,8 +102,7 @@ function MiniSparkline() {
 const features = [
 	{
 		title: "Cut-Level Pricing",
-		description:
-			"85+ standardized beef cuts with factory-level pricing across US, Brazil, Australia, Uruguay, and Argentina",
+		description: `${SITE_STATS.beefCuts} standardized beef cuts with factory-level pricing across US, Brazil, Australia, Uruguay, and Argentina`,
 		span: "md:col-span-2",
 	},
 	{
@@ -139,7 +138,7 @@ export const Hero: React.FC = () => {
 					<div className="lg:col-span-3">
 						<MotionReveal>
 							<p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-primary">
-								{`85+ beef cuts · ${SITE_STATS.aiModels} AI models · ${SITE_STATS.sourceCountries} export markets`}
+								{`${SITE_STATS.beefCuts} beef cuts · ${SITE_STATS.aiModels} AI models · ${SITE_STATS.sourceCountries} export markets`}
 							</p>
 						</MotionReveal>
 
@@ -154,9 +153,9 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.2}>
 							<p className="mt-6 max-w-xl text-lg font-medium text-muted-foreground leading-relaxed">
 								Factory-level cut pricing from{" "}
-								<span className="font-mono text-primary">16+ export plants</span> across 5
-								countries. AI price forecasting, export flow tracking, and supply chain monitoring —
-								all in one platform.
+								<span className="font-mono text-primary">{SITE_STATS.factories} export plants</span>{" "}
+								across {SITE_STATS.sourceCountries} countries. AI price forecasting, export flow
+								tracking, and supply chain monitoring — all in one platform.
 							</p>
 						</MotionReveal>
 
@@ -182,7 +181,9 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.4}>
 							<div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-mono tabular-nums">
 								<div className="flex items-center gap-2">
-									<span className="text-primary font-semibold text-base">85+</span>
+									<span className="text-primary font-semibold text-base">
+										{SITE_STATS.beefCuts}
+									</span>
 									<span>Beef Cuts Tracked</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />

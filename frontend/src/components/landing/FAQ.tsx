@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { MotionReveal } from "@/components/ui/MotionReveal";
 import { SPRING_DEFAULTS } from "@/lib/motion";
+import { SITE_STATS } from "@/lib/site-stats";
 
 interface FAQItem {
 	question: string;
@@ -13,18 +14,15 @@ interface FAQItem {
 const faqs: FAQItem[] = [
 	{
 		question: "What is MT?",
-		answer:
-			"MT is a beef trade analytics platform. We track 85+ standardized beef cuts across 16+ export factories in 5 major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina). 6 independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.",
+		answer: `MT is a beef trade analytics platform. We track ${SITE_STATS.beefCuts} standardized beef cuts across ${SITE_STATS.factories} export factories in ${SITE_STATS.sourceCountries} major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina). ${SITE_STATS.aiModels} independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.`,
 	},
 	{
 		question: "How does the AI price forecasting work?",
-		answer:
-			"Six models run independently on each beef commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL decomposition, and Chronos-2. Each produces a price forecast, a directional signal (up/down/stable), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.",
+		answer: `${SITE_STATS.aiModels} statistical models run independently on each beef commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, and STL decomposition. Each produces a price forecast, a directional signal (up/down/stable), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.`,
 	},
 	{
 		question: "What beef cuts are covered?",
-		answer:
-			"85+ standardized cuts organized by primal: Chuck, Rib, Loin, Round, Brisket, Shank, Plate/Flank, and Offal. Each cut has IMPS codes, HS codes, and multilingual names (English, Chinese, Spanish, Portuguese). Pricing is tracked at factory level — you can compare the same cut across different plants and origins.",
+		answer: `${SITE_STATS.beefCuts} standardized cuts organized by primal: Chuck, Rib, Loin, Round, Brisket, Shank, Plate/Flank, and Offal. Each cut has IMPS codes, HS codes, and multilingual names (English, Chinese, Spanish, Portuguese). Pricing is tracked at factory level — you can compare the same cut across different plants and origins.`,
 	},
 	{
 		question: "What export markets do you cover?",
@@ -38,8 +36,7 @@ const faqs: FAQItem[] = [
 	},
 	{
 		question: "Can I set up price alerts?",
-		answer:
-			"Yes. Custom price thresholds on any of the 85+ beef cuts. Breakout and trend reversal detection with factor attribution. Alerts refresh every few minutes with severity levels (info/warning/critical) so you see what's driving the price move.",
+		answer: `Yes. Custom price thresholds on any of the ${SITE_STATS.beefCuts} beef cuts. Breakout and trend reversal detection with factor attribution. Alerts refresh every few minutes with severity levels (info/warning/critical) so you see what's driving the price move.`,
 	},
 ];
 

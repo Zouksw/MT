@@ -2,21 +2,20 @@
 
 import type React from "react";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const features = [
 	{
 		title: "Cut-Level Pricing",
-		description:
-			"85+ standardized beef cuts — IMPS-coded, multilingual — priced at factory level across 16+ export plants in 5 countries.",
-		details: ["85+ cuts", "IMPS/HS codes", "Factory-level"],
+		description: `${SITE_STATS.beefCuts} standardized beef cuts — IMPS-coded, multilingual — priced at factory level across ${SITE_STATS.factories} export plants in ${SITE_STATS.sourceCountries} countries.`,
+		details: [`${SITE_STATS.beefCuts} cuts`, "IMPS/HS codes", "Factory-level"],
 		span: "md:col-span-2",
 		visual: "cuts",
 	},
 	{
 		title: "AI Price Forecasting",
-		description:
-			"5 independent models — ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive — each producing price forecasts with confidence intervals and MAPE verification.",
-		details: ["5 AI models", "Confidence intervals", "MAPE tracking"],
+		description: `${SITE_STATS.aiModels} independent models — ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive — each producing price forecasts with confidence intervals and MAPE verification.`,
+		details: [`${SITE_STATS.aiModels} AI models`, "Confidence intervals", "MAPE tracking"],
 		span: "",
 		visual: null,
 		goldAccent: true,
@@ -25,7 +24,7 @@ const features = [
 		title: "Export Trade Flows",
 		description:
 			"Brazil, Uruguay, Australia, Argentina, US — export volumes, FOB prices, and destination analysis by HS code (0201/0202).",
-		details: ["Volume tracking", "FOB pricing", "5 markets"],
+		details: ["Volume tracking", "FOB pricing", `${SITE_STATS.sourceCountries} markets`],
 		span: "md:col-span-2",
 		visual: "trade",
 	},
@@ -56,10 +55,10 @@ const features = [
 ];
 
 const metrics = [
-	{ value: "85+", label: "Beef Cuts" },
-	{ value: "8", label: "AI Models" },
-	{ value: "16+", label: "Export Factories" },
-	{ value: "5", label: "Markets" },
+	{ value: String(SITE_STATS.beefCuts), label: "Beef Cuts" },
+	{ value: String(SITE_STATS.aiModels), label: "AI Models" },
+	{ value: String(SITE_STATS.factories), label: "Export Factories" },
+	{ value: String(SITE_STATS.sourceCountries), label: "Markets" },
 ];
 
 function CutsVisual() {
