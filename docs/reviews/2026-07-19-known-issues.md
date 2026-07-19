@@ -124,17 +124,16 @@ prediction inline. Today only the dedicated `MarketForecastBoard`
 
 The backend already returns the full consensus shape (`direction`,
 `confidence`, `modelsAgree`, `totalModels`, `predictedChange`) from
-`GET /api/signals/:slug` — but `useMarketForecasts` calls the lighter
-`/inference/predict/batch` which lacks those fields.
+`POST /api/signals/batch`, and `useMarketForecasts` now calls it (G5).
 
 **Status:** **Partially shipped — part (a) done in G5 (1378e5a),
-part (b) still open.** Two parts: (a) enrich the forecast hook to
-surface confidence/modelCount — ✅ done (useMarketForecasts now calls
-`/api/signals/batch`, MarketForecastBoard shows Confidence + Models
-columns); (b) add a prediction column to the two main price tables
-("Latest Cut Prices" `beef/page.tsx:144`, "Prices by Source"
-`trading/page.tsx`) — ❌ still open, neither table has a prediction
-column yet. Re-queued as G7 below.
+part (b) blocked on data (G7).** Two parts: (a) enrich the forecast
+hook to surface confidence/modelCount — ✅ done (useMarketForecasts
+calls `/api/signals/batch`, MarketForecastBoard shows Confidence +
+Models columns); (b) add a prediction column to the two main price
+tables — ❌ blocked. Originally written as "easy, data ready"; a live
+data audit on 2026-07-19 proved that false. See G7 for the measured
+blocker chain.
 
 ---
 
@@ -151,7 +150,51 @@ restructure, (4) data-fill as keys arrive.
 | **G4** | Dashboard 行情总览 restructure (SCOPE-1) | dashboard/page.tsx, useDashboardStats.ts | M2 | M | ✅ shipped 2026-07-19 (dab785a) |
 | **G5** | Inline AI prediction in market board — part (a) only (SCOPE-2) | signals.ts (/batch), useMarketForecasts.ts, MarketForecastBoard.tsx | M2 | M | ✅ shipped 2026-07-19 (1378e5a) — SCOPE-2 part (a) |
 | **G6** | Wire MLA/USDA-AMS once keys provided (DATA-1) | .env only | M2 data | S | blocked on user credentials |
-| **G7** | Prediction column in the two main price tables — SCOPE-2 part (b) | beef/page.tsx (Latest Cut Prices), trading/page.tsx (Prices by Source) | M2 | M | open — deferred, not blocking |
+| **G7** | Prediction column in the two main price tables — SCOPE-2 part (b) | beef/page.tsx (Latest Cut Prices), trading/page.tsx (Prices by Source); mapping already exists in beefPriceBridge.ts | M2 | M | **blocked on DATA-1 data** (see audit below) |
+
+### G7 — live data audit (2026-07-19)
+
+Originally scoped as "add a prediction column, data layer is ready." A
+live DB audit proved the data layer is **not** ready. The blocker chain,
+each link measured against the production database:
+
+1. **29 / 32 beef slugs have zero CommodityPrice points.** Only
+   `beef_carcass_us` (4213 pts), `aus_cube_roll_m9` (180),
+   `aus_sirloin_m9` (180) have data. The other 29 — including every CN
+   domestic, every BRA/ARG/URY cut — have 0 rows. Root cause: MLA and
+   USDA-AMS scrapers are key-gated off (DATA-1); CEPEA/INAC are
+   network-blocked. Forecasts need price history, so 29 slugs cannot
+   produce a forecast today.
+
+2. **The cutCode → slug mapping already exists** — no new code needed.
+   `backend/src/services/beefPriceBridge.ts` exports `SLUG_TO_CUTCODE`
+   (4 unambiguous entries) + `ISO3_TO_ISO2`, with a fully documented
+   AMBIGUOUS block for the 11 slugs that need a manual disambiguation
+   decision. The mapping work the original G7 assumed is done.
+
+3. **The bridge is conservative by design** — it only copies slugs with
+   a 1:1 unambiguous cutCode. Of the 4 mapped slugs, only
+   `aus_cube_roll_m9` has CommodityPrice data, so the bridge produces
+   exactly 1 row (`RIB_EYE_ROLL`, `sourceRef=aus_cube_roll_m9`).
+
+4. **That 1 bridge row is invisible in `/prices/latest`.** The route
+   (beef.ts:136) slices by the global max date (2026-04-30, held by
+   mla_nlrs/cepea seed rows). The bridge row is dated 2026-04-29, so it
+   is filtered out. Net: the frontend price table carries zero
+   `sourceRef` values, so there is nothing to join a forecast to.
+
+**Implication:** adding a prediction column today would show a real
+forecast on 0 of 80 rows. That is a hollow column — the exact anti-pattern
+G1/G3 removed. Doing G7 before DATA-1 would re-introduce fake-feeling UI.
+
+**When DATA-1 unblocks:** the bridge will start producing current-dated
+rows (today's CommodityPrice close), which will become the global-max
+date and surface in `/prices/latest` with their `sourceRef`. At that
+point G7 is a pure frontend join: `priceRow.sourceRef → forecastMap[slug]`.
+The pre-built mapping in beefPriceBridge.ts already covers the path. A
+separate follow-up (G7-latest) may be needed to stop `/prices/latest`
+from hiding newer bridge rows when seed data coexists — but only once
+real data is flowing, not for the current transitional state.
 
 `S` ≈ half a day, `M` ≈ 1-2 days. **Next recommended batch: G4 + G5**
 (M2 restructure — both open, G5 unblocked, G4 structurally buildable).
