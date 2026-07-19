@@ -2,7 +2,8 @@
 
 import { Eye, FileText, Newspaper, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -58,7 +59,14 @@ export default function MarketNewsList() {
 	const pageSize = isMobile ? 10 : 20;
 	const [category, setCategory] = useState("");
 	const [search, setSearch] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<Record<string, unknown> | null>(null);
+
+	// Debounce the search input so we don't refetch the list on every keystroke.
+	useEffect(() => {
+		const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+		return () => clearTimeout(t);
+	}, [search]);
 
 	// Main feed — server-side paginated + filtered.
 	const { data, total, loading, mutate } = useList("news", {
@@ -68,21 +76,32 @@ export default function MarketNewsList() {
 		order: "desc",
 		filters: {
 			...(category ? { category } : {}),
-			...(search ? { search } : {}),
+			...(debouncedSearch ? { search: debouncedSearch } : {}),
 		},
 	});
 
-	// Stats — single fetch for the four counts.
-	const { data: statsData } = useList<{ status?: string; publishedAt?: string }>("news", {
-		pageSize: 1000,
+	// Stats — single lightweight fetch from the dedicated /news/stats endpoint.
+	// Previously this pulled 1000 rows via useList and client-counted them —
+	// wasteful and laggy as the article count grows. The endpoint returns the
+	// 4 counts server-side in one small response.
+	const statsFetcher = async (url: string) => {
+		const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
+		const res = await fetch(url, {
+			headers: token ? { Authorization: `Bearer ${token}` } : {},
+		});
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const j = (await res.json()) as {
+			data?: { total: number; published: number; drafts: number; thisWeek: number };
+		};
+		return j.data ?? { total: 0, published: 0, drafts: 0, thisWeek: 0 };
+	};
+	const { data: stats } = useSWR("/api/news/stats", statsFetcher, {
+		revalidateOnFocus: false,
 	});
-	const totalArticles = statsData.length;
-	const publishedCount = statsData.filter((n) => n.status === "published").length;
-	const draftCount = statsData.filter((n) => n.status === "draft").length;
-	const weekAgo = Date.now() - 7 * 86400000;
-	const thisWeek = statsData.filter(
-		(n) => new Date(n.publishedAt ?? 0).getTime() >= weekAgo,
-	).length;
+	const totalArticles = stats?.total ?? 0;
+	const publishedCount = stats?.published ?? 0;
+	const draftCount = stats?.drafts ?? 0;
+	const thisWeek = stats?.thisWeek ?? 0;
 
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 

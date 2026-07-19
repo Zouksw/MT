@@ -152,12 +152,13 @@ export default function NewsDetailPage() {
 						{article.commoditySlug && (
 							<div className="mb-3">
 								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">
-									Related cut
+									Related commodity
 								</span>
-								<a
-									href={`/beef/cuts/${article.commoditySlug}`}
-									className="text-sm text-primary hover:underline"
-								>
+								{/* Link to the beef market board, not /beef/cuts/:cutCode — the
+								 * news commodity_slug is a Commodity.slug (e.g. bra_topside),
+								 * NOT a BeefCutTaxonomy cutCode (e.g. TOPSIDE). The old link
+								 * passed a slug where a cutCode was required → 404. */}
+								<a href="/beef" className="text-sm text-primary hover:underline">
 									{article.commoditySlug.replace(/_/g, " ")}
 								</a>
 							</div>
