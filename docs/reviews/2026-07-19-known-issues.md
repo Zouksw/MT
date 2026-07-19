@@ -143,8 +143,8 @@ restructure, (4) data-fill as keys arrive.
 | **G1** | Freshness board: surface `empty` state for 0-row runs (DATA-2) | scraperManager.ts, marketData.ts, settings/data-sources/page.tsx | M1 trust | S | ✅ shipped 2026-07-19 |
 | **G2** | ~~MarketNews migration + seed~~ RESCINDED — table+seed already exist (DATA-3 invalid) | — | — | — | ❌ non-issue |
 | **G3** | Dashboard: kill fake trend-0 + forced 100% AI active (TRUST-1) | useDashboardStats.ts | M1 trust | S | ✅ shipped 2026-07-19 |
-| **G4** | Dashboard 行情总览 restructure (SCOPE-1, structure only) | dashboard/page.tsx, new components | M2 | M | open |
-| **G5** | Inline AI prediction in price tables (SCOPE-2) | useMarketForecasts.ts, beef/page.tsx, trading/page.tsx | M2 | M | open |
+| **G4** | Dashboard 行情总览 restructure (SCOPE-1) | dashboard/page.tsx, useDashboardStats.ts | M2 | M | ✅ shipped 2026-07-19 (dab785a) |
+| **G5** | Inline AI prediction in market board (SCOPE-2) | signals.ts (/batch), useMarketForecasts.ts, MarketForecastBoard.tsx | M2 | M | ✅ shipped 2026-07-19 (1378e5a) |
 | **G6** | Wire MLA/USDA-AMS once keys provided (DATA-1) | .env only | M2 data | S | blocked on user credentials |
 
 `S` ≈ half a day, `M` ≈ 1-2 days. **Next recommended batch: G4 + G5**
