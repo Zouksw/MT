@@ -2,19 +2,20 @@
 
 import { ArrowDownRight, ArrowUpRight, Lock, Minus, Sparkles } from "lucide-react";
 import { type ForecastPermission, useMarketForecasts } from "@/hooks/useMarketForecasts";
-import { formatDecimal, formatPriceRange, formatSignedPercent } from "@/lib/format";
+import { formatDecimal, formatPercent, formatPriceRange, formatSignedPercent } from "@/lib/format";
 
 /**
  * Market Forecast Board — the product's signature AI-in-market-row experience.
  *
- * Renders beef commodities with their latest price alongside a 7-day AI forecast
- * (change % + confidence band), inline. This is where AINode-style prediction
- * meets the 牧集网-style market board: the forecast is not a subpage, it lives
- * next to the price.
+ * Renders beef commodities with their latest price alongside a 7-day multi-model
+ * consensus forecast (direction + change % + confidence + model agreement +
+ * range), inline. This is where AINode-style prediction meets the 牧集网-style
+ * market board: the forecast is not a subpage, it lives next to the price, and
+ * each row surfaces the full consensus per PRODUCT-SPEC §5.3.
  *
  * Color rule (enforced here): green = forecast up, red = forecast down ONLY.
- * The confidence band is neutral/foreground; permission/upgrade affordances use
- * primary (gold), never directional colors.
+ * The confidence band + model count are neutral/foreground; permission/upgrade
+ * affordances use primary (gold), never directional colors.
  */
 export function MarketForecastBoard() {
 	const { rows, loading, permission, horizon } = useMarketForecasts(7);
@@ -30,7 +31,9 @@ export function MarketForecastBoard() {
 				<div className="flex items-center gap-2">
 					<Sparkles className="size-4 text-primary" />
 					<h2 className="text-h4 font-display font-semibold text-foreground">AI Price Forecast</h2>
-					<span className="text-xs text-muted-foreground">{horizon}-day outlook</span>
+					<span className="text-xs text-muted-foreground">
+						{horizon}-day outlook · multi-model consensus
+					</span>
 				</div>
 				<PermissionBadge permission={permission} />
 			</header>
@@ -50,7 +53,9 @@ export function MarketForecastBoard() {
 								<th className="px-3 py-2 font-medium text-right">Latest</th>
 								<th className="px-3 py-2 font-medium text-right">7d Forecast</th>
 								<th className="px-3 py-2 font-medium text-right">Change</th>
-								<th className="px-5 py-2 font-medium text-right">95% Band</th>
+								<th className="px-3 py-2 font-medium text-right">Confidence</th>
+								<th className="px-3 py-2 font-medium text-right">Models</th>
+								<th className="px-5 py-2 font-medium text-right">Range</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -93,6 +98,20 @@ export function MarketForecastBoard() {
 												<Arrow className="size-3.5" />
 												{formatSignedPercent(r.changePct, 1)}
 											</span>
+										</td>
+										<td
+											className="px-3 py-3 text-right tabular-nums text-foreground"
+											style={{ fontVariantNumeric: "tabular-nums" }}
+										>
+											{r.confidence != null ? formatPercent(r.confidence) : "--"}
+										</td>
+										<td
+											className="px-3 py-3 text-right tabular-nums text-xs text-muted-foreground"
+											style={{ fontVariantNumeric: "tabular-nums" }}
+										>
+											{r.modelsAgree != null && r.totalModels != null
+												? `${r.modelsAgree}/${r.totalModels}`
+												: "--"}
 										</td>
 										<td
 											className="px-5 py-3 text-right font-mono tabular-nums text-xs text-muted-foreground"

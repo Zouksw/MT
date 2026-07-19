@@ -242,6 +242,77 @@ router.get(
 // ─── Parameterized routes ───
 
 /**
+ * POST /api/signals/batch
+ *
+ * Generate consensus forecasts for multiple commodities in one request.
+ * Returns one PriceForecast per slug (direction/confidence/modelsAgree/
+ * predictedChange/range) — the full consensus shape, not the raw
+ * inference/batch array. Used by the market forecast board so each row
+ * surfaces confidence + model agreement inline (PRODUCT-SPEC §5.3),
+ * avoiding N parallel /signals/:slug calls from the client.
+ *
+ * Body: { slugs: string[], horizon?: number }
+ * Response: { forecasts: Array<{ slug, ok, forecast?, error? }> }
+ *
+ * Fault-tolerant: a commodity with no price data returns {ok:false, error}
+ * rather than failing the whole batch.
+ */
+const batchSignalsSchema = z.object({
+	slugs: z.array(z.string().min(1)).min(1).max(50),
+	horizon: z.coerce.number().min(1).max(100).default(7),
+});
+
+router.post(
+	"/batch",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res) => {
+		const { slugs, horizon } = batchSignalsSchema.parse(req.body);
+
+		// Resolve slugs → commodities in one query (avoid N findFirst calls).
+		const commodities = await prisma.commodity.findMany({
+			where: { slug: { in: slugs } },
+			select: { id: true, slug: true },
+		});
+		const bySlug = new Map(commodities.map((c) => [c.slug, c]));
+
+		// Fetch the latest close per commodity in one query.
+		const latestPrices = await prisma.commodityPrice.findMany({
+			where: { commodityId: { in: commodities.map((c) => c.id) } },
+			orderBy: [{ commodityId: "asc" }, { date: "desc" }],
+			distinct: ["commodityId"],
+			select: { commodityId: true, close: true },
+		});
+		const priceByCommodityId = new Map(latestPrices.map((p) => [p.commodityId, Number(p.close)]));
+
+		// Run forecasts in parallel — each settled independently so one bad
+		// commodity doesn't sink the batch.
+		const settled = await Promise.allSettled(
+			slugs.map(async (slug) => {
+				const commodity = bySlug.get(slug);
+				if (!commodity) throw new Error(`Commodity "${slug}" not found`);
+				const currentPrice = priceByCommodityId.get(commodity.id) ?? 0;
+				if (!currentPrice) throw new Error("No current price — insufficient data");
+				const forecast = await generateForecast({
+					commodityId: commodity.id,
+					horizon,
+					currentPrice,
+				});
+				return { slug, ok: true as const, forecast };
+			}),
+		);
+
+		const forecasts = settled.map((r, i) => {
+			const slug = slugs[i];
+			if (r.status === "fulfilled") return r.value;
+			const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+			return { slug, ok: false as const, error: msg };
+		});
+
+		success(res, { forecasts });
+	}),
+);
+
+/**
  * GET /api/signals/:commodityId
  *
  * Generate a trading signal for a commodity by running predictions

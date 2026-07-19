@@ -7,15 +7,17 @@ import { tokenManager } from "@/lib/tokenManager";
 /**
  * Market forecast board — weaves AI prediction into the market view.
  *
- * Lists beef commodities that have price history, fetches a 7-day prediction for
- * each via /inference/predict/batch, and returns one row per commodity with the
- * latest price + forecast change. This is the product's core "AI in the market
- * row" experience per PRODUCT-SPEC — predictions live next to prices, not in a
- * subpage.
+ * Lists beef commodities that have price history, fetches a 7-day consensus
+ * forecast for each via /api/signals/batch, and returns one row per commodity
+ * with the latest price + the full consensus (direction / change / confidence /
+ * model agreement / range). This is the product's core "AI in the market row"
+ * experience per PRODUCT-SPEC §5.3 — predictions live next to prices, not in a
+ * subpage, and each row surfaces the multi-model consensus (not just a single
+ * model's value array).
  *
- * Auth handling: predictions require an EDITOR/ADMIN token. When there is no
- * token (or the request is denied), `permission` reflects that so the UI can
- * show a sign-in/upgrade affordance instead of an empty board.
+ * Auth handling: forecasts require authentication. When there is no token (or
+ * the request is denied), `permission` reflects that so the UI can show a
+ * sign-in/upgrade affordance instead of an empty board.
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -36,16 +38,30 @@ interface CommodityLatest {
 	date?: string;
 }
 
-interface PredictionResponse {
-	timestamps?: number[];
-	values?: number[];
-	lowerBound?: number[];
-	upperBound?: number[];
+/** Consensus forecast shape returned by /api/signals/batch (mirrors PriceForecast). */
+interface ConsensusForecast {
+	direction: "up" | "down" | "flat";
+	confidence: number;
+	modelsAgree: number;
+	totalModels: number;
+	availableModels: number;
+	predictedChange: number;
+	currentPrice: number;
+	predictedPrice: number;
+	horizon: number;
+	range: { lower: number; upper: number };
 }
 
-interface BatchResponse {
+interface BatchForecastEntry {
+	slug: string;
+	ok: boolean;
+	forecast?: ConsensusForecast;
+	error?: string;
+}
+
+interface BatchSignalsResponse {
 	success: boolean;
-	data?: PredictionResponse[];
+	data?: { forecasts: BatchForecastEntry[] };
 	error?: { message?: string };
 }
 
@@ -57,12 +73,19 @@ export interface MarketForecastRow {
 	currency?: string;
 	latestPrice: number | null;
 	latestDate: string | null;
-	/** First predicted value (next period). */
-	forecastValue: number | null;
-	/** Last predicted value (end of horizon). */
+	/** Consensus predicted price at end of horizon (median across models). */
 	forecastEnd: number | null;
-	/** Percent change from latestPrice to forecastEnd, in percent units (+2.3 / -1.1). */
+	/** Consensus predicted % change at end of horizon. */
 	changePct: number | null;
+	/** Consensus direction (up/down/flat across models). */
+	direction: "up" | "down" | "flat" | null;
+	/** Blended confidence [0,1] = agreement ratio + magnitude. */
+	confidence: number | null;
+	/** Number of models agreeing with the consensus direction. */
+	modelsAgree: number | null;
+	/** Total models the consensus was attempted across. */
+	totalModels: number | null;
+	/** Min/max predicted price across models (model-disagreement spread). */
 	lowerBound: number | null;
 	upperBound: number | null;
 	error?: string;
@@ -126,8 +149,8 @@ export function useMarketForecasts(horizon = 7) {
 		{ revalidateOnFocus: false },
 	);
 
-	// Only predict for commodities that actually have a latest price — avoids
-	// "Insufficient price data" errors polluting the board.
+	// Only forecast commodities that actually have a latest price — avoids
+	// "Insufficient price data" entries polluting the board.
 	const predictableSlugs = useMemo(
 		() =>
 			slugs.filter((s) => {
@@ -138,23 +161,25 @@ export function useMarketForecasts(horizon = 7) {
 		[slugs, latestPriceMap.data],
 	);
 
-	// 3. Batch-predict for those slugs.
+	// 3. Batch consensus forecast for predictable slugs. The /signals/batch
+	// endpoint returns the full consensus shape per slug (direction /
+	// confidence / modelsAgree / range) so each market row surfaces the
+	// multi-model agreement — the spec's "model count" + "confidence" columns
+	// the raw /inference/predict/batch array never carried.
 	const batchKey =
 		hasToken && predictableSlugs.length > 0
-			? ["beef-batch-forecast", predictableSlugs.join(","), horizon]
+			? ["beef-signals-batch", predictableSlugs.join(","), horizon]
 			: null;
 
 	const batch = useSWR(
 		batchKey,
 		async ([_key, slugCsv, h]: [string, string, number]) => {
 			const slugList = slugCsv.split(",").filter(Boolean);
-			const r = await jsonFetch(`${API_URL}/inference/predict/batch`, {
+			const r = await jsonFetch(`${API_URL}/signals/batch`, {
 				method: "POST",
-				body: JSON.stringify({
-					requests: slugList.map((slug) => ({ commodityId: slug, horizon: h, algorithm: "arima" })),
-				}),
+				body: JSON.stringify({ slugs: slugList, horizon: h }),
 			});
-			const j = (await r.json()) as BatchResponse;
+			const j = (await r.json()) as BatchSignalsResponse;
 			if (!r.ok || !j.success) {
 				const err = new Error(j.error?.message || `HTTP ${r.status}`) as Error & {
 					status?: number;
@@ -162,8 +187,7 @@ export function useMarketForecasts(horizon = 7) {
 				err.status = r.status;
 				throw err;
 			}
-			// Batch returns an array aligned to the requests.
-			return j.data ?? [];
+			return j.data?.forecasts ?? [];
 		},
 		{ revalidateOnFocus: false, shouldRetryOnError: false },
 	);
@@ -180,36 +204,20 @@ export function useMarketForecasts(horizon = 7) {
 		return "allowed";
 	})();
 
+	// Index batch results by slug for O(1) merge.
+	const forecastBySlug = useMemo(() => {
+		const m = new Map<string, BatchForecastEntry>();
+		for (const f of batch.data ?? []) m.set(f.slug, f);
+		return m;
+	}, [batch.data]);
+
 	// Merge into rows.
 	const rows: MarketForecastRow[] = useMemo(() => {
 		return beefCommodities.map((c) => {
 			const latest = latestPriceMap.data?.[c.slug];
 			const latestPrice = latest?.value ?? latest?.price ?? null;
-			const idx = predictableSlugs.indexOf(c.slug);
-			const pred = idx >= 0 ? batch.data?.[idx] : undefined;
-
-			let forecastValue: number | null = null;
-			let forecastEnd: number | null = null;
-			let changePct: number | null = null;
-			let lowerBound: number | null = null;
-			let upperBound: number | null = null;
-			let predError: string | undefined;
-
-			if (pred && "error" in pred && typeof pred.error === "string") {
-				predError = pred.error;
-			} else if (pred && Array.isArray(pred.values) && pred.values.length > 0) {
-				forecastValue = pred.values[0];
-				forecastEnd = pred.values[pred.values.length - 1];
-				if (latestPrice && latestPrice > 0 && forecastEnd != null) {
-					changePct = ((forecastEnd - latestPrice) / latestPrice) * 100;
-				}
-				if (Array.isArray(pred.lowerBound) && pred.lowerBound.length > 0) {
-					lowerBound = pred.lowerBound[pred.lowerBound.length - 1];
-				}
-				if (Array.isArray(pred.upperBound) && pred.upperBound.length > 0) {
-					upperBound = pred.upperBound[pred.upperBound.length - 1];
-				}
-			}
+			const entry = forecastBySlug.get(c.slug);
+			const fc = entry?.ok ? entry.forecast : undefined;
 
 			return {
 				slug: c.slug,
@@ -219,15 +227,18 @@ export function useMarketForecasts(horizon = 7) {
 				currency: c.currency,
 				latestPrice,
 				latestDate: latest?.date ?? null,
-				forecastValue,
-				forecastEnd,
-				changePct,
-				lowerBound,
-				upperBound,
-				error: predError,
+				forecastEnd: fc?.predictedPrice ?? null,
+				changePct: fc?.predictedChange ?? null,
+				direction: fc?.direction ?? null,
+				confidence: fc?.confidence ?? null,
+				modelsAgree: fc?.modelsAgree ?? null,
+				totalModels: fc?.totalModels ?? null,
+				lowerBound: fc?.range.lower ?? null,
+				upperBound: fc?.range.upper ?? null,
+				error: entry && !entry.ok ? entry.error : undefined,
 			};
 		});
-	}, [beefCommodities, latestPriceMap.data, predictableSlugs, batch.data]);
+	}, [beefCommodities, latestPriceMap.data, forecastBySlug]);
 
 	const loading =
 		commoditiesLoading ||
