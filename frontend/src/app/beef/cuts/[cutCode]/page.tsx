@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import useSWR from "swr";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatPrice, formatPriceRange } from "@/lib/format";
 
@@ -12,8 +12,11 @@ export default function CutDetail() {
 	const params = useParams();
 	const cutCode = params.cutCode as string;
 
-	const { data: cutData } = useSWR(cutCode ? `/api/beef/cuts/${cutCode}` : null, beefFetcher);
-	const { data: priceData, error: priceErr } = useSWR(
+	const { data: cutData } = useRetryableFetch(
+		cutCode ? `/api/beef/cuts/${cutCode}` : null,
+		beefFetcher,
+	);
+	const { data: priceData, error: priceErr } = useRetryableFetch(
 		cutCode ? `/api/beef/prices/history/${cutCode}?days=90` : null,
 		beefFetcher,
 	);

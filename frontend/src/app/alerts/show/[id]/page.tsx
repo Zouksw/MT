@@ -1,7 +1,15 @@
 "use client";
 
 import dayjs from "dayjs";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import {
+	ArrowLeft,
+	BarChart3,
+	ChevronRight,
+	Cog,
+	Megaphone,
+	Siren,
+	TrendingUp,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { Alert } from "@/components/ui/Alert";
@@ -30,12 +38,21 @@ const SEVERITY_CONFIG: Record<
 	ERROR: { tagColor: "error", label: "Error", alertVariant: "error" },
 };
 
-const ALERT_TYPE_CONFIG: Record<string, { label: string; icon: string }> = {
-	ANOMALY: { label: "Anomaly Detection", icon: "\u{1F6A8}" },
-	FORECAST_READY: { label: "Forecast Ready", icon: "\u{1F4C8}" },
-	SYSTEM: { label: "System Event", icon: "⚙️" },
-	THRESHOLD: { label: "Threshold Breach", icon: "\u{1F4CA}" },
+// Alert-type config. Icons are lucide-react components (not emoji) so they
+// inherit the surrounding text color/size and stay crisp at any DPI — emoji
+// glyphs render inconsistently across platforms and can't be themed.
+const ALERT_TYPE_CONFIG: Record<
+	string,
+	{ label: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+	ANOMALY: { label: "Anomaly Detection", icon: Siren },
+	FORECAST_READY: { label: "Forecast Ready", icon: TrendingUp },
+	SYSTEM: { label: "System Event", icon: Cog },
+	THRESHOLD: { label: "Threshold Breach", icon: BarChart3 },
 };
+
+// Fallback icon for alert types not listed above.
+const DEFAULT_ALERT_TYPE_ICON = Megaphone;
 
 export default function AlertShowPage({ params }: AlertShowPageProps) {
 	const { id } = React.use(params);
@@ -92,8 +109,9 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 	const severityConfig = SEVERITY_CONFIG[alert.severity as string] || SEVERITY_CONFIG.INFO;
 	const typeConfig = ALERT_TYPE_CONFIG[alert.type as string] || {
 		label: alert.type as string,
-		icon: "\u{1F4E2}",
+		icon: DEFAULT_ALERT_TYPE_ICON,
 	};
+	const TypeIcon = typeConfig.icon;
 
 	return (
 		<div className="min-h-screen bg-muted p-4 md:p-6">
@@ -129,7 +147,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 				<div className="mb-6">
 					<Alert
 						variant={severityConfig.alertVariant}
-						title={`${typeConfig.icon} ${typeConfig.label} - ${severityConfig.label} Severity`}
+						title={`${typeConfig.label} - ${severityConfig.label} Severity`}
 					>
 						{String(alert.message || alert.description || "No description provided")}
 					</Alert>
@@ -174,7 +192,7 @@ export default function AlertShowPage({ params }: AlertShowPageProps) {
 										</dt>
 										<dd>
 											<Tag color="info">
-												{String(typeConfig.icon)} {String(typeConfig.label)}
+												<TypeIcon className="size-3" /> {typeConfig.label}
 											</Tag>
 										</dd>
 									</div>

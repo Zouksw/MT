@@ -1,11 +1,16 @@
 "use client";
 
-import useSWR from "swr";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardBody } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 
+// Country flags for the per-country section headers. These are emoji rather
+// than lucide icons on purpose: lucide has no flag icon set, and a flag is
+// the single clearest single-glyph identifier of a country — it carries real
+// semantic information (which country), unlike decorative emoji-as-icon.
+// (design-review: emoji as semantic info = keep; emoji as decoration = replace.)
 const COUNTRY_FLAGS: Record<string, string> = {
 	AU: "🇦🇺",
 	BR: "🇧🇷",
@@ -23,7 +28,7 @@ const COUNTRY_NAMES: Record<string, string> = {
 };
 
 export default function FactoryDirectory() {
-	const { data, error } = useSWR("/api/beef/factories", beefFetcher);
+	const { data, error } = useRetryableFetch("/api/beef/factories", beefFetcher);
 
 	const factories = data?.data?.factories ?? data?.factories ?? [];
 
