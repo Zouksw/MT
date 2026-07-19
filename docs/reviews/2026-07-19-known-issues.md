@@ -10,8 +10,10 @@ For work that *is* actionable and queued, see the统筹 section at the bottom.
 
 **2026-07-19 status update:** DATA-2 and TRUST-1 **CLOSED** (G1/G3 shipped).
 DATA-3 **RESCINDED** (was a phantom — the table+seed already existed; the
-exploration agent's "missing" finding was wrong, verified live). Only
-DATA-1 and the SCOPE items remain open.
+exploration agent's "missing" finding was wrong, verified live). DATA-4
+**added** (2026-07-19) — full data-layer audit revealing the "2 healthy
+sources" are non-beef; all beef data is seed snapshot. Only DATA-1 (now
+informed by DATA-4) and the SCOPE items remain open as blockers.
 
 ---
 
@@ -134,6 +136,63 @@ Models columns); (b) add a prediction column to the two main price
 tables — ❌ blocked. Originally written as "easy, data ready"; a live
 data audit on 2026-07-19 proved that false. See G7 for the measured
 blocker chain.
+
+### DATA-4 — Data layer reality audit (2026-07-19) — worse than DATA-1 implied
+
+**Impact:** DATA-1 framed the data gap as "4 beef sources need API keys."
+A live audit of all 19 sources via `/api/market/sources` + per-scraper
+log inspection + DB row counts revealed the gap is **structurally wider**:
+the platform's core value (beef prices + AI forecasts) currently runs on
+**seed snapshots only**, with zero live beef data flowing.
+
+**The "2 healthy sources" are misleading.** `/api/market/sources` reports
+`commodity_prices` and `world_bank` as healthy. Both are real and producing,
+but **neither feeds beef**:
+- `commodity_prices` writes 3 FX pairs (USD/CNY, AUD/USD, BRL/USD).
+- `world_bank` writes 12 non-beef series (energy/metals/grains/softs;
+  World Bank API is dead, falls back to FRED monthly CSVs).
+- The 5 bridge slugs (`aus_cube_roll_m9` etc.) read CommodityPrice rows
+  that came from **seed data**, not any scraper.
+
+**Full source classification (19 sources):**
+
+| Category | Sources | Status |
+|---|---|---|
+| Directly beef (4) | usda_ams, mla_nlrs, inac, cepea | **ALL non-producing**: usda_ams+mla_nlrs key-gated (USDA_MARS_API_KEY, MLA_API_KEY), inac network-blocked, cepea Cloudflare-blocked |
+| Beef-adjacent (7) | usda_psd, abares, secex, china_customs_stats, china_wholesale, cme_futures, argentina | **ALL silent-fail**: API endpoints 404/403, regex patterns stale, geo-blocked |
+| Macro context (8) | commodity_prices, world_bank, fred, fao_prices, dce_futures, baltic_dry, shipping_index, weather | 2 healthy (FX + non-beef), 4 key-gated, 2 silent-fail |
+
+**`argentina` is a ghost source.** Listed in `server.ts:180` DAILY_SOURCES
+and `marketData.ts:234` sourceLabels, but **never registered** in
+`index.ts` `registerAllScrapers`. No `src/` file exists (only a stale
+`dist/.../argentinaData.js` from Jul 13). The running backend (older
+build) reports it "completing in 0ms"; current `src/` would throw
+`Unknown source: argentina`. **This is a latent bug** — rebuild will
+surface it.
+
+**`healthy` classifier under-reports problems.** `scraperManager.ts:117`
+sets `emptyAfterRun = inserted===0 && updated===0`. But `commodity_prices`
+reports `5 updated` (FX) and `world_bank` reports `32 updated`, so both
+count as "healthy" despite contributing zero beef rows. A user reading
+the data-sources board sees "2 healthy" and assumes the platform has
+live data — it does not (for beef).
+
+**chronos exists but is NOT in the user-facing consensus.**
+inference-service `/models` returns 6 (5 statistical + chronos), but
+backend `tradingSignals.ts:25` `ALL_MODELS` lists only 5 (no chronos).
+So `signals/batch` consensus runs 5 models. SITE_STATS.aiModels = 5 is
+correct for what the user sees, but the "6th model" is stranded.
+
+**Status:** **OPEN — informational, not directly code-actionable.** This
+entry records reality so future planning doesn't re-discover it. The
+actionable consequences:
+- G7 (prediction column) stays blocked until beef data flows (DATA-1).
+- `argentina` ghost source is a latent bug (rebuild will break it) —
+  queued as a separate cleanup.
+- `healthy` classifier should distinguish "producing beef" vs "producing
+  anything" — queued as a separate cleanup.
+- chronos integration into backend consensus is a real enhancement
+  opportunity (would make aiModels = 6 honest) — queued.
 
 ---
 

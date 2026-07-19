@@ -6,12 +6,19 @@
  * codebase — a credibility-damaging contradiction. This constant is the ONE
  * place these numbers live; every page imports from here.
  *
- * Numbers reflect the real backend state as of 2026-07-13:
- *  - 5 statistical models (ARIMA, Holt-Winters, Exp. Smoothing, STL, Naive)
- *  - 74 beef cut taxonomies defined (BeefCutTaxonomy count)
- *  - 21 factories tracked
- *  - 7+ data sources (USDA, CEPEA, MLA, INAC, ABARES, World Bank, FRED)
- *  - 5 import source countries (US, BR, AUS, URY, ARG)
+ * Numbers reflect the real backend state as of 2026-07-19:
+ *  - 5 statistical models in the user-facing consensus (backend ALL_MODELS:
+ *    ARIMA, Holt-Winters, Exp. Smoothing, STL, Naive). NOTE: inference-service
+ *    also exposes chronos (/models returns 6), but chronos is NOT wired into
+ *    the backend signals/batch consensus the user sees — so the honest
+ *    user-facing count is 5, not 6. See known-issues DATA-4.
+ *  - 74 beef cut taxonomies defined (BeefCutTaxonomy count).
+ *  - 21 factories tracked.
+ *  - 7 data sources CONFIGURED, but only 2 currently produce data
+ *    (commodity_prices = FX rates, world_bank = non-beef commodities).
+ *    Zero beef-producing sources are live — all beef price data is seed
+ *    snapshot. See known-issues DATA-1 / DATA-4 for the full picture.
+ *  - 5 import source countries (US, BR, AUS, URY, ARG).
  */
 
 export const SITE_STATS = {
