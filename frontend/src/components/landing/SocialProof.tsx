@@ -3,6 +3,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: string }) {
 	const [value, setValue] = useState(0);
@@ -43,27 +44,13 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
 	);
 }
 
+// Single source of truth: site-stats.ts. Never hardcode these numbers —
+// an inconsistent claim is the most credibility-damaging bug on a marketing page.
 const stats = [
-	{
-		numericValue: 85,
-		suffix: "+",
-		label: "Beef Cuts",
-	},
-	{
-		numericValue: 8,
-		suffix: "",
-		label: "AI price models",
-	},
-	{
-		numericValue: 16,
-		suffix: "+",
-		label: "Export factories",
-	},
-	{
-		numericValue: 5,
-		suffix: "",
-		label: "Beef markets covered",
-	},
+	{ numericValue: SITE_STATS.beefCuts, suffix: "", label: "Beef Cuts" },
+	{ numericValue: SITE_STATS.aiModels, suffix: "", label: "AI price models" },
+	{ numericValue: SITE_STATS.factories, suffix: "", label: "Export factories" },
+	{ numericValue: SITE_STATS.sourceCountries, suffix: "", label: "Beef markets covered" },
 ];
 
 export const SocialProof: React.FC = () => {

@@ -7,23 +7,28 @@ import AppProviders from "@/components/AppProviders";
 import { WebVitals } from "@/components/WebVitals";
 import "@/styles/globals.css";
 import { Geist } from "next/font/google";
+import { SITE_STATS } from "@/lib/site-stats";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
+// Beef-only positioning (PRODUCT-SPEC §一, §六 阶段0). Generic "55+ commodities"
+// copy is a pre-beef-focus legacy — the platform is a beef-trade platform.
+const BEEF_DESCRIPTION = `AI-powered beef price intelligence: ${SITE_STATS.beefCuts} beef cuts, ${SITE_STATS.sourceCountries} import markets, multi-model price forecasting for the China beef trade`;
+
 export const metadata: Metadata = {
 	title: {
-		default: "MT — AI-Powered Commodity Market Intelligence",
+		default: "MT — AI-Powered Beef Market Intelligence",
 		template: "%s | MT",
 	},
-	description:
-		"AI-powered commodity price analysis, multi-factor market intelligence, and predictive signals for 55+ commodities",
+	description: BEEF_DESCRIPTION,
 	keywords: [
-		"commodity analysis",
-		"AI forecasting",
-		"market signals",
-		"commodity prices",
-		"multi-factor analysis",
+		"beef prices",
+		"beef market intelligence",
+		"AI price forecasting",
+		"beef trade",
+		"imported beef",
+		"beef cuts",
 	],
 	authors: [{ name: "MT Team" }],
 	icons: {
@@ -38,15 +43,14 @@ export const metadata: Metadata = {
 		type: "website",
 		locale: "en_US",
 		url: "https://mt.ai",
-		title: "MT — AI-Powered Commodity Market Intelligence",
-		description:
-			"AI-powered commodity price analysis, multi-factor market intelligence, and predictive signals for 55+ commodities",
+		title: "MT — AI-Powered Beef Market Intelligence",
+		description: BEEF_DESCRIPTION,
 		siteName: "MT",
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "MT — AI-Powered Commodity Market Intelligence",
-		description: "AI-powered commodity price analysis and predictive signals",
+		title: "MT — AI-Powered Beef Market Intelligence",
+		description: "AI-powered beef price analysis and predictive signals",
 	},
 };
 

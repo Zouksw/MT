@@ -6,6 +6,7 @@ import { useState } from "react";
 import { MarketingNav } from "@/components/landing/MarketingNav";
 import { Button } from "@/components/ui";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 export default function PricingPage() {
 	const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
@@ -13,10 +14,10 @@ export default function PricingPage() {
 	const plans = [
 		{
 			name: "Free",
-			description: "85+ beef cut prices, basic charts, 7-day history",
+			description: `${SITE_STATS.beefCuts} beef cut prices, basic charts, 7-day history`,
 			price: { monthly: 0, yearly: 0 },
 			features: [
-				"85+ beef cut prices",
+				`${SITE_STATS.beefCuts} beef cut prices`,
 				"5 watchlist items",
 				"3 of 5 AI models",
 				"Basic charts & OHLCV data",
@@ -30,7 +31,7 @@ export default function PricingPage() {
 			description: "5 AI models, multi-factor analysis, alerts, API access",
 			price: { monthly: 49, yearly: 39 },
 			features: [
-				"全部 85+ 牛肉部位",
+				`全部 ${SITE_STATS.beefCuts} 牛肉部位`,
 				"All 5 AI models with consensus signals",
 				"Multi-factor analysis (weather, forex, shipping)",
 				"Price alerts & anomaly detection",
@@ -47,7 +48,7 @@ export default function PricingPage() {
 			description: "Private deployment, custom model training, dedicated support",
 			price: { monthly: 199, yearly: 159 },
 			features: [
-				"全部 85+ 牛肉部位 + custom sources",
+				`全部 ${SITE_STATS.beefCuts} 牛肉部位 + custom sources`,
 				"All AI models with priority inference",
 				"Advanced correlation & seasonality",
 				"Dedicated API endpoints",
@@ -86,8 +87,8 @@ export default function PricingPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-muted-foreground mb-10">
-							Free tier includes all 85+ beef cut prices. Paid tiers unlock AI signals and advanced
-							analytics.
+							Free tier includes all {SITE_STATS.beefCuts} beef cut prices. Paid tiers unlock AI
+							signals and advanced analytics.
 						</p>
 					</MotionReveal>
 
@@ -272,7 +273,7 @@ export default function PricingPage() {
 							},
 							{
 								q: "Is the free plan really free?",
-								a: "No time limit. All 85+ beef cut prices with OHLCV charts and 7-day history, permanently free. Upgrade for AI signals and extended history.",
+								a: `No time limit. All ${SITE_STATS.beefCuts} beef cut prices with OHLCV charts and 7-day history, permanently free. Upgrade for AI signals and extended history.`,
 							},
 							{
 								q: "What payment methods do you accept?",
