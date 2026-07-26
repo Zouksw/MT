@@ -3,6 +3,7 @@ import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
+import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
 
 const router = Router();
 
@@ -127,7 +128,13 @@ router.get(
 			},
 		});
 
-		success(res, { prices, count: prices.length });
+		// Attach the honesty-framework freshness tier to each row + a page-level
+		// summary so the UI can show a "demo snapshot mode" banner when no live
+		// data is present. See services/beefFreshness.ts.
+		const pricesWithFreshness = withFreshness(prices);
+		const freshness = pageFreshnessSummary(prices);
+
+		success(res, { prices: pricesWithFreshness, count: pricesWithFreshness.length, freshness });
 	}),
 );
 
@@ -147,7 +154,7 @@ router.get(
 		});
 
 		if (!latest) {
-			return success(res, { prices: [], date: null });
+			return success(res, { prices: [], date: null, freshness: null });
 		}
 
 		const factoryFilter = country ? { factory: { country: country as string } } : {};
@@ -164,7 +171,16 @@ router.get(
 			orderBy: { cutCode: "asc" },
 		});
 
-		success(res, { prices, date: latest.date, count: prices.length });
+		// Attach freshness tiers + page summary (same as /prices).
+		const pricesWithFreshness = withFreshness(prices);
+		const freshness = pageFreshnessSummary(prices);
+
+		success(res, {
+			prices: pricesWithFreshness,
+			date: latest.date,
+			count: pricesWithFreshness.length,
+			freshness,
+		});
 	}),
 );
 
