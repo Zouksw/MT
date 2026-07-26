@@ -11,6 +11,7 @@
 
 import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
+import { getBeefCutSeries, isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
@@ -98,7 +99,25 @@ export async function runAndCachePrediction(
 	const key = cacheKeys.prediction(commodityId, modelId, horizon);
 
 	try {
-		const { values, timestamps } = await getCommodityPriceValues(commodityId, 200);
+		// Dual-backend: if commodityId is a virtual cut-series key
+		// (cut:{factoryId}:{cutCode}), extract the series from BeefCutPrice
+		// instead of CommodityPrice. This lets the same consensus/MAPE pipeline
+		// forecast a beef cut — closing the architecture gap where predictions
+		// only ran on macro commodities. See services/beefCutSeries.ts.
+		let values: number[];
+		let timestamps: number[];
+		if (isCutSeriesKey(commodityId)) {
+			const parsed = parseCutSeriesKey(commodityId);
+			if (!parsed) {
+				throw new Error(`Malformed cut-series key: ${commodityId}`);
+			}
+			({ values, timestamps } = await getBeefCutSeries({
+				factoryId: parsed.factoryId,
+				cutCode: parsed.cutCode,
+			}));
+		} else {
+			({ values, timestamps } = await getCommodityPriceValues(commodityId, 200));
+		}
 
 		const result = await predict({
 			values,

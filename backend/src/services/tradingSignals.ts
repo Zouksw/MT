@@ -17,7 +17,9 @@
  * Uses Promise.allSettled for parallel execution — failed models don't block.
  */
 
-import { logger } from "../lib";
+import { logger, prisma } from "../lib";
+import { cutSeriesKey, getBeefCutSeries } from "./beefCutSeries";
+import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
 
 // All pretrained / ready-to-use models (IoTDB AINode style — no self-training).
@@ -326,4 +328,110 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
  */
 export function getAllModels(): string[] {
 	return [...ALL_MODELS];
+}
+
+/**
+ * Generate a price forecast for a single beef CUT (factoryId + cutCode),
+ * reusing the same multi-model consensus pipeline as generateForecast.
+ *
+ * This is the dual-backend entry point (see docs/PROJECT-STATE-AND-VISION §3.1):
+ * instead of forecasting a macro commodity by commodityId, it forecasts a
+ * cut-level price series extracted from BeefCutPrice. The series is addressed
+ * by the virtual key `cut:{factoryId}:{cutCode}`, which predictionCache
+ * detects and routes to getBeefCutSeries.
+ *
+ * Data-honesty: bridge-proxy rows are excluded from the training series
+ * (getBeefCutSeries default), so a cut forecast is never trained on a carcass
+ * aggregate masquerading as a cut price.
+ *
+ * Throws if the cut has insufficient real data (<2 non-bridge points).
+ */
+export async function generateBeefCutForecast(
+	factoryId: string,
+	cutCode: string,
+	horizon: number = 10,
+	models?: string[],
+): Promise<PriceForecast> {
+	// Resolve the cut's current (latest non-bridge) price as the forecast anchor.
+	// Reuse getBeefCutSeries so the "current price" is consistent with the
+	// training series — both exclude bridge proxies.
+	const series = await getBeefCutSeries({ factoryId, cutCode });
+	const currentPrice = series.values[series.values.length - 1];
+
+	if (!currentPrice || currentPrice <= 0) {
+		throw new Error(`No valid current price for cut ${cutCode}/factory ${factoryId}`);
+	}
+
+	// The virtual key routes predictionCache → getBeefCutSeries automatically.
+	const cutKey = cutSeriesKey(factoryId, cutCode);
+
+	return generateForecast({
+		commodityId: cutKey,
+		horizon,
+		currentPrice,
+		models,
+	});
+}
+
+/**
+ * Find the best factory to forecast a given cutCode, or null if no factory
+ * has sufficient real (non-bridge) data. Used by /api/beef/forecasts/* to
+ * surface a representative per-cut forecast without the caller needing to
+ * know factoryIds.
+ *
+ * DATA-HONESTY FRESHNESS GATE: even with ≥2 non-bridge points, if the LATEST
+ * point is older than STALE_WINDOW_DAYS the series is treated as not
+ * forecastable. Training a forecast on an 87-day-old synthetic snapshot (the
+ * current seed state) would produce a real-looking prediction from fake data
+ * — exactly the credibility problem the honesty framework exists to prevent.
+ * The caller gets null + a reason so the UI can show an honest state.
+ */
+export async function findForecastableFactoryForCut(cutCode: string): Promise<{
+	factoryId: string;
+	latestPrice: number;
+	latestDate: Date;
+	pointCount: number;
+} | null> {
+	// Group by factoryId, count non-bridge rows per factory, pick the one with
+	// the most points (most data = most reliable forecast).
+	const factories = await prisma.beefCutPrice.groupBy({
+		by: ["factoryId"],
+		where: {
+			cutCode,
+			source: { not: { startsWith: "bridge:" } },
+		},
+		_count: { _all: true },
+		orderBy: { _count: { id: "desc" } },
+		take: 1,
+	});
+
+	if (factories.length === 0) return null;
+	const factoryId = factories[0].factoryId;
+	const pointCount = factories[0]._count._all;
+
+	if (pointCount < 2) return null;
+
+	// Latest non-bridge price for this factory+cut.
+	const latest = await prisma.beefCutPrice.findFirst({
+		where: { factoryId, cutCode, source: { not: { startsWith: "bridge:" } } },
+		orderBy: { date: "desc" },
+		select: { price: true, date: true },
+	});
+
+	if (!latest || latest.price == null) return null;
+
+	// Freshness gate: a forecast trained on stale data is a fabricated
+	// prediction. Reuse the honesty framework's threshold so the cut forecast
+	// and the freshness badge agree on what "live" means.
+	const ageDays = Math.floor((Date.now() - latest.date.getTime()) / 86_400_000);
+	if (ageDays > STALE_WINDOW_DAYS) {
+		return null;
+	}
+
+	return {
+		factoryId,
+		latestPrice: latest.price,
+		latestDate: latest.date,
+		pointCount,
+	};
 }

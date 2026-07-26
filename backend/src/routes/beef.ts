@@ -4,6 +4,7 @@ import { success } from "@/lib/response";
 import { authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
 import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
+import { findForecastableFactoryForCut, generateBeefCutForecast } from "@/services/tradingSignals";
 
 const router = Router();
 
@@ -429,6 +430,77 @@ router.get(
 		}
 
 		success(res, { spreads });
+	}),
+);
+
+/**
+ * GET /api/beef/forecasts/:cutCode
+ *
+ * Per-cut AI forecast — the core M2 feature (PRODUCT-SPEC §四 "AI 预测 >
+ * 价格预测", §5.3 "AI 预测融入行情"). Generates a multi-model consensus
+ * forecast for the cut's daily price series, extracted from BeefCutPrice.
+ *
+ * This is the dual-backend prediction path: unlike /api/signals/:slug (which
+ * forecasts a CommodityPrice macro commodity), this forecasts a beef CUT. See
+ * services/beefCutSeries.ts + tradingSignals.generateBeefCutForecast.
+ *
+ * Data-honesty: bridge-proxy rows are excluded from the training series, so a
+ * forecast is only produced when the cut has ≥2 real (non-bridge) price
+ * points. Otherwise returns forecastable:false so the UI can show an honest
+ * "insufficient real data" state instead of a fabricated prediction.
+ *
+ * Requires auth (AI-feature tier gate consistency with /api/signals).
+ */
+router.get(
+	"/forecasts/:cutCode",
+	authenticate,
+	asyncHandler(async (req, res) => {
+		const { cutCode } = req.params;
+		const horizon = Math.min(Number(req.query.horizon) || 10, 30);
+
+		// Verify the cut exists in taxonomy.
+		const cut = await prisma.beefCutTaxonomy.findUnique({
+			where: { cutCode },
+			select: { cutCode: true, nameEn: true, nameZh: true },
+		});
+		if (!cut) {
+			throw new NotFoundError(`Cut not found: ${cutCode}`);
+		}
+
+		// Find the factory with the most real, fresh data for this cut.
+		// Returns null if no factory has ≥2 non-bridge points OR if the latest
+		// point is stale (>STALE_WINDOW_DAYS) — see tradingSignals for the gate.
+		const factory = await findForecastableFactoryForCut(cutCode);
+		if (!factory) {
+			// Distinguish "no data at all" from "stale data" for an honest UI message.
+			const anyData = await prisma.beefCutPrice.findFirst({
+				where: { cutCode, source: { not: { startsWith: "bridge:" } } },
+				orderBy: { date: "desc" },
+				select: { date: true },
+			});
+			const reason = anyData
+				? `Price data for this cut is stale (latest ${anyData.date.toISOString().split("T")[0]}). Forecasting requires fresh data (within ${"7"} days). Activate a beef data source to enable predictions.`
+				: "Insufficient real (non-bridge) price data for this cut. Forecasting requires ≥2 real price points.";
+			return success(res, { cutCode, forecastable: false, reason });
+		}
+
+		try {
+			const forecast = await generateBeefCutForecast(factory.factoryId, cutCode, horizon);
+			success(res, {
+				cutCode,
+				forecastable: true,
+				factoryId: factory.factoryId,
+				dataPoints: factory.pointCount,
+				currentPrice: factory.latestPrice,
+				forecast,
+			});
+		} catch (err) {
+			// Forecast can fail at inference-time (e.g. all models unavailable).
+			// Return forecastable:false with the reason rather than a 500, so the
+			// UI treats it as an honest "can't forecast" state.
+			const reason = err instanceof Error ? err.message : String(err);
+			success(res, { cutCode, forecastable: false, reason });
+		}
 	}),
 );
 
