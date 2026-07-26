@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Code, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SPRING_DEFAULTS } from "@/lib/motion";
+import { SITE_STATS } from "@/lib/site-stats";
 import type { AuthPageProps } from "./auth-types";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
@@ -119,8 +120,9 @@ export function AuthPage(props: AuthPageProps) {
 						MT
 					</h1>
 					<p className="mt-6 max-w-xs text-xl font-medium leading-relaxed text-white/80">
-						85+ beef cuts.
-						<br />5 AI models.
+						{SITE_STATS.beefCuts} beef cuts.
+						<br />
+						{SITE_STATS.aiModels} AI models.
 						<br />
 						<span className="text-primary">One signal.</span>
 					</p>

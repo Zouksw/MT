@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useMarketForecasts } from "@/hooks/useMarketForecasts";
+import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import type { Alert, Forecast } from "@/types/api";
 import { getAuthToken } from "@/utils/auth";
@@ -325,25 +325,36 @@ export const useDashboardStats = () => {
 	const aiActive = activeModelsData?.total ?? activeModelsData?.pagination?.total ?? 0;
 
 	// AI 7-day summary for the dashboard hero (PRODUCT-SPEC §5.1 AI 7日预测 card).
-	// Takes the first forecastable row from the market forecast board (the
-	// headline cut) and surfaces its consensus direction + change + confidence +
-	// model agreement. Null when no cut is forecastable (no price data / no
-	// token) so the card shows an honest empty state instead of a fake arrow.
-	const marketForecasts = useMarketForecasts(7);
+	// Sourced from the dual-backend cut-forecast batch (useBeefCutForecasts),
+	// NOT the legacy commodity-slug path — keeps the dashboard consistent with
+	// the /beef board and cut-detail page (all keyed by cutCode). Takes the
+	// first forecastable cut, resolves its display name from the cut taxonomy,
+	// and surfaces consensus direction + change + confidence + model agreement.
+	// Null when no cut is forecastable (stale data / no token) → honest empty.
+	const { forecasts: cutForecasts } = useBeefCutForecasts(7);
 	const aiSummary = useMemo(() => {
-		const row = marketForecasts.rows.find(
-			(r) => r.direction != null && r.changePct != null && r.confidence != null,
+		if (!cutForecasts) return null;
+		// Name lookup from the taxonomy (already fetched above as cutsData).
+		const cuts = (cutsData?.data?.cuts ?? cutsData?.cuts ?? []) as Array<{
+			cutCode: string;
+			nameZh?: string;
+			nameEn?: string;
+		}>;
+		const nameByCode = new Map(cuts.map((c) => [c.cutCode, c.nameZh || c.nameEn]));
+		const entry = Object.entries(cutForecasts).find(
+			([, fc]) => fc.direction != null && fc.predictedChange != null && fc.confidence != null,
 		);
-		if (!row || !row.direction || row.confidence == null || row.modelsAgree == null) return null;
+		if (!entry) return null;
+		const [cutCode, fc] = entry;
 		return {
-			direction: row.direction,
-			changePct: row.changePct ?? 0,
-			confidence: row.confidence,
-			modelsAgree: row.modelsAgree,
-			totalModels: row.totalModels ?? 0,
-			cutName: row.nameCn || row.name,
+			direction: fc.direction,
+			changePct: fc.predictedChange ?? 0,
+			confidence: fc.confidence,
+			modelsAgree: fc.modelsAgree,
+			totalModels: fc.availableModels ?? 0,
+			cutName: nameByCode.get(cutCode) || cutCode.replace(/_/g, " "),
 		};
-	}, [marketForecasts.rows]);
+	}, [cutForecasts, cutsData]);
 
 	// Latest 资讯 for the dashboard news strip (PRODUCT-SPEC §5.1 最新市场动态).
 	const recentNews = useMemo(() => {
