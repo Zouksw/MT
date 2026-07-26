@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
-import { authenticate } from "@/middleware/auth";
-import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
+import type { AuthenticatedRequest } from "@/middleware/auth";
+import { authenticate, authorize } from "@/middleware/auth";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
+import { importBeefPrices, parseBeefCSV } from "@/services/beefImport";
 import { findForecastableFactoryForCut, generateBeefCutForecast } from "@/services/tradingSignals";
 
 const router = Router();
@@ -501,6 +503,65 @@ router.get(
 			const reason = err instanceof Error ? err.message : String(err);
 			success(res, { cutCode, forecastable: false, reason });
 		}
+	}),
+);
+
+/**
+ * POST /api/beef/import
+ *
+ * Manual beef cut price import — the no-API-key real-data path. An admin
+ * uploads a CSV (factoryCode, cutCode, price, date[, currency, unit, grade])
+ * and each row is upserted into BeefCutPrice with source='manual:<uploader>'.
+ *
+ * This is how real cut-level prices enter the platform when no scraper key is
+ * configured. Manual rows are classified 'live' by the freshness framework
+ * (recent, non-bridge, non-seed), so they unlock per-cut AI forecasts and
+ * turn the SnapshotBanner off — the platform becomes honestly live without
+ * any API key.
+ *
+ * ADMIN-only. Multipart form-data with a 'file' field. 10MB limit.
+ * See services/beefImport.ts for the CSV contract.
+ */
+router.post(
+	"/import",
+	authenticate,
+	authorize("ADMIN"),
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		if (!req.is("multipart/form-data")) {
+			throw new BadRequestError("Content-Type must be multipart/form-data");
+		}
+
+		const multer = (await import("multer")).default;
+		const upload = multer({
+			storage: multer.memoryStorage(),
+			limits: { fileSize: 10 * 1024 * 1024 },
+		});
+
+		await new Promise<void>((resolve, reject) => {
+			upload.single("file")(
+				req as Parameters<ReturnType<typeof upload.single>>[0],
+				res as Parameters<ReturnType<typeof upload.single>>[1],
+				(err) => {
+					if (err) reject(new BadRequestError(err.message));
+					else resolve();
+				},
+			);
+		});
+
+		const file = (req as unknown as { file?: { buffer: Buffer } }).file;
+		if (!file) {
+			throw new BadRequestError("No file uploaded");
+		}
+
+		const rows = parseBeefCSV(file.buffer);
+		if (rows.length === 0) {
+			throw new BadRequestError("CSV is empty or has no data rows");
+		}
+
+		const uploader = req.user?.email ?? "unknown";
+		const result = await importBeefPrices(rows, uploader);
+
+		success(res, result, 201);
 	}),
 );
 
