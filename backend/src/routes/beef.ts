@@ -133,8 +133,13 @@ router.get(
 
 		// Attach the honesty-framework freshness tier to each row + a page-level
 		// summary so the UI can show a "demo snapshot mode" banner when no live
-		// data is present. See services/beefFreshness.ts.
-		const pricesWithFreshness = withFreshness(prices);
+		// data is present. See services/beefFreshness.ts. Also coerce price from
+		// Prisma Decimal (which serializes as a JSON string) to a JS number so
+		// the frontend contract stays numeric.
+		const pricesWithFreshness = withFreshness(prices).map((p) => ({
+			...p,
+			price: Number(p.price),
+		}));
 		const freshness = pageFreshnessSummary(prices);
 
 		success(res, { prices: pricesWithFreshness, count: pricesWithFreshness.length, freshness });
@@ -174,8 +179,12 @@ router.get(
 			orderBy: { cutCode: "asc" },
 		});
 
-		// Attach freshness tiers + page summary (same as /prices).
-		const pricesWithFreshness = withFreshness(prices);
+		// Attach freshness tiers + page summary (same as /prices). Coerce price
+		// Decimal → number to keep the frontend contract numeric.
+		const pricesWithFreshness = withFreshness(prices).map((p) => ({
+			...p,
+			price: Number(p.price),
+		}));
 		const freshness = pageFreshnessSummary(prices);
 
 		success(res, {
@@ -315,7 +324,10 @@ router.get(
 			take: 1000,
 		});
 
-		success(res, { cutCode, prices, count: prices.length });
+		// Coerce Decimal price → number for the frontend contract.
+		const pricesOut = prices.map((p) => ({ ...p, price: Number(p.price) }));
+
+		success(res, { cutCode, prices: pricesOut, count: pricesOut.length });
 	}),
 );
 
@@ -412,21 +424,23 @@ router.get(
 			Record<string, { min: number; max: number; avg: number; count: number }>
 		> = {};
 		for (const p of prices) {
+			// price is Decimal(18,4) — coerce to number once for the spread math.
+			const price = Number(p.price);
 			const key = p.cutCode;
 			if (!spreads[key]) spreads[key] = {};
 			const sourceKey = `${p.source} (${p.factory?.country || "unknown"})`;
 			if (!spreads[key][sourceKey]) {
 				spreads[key][sourceKey] = {
-					min: p.price,
-					max: p.price,
-					avg: p.price,
+					min: price,
+					max: price,
+					avg: price,
 					count: 1,
 				};
 			} else {
 				const s = spreads[key][sourceKey];
-				s.min = Math.min(s.min, p.price);
-				s.max = Math.max(s.max, p.price);
-				s.avg = (s.avg * s.count + p.price) / (s.count + 1);
+				s.min = Math.min(s.min, price);
+				s.max = Math.max(s.max, price);
+				s.avg = (s.avg * s.count + price) / (s.count + 1);
 				s.count++;
 			}
 		}

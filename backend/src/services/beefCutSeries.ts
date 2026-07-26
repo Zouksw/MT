@@ -86,7 +86,10 @@ export async function getBeefCutSeries(
 	}
 
 	return {
-		values: rows.map((r) => r.price),
+		// price is Decimal(18,4) — coerce to number at the read boundary for
+		// the inference pipeline (which takes number[]). Sub-$0.0001 precision
+		// is preserved well within JS double range.
+		values: rows.map((r) => Number(r.price)),
 		timestamps: rows.map((r) => r.date.getTime()),
 	};
 }

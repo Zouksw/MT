@@ -625,7 +625,11 @@ model BeefCutPrice {
   id        String   @id @default(cuid())
   factoryId String
   cutCode   String
-  price     Float
+  // Decimal (not Float) for a money field — Float/real accumulates rounding
+  // error across arithmetic and breaks deterministic equality checks.
+  // 4 decimal places is ample for USD/kg beef prices (7.4231 = sub-$0.01
+  // precision); CommodityPrice uses 6 because it carries sub-cent financials.
+  price     Decimal @db.Decimal(18, 4)
   currency  String   @default("USD")
   unit      String   @default("USD/kg")
   source    String

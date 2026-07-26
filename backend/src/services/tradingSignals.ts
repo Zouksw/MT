@@ -430,7 +430,8 @@ export async function findForecastableFactoryForCut(cutCode: string): Promise<{
 
 	return {
 		factoryId,
-		latestPrice: latest.price,
+		// latest.price is Decimal(18,4) — coerce to number for the forecast anchor.
+		latestPrice: Number(latest.price),
 		latestDate: latest.date,
 		pointCount,
 	};
