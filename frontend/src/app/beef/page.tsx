@@ -2,6 +2,7 @@
 
 import { Beef, DollarSign, Target, Warehouse } from "lucide-react";
 import { BeefFreshnessBadge } from "@/components/beef/BeefFreshnessBadge";
+import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { SnapshotBanner } from "@/components/beef/SnapshotBanner";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { MarketForecastBoard } from "@/components/market/MarketForecastBoard";
@@ -9,6 +10,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatDecimal, formatPrice } from "@/lib/format";
@@ -37,6 +39,10 @@ export default function BeefOverview() {
 	);
 
 	const latestPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
+	// Batch forecast summary — one fetch powers the per-row 7d-forecast column.
+	// Null when unauth/error (column silently omits). Cuts absent from the map
+	// are stale/insufficient → honest "—" cell, never a fabricated prediction.
+	const { forecasts: cutForecasts } = useBeefCutForecasts(7);
 	// Page-level freshness summary from backend (services/beefFreshness.ts).
 	// allStale=true → render the demo-snapshot banner so we never silently pass
 	// frozen seed data off as a live market.
@@ -162,6 +168,7 @@ export default function BeefOverview() {
 									<tr>
 										<th className="text-left">Cut</th>
 										<th className="text-right">Price (USD/kg)</th>
+										<th className="text-left">7d Forecast</th>
 										<th className="text-left">Source</th>
 										<th className="text-left">Freshness</th>
 										<th className="text-left">Factory</th>
@@ -192,6 +199,9 @@ export default function BeefOverview() {
 														</a>
 													</td>
 													<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
+													<td>
+														<CutForecastCell forecast={cutForecasts?.[p.cutCode]} />
+													</td>
 													<td className="text-gray-500 text-xs">{p.source}</td>
 													<td>
 														<BeefFreshnessBadge

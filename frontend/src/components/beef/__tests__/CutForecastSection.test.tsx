@@ -14,7 +14,7 @@ const mocked = useRetryableFetch as jest.MockedFunction<typeof useRetryableFetch
 function setData(data: unknown) {
 	mocked.mockReturnValue({
 		data,
-		error: null,
+		error: undefined,
 		isLoading: false,
 		isValidating: false,
 		isRetrying: false,
@@ -27,7 +27,7 @@ function setData(data: unknown) {
 function setLoading() {
 	mocked.mockReturnValue({
 		data: null,
-		error: null,
+		error: undefined,
 		isLoading: true,
 		isValidating: false,
 		isRetrying: false,

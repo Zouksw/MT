@@ -450,6 +450,91 @@ router.get(
 );
 
 /**
+ * GET /api/beef/forecasts
+ *
+ * Batch forecast summary — one fetch returns the consensus direction +
+ * predicted-change + confidence for ALL forecastable cuts. This is the layer-2
+ * endpoint that powers the per-row forecast column on the /beef Latest Cut
+ * Prices table: calling /forecasts/:cutCode once per row would fire N model
+ * ensembles (slow, N inference round-trips). This endpoint computes each cut's
+ * forecast once and returns a lightweight summary map keyed by cutCode.
+ *
+ * Returns only cuts with sufficient fresh (non-bridge, non-stale) data.
+ * Cuts that can't be forecast are simply omitted from the map — the UI shows
+ * nothing for them (an honest absence, not a fabricated zero).
+ *
+ * Optional ?horizon=N (default 7, max 30).
+ * Requires auth (same gate as the single-cut endpoint).
+ */
+router.get(
+	"/forecasts",
+	authenticate,
+	asyncHandler(async (req, res) => {
+		const horizon = Math.min(Number(req.query.horizon) || 7, 30);
+
+		// Find all (factoryId, cutCode) pairs with enough fresh real data.
+		// One row per cutCode (the best factory), matching the per-cut endpoint's
+		// findForecastableFactoryForCut selection logic.
+		const candidates = await prisma.beefCutPrice.groupBy({
+			by: ["cutCode", "factoryId"],
+			where: { source: { not: { startsWith: "bridge:" } } },
+			_count: { _all: true },
+		});
+
+		// Per cutCode, keep the factory with the most points (deterministic).
+		const bestByCut = new Map<string, { factoryId: string; points: number }>();
+		for (const c of candidates) {
+			const cur = bestByCut.get(c.cutCode);
+			if (!cur || c._count._all > cur.points) {
+				bestByCut.set(c.cutCode, { factoryId: c.factoryId, points: c._count._all });
+			}
+		}
+
+		// Forecast each candidate (parallel, fault-tolerant). Only cuts passing
+		// the freshness gate are forecastable; the rest are skipped (honest
+		// omission — never fabricate from stale seed data).
+		const entries = await Promise.all(
+			Array.from(bestByCut.entries()).map(async ([cutCode, { factoryId, points }]) => {
+				try {
+					// Re-validate via findForecastableFactoryForCut so the batch path
+					// applies the SAME freshness gate as the single-cut endpoint.
+					// (bestByCut only checked point count, not freshness.)
+					const check = await findForecastableFactoryForCut(cutCode);
+					if (!check || check.factoryId !== factoryId) return null;
+
+					const f = await generateBeefCutForecast(factoryId, cutCode, horizon);
+					return [
+						cutCode,
+						{
+							direction: f.direction,
+							predictedChange: f.predictedChange,
+							confidence: f.confidence,
+							predictedPrice: f.predictedPrice,
+							modelsAgree: f.modelsAgree,
+							availableModels: f.availableModels,
+							dataPoints: points,
+							horizon,
+						},
+					] as const;
+				} catch {
+					return null;
+				}
+			}),
+		);
+
+		const forecasts: Record<string, unknown> = {};
+		for (const e of entries) {
+			if (e) {
+				const [code, summary] = e;
+				forecasts[code] = summary;
+			}
+		}
+
+		success(res, { forecasts, count: Object.keys(forecasts).length, horizon });
+	}),
+);
+
+/**
  * GET /api/beef/forecasts/:cutCode
  *
  * Per-cut AI forecast — the core M2 feature (PRODUCT-SPEC §四 "AI 预测 >
