@@ -1,6 +1,8 @@
 "use client";
 
 import { Beef, DollarSign, Target, Warehouse } from "lucide-react";
+import { BeefFreshnessBadge } from "@/components/beef/BeefFreshnessBadge";
+import { SnapshotBanner } from "@/components/beef/SnapshotBanner";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { MarketForecastBoard } from "@/components/market/MarketForecastBoard";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -35,6 +37,10 @@ export default function BeefOverview() {
 	);
 
 	const latestPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
+	// Page-level freshness summary from backend (services/beefFreshness.ts).
+	// allStale=true → render the demo-snapshot banner so we never silently pass
+	// frozen seed data off as a live market.
+	const priceFreshness = pricesData?.data?.freshness ?? pricesData?.freshness ?? null;
 	const weeklyKills = killData?.data?.kills ?? killData?.kills ?? [];
 	const coldStorage = storageData?.data?.coldStorage ?? storageData?.coldStorage ?? [];
 	const cuts = cutsData?.data?.cuts ?? cutsData?.cuts ?? [];
@@ -109,6 +115,9 @@ export default function BeefOverview() {
 				description="Factory-level and cut-level beef trading data across global markets"
 			/>
 
+			{/* Honesty banner — shows only when no live data is present on the page. */}
+			<SnapshotBanner freshness={priceFreshness} />
+
 			{/* Summary Stats */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 				<StatCard title="Avg Cut Price" value={avgPrice} icon={<DollarSign />} variant="primary" />
@@ -154,6 +163,7 @@ export default function BeefOverview() {
 										<th className="text-left">Cut</th>
 										<th className="text-right">Price (USD/kg)</th>
 										<th className="text-left">Source</th>
+										<th className="text-left">Freshness</th>
 										<th className="text-left">Factory</th>
 										<th className="text-left">Grade</th>
 									</tr>
@@ -166,6 +176,9 @@ export default function BeefOverview() {
 												cutCode: string;
 												price: number;
 												source: string;
+												freshness?: "live" | "proxy" | "snapshot";
+												dataDate?: string | null;
+												reason?: string;
 												grade?: string;
 												factory?: { code: string; name: string; country: string };
 											}) => (
@@ -180,6 +193,14 @@ export default function BeefOverview() {
 													</td>
 													<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
 													<td className="text-gray-500 text-xs">{p.source}</td>
+													<td>
+														<BeefFreshnessBadge
+															freshness={p.freshness}
+															dataDate={p.dataDate}
+															reason={p.reason}
+															compact
+														/>
+													</td>
 													<td className="text-xs">
 														{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}
 													</td>
