@@ -86,6 +86,12 @@ module.exports = {
         INFERENCE_HOST: '0.0.0.0',
         INFERENCE_PORT: '10810',
         INFERENCE_LOG_LEVEL: 'info',
+        // Chronos foundation-model weights. huggingface.co is network-blocked
+        // in this env, but the hf-mirror.com mirror is reachable — route all HF
+        // downloads through it. HF_HOME pins the cache location so cached
+        // weights survive restarts and the availability probe finds them.
+        HF_ENDPOINT: 'https://hf-mirror.com',
+        HF_HOME: '/root/.cache/huggingface',
       },
       // Logging
       error_file: path.join(ROOT, '.logs/inference-error.log'),
