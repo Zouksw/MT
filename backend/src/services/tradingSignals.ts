@@ -20,6 +20,7 @@
 import { logger, prisma } from "../lib";
 import { cutSeriesKey, getBeefCutSeries } from "./beefCutSeries";
 import { STALE_WINDOW_DAYS } from "./beefFreshness";
+import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
 
 // All pretrained / ready-to-use models (IoTDB AINode style — no self-training).
@@ -123,16 +124,6 @@ function calculateConfidence(
 	const spread = upper - lower;
 	const rawConfidence = 1 - spread / currentPrice;
 	return Math.max(0, Math.min(1, rawConfidence));
-}
-
-/**
- * Median of a numeric array (used for robust consensus price).
- */
-function median(values: number[]): number {
-	if (values.length === 0) return 0;
-	const sorted = [...values].sort((a, b) => a - b);
-	const mid = Math.floor(sorted.length / 2);
-	return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
@@ -243,25 +234,36 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		};
 	}
 
-	// Count directions
+	// Resolve quality weights from historical MAPE (PRODUCT-SPEC §3.3). Better
+	// models (lower MAPE) weigh more in the direction vote + consensus price.
+	// Falls back to equal weights if MAPE data unavailable — enhancement, not
+	// a hard dependency.
+	const qualityWeights = await resolveModelWeights(availableForecasts.map((f) => f.modelId));
+
+	// Count directions (still reported as raw headcount for the distribution UI)
 	const upCount = availableForecasts.filter((f) => f.direction === "up").length;
 	const downCount = availableForecasts.filter((f) => f.direction === "down").length;
 	const flatCount = availableCount - upCount - downCount;
 
-	// Determine consensus direction (plurality, must beat the others)
-	let consensusDirection: Direction = "flat";
-	let modelsAgree = flatCount;
+	// Quality-weighted direction vote — a direction backed by the best models
+	// wins even if outvoted in headcount by worse models. Falls back to plain
+	// plurality when weights are equal.
+	const vote = weightedDirectionVote(
+		availableForecasts.map((f) => ({
+			direction: f.direction,
+			weight: qualityWeights.get(f.modelId) ?? 1 / availableCount,
+		})),
+	);
+	const consensusDirection: Direction = vote.direction;
+	// modelsAgree reports the headcount voting the consensus direction (the UI
+	// shows "3/5" which is intuitive as headcount; the weight already factored
+	// into the decision + confidence).
+	const modelsAgree =
+		consensusDirection === "up" ? upCount : consensusDirection === "down" ? downCount : flatCount;
 
-	if (upCount > downCount && upCount > flatCount) {
-		consensusDirection = "up";
-		modelsAgree = upCount;
-	} else if (downCount > upCount && downCount > flatCount) {
-		consensusDirection = "down";
-		modelsAgree = downCount;
-	}
-
-	// Confidence = agreement ratio + magnitude bonus
-	const agreementRatio = modelsAgree / availableCount;
+	// Confidence = WEIGHTED agreement ratio + magnitude bonus. Weighted ratio
+	// reflects that the winning direction was backed by quality, not just heads.
+	const agreementRatio = vote.agreementRatio;
 	const avgMagnitude = Math.abs(
 		availableForecasts.reduce((sum, f) => sum + f.predictedChange, 0) / availableCount,
 	);
@@ -270,9 +272,15 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		agreementRatio * 0.7 + Math.min(avgMagnitude / 5, 1) * 0.3,
 	);
 
-	// Consensus predicted price = median of available models (robust to outliers)
+	// Consensus predicted price = WEIGHTED median (robust to outliers AND
+	// quality-aware). Falls back to plain median when weights are equal.
 	const predictedPrices = availableForecasts.map((f) => f.predictedPrice);
-	const consensusPrice = median(predictedPrices);
+	const consensusPrice = weightedMedian(
+		availableForecasts.map((f) => ({
+			price: f.predictedPrice,
+			weight: qualityWeights.get(f.modelId) ?? 1 / availableCount,
+		})),
+	);
 
 	// Forecast range = min/max across models (shows model disagreement spread)
 	const rangeLower = Math.min(...predictedPrices);
