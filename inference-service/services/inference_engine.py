@@ -21,9 +21,44 @@ try:
     import numpy as np  # noqa: F401
 
     CHRONOS_AVAILABLE = True
-    logger.info("Chronos-forecasting available")
+    logger.info("Chronos-forecasting importable")
 except ImportError:
     logger.warning("chronos-forecasting not installed — chronos model unavailable")
+
+# Honest availability probe for chronos. The pip import succeeding only means
+# the library is installed — it does NOT mean the pretrained weights can be
+# loaded. In this deployment huggingface.co is network-blocked, so
+# ChronosPipeline.from_pretrained("amazon/chronos-t5-tiny") hangs/fails at
+# runtime. We must not advertise chronos as usable in /models when every
+# actual /predict {"model_id":"chronos"} call will fail. Probe once at import:
+# if we have already cached the weights locally (HF_HOME / hub cache), chronos
+# IS usable; otherwise it is blocked.
+CHRONOS_USABLE = False
+CHRONOS_BLOCKED_REASON: str | None = None
+if CHRONOS_AVAILABLE:
+    import os
+    from pathlib import Path
+
+    def _chronos_weights_cached() -> bool:
+        """True iff the amazon/chronos-t5-tiny snapshot is present in any HF cache dir."""
+        candidates = []
+        hf_home = os.environ.get("HF_HOME") or os.environ.get("TRANSFORMERS_CACHE")
+        if hf_home:
+            candidates.append(Path(hf_home))
+        candidates.append(Path.home() / ".cache" / "huggingface")
+        for base in candidates:
+            # HF hub cache layout: hub/models--amazon--chronos-t5-tiny/snapshots/<sha>/
+            snapshot_root = base / "hub" / "models--amazon--chronos-t5-tiny" / "snapshots"
+            if snapshot_root.exists() and any(snapshot_root.iterdir()):
+                return True
+        return False
+
+    if _chronos_weights_cached():
+        CHRONOS_USABLE = True
+        logger.info("Chronos weights cached locally — chronos is usable")
+    else:
+        CHRONOS_BLOCKED_REASON = "model weights unreachable (huggingface.co blocked); pip import only"
+        logger.warning("Chronos importable but weights not cached — advertised as blocked")
 
 # Only pretrained / ready-to-use models. No self-training models.
 _all_models = {**STATISTICAL_MODELS}
@@ -49,6 +84,12 @@ def predict(
     start = time.time()
 
     if model_id == "chronos":
+        # Fail fast with a clear message instead of hanging on the unreachable
+        # huggingface.co fetch. /models already advertises this as blocked.
+        if not CHRONOS_USABLE:
+            raise RuntimeError(
+                f"chronos is not available in this environment: {CHRONOS_BLOCKED_REASON}"
+            )
         result = _predict_chronos(values, horizon, confidence_level)
     elif model_id == "sarimax":
         # SARIMAX is the only model that consumes exogenous variables.
@@ -95,18 +136,27 @@ def _predict_chronos(
 
 
 def list_models() -> list[dict]:
-    """Return metadata for all available models."""
+    """Return metadata for all available models.
+
+    chronos is included for transparency (it is installed), but its
+    `available` flag reflects whether the pretrained weights can actually be
+    loaded in this environment. /models MUST NOT imply a blocked model is
+    callable — a client picking chronos and calling /predict would otherwise
+    hang on the unreachable huggingface.co fetch.
+    """
     models = [
-        {"id": "arima", "name": "ARIMA", "type": "statistical", "description": "AutoRegressive Integrated Moving Average"},
-        {"id": "sarimax", "name": "SARIMAX", "type": "statistical", "description": "ARIMA with exogenous variables (multivariate: FX, freight, feed, etc.)"},
-        {"id": "holtwinters", "name": "Holt-Winters", "type": "statistical", "description": "Triple exponential smoothing with trend and seasonality"},
-        {"id": "exponential_smoothing", "name": "Exponential Smoothing", "type": "statistical", "description": "Simple exponential smoothing"},
-        {"id": "naive_forecaster", "name": "Naive Forecaster", "type": "statistical", "description": "Last-value baseline forecaster"},
-        {"id": "stl_forecaster", "name": "STL Forecaster", "type": "statistical", "description": "STL decomposition with linear trend extrapolation"},
+        {"id": "arima", "name": "ARIMA", "type": "statistical", "description": "AutoRegressive Integrated Moving Average", "available": True},
+        {"id": "sarimax", "name": "SARIMAX", "type": "statistical", "description": "ARIMA with exogenous variables (multivariate: FX, freight, feed, etc.)", "available": True},
+        {"id": "holtwinters", "name": "Holt-Winters", "type": "statistical", "description": "Triple exponential smoothing with trend and seasonality", "available": True},
+        {"id": "exponential_smoothing", "name": "Exponential Smoothing", "type": "statistical", "description": "Simple exponential smoothing", "available": True},
+        {"id": "naive_forecaster", "name": "Naive Forecaster", "type": "statistical", "description": "Last-value baseline forecaster", "available": True},
+        {"id": "stl_forecaster", "name": "STL Forecaster", "type": "statistical", "description": "STL decomposition with linear trend extrapolation", "available": True},
     ]
     if CHRONOS_AVAILABLE:
         models.append({
             "id": "chronos", "name": "Chronos-2", "type": "foundation",
             "description": "Amazon Chronos T5 time-series foundation model (pretrained, zero-shot)",
+            "available": CHRONOS_USABLE,
+            **({"blocked_reason": CHRONOS_BLOCKED_REASON} if CHRONOS_BLOCKED_REASON else {}),
         })
     return models
