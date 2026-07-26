@@ -295,3 +295,52 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 
 	return subscribed;
 }
+
+/**
+ * Schedule predictions for beef CUTS — the dual-backend path.
+ *
+ * Mirrors schedulePredictionsFromPostgreSQL but for BeefCutPrice series
+ * addressed by the virtual key cut:{factoryId}:{cutCode}. Only (factoryId,
+ * cutCode) pairs with ≥2 fresh (non-bridge) price points AND latest within
+ * STALE_WINDOW_DAYS are subscribed — the same honesty gate the forecast API
+ * applies, so we never background-refresh a forecast that would be rejected
+ * on-demand. runAndCachePrediction detects the cut: prefix and routes to
+ * getBeefCutSeries automatically.
+ *
+ * This warms the Redis cache so the per-row /beef forecast column and the
+ * cut-detail page hit cache (sub-50ms) instead of computing 5 models
+ * synchronously on first request.
+ */
+export async function scheduleBeefCutPredictions(): Promise<number> {
+	// Find (factoryId, cutCode) pairs with ≥2 non-bridge points and a recent
+	// latest date. The freshness gate matches findForecastableFactoryForCut.
+	const STALE_WINDOW_DAYS = 7;
+	const since = new Date();
+	since.setDate(since.getDate() - STALE_WINDOW_DAYS);
+
+	const cuts = await prisma.beefCutPrice.groupBy({
+		by: ["factoryId", "cutCode"],
+		where: {
+			source: { not: { startsWith: "bridge:" } },
+			date: { gte: since },
+		},
+		_count: { _all: true },
+	});
+
+	const MODELS = getAllModels();
+	let subscribed = 0;
+	for (const c of cuts) {
+		if (c._count._all >= 2) {
+			// Virtual key routes runAndCachePrediction → getBeefCutSeries.
+			const key = `cut:${c.factoryId}:${c.cutCode}`;
+			subscribeCommodity(key, MODELS, 10);
+			subscribed++;
+		}
+	}
+
+	logger.info(
+		`[PREDICT-CUT] Subscribed ${subscribed} beef cut series to prediction refresh (${cuts.length - subscribed} had <2 fresh non-bridge points, skipped)`,
+	);
+
+	return subscribed;
+}

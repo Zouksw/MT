@@ -15,7 +15,10 @@ import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import { verifyDuePredictions } from "@/services/mapeTracking";
-import { schedulePredictionsFromPostgreSQL } from "@/services/predictionCache";
+import {
+	scheduleBeefCutPredictions,
+	schedulePredictionsFromPostgreSQL,
+} from "@/services/predictionCache";
 import { createApp } from "./app";
 import { config } from "./lib";
 
@@ -147,6 +150,14 @@ function start(): void {
 				logger.info(`🤖 Scheduled predictions for ${count} commodities (every 30 min)`);
 			} catch (err) {
 				logger.warn(`🤖 Prediction scheduling skipped: ${err}`);
+			}
+			// Dual-backend: also schedule beef CUT predictions (cut:{factoryId}:
+			// {cutCode} virtual keys). Shares the same 30-min refresh timer.
+			try {
+				const cutCount = await scheduleBeefCutPredictions();
+				logger.info(`🥩 Scheduled cut predictions for ${cutCount} beef cut series`);
+			} catch (err) {
+				logger.warn(`🥩 Cut prediction scheduling skipped: ${err}`);
 			}
 		}, 5000);
 	});
