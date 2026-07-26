@@ -1,29 +1,85 @@
 "use client";
 
 import { ArrowDownRight, ArrowUpRight, Lock, Minus, Sparkles } from "lucide-react";
-import { type ForecastPermission, useMarketForecasts } from "@/hooks/useMarketForecasts";
-import { formatDecimal, formatPercent, formatPriceRange, formatSignedPercent } from "@/lib/format";
+import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
+import { useRetryableFetch } from "@/hooks/useRetryableFetch";
+import { beefFetcher } from "@/lib/beef";
+import { formatDecimal, formatPrice, formatSignedPercent } from "@/lib/format";
+import { tokenManager } from "@/lib/tokenManager";
 
 /**
  * Market Forecast Board — the product's signature AI-in-market-row experience.
  *
- * Renders beef commodities with their latest price alongside a 7-day multi-model
- * consensus forecast (direction + change % + confidence + model agreement +
- * range), inline. This is where AINode-style prediction meets the 牧集网-style
- * market board: the forecast is not a subpage, it lives next to the price, and
- * each row surfaces the full consensus per PRODUCT-SPEC §5.3.
+ * Layer 3 of the frontend integration: this board now consumes CUT-level data
+ * (BeefCutTaxonomy + BeefCutPrice + the dual-backend /api/beef/forecasts
+ * batch), NOT the legacy commodity-slug path. The old implementation hit
+ * /market/commodities + /signals/batch keyed by slug, which was disconnected
+ * from the price table's cutCode rows AND linked to /beef/cuts/:slug (wrong —
+ * slug is not a cutCode). This version keys everything by cutCode, so the
+ * forecast, the latest price, and the cut-detail link are all consistent.
  *
- * Color rule (enforced here): green = forecast up, red = forecast down ONLY.
- * The confidence band + model count are neutral/foreground; permission/upgrade
- * affordances use primary (gold), never directional colors.
+ * PRODUCT-SPEC §5.3: the forecast lives next to the price, each row surfaces
+ * the full multi-model consensus (direction / change / confidence / model
+ * agreement / range), not a subpage.
+ *
+ * Honesty: cuts absent from the batch forecast map (stale/insufficient data)
+ * are omitted from the board rather than shown with fabricated values. If the
+ * whole map is empty (demo snapshot mode), the board shows an honest empty
+ * state naming the activation path.
  */
 export function MarketForecastBoard() {
-	const { rows, loading, permission, horizon } = useMarketForecasts(7);
+	const hasToken = typeof window !== "undefined" && !!tokenManager.getToken();
+
+	// Latest cut prices (same source as the price table) — gives us the cut
+	// list + current price + display names. Reuse beefFetcher (cookie auth).
+	const { data: pricesData, isLoading: pricesLoading } = useRetryableFetch(
+		"/api/beef/prices/latest",
+		beefFetcher,
+	);
+	// Batch cut-level forecasts — one fetch, all cuts.
+	const { forecasts: cutForecasts, isLoading: forecastsLoading } = useBeefCutForecasts(7);
+
+	const allPrices = (pricesData?.data?.prices ?? pricesData?.prices ?? []) as Array<{
+		cutCode: string;
+		price: number;
+	}>;
+
+	// One row per cutCode: latest price + forecast (if forecastable).
+	// Cuts with no forecast in the batch map are forecastable:false — we keep
+	// them in pricedOnly but exclude from the forecastable board.
+	const seenCut = new Set<string>();
+	const rows: Array<{
+		cutCode: string;
+		latestPrice: number | null;
+		forecastEnd: number | null;
+		changePct: number | null;
+		direction: "up" | "down" | "flat" | null;
+		confidence: number | null;
+		modelsAgree: number | null;
+		totalModels: number | null;
+	}> = [];
+
+	for (const p of allPrices) {
+		if (seenCut.has(p.cutCode)) continue; // dedupe cutCodes (many factory rows)
+		seenCut.add(p.cutCode);
+		const fc = cutForecasts?.[p.cutCode];
+		rows.push({
+			cutCode: p.cutCode,
+			latestPrice: p.price ?? null,
+			forecastEnd: fc?.predictedPrice ?? null,
+			changePct: fc?.predictedChange ?? null,
+			direction: fc?.direction ?? null,
+			confidence: fc?.confidence ?? null,
+			modelsAgree: fc?.modelsAgree ?? null,
+			totalModels: fc?.availableModels ?? null,
+		});
+	}
 
 	const forecastable = rows.filter(
 		(r) => r.latestPrice != null && r.forecastEnd != null && r.changePct != null,
 	);
 	const pricedOnly = rows.filter((r) => r.latestPrice != null);
+	const loading = pricesLoading || (hasToken && forecastsLoading);
 
 	return (
 		<section className="rounded-xl border bg-card">
@@ -32,10 +88,10 @@ export function MarketForecastBoard() {
 					<Sparkles className="size-4 text-primary" />
 					<h2 className="text-h4 font-display font-semibold text-foreground">AI Price Forecast</h2>
 					<span className="text-xs text-muted-foreground">
-						{horizon}-day outlook · multi-model consensus
+						7-day outlook · multi-model consensus
 					</span>
 				</div>
-				<PermissionBadge permission={permission} />
+				<PermissionBadge hasToken={hasToken} loading={loading} />
 			</header>
 
 			{loading ? (
@@ -54,8 +110,7 @@ export function MarketForecastBoard() {
 								<th className="px-3 py-2 font-medium text-right">7d Forecast</th>
 								<th className="px-3 py-2 font-medium text-right">Change</th>
 								<th className="px-3 py-2 font-medium text-right">Confidence</th>
-								<th className="px-3 py-2 font-medium text-right">Models</th>
-								<th className="px-5 py-2 font-medium text-right">Range</th>
+								<th className="px-5 py-2 font-medium text-right">Models</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -69,28 +124,19 @@ export function MarketForecastBoard() {
 										: "text-muted-foreground";
 								const Arrow = up ? ArrowUpRight : down ? ArrowDownRight : Minus;
 								return (
-									<tr key={r.slug} className="border-b last:border-0 hover:bg-muted/40">
+									<tr key={r.cutCode} className="border-b last:border-0 hover:bg-muted/40">
 										<td className="px-5 py-3">
 											<a
-												href={`/beef/cuts/${r.slug}`}
+												href={`/beef/cuts/${r.cutCode}`}
 												className="font-medium text-foreground hover:text-primary"
 											>
-												{r.name}
+												{r.cutCode.replace(/_/g, " ")}
 											</a>
-											{r.nameCn && (
-												<span className="ml-2 text-xs text-muted-foreground">{r.nameCn}</span>
-											)}
 										</td>
-										<td
-											className="px-3 py-3 text-right font-mono tabular-nums text-foreground"
-											style={{ fontVariantNumeric: "tabular-nums" }}
-										>
-											{formatDecimal(r.latestPrice, 2)}
+										<td className="px-3 py-3 text-right font-mono tabular-nums text-foreground">
+											{formatPrice(r.latestPrice, false)}
 										</td>
-										<td
-											className="px-3 py-3 text-right font-mono tabular-nums text-foreground"
-											style={{ fontVariantNumeric: "tabular-nums" }}
-										>
+										<td className="px-3 py-3 text-right font-mono tabular-nums text-foreground">
 											{formatDecimal(r.forecastEnd, 2)}
 										</td>
 										<td className={`px-3 py-3 text-right font-medium tabular-nums ${changeColor}`}>
@@ -99,26 +145,12 @@ export function MarketForecastBoard() {
 												{formatSignedPercent(r.changePct, 1)}
 											</span>
 										</td>
-										<td
-											className="px-3 py-3 text-right tabular-nums text-foreground"
-											style={{ fontVariantNumeric: "tabular-nums" }}
-										>
-											{r.confidence != null ? formatPercent(r.confidence) : "--"}
+										<td className="px-3 py-3 text-right tabular-nums text-foreground">
+											{r.confidence != null ? `${Math.round(r.confidence * 100)}%` : "--"}
 										</td>
-										<td
-											className="px-3 py-3 text-right tabular-nums text-xs text-muted-foreground"
-											style={{ fontVariantNumeric: "tabular-nums" }}
-										>
+										<td className="px-3 py-3 text-right tabular-nums text-xs text-muted-foreground">
 											{r.modelsAgree != null && r.totalModels != null
 												? `${r.modelsAgree}/${r.totalModels}`
-												: "--"}
-										</td>
-										<td
-											className="px-5 py-3 text-right font-mono tabular-nums text-xs text-muted-foreground"
-											style={{ fontVariantNumeric: "tabular-nums" }}
-										>
-											{r.lowerBound != null && r.upperBound != null
-												? formatPriceRange(r.lowerBound, r.upperBound, false)
 												: "--"}
 										</td>
 									</tr>
@@ -128,42 +160,40 @@ export function MarketForecastBoard() {
 					</table>
 				</div>
 			) : pricedOnly.length > 0 ? (
-				// Prices exist but no forecasts returned — likely permission or model issue.
 				<div className="p-5">
-					<PermissionMessage permission={permission} />
+					<PermissionMessage hasToken={hasToken} />
 				</div>
 			) : (
 				<div className="p-8 text-center text-sm text-muted-foreground">
-					No beef commodities with price history yet. Forecasts will appear here once price data is
-					ingested.
+					No beef cuts with fresh price data yet. Forecasts will appear here once a beef data source
+					is activated (USDA MARS API, MLA API, or manual CSV import) — the honesty framework
+					requires fresh, non-bridge data to forecast.
 				</div>
 			)}
 		</section>
 	);
 }
 
-function PermissionBadge({ permission }: { permission: ForecastPermission }) {
-	if (permission === "allowed") {
+function PermissionBadge({ hasToken, loading }: { hasToken: boolean; loading: boolean }) {
+	if (loading) return <span className="text-xs text-muted-foreground">Loading…</span>;
+	if (!hasToken) {
 		return (
 			<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-				<span className="inline-block size-1.5 rounded-full bg-primary" />
-				AI active
+				<Lock className="size-3" />
+				Sign in for forecast
 			</span>
 		);
 	}
-	if (permission === "loading") {
-		return <span className="text-xs text-muted-foreground">Loading…</span>;
-	}
 	return (
 		<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-			<Lock className="size-3" />
-			{permission === "no-token" ? "Sign in for forecast" : "Pro feature"}
+			<span className="inline-block size-1.5 rounded-full bg-primary" />
+			AI active
 		</span>
 	);
 }
 
-function PermissionMessage({ permission }: { permission: ForecastPermission }) {
-	if (permission === "no-token") {
+function PermissionMessage({ hasToken }: { hasToken: boolean }) {
+	if (!hasToken) {
 		return (
 			<p className="text-sm text-muted-foreground">
 				<a href="/login" className="text-primary hover:underline">
@@ -173,19 +203,12 @@ function PermissionMessage({ permission }: { permission: ForecastPermission }) {
 			</p>
 		);
 	}
-	if (permission === "denied") {
-		return (
-			<p className="text-sm text-muted-foreground">
-				AI forecasts are a Pro feature.{" "}
-				<a href="/pricing" className="text-primary hover:underline">
-					Upgrade
-				</a>{" "}
-				to unlock 7-day price predictions.
-			</p>
-		);
-	}
 	return (
-		<p className="text-sm text-muted-foreground">Forecasts unavailable for these cuts right now.</p>
+		<p className="text-sm text-muted-foreground">
+			No fresh cut-level data available for forecasting. Price data on this page is currently a
+			snapshot — activate a beef data source (USDA MARS, MLA, or manual import) to enable real-time
+			AI forecasts per cut.
+		</p>
 	);
 }
 
