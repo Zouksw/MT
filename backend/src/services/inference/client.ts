@@ -96,7 +96,7 @@ export async function predictFromCache(request: PredictionRequest): Promise<Pred
 	const result = await predict({
 		values,
 		timestamps,
-		model_id: request.algorithm || "arima",
+		model_id: request.algorithm || "chronos_tiny",
 		horizon: request.horizon,
 		confidence_level: request.confidenceLevel || 0.95,
 	});

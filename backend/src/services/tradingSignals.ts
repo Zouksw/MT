@@ -23,13 +23,19 @@ import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
 
-// All pretrained / ready-to-use models (IoTDB AINode style — no self-training).
-// Timer-XL/Sundial (per-request online training) removed in Round 12.
-const ALL_MODELS = [
+// PRIMARY consensus ensemble = 3 Chronos T5 sizes (capacity diversity).
+// The multi-size ensemble votes via the weighted consensus pipeline:
+// chronos_base (most accurate) weighs more when its MAPE is lower.
+const ALL_MODELS = ["chronos_tiny", "chronos_mini", "chronos_base"] as const;
+
+// BASELINE models — NOT part of the main consensus, but reported on the /ai
+// accuracy page so users can see chronos vs classical-method performance.
+// naive_forecaster is the standard "dumb baseline" any real model must beat.
+export const BASELINE_MODELS = [
+	"naive_forecaster",
 	"arima",
 	"holtwinters",
 	"exponential_smoothing",
-	"naive_forecaster",
 	"stl_forecaster",
 ] as const;
 

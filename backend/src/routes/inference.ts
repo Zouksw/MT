@@ -33,14 +33,22 @@ async function resolveCommodityId(input: string): Promise<string> {
 	return commodity.id;
 }
 
+// All callable models: 3 chronos variants (primary) + 6 statistical (baseline).
+// The /ai predict page lets users call ANY of these for comparison.
 const VALID_MODELS = [
+	"chronos_tiny",
+	"chronos_mini",
+	"chronos_base",
 	"arima",
+	"sarimax",
 	"holtwinters",
 	"exponential_smoothing",
 	"naive_forecaster",
 	"stl_forecaster",
-	"chronos",
 ] as const;
+
+// Default model when none specified — the smallest chronos variant (fast + zero-shot).
+const DEFAULT_MODEL = "chronos_tiny";
 
 type ModelId = (typeof VALID_MODELS)[number];
 
@@ -81,7 +89,7 @@ router.post(
 		// because CommodityPrice.commodityId only matches UUIDs.
 		const uuid = await resolveCommodityId(commodityId);
 
-		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : "arima";
+		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 
@@ -140,7 +148,7 @@ router.post(
 				continue;
 			}
 
-			const modelId: ModelId = VALID_MODELS.includes(r.algorithm) ? r.algorithm : "arima";
+			const modelId: ModelId = VALID_MODELS.includes(r.algorithm) ? r.algorithm : DEFAULT_MODEL;
 			const h = Math.min(Math.max(Number(r.horizon) || 10, 1), 100);
 			const cl = Number(r.confidenceLevel) || 0.95;
 
@@ -217,7 +225,7 @@ router.post(
 
 		const uuid = await resolveCommodityId(commodityId);
 
-		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : "arima";
+		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 		const limit = Number(historyPoints) || 50;

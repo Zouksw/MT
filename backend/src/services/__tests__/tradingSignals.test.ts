@@ -56,22 +56,17 @@ describe("Price Forecast Engine", () => {
 	});
 
 	describe("getAllModels", () => {
-		it("returns the 5 pretrained statistical models (no timer_xl/sundial)", () => {
+		it("returns the 3 chronos ensemble variants (primary consensus)", () => {
 			const models = getAllModels();
-			// Round 12 removed timer_xl/sundial (self-training). This guards
-			// against accidental re-addition.
+			// Primary consensus = 3 Chronos T5 sizes (capacity-diversity ensemble).
+			// Statistical models moved to BASELINE_MODELS (not in the main vote).
+			// This guards against accidental reversion to the old 5-statistical setup.
+			expect(models).toEqual(
+				expect.arrayContaining(["chronos_tiny", "chronos_mini", "chronos_base"]),
+			);
+			expect(models).toHaveLength(3);
 			expect(models).not.toContain("timer_xl");
 			expect(models).not.toContain("sundial");
-			expect(models).toEqual(
-				expect.arrayContaining([
-					"arima",
-					"holtwinters",
-					"exponential_smoothing",
-					"naive_forecaster",
-					"stl_forecaster",
-				]),
-			);
-			expect(models).toHaveLength(5);
 		});
 
 		it("returns a defensive copy (mutating it does not change future calls)", () => {

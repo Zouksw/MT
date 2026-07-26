@@ -34,10 +34,11 @@ describe("Signals/AI Routes (Integration)", () => {
 
 		expect(res.status).toBe(200);
 		expect(res.body.success).toBe(true);
-		expect(res.body.data.models.length).toBe(5);
-		expect(res.body.data.count).toBe(5);
+		// Primary consensus = 3 chronos variants (was 5 statistical models).
+		expect(res.body.data.models.length).toBe(3);
+		expect(res.body.data.count).toBe(3);
 
-		// Models are string IDs (e.g. "arima", "holtwinters")
+		// Models are string IDs (e.g. "chronos_tiny", "chronos_base")
 		expect(typeof res.body.data.models[0]).toBe("string");
 	});
 
@@ -65,7 +66,7 @@ describe("Signals/AI Routes (Integration)", () => {
 		expect(["up", "down", "flat"]).toContain(res.body.data.direction);
 		expect(res.body.data).toHaveProperty("confidence");
 		expect(res.body.data).toHaveProperty("individualForecasts");
-		expect(res.body.data.individualForecasts).toHaveLength(5);
+		expect(res.body.data.individualForecasts).toHaveLength(3);
 	});
 
 	it("should return model accuracy for specific model", async () => {

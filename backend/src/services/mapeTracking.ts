@@ -267,13 +267,11 @@ export async function getAllModelAccuracy(
 		verifiedCount: number;
 	}>
 > {
-	const models = [
-		"arima",
-		"holtwinters",
-		"exponential_smoothing",
-		"naive_forecaster",
-		"stl_forecaster",
-	];
+	// Primary chronos ensemble + baselines for the accuracy-comparison page.
+	// Importing here (not at module top) avoids a circular dependency:
+	// tradingSignals imports predictionCache which imports mapeTracking.
+	const { getAllModels, BASELINE_MODELS } = await import("./tradingSignals");
+	const models = [...getAllModels(), ...BASELINE_MODELS];
 
 	const results = await Promise.all(
 		models.map(async (modelId) => {

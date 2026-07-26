@@ -258,7 +258,7 @@ export async function invalidateCommodityCache(
  * Schedule predictions for active commodities that actually have price data.
  *
  * Previously this subscribed ALL active commodities (111), but 64% had zero
- * CommodityPrice rows — every 30-min refresh fired 5 model predictions that
+ * CommodityPrice rows — every 30-min refresh fired 3 model predictions that
  * all failed with "Insufficient price data", wasting inference-service work
  * and polluting logs. Now we only subscribe commodities with ≥2 daily prices
  * (the inference engine's minimum for fitting a model).
@@ -308,7 +308,7 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
  * getBeefCutSeries automatically.
  *
  * This warms the Redis cache so the per-row /beef forecast column and the
- * cut-detail page hit cache (sub-50ms) instead of computing 5 models
+ * cut-detail page hit cache (sub-50ms) instead of computing 3 models
  * synchronously on first request.
  */
 export async function scheduleBeefCutPredictions(): Promise<number> {
