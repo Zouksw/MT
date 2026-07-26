@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * WatchlistPanel — the "follow list" UI (PRODUCT-SPEC §四: portfolio/watchlist
+ * 降级为关注列表). This component and its backend (/api/watchlists +
+ * watchlistService) are KEPT as the implementation basis for the degraded
+ * "关注列表" entry point.
+ *
+ * The /trading/watchlist ROUTE was removed (§九: no trading semantics in the
+ * main IA), so this panel currently has no renderer. It will be re-mounted at
+ * a non-trading entry point (e.g. /settings/watchlists or a user-menu item)
+ * when the degraded entry is wired. Do NOT delete without removing
+ * lib/watchlist.ts and backend watchlistService too.
+ */
+
 import { Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
