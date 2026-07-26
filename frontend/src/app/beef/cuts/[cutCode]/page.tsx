@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { CutForecastSection } from "@/components/beef/CutForecastSection";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -105,6 +106,10 @@ export default function CutDetail() {
 					)}
 				</div>
 			)}
+
+			{/* AI Forecast — per-cut prediction (dual-backend, layer 1 integration).
+			    Consumes /api/beef/forecasts/:cutCode; honest about forecastable:false. */}
+			{cutCode && <CutForecastSection cutCode={cutCode} />}
 
 			{/* Price History by Source */}
 			{priceErr && <p className="text-sm text-destructive mb-4">Failed to load price history</p>}
