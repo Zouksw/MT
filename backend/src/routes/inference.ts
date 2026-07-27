@@ -7,6 +7,7 @@ import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
 import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
 import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inference";
+import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 
 const router = Router();
 
@@ -31,6 +32,37 @@ async function resolveCommodityId(input: string): Promise<string> {
 		);
 	}
 	return commodity.id;
+}
+
+/**
+ * Resolve a caller-supplied commodityId/UUID into the full commodity row
+ * (id + slug). The slug is needed to apply authoritative-source filtering
+ * (docs/KNOWN-ISSUES.md R2) on direct CommodityPrice reads in this router.
+ * Throws BadRequestError when the slug/UUID is unknown.
+ */
+async function resolveCommodity(input: string): Promise<{ id: string; slug: string }> {
+	if (UUID_RE.test(input)) {
+		const found = await prisma.commodity.findUnique({
+			where: { id: input },
+			select: { id: true, slug: true },
+		});
+		if (!found) {
+			throw new BadRequestError(
+				`Commodity "${input}" not found. Use GET /api/signals/commodities to list available commodities.`,
+			);
+		}
+		return found;
+	}
+	const commodity = await prisma.commodity.findFirst({
+		where: { slug: input },
+		select: { id: true, slug: true },
+	});
+	if (!commodity) {
+		throw new BadRequestError(
+			`Commodity "${input}" not found. Use GET /api/signals/commodities to list available commodities.`,
+		);
+	}
+	return commodity;
 }
 
 // All callable models: 3 chronos variants (primary) + 6 statistical (baseline).
@@ -223,7 +255,8 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
-		const uuid = await resolveCommodityId(commodityId);
+		const commodity = await resolveCommodity(commodityId);
+		const uuid = commodity.id;
 
 		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
@@ -232,7 +265,11 @@ router.post(
 
 		const [historicalData, predictionResult] = await Promise.all([
 			prisma.commodityPrice.findMany({
-				where: { commodityId: uuid, interval: "daily" },
+				where: {
+					commodityId: uuid,
+					interval: "daily",
+					...authoritativeSourceWhere(commodity.slug),
+				},
 				orderBy: { date: "desc" },
 				take: limit,
 				select: { date: true, close: true },
@@ -270,13 +307,18 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
-		const uuid = await resolveCommodityId(commodityId);
+		const commodity = await resolveCommodity(commodityId);
+		const uuid = commodity.id;
 
 		const th = Number(threshold) || 2.5;
 		const limit = Number(historyPoints) || 100;
 
 		const prices = await prisma.commodityPrice.findMany({
-			where: { commodityId: uuid, interval: "daily" },
+			where: {
+				commodityId: uuid,
+				interval: "daily",
+				...authoritativeSourceWhere(commodity.slug),
+			},
 			orderBy: { date: "asc" },
 			take: limit,
 			select: { date: true, close: true },
@@ -341,13 +383,18 @@ router.post(
 			throw new BadRequestError("Missing required parameter: commodityId");
 		}
 
-		const uuid = await resolveCommodityId(commodityId);
+		const commodity = await resolveCommodity(commodityId);
+		const uuid = commodity.id;
 
 		const th = Number(threshold) || 2.5;
 		const limit = Number(historyPoints) || 100;
 
 		const prices = await prisma.commodityPrice.findMany({
-			where: { commodityId: uuid, interval: "daily" },
+			where: {
+				commodityId: uuid,
+				interval: "daily",
+				...authoritativeSourceWhere(commodity.slug),
+			},
 			orderBy: { date: "asc" },
 			take: limit,
 			select: { date: true, close: true },

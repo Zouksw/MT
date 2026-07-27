@@ -10,6 +10,7 @@
  */
 
 import { logger, prisma } from "@/lib";
+import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 
 export interface CorrelationResult {
 	commodityA: string;
@@ -41,7 +42,7 @@ async function getPriceSeries(
 
 	const commodity = await prisma.commodity.findUnique({
 		where: { slug: commoditySlug },
-		select: { id: true },
+		select: { id: true, slug: true },
 	});
 
 	if (!commodity) return [];
@@ -51,6 +52,7 @@ async function getPriceSeries(
 			commodityId: commodity.id,
 			interval: "daily",
 			date: { gte: since },
+			...authoritativeSourceWhere(commodity.slug),
 		},
 		orderBy: { date: "asc" },
 		select: { date: true, close: true },

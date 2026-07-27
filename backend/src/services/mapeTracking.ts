@@ -9,6 +9,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
+import { getAuthoritativeSource } from "@/services/inference/authoritativeSources";
 import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
 
 export interface LogPredictionParams {
@@ -188,11 +189,28 @@ export async function verifyDuePredictions(): Promise<number> {
 				}
 				actualValues = cutActuals.map((p) => Number(p.price));
 			} else {
+				// Multi-source guard (docs/KNOWN-ISSUES.md R2): filter actuals by
+				// the same authoritative source the training data used, so the
+				// MAPE numerator compares like with like. Without this, a brl_usd
+				// prediction trained on fred (≈5.0) gets "verified" against
+				// exchange_rate_api rows (≈0.2) → bogus ~96% MAPE.
+				let authoritativeSource: string | null = null;
+				try {
+					const commodity = await prisma.commodity.findUnique({
+						where: { id: log.commodityId },
+						select: { slug: true },
+					});
+					authoritativeSource = getAuthoritativeSource(commodity?.slug);
+				} catch {
+					// If the commodity lookup fails, fall back to unfiltered
+					// (legacy behaviour) rather than abort verification.
+				}
 				const actualPrices = await prisma.commodityPrice.findMany({
 					where: {
 						commodityId: log.commodityId,
 						interval: "daily",
 						date: { gt: log.predictedAt },
+						...(authoritativeSource ? { source: authoritativeSource } : {}),
 					},
 					orderBy: { date: "asc" },
 					take: log.horizon,

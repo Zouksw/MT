@@ -12,6 +12,7 @@
 import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { NotFoundError } from "@/middleware/errorHandler";
+import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 
 export interface PriceHistoryParams {
 	interval: "daily" | "weekly" | "monthly";
@@ -61,7 +62,10 @@ export async function requireCommodity(slug: string) {
 export async function getLatestPrice(slug: string) {
 	const commodity = await requireCommodity(slug);
 	const prices = await prisma.commodityPrice.findMany({
-		where: { commodityId: commodity.id },
+		where: {
+			commodityId: commodity.id,
+			...authoritativeSourceWhere(commodity.slug),
+		},
 		orderBy: { date: "desc" },
 		take: 1,
 	});
@@ -75,6 +79,7 @@ export async function getPriceHistory(slug: string, params: PriceHistoryParams) 
 	const where: Record<string, unknown> = {
 		commodityId: commodity.id,
 		interval: params.interval,
+		...authoritativeSourceWhere(commodity.slug),
 	};
 	if (params.from || params.to) {
 		where.date = {
@@ -96,11 +101,7 @@ export async function getPriceHistory(slug: string, params: PriceHistoryParams) 
  * Prices for a commodity grouped by source — each source becomes a series of
  * {date, close} points. Used for multi-source comparison charts.
  */
-export async function getPricesBySource(
-	slug: string,
-	interval: string,
-	limit: number,
-) {
+export async function getPricesBySource(slug: string, interval: string, limit: number) {
 	const commodity = await requireCommodity(slug);
 
 	const prices = await prisma.commodityPrice.findMany({
