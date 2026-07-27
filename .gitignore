@@ -101,11 +101,8 @@ debug-*.js
 # Test results (never commit)
 test-results/
 
-# Taste skill (embedded repo)
+# Taste skill (embedded repo — removed; keep ignore as guard)
 taste-skill/
-
-# Archived / deprecated artifacts (kept locally, never commit)
-archive/
 
 # System files (never commit)
 .dotnet/
@@ -113,12 +110,16 @@ archive/
 .wget-hsts
 .bash_history
 .config/
+.gnupg/
+.rpmdb/
+.pki/
+.pip/
+.profile
+snap/
 
 # Backup files
 *.sql.gz
 backups/
 # Allow Prisma migration SQL files
 !backend/prisma/migrations/**/*.sql
-docs/references/awesome-design-md/
-.claude/skills/gstack/
 mt-backup/

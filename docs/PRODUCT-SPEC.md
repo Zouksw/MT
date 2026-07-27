@@ -155,7 +155,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 ## 六、对前端提升计划的调整
 
-基于"牧集+AINode"定位,原 `FRONTEND-IMPROVEMENT-PLAN.md` 的阶段 0 决策已解决:
+基于"牧集+AINode"定位,前端提升计划的阶段 0 决策已解决（原计划文档已归档清理）:
 
 ### ✅ 阶段 0 决策: **beef-only 聚焦**
 - landing/about/pricing 全部统一为**牛肉贸易**叙事

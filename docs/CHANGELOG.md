@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-03-13"
+last_updated: "2026-07-27"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -14,9 +14,9 @@ tags:
   - "version-history"
 target_audience: "Developers, Users, Contributors"
 related_docs:
-  - "Roadmap": "ROADMAP.md"
-  - "Deployment Guide": "docs/DEPLOYMENT.md"
-  - "API Reference": "docs/API.md"
+  - "Product Spec": "PRODUCT-SPEC.md"
+  - "Deployment Guide": "deployment/DEPLOYMENT-CHECKLIST.md"
+  - "API Reference": "API.md"
 changes:
   - version: "1.0.0"
     date: "2026-03-10"
@@ -41,6 +41,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-07-27 — 项目整理：AI 全自动开发规范化 + 冗余清理 + 安全
+
+把仓库整理成规范、完整的「AI 全自动开发」项目。**纯文档/配置整理，零业务代码变更。**
+
+**AI 代理文档**
+- 新增 `AGENTS.md`（项目根，AI 代理首要入口）：项目定位、核心价值链、规模事实（每项附计数方式）、技术栈、目录约定、命令、不可越线约束、文档导航。
+- 重写 `CLAUDE.md`：删除整段失效的 gstack 安装说明与 30+ 不存在的 skill 路由表（实测 gstack 未安装），保留 Coding Guidelines / Dev Server / Health Stack，新增"事实严谨"准则并指向 `AGENTS.md`。
+
+**冗余清理（删 + 提取精华）**
+- 删除外挂 git 仓库：`docs/references/awesome-design-md/`（2.0M，含完整 .git）、`archive/`（2.6M，含 taste-skill 完整 .git）。
+- 删除 47 份 round/review 流水账报告（`docs/archive/` 29 + `docs/reviews/` 18），先提取精华为 `docs/KNOWN-ISSUES.md`（开放阻塞，每条标来源 + 验证日期）与 `docs/TECH-DEBT.md`（过度工程化清单，每条标审计日期 + 待复核）。
+- 合并冲突版本：`PROJECT-STATE-AND-VISION-2026-07-26-v2.md` → `docs/PROJECT-VISION.md`，删除被取代的 v1。
+- 删除过时文档：自标 DEPRECATED 的 `ROADMAP.md`、`FRONTEND-IMPROVEMENT-PLAN.md`、`FULLSTACK-PROGRESS-2026-07-27.md`、`CHRONOS-ENSEMBLE-MIGRATION-2026-07-27.md`、基于废弃 ROADMAP 流程的 `developer/DEVELOPMENT-WORKFLOW.md`、7 个第三方 `references/*-design.md`。
+- 重写 `docs/INDEX.md`（无死链）；修复 `PRODUCT-SPEC.md` / `CHANGELOG.md` frontmatter 死链。
+
+**README 事实纠错**（数字全部改实测值，附计数方式见 `AGENTS.md` §三）
+- 数据源 18 → **19**、Prisma 模型 36 → **31**、前端页面 41 → **44**、后端路由 22 → **20**、统计模型 5 → **6**（补 SARIMAX 行 + Chronos 变体说明）。
+- 测试数改为"运行 `pnpm test` 获取当前数"（历史各文档数字互相矛盾，不写死）。
+- 数据源表按实际 19 个文件重列（删除不存在的 "USDA FAS"，补 Secex / Shipping Index）。
+
+**安全 + 误提交系统文件清理**
+- `git rm --cached`（本地文件保留）：`.gnupg/`（**含 GPG 私钥**，安全重点）、`.rpmdb/`、`.pki/`、`.pip/`、`.profile`、`.wget-hsts`、`snap/`。
+- 补 `.gitignore`：`.gnupg/`、`.rpmdb/`、`.pki/`、`.pip/`、`.profile`、`snap/`；清理指向已删内容的死规则。
+- `nginx/nginx.conf` 基于事实保留：`docker-compose.yml` 把它挂载为 nginx 容器配置（非废弃文件）。
+
+**验证**：4 个规模数字 + 9 个 model id 经只读命令复现 ✅；导航文件无死链 ✅；零业务代码变更 ✅。全部变更（57 条）在工作区/暂存区，未 commit。
 
 ### 2026-07-19 — Project unification refactor (R1-R4)
 

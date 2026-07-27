@@ -1,100 +1,52 @@
-# MT — Documentation
+# MT — 文档索引
 
-**Version**: 2.2.0 | **Last Updated**: 2026-07-12
-
----
-
-## 产品定位 (单一事实来源)
-
-> **为中国牛肉产业链上下游提供进口/国产牛肉价格数据采集、行情展示、多维分析,并以 AI 模型预测未来价格走势的专业平台。**
-
-- **对标**: 类[牧集网](https://web.mooket.com/)的牛肉贸易数据/展示/分析 + 类 IoTDB AINode 的预训练模型预测
-- **差异化**: 牧集无 AI 预测;AINode 无行业数据。本项目 = 牧集的数据深度 × AINode 的预测智能
-- **最终形态 spec**: [PRODUCT-SPEC.md](PRODUCT-SPEC.md)
-- **前端提升计划**: [FRONTEND-IMPROVEMENT-PLAN.md](FRONTEND-IMPROVEMENT-PLAN.md)
+> 产品方向唯一事实来源：[PRODUCT-SPEC.md](PRODUCT-SPEC.md)
+> AI 代理工作入口：[../AGENTS.md](../AGENTS.md) · 编码准则：[../CLAUDE.md](../CLAUDE.md)
 
 ---
 
-## Quick Navigation
+## 产品与规划
 
-### Getting Started
-- [API Reference](API.md) — REST API documentation
-- [Deployment Guide](deployment/DEPLOYMENT-CHECKLIST.md) — Production deployment
-- [Design System](DESIGN.md) — UI/UX design spec
+| 文档 | 内容 |
+|------|------|
+| [PRODUCT-SPEC.md](PRODUCT-SPEC.md) | **产品方向唯一事实来源**（定位、功能、里程碑、范围边界） |
+| [PROJECT-VISION.md](PROJECT-VISION.md) | 项目状态全景 + 产品愿景 + 核心特性设计 |
+| [KNOWN-ISSUES.md](KNOWN-ISSUES.md) | 开放阻塞与待决策（数据源失效、MAPE 验证环、Chronos 接入等），每条标注来源与验证日期 |
+| [TECH-DEBT.md](TECH-DEBT.md) | 过度工程化与冗余清单（BullMQ 死队列、多租户脚手架、死模型等），每条标注审计日期，动手前需复核 |
+| [AUTOMATION-STATUS.md](AUTOMATION-STATUS.md) | CI/CD、cron、护栏等自动化基础设施状态 |
+| [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 
-### Core Documentation
-- [Product Spec](PRODUCT-SPEC.md) — **Single source of truth** for product direction
-- [Roadmap](ROADMAP.md) — ⚠️ **DEPRECATED 2026-07-19** (pre-repositioning, numbers stale). See PRODUCT-SPEC instead.
-- [Security](SECURITY.md) — Security policies and best practices
-- [CHANGELOG](CHANGELOG.md) — Version history
+## 技术参考
 
-### Developer Resources
-- [Contributing](guides/CONTRIBUTING.md) — Contribution guidelines
-- [Secrets Management](guides/SECRETS-MANAGEMENT.md) — Credentials handling
-- [CLAUDE.md](../CLAUDE.md) — AI assistant instructions (project root)
+| 文档 | 内容 |
+|------|------|
+| [API.md](API.md) | REST API 参考 |
+| [DESIGN.md](DESIGN.md) | UI/UX 设计规范 |
+| [SECURITY.md](SECURITY.md) | 安全策略 |
 
-### Reviews & Audits (`reviews/`)
+## 开发与运维
 
-> Pre-2026-07-12 reviews (rounds 1–24, sarimax experiment, overengineering audit, etc.) archived under `docs/archive/`.
+| 文档 | 内容 |
+|------|------|
+| [deployment/DEPLOYMENT-CHECKLIST.md](deployment/DEPLOYMENT-CHECKLIST.md) | 生产部署清单 |
+| [guides/CONTRIBUTING.md](guides/CONTRIBUTING.md) | 贡献指南 |
+| [guides/SECRETS-MANAGEMENT.md](guides/SECRETS-MANAGEMENT.md) | 凭据管理 |
+| [../CLAUDE.md](../CLAUDE.md) | 编码准则 + Dev Server 管理 + Health Stack 质量门 |
+| [../AGENTS.md](../AGENTS.md) | 项目定位、价值链、规模事实、命令、约束 |
 
-**Current milestone work (M1 → M3):**
-- [**M3-A 资讯模块**](reviews/2026-07-13-m3a-market-news.md) — market news feed full stack (model + service + route + 3 frontend pages)
-- [**M2 AI 预测融入主流程**](reviews/2026-07-12-m2-ai-in-market.md) — lib/format + 颜色语义 + dashboard KPI hero + MarketForecastBoard
-- [**M1 应用 Shell + 信任修复**](reviews/2026-07-12-m1-shell-and-trust.md) — AppShell + WebSocket 假声明删除 + beef-only 统一
+## 参考资料（业务数据）
 
-**Recent rounds (25–29):**
-- [Round 29](reviews/2026-07-12-round-29.md) — watchlistService extraction (312→100 lines)
-- [Round 28](reviews/2026-07-12-round-28.md) — data quality (upsertFactor, scraperManager error reporting)
-- [Round 27 exploration](reviews/2026-07-12-round-27-exploration.md) — multi-skill探查 + R27-32 计划
-- [Round 26](reviews/2026-07-12-round-26.md) — inference slug/UUID fix (双向回归)
-- [Round 25](reviews/2026-07-12-round-25.md) — Storybook/phosphor/envelope 清理
-
-**Frontend design:**
-- [设计审查](reviews/2026-07-12-frontend-design-review.md) — CRITICAL/HIGH/AI-slop 分级
-- [设计修复](reviews/2026-07-12-frontend-design-fixes.md) — gold 统一 + Button cva + emoji→lucide
-- [提升计划 review](reviews/2026-07-12-frontend-plan-review.md) — 4 阶段计划审查
-- [深度行动项](reviews/2026-07-12-deep-dive-actionable-items.md) — actionable 整理
-
-### Domain Reference
-- [数据源全链路审计报告](数据源全链路审计报告.md) — Data source audit
-- [中国进口牛肉贸易数据源](中国进口牛肉贸易全链路数据源梳理报告.md) — Beef trade data sources
+| 文件 | 内容 |
+|------|------|
+| [references/beef-reference.xlsx](references/beef-reference.xlsx) | 牛肉部位/工厂数据参考表 |
+| [中国进口牛肉贸易全链路数据源梳理报告.md](中国进口牛肉贸易全链路数据源梳理报告.md) | 进口牛肉贸易数据源梳理 |
+| [数据源全链路审计报告.md](数据源全链路审计报告.md) | 数据源全链路审计 |
 
 ---
 
-## Document Index
+## 文档约定
 
-| Document | Description | Audience |
-|----------|-------------|----------|
-| [API.md](API.md) | REST API endpoints and schemas | Developers |
-| [SECURITY.md](SECURITY.md) | Security configuration | Operators, Developers |
-| [DESIGN.md](DESIGN.md) | UI/UX design system | Designers, Developers |
-| [ROADMAP.md](ROADMAP.md) | Development roadmap + 实测指标 | All |
-| [CHANGELOG.md](CHANGELOG.md) | Version history | All |
-| [reviews/](reviews/) | 轮次审查与深度审计档案 | Maintainers |
-
----
-
-## Common Tasks
-
-**Start Development**:
-```bash
-pnpm restart          # Start backend (8000) + frontend (3000)
-pnpm stop             # Stop all services
-```
-
-**Run Tests**:
-```bash
-cd backend && npx vitest run    # ~431 backend tests
-cd frontend && npx jest         # 307 frontend tests
-```
-
-**Health Check**:
-```bash
-cd backend && npx tsc --noEmit && npx @biomejs/biome lint src/ && npx vitest run
-cd frontend && npx tsc --noEmit -p tsconfig.json && npx next build  # build = the real gate
-```
-
----
-
-**Maintainer**: MT Team
-**Last Review**: 2026-07-13
+- **数字必须实测**：不沿用历史 README / round 报告里已被发现矛盾的数字（规模事实见 [../AGENTS.md](../AGENTS.md) §三，附计数方式）。
+- **易变数字不写死**：测试总数等只写"运行命令获取当前数"。
+- **issue / 技术债**：每条标注证据来源与日期；未验证的标"待确认/待复核"。
+- 解决某条 issue / 技术债时，在原条目末尾追加"已解决（日期）"，不删除（保留历史可防重复审计）。

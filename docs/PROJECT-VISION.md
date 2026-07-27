@@ -54,7 +54,9 @@ prediction_logs（预测产出）:
   cut-keyed（双后端）: 仅 15 条（e2e 测试残留，非生产路径）
 ```
 
-**18 源 × 真相**不变：0 个真实产出牛肉数据。"2 healthy" = commodity_prices(汇率) + world_bank(能源/金属/谷物)，都非牛肉。
+**数据源 × 真相**不变：0 个真实产出牛肉数据。"2 healthy" = commodity_prices(汇率) + world_bank(能源/金属/谷物)，都非牛肉。
+
+> 注：此处的源分类取自 2026-07-19 DATA-4 审计（当时移除 `argentina` 后计 18）。当前 `backend/src/services/dataIngestion/sources/` 实测 **19** 个文件；逐源可用性详见 [KNOWN-ISSUES.md](KNOWN-ISSUES.md) D1（动手前需 live 复核，状态随时间变化）。
 
 ### 1.3 技术栈各层完成度（loop 后修订）
 

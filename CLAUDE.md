@@ -1,16 +1,21 @@
 # CLAUDE.md
 
+> **AI 代理工作主入口**：[`AGENTS.md`](AGENTS.md)（项目定位、价值链、规模事实、命令、约束、文档导航）。
+> 本文件聚焦**编码准则 + Dev Server 管理 + 质量门**。
+
 ## Product: MT
 
 大宗商品市场信息与分析平台. **不是交易平台.**
 
-核心功能: 商品价格展示 + 多因素分析(天气/汇率/关税/运费) + AI自动预测(8模型信号引擎).
+核心功能: 牛肉价格展示 + 多因素分析(天气/汇率/关税/运费) + AI自动预测(统计模型 + Chronos 预训练基座).
 不涉及: 下单交易, 账户余额, 订单执行, 实际支付.
 
 已有但需重新定位的功能:
 - Simulation(模拟交易) → 预测回测工具(验证AI预测准确率)
 - Portfolio(投资组合) → 分析分组(跟踪相关品种)
-- Billing(Stripe计费) → AI功能分层(更多信号/模型/历史数据)
+- Billing(Stripe计费) → AI功能分层(更多信号/模型/历史数据)，仅静态展示
+
+详见 [PRODUCT-SPEC.md](docs/PRODUCT-SPEC.md) 与 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -20,7 +25,7 @@ Behavioral guidelines to reduce common LLM coding mistakes.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-## 1. Think Before Coding
+### 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
@@ -30,7 +35,7 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-## 2. Simplicity First
+### 2. Simplicity First
 
 **Minimum code that solves the problem. Nothing speculative.**
 
@@ -42,7 +47,7 @@ Before implementing:
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-## 3. Surgical Changes
+### 3. Surgical Changes
 
 **Touch only what you must. Clean up only your own mess.**
 
@@ -58,7 +63,7 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Goal-Driven Execution
+### 4. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
@@ -75,6 +80,12 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+### 5. 事实严谨（写文档/报告时）
+
+- 写入文档的数字必须先用只读命令核实，不沿用历史 README / round 报告里已被发现矛盾的数字。
+- 未验证的不写成定论，标注"待确认/待复核"，附证据来源（文件:行 或 命令）与日期。
+- 测试数等易变数字不写死，只写"运行 `pnpm test` 获取当前数"。
 
 ---
 
@@ -122,65 +133,33 @@ cd /root/backend && pnpm dev &
 cd /root/frontend && pnpm dev &
 ```
 
-## Skill routing
-
-When the user's request matches an available skill, invoke it via the Skill tool. The
-skill has multi-step workflows, checklists, and quality gates that produce better
-results than an ad-hoc answer. When in doubt, invoke the skill. A false positive is
-cheaper than a false negative.
-
-Key routing rules:
-- Product ideas, "is this worth building", brainstorming → invoke /office-hours
-- Strategy, scope, "think bigger", "what should we build" → invoke /plan-ceo-review
-- Architecture, "does this design make sense" → invoke /plan-eng-review
-- Design system, brand, "how should this look" → invoke /design-consultation
-- Design review of a plan → invoke /plan-design-review
-- Developer experience of a plan → invoke /plan-devex-review
-- "Review everything", full review pipeline → invoke /autoplan
-- Bugs, errors, "why is this broken", "wtf", "this doesn't work" → invoke /investigate
-- Test the site, find bugs, "does this work" → invoke /qa (or /qa-only for report only)
-- Code review, check the diff, "look at my changes" → invoke /review
-- Visual polish, design audit, "this looks off" → invoke /design-review
-- Developer experience audit, try onboarding → invoke /devex-review
-- Ship, deploy, create a PR, "send it" → invoke /ship
-- Merge + deploy + verify → invoke /land-and-deploy
-- Configure deployment → invoke /setup-deploy
-- Post-deploy monitoring → invoke /canary
-- Update docs after shipping → invoke /document-release
-- Weekly retro, "how'd we do" → invoke /retro
-- Second opinion, codex review → invoke /codex
-- Safety mode, careful mode, lock it down → invoke /careful or /guard
-- Restrict edits to a directory → invoke /freeze or /unfreeze
-- Upgrade gstack → invoke /gstack-upgrade
-- Save progress, "save my work" → invoke /context-save
-- Resume, restore, "where was I" → invoke /context-restore
-- Security audit, OWASP, "is this secure" → invoke /cso
-- Make a PDF, document, publication → invoke /make-pdf
-- Launch real browser for QA → invoke /gstack
-- Import cookies for authenticated testing → invoke /setup-browser-cookies
-- Performance regression, page speed, benchmarks → invoke /benchmark
-- Review what gstack has learned → invoke /learn
-- Tune question sensitivity → invoke /plan-tune
-- Code quality dashboard → invoke /health
+---
 
 ## Health Stack
 
-- typecheck: bash -c 'cd backend && npx tsc --noEmit' && bash -c 'cd frontend && npx tsc --noEmit --project tsconfig.json'
-- lint: bash -c 'cd backend && npx @biomejs/biome lint src/' && bash -c 'cd frontend && npx @biomejs/biome lint src/'
-- test: bash -c 'cd backend && npx vitest run' && bash -c 'cd frontend && npx jest --forceExit'
-- deadcode: bash -c 'cd backend && npx ts-prune 2>&1 | grep -v "used in module" | grep -v "__tests__" | grep -v "test-helpers"'
-- security: bash -c 'cd backend && pnpm audit' && bash -c 'cd frontend && pnpm audit'
-- bundle: bash -c 'cd frontend && ANALYZE=true npx next build'
+质量门命令（提交前全绿）：
 
-## gstack (recommended)
+- typecheck: `bash -c 'cd backend && npx tsc --noEmit' && bash -c 'cd frontend && npx tsc --noEmit --project tsconfig.json'`
+- lint: `bash -c 'cd backend && npx @biomejs/biome lint src/' && bash -c 'cd frontend && npx @biomejs/biome lint src/'`
+- test: `bash -c 'cd backend && npx vitest run' && bash -c 'cd frontend && npx jest --forceExit'`
+- inference: `cd inference-service && ruff check . && pytest -q`（需先 `source venv/bin/activate`）
+- deadcode: `bash -c 'cd backend && npx ts-prune 2>&1 | grep -v "used in module" | grep -v "__tests__" | grep -v "test-helpers"'`（knip 配置见根 `knip.json`）
+- security: `bash -c 'cd backend && pnpm audit' && bash -c 'cd frontend && pnpm audit'`
+- bundle: `bash -c 'cd frontend && ANALYZE=true npx next build'`
 
-This project uses [gstack](https://github.com/garrytan/gstack) for AI-assisted workflows.
-Install it for the best experience:
+> 测试总数随时间变化且各历史文档记录互相矛盾，不在此写死具体数字；运行上述命令获取当前值。
 
-```bash
-git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack
-cd ~/.claude/skills/gstack && ./setup --team
-```
+---
 
-Skills like /qa, /ship, /review, /investigate, and /browse become available after install.
-Use /browse for all web browsing. Use ~/.claude/skills/gstack/... for gstack file paths.
+## Skill 使用
+
+当用户请求匹配某个可用 skill 时，通过 Skill 工具调用。可用 skill 列表见会话中的 system-reminder（不要凭记忆臆造 skill 名）。
+
+常见匹配：
+- 代码审查 / 查 diff → review 类 skill
+- bug 排查 / "为什么坏了" → investigate / diagnose / debugging 类 skill
+- 测试补写 → gen-tests / tdd / test-driven-development
+- 重构 / 架构 → improve-codebase-architecture / code-simplification
+- 安全审计 → security-and-hardening / cso 类 skill
+- 安全模式（删除/危险操作前）→ careful
+- 文档 / ADR → documentation-and-adrs

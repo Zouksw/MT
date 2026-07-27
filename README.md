@@ -6,9 +6,10 @@
 
 进口/国产牛肉价格采集 · 行情展示 · 多维分析 · AI 模型价格预测
 
-[![Tests](https://img.shields.io/badge/backend-431%20tests%20(Vitest)-brightgreen)]()
-[![Tests](https://img.shields.io/badge/frontend-307%20tests%20(Jest)-brightgreen)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)]()
+[![Backend Tests](https://img.shields.io/badge/backend-Vitest-brightgreen)]()
+[![Frontend Tests](https://img.shields.io/badge/frontend-Jest-brightgreen)]()
+[![Inference Tests](https://img.shields.io/badge/inference-pytest-brightgreen)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)]()
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-gray)]()
 
@@ -37,11 +38,15 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 
 | 模型 | 方法 | 用途 |
 |------|------|------|
-| ARIMA | 自回归移动平均 | 短期趋势 |
+| ARIMA | 自回归移动平均 (ARIMA(2,1,1)) | 短期趋势 |
+| SARIMAX | 带外生变量的季节 ARIMA | 多因素短期 |
 | Holt-Winters | 三次指数平滑 | 季节性周期 |
 | Exp. Smoothing | 二次指数平滑 | 平滑趋势 |
-| STL | 季节分解 | 周期分离 |
+| STL | 季节分解 + 阻尼外推 | 周期分离 |
 | Naive | 朴素基线 | 对比基准 |
+| Chronos (×3 变体) | 预训练时序基座 (tiny/mini/base) | 基座预测 |
+
+> 6 个统计模型 + 3 个 Chronos 变体 = 9 个 model id（实现在 `inference-service`）。
 
 每个模型独立预测，输出预测值、95% 置信区间和 MAPE 精度。预测结果**直接编织进行情行**（MarketForecastBoard），而非藏在子页面。
 
@@ -54,7 +59,7 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 - **85+ 牛肉切割部位** — 进口（US/BR/AUS/URY/ARG）+ 国产
 - **21 个工厂** — 工厂级别价格溯源
 - **2,400+ 牛肉切割价格** — 按部位 × 工厂 × 来源
-- **7+ 数据源** — USDA、CEPEA、MLA、INAC、ABARES、World Bank 等
+- **19 个数据源** — USDA、CEPEA、MLA、INAC、ABARES、World Bank、FRED、CME、DCE 等（实现在 `backend/src/services/dataIngestion/sources/`）
 
 ---
 
@@ -63,28 +68,32 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 ```
 MT
 ├── frontend/          Next.js 15 + React 19 + Tailwind CSS
-│   ├── app/           41 页面 (App Router)
+│   ├── app/           44 页面 (App Router)
 │   └── components/    可复用组件库
 ├── backend/           Express + TypeScript + Prisma ORM
-│   ├── routes/        22 API 路由模块
-│   ├── services/      45 业务服务（含 18 个数据采集源）
+│   ├── routes/        20 API 路由模块
+│   ├── services/      业务服务（含 dataIngestion/sources/ 19 个数据采集源）
 │   └── middleware/     认证、限流、安全、日志
-├── prisma/            数据库 Schema（36 个模型）
+├── inference-service/ Python FastAPI 推理服务（6 统计模型 + 3 Chronos 变体）
+├── prisma/            数据库 Schema（31 个模型）
 ├── scripts/           运维脚本
 ├── deploy/            Docker + Helm 部署配置
-└── docs/              完整文档
+└── docs/              文档
 ```
 
 ### 技术栈
 
 | 层 | 技术 |
 |---|------|
-| 前端 | Next.js 15, React 19, Tailwind CSS, Recharts, SWR |
-| 后端 | Express, TypeScript 5.8, Prisma ORM |
+| 前端 | Next.js 15, React 19, Tailwind CSS, Recharts, SWR, TypeScript 5.8, Jest |
+| 后端 | Express, TypeScript 5.4, Prisma ORM, Vitest |
+| 推理 | Python 3.10, FastAPI, statsmodels, sktime, chronos-forecasting, torch (CPU), pytest |
 | 数据库 | PostgreSQL 15 |
 | 缓存 | Redis 7 |
-| 测试 | Vitest (后端 431 tests), Jest (前端 307 tests) |
+| 进程管理 | PM2 |
 | 安全 | JWT, bcrypt, CSRF, Helmet, rate limiting |
+
+> 上述规模数字（44 页面 / 20 路由 / 19 源 / 31 模型 / 9 model id）为 2026-07-27 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
 
 ---
 
@@ -213,17 +222,20 @@ curl http://localhost:8000/api/news?pageSize=5 \
 
 ```bash
 # 后端 (Vitest)
-cd backend && pnpm test              # 431 tests
+cd backend && pnpm test
 
 # 前端 (Jest)
-cd frontend && pnpm test             # 307 tests
+cd frontend && pnpm test
+
+# 推理服务 (pytest)
+cd inference-service && source venv/bin/activate && pytest -q
 
 # 类型检查
 cd backend && npx tsc --noEmit
 cd frontend && npx tsc --noEmit
 ```
 
-所有测试均为**真实集成测试** — 连接真实 PostgreSQL 和 Redis，不使用 mock。
+测试总数随时间变化，运行上述命令获取当前值。后端测试为**真实集成测试** — 连接真实 PostgreSQL 和 Redis，不使用 mock。
 
 ---
 
@@ -243,16 +255,16 @@ backend/
 │   │   ├── mapeTracking.ts      # 预测精度追踪
 │   │   ├── backtesting.ts       # 历史回测
 │   │   ├── correlationAnalysis.ts  # 相关性分析
-│   │   ├── dataIngestion/       # 18 个数据采集源
+│   │   ├── dataIngestion/sources/  # 19 个数据采集源
 │   │   └── ...
 │   └── middleware/          # 认证、安全、限流
 ├── prisma/
-│   └── schema.prisma        # 36 个数据模型
+│   └── schema.prisma        # 31 个数据模型
 └── vitest.config.ts
 
 frontend/
 ├── src/
-│   ├── app/                 # 41 个页面（App Router）
+│   ├── app/                 # 44 个页面（App Router）
 │   ├── components/
 │   │   ├── trading/         # 交易面板、图表、信号
 │   │   ├── charts/          # Recharts 可视化
@@ -267,26 +279,29 @@ frontend/
 
 ## 数据源
 
-| 来源 | 数据类型 | 覆盖 |
+> 共 19 个数据源，实现于 `backend/src/services/dataIngestion/sources/`。下表按覆盖地域归类：
+
+| 来源（文件） | 数据类型 | 覆盖 |
 |------|----------|------|
-| ABARES | 农产品价格 | 澳大利亚 |
-| USDA AMS | 农产品价格 | 美国 |
-| USDA PSD | 供需平衡 | 全球 |
-| USDA FAS | 农产品贸易 | 全球 |
-| FAO | 食品价格指数 | 全球 |
-| World Bank | 大宗商品价格 | 全球 |
-| FRED | 经济指标 | 美国 |
-| CME Futures | 期货价格 | 全球 |
-| DCE Futures | 期货价格 | 中国 |
-| China Customs | 进出口 | 中国 |
-| China Wholesale | 批发价格 | 中国 |
-| CEPEA | 农产品价格 | 巴西 |
-| INAC | 肉类价格 | 乌拉圭 |
-| MLA NLRS | 畜牧价格 | 澳大利亚 |
-| Baltic Dry | 运费指数 | 全球 |
-| Commodity Prices | 综合价格 | 全球 |
-| Weather Data | 气象数据 | 全球 |
-| Manual Import | 手动导入 | 自定义 |
+| ABARES (`abaresData.ts`) | 农产品价格 | 澳大利亚 |
+| MLA NLRS (`mlaNlrs.ts`) | 畜牧/部位价格 | 澳大利亚 |
+| USDA AMS (`usdaAms.ts`) | 部位级价格 | 美国 |
+| USDA PSD (`usdaPsd.ts`) | 供需平衡 | 全球 |
+| CEPEA (`cepeaData.ts`) | 农产品价格 | 巴西 |
+| Secex (`secexData.ts`) | 出口统计 | 巴西 |
+| INAC (`inacData.ts`) | 肉类价格 | 乌拉圭 |
+| FAO (`faoPrices.ts`) | 食品价格指数 | 全球 |
+| World Bank (`worldBankPrices.ts`) | 大宗商品价格 | 全球 |
+| FRED (`fredData.ts`) | 经济/能源指标 | 美国 |
+| Commodity Prices (`commodityPrices.ts`) | 综合价格/外汇 | 全球 |
+| CME Futures (`cmeFutures.ts`) | 期货价格 | 全球 |
+| DCE Futures (`dceFutures.ts`) | 期货价格 | 中国 |
+| China Customs (`chinaCustomsStats.ts`) | 进出口 | 中国 |
+| China Wholesale (`chinaWholesale.ts`) | 批发价格 | 中国 |
+| Baltic Dry (`balticDry.ts`) | 干散货运费指数 | 全球 |
+| Shipping Index (`shippingIndex.ts`) | 集运指数 | 全球 |
+| Weather Data (`weatherData.ts`) | 气象数据 | 全球 |
+| Manual Import (`manualImport.ts`) | 手动导入 | 自定义 |
 
 ---
 

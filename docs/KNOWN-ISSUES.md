@@ -1,0 +1,79 @@
+# Known Issues — 阻塞与待决策事项
+
+> 本文件从历史 round/review 报告中**提取的、仍可能有效**的工程信息。
+> 每条标注**来源**与**验证日期**。代码此后可能已变更——动手前请重新核实。
+> 已关闭（CLOSED/RESCINDED/FIXED）的事项不收录，只保留**开放**或**信息性**条目。
+
+---
+
+## 一、数据层阻塞（最关键，影响整个牛肉核心价值链）
+
+### D1 — 牛肉数据源大面积失效，核心价值依赖 seed 快照
+
+**来源**：`reviews/2026-07-19-known-issues.md` DATA-1 + DATA-4，2026-07-19 实时 DB 审计
+**现状（截至 2026-07-19）**：
+
+| 来源 | 写入表 | 当时行数 | 当时最新 | 根因 |
+|---|---|---|---|---|
+| `fred` → `beef_carcass_us` | CommodityPrice | 4213 | 2026-07-18 ✅ | 正常（公开 CSV，无需 key） |
+| `cme_futures` → 牛肉期货 | CommodityPrice | — | — | 正常 |
+| `mla_nlrs`（澳，冻结于 2026-04-30） | BeefCutPrice | 1440 | 2026-04-30 | `MLA_API_KEY=""` |
+| `usda_ams` LM_XB405（美部位级） | BeefCutPrice | 0 | — | `USDA_MARS_API_KEY=""` |
+| `cepea`（巴西） | CommodityPrice | 0 | — | Cloudflare bot challenge（`cf-mitigated: challenge`，HTTP 403），`fetch()` 无法通过 |
+| `inac`（乌拉圭） | BeefCutPrice | 0 | — | 连接超时——host 不可达（IP/地域封锁或 URL 失效） |
+
+**DATA-4 补充审计结论**：当时平台"2 个 healthy 源"（commodity_prices、world_bank）**都不产牛肉**——前者只写 3 个外汇对，后者只写 12 个非牛肉序列。即 19 源中 4 个直供牛肉源**全部不产数据**，平台牛肉价 + AI 预测实际跑在 seed 快照上。
+
+**解决路径（需用户输入，非代码）**：
+- **MLA + USDA-AMS**：用户提供 API key → 写入 `.env` → 两个 scraper 已端到端可用（仅 key 门控）。最高收益。
+- **CEPEA**：需 headless 浏览器（Playwright）过 Cloudflare。脆弱、有 ToS 风险——除非优先级提升否则搁置。
+- **INAC**：确认 URL 是否仍有效；若地域封锁，考虑代理或下线该源。
+
+**桥接兜底（已上线）**：`beefPriceBridge.ts` 把 5 个 STRONG 映射的 CommodityPrice slug 复制到 BeefCutPrice，但只有 `aus_cube_roll_m9` 有上游行（180 行，最新 2026-04-29）。
+
+---
+
+### D2 — MAPE 验证环断裂（数据层后果）
+
+**来源**：`archive/2026-07-06-round-17-19.md` P0-2，2026-07-06 取证
+**现状**：747 条合格（≥7 天）completed 预测里，**691 条 `actuals_after=0`**（预测时刻之后无新 daily 价格）。根因同 D1——FRED 系列自身滞后/停发（`DCOILWTICO`/`DHHNGSP` 上游未发新数据），Stooq 备用路径被 Cloudflare 拦（`cmeFutures.ts:270` 代码注释自述）。
+**性质**：非代码 bug，属数据覆盖主线。待 D1 数据流打通后自然缓解。
+**已做决策（避免 quality theater）**：当时不建议放宽 `mapeTracking.ts` 的 7 天冷却 / `min(horizon,3)` 阈值——调参只能把可验证数从 42 提到 63（+21），691 条（92.5%）无论怎么调都不可验证。等数据流入后再复核阈值。
+
+---
+
+## 二、推理服务
+
+### R1 — Chronos 接入后端共识 + 网络可用性
+
+**来源**：`reviews/2026-07-19-known-issues.md` DATA-4 末段，2026-07-20 live 测试
+**现状（截至 2026-07-20）**：
+- inference-service `/models` 当时返回 6（5 统计 + chronos），但后端 `tradingSignals.ts:25` `ALL_MODELS` 只列 5（无 chronos）→ `signals/batch` 共识只跑 5 模型。
+- 直连 `/predict` model_id=chronos 当时返回 HTTP 500：`Can't load the configuration of 'amazon/chronos-t5-tiny'`，根因 huggingface.co 不可达（`[Errno 101] Network is unreachable`）。
+**注意**：此后 `ecosystem.config.cjs` 已为 inference 配置 `HF_ENDPOINT=https://hf-mirror.com` 并预下载权重到 `/root/.cache/huggingface`（见该文件注释），状态可能已改善——**需重新 live 验证**，勿沿用"chronos 不可用"结论。
+**性质**：chronos 进后端共识的前提是网络可达 + 权重可加载。若直接把 chronos 加进 ALL_MODELS 而它仍 500，会引入永久失败的模型调用。建议：先 live 验证 `/predict?model_id=chronos_tiny` 返回 200，再接入。
+
+---
+
+## 三、潜伏 bug（重构副产物，已修，留作记录）
+
+### B1 — watchlist quotes 路由 text=uuid 类型转换 bug
+
+**来源**：`reviews/2026-07-12-round-29.md`，2026-07-12
+**事实**：原 `routes/watchlist.ts` 的 quotes 路由用 `::uuid[]` 类型转换，但 `commodity_prices.commodity_id` 是 **text 列**（`information_schema` 实查确认）。list 路由用 `::text[]`（正确），quotes 用 `::uuid[]`（错误）→ `/api/watchlists/:id/quotes` 报 500 `operator does not exist: text = uuid`。
+**状态**：已修——`batchRecentPricePairs` 改 `::text[]`，并有回归测试（把 `::text[]` 改回 `::uuid[]` → 测试 FAIL）。**保留记录以防类似 raw-SQL 类型转换复发。**
+
+---
+
+## 四、产品范围（PRODUCT-SPEC 约束，非 bug）
+
+**来源**：`reviews/2026-07-19-known-issues.md` Out of scope，PRODUCT-SPEC §九
+**明确不做**：交易撮合 / 订单执行 / 支付；主 IA 中的非牛肉商品（原油/黄金等留在数据层）；UGC/社区；原生 App（仅响应式 Web）；Paywall/计费（暂为静态展示）。
+
+---
+
+## 如何更新本文件
+
+- 解决某条 issue 时：在条目末尾加 `**已解决（日期）**：…`，不要直接删除（保留历史可防重复审计）。
+- 新增 issue：必须附**证据来源**（文件:行 或 命令输出）和**验证日期**；未 live 验证的标"待确认"。
+- 数字类陈述：标注"截至 YYYY-MM-DD 实测"，因为数据层会变。
