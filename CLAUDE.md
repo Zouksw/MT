@@ -151,15 +151,27 @@ cd /root/frontend && pnpm dev &
 
 ---
 
-## Skill 使用
+## Skill 使用（开发约束）
 
-当用户请求匹配某个可用 skill 时，通过 Skill 工具调用。可用 skill 列表见会话中的 system-reminder（不要凭记忆臆造 skill 名）。
+> **这是项目硬约束：接到任何非平凡任务前，先自觉扫描可用 skill 列表并主动匹配调用。**
 
-常见匹配：
-- 代码审查 / 查 diff → review 类 skill
-- bug 排查 / "为什么坏了" → investigate / diagnose / debugging 类 skill
-- 测试补写 → gen-tests / tdd / test-driven-development
-- 重构 / 架构 → improve-codebase-architecture / code-simplification
-- 安全审计 → security-and-hardening / cso 类 skill
+**约束（写入项目开发约束，所有 AI 代理必须遵守）**：
+1. **主动而非被动**：接到任务后，先看会话 system-reminder 里列出的可用 skill，**主动**判断是否匹配，匹配就调用——不等用户点名 skill。
+2. **不凭记忆臆造**：只调用 system-reminder 列表里的 skill 名，绝不凭训练记忆猜 skill 名（skill 集合会变，记忆会过时）。
+3. **没匹配也别硬套**：找不到匹配的 skill 时正常完成任务，不要为"用 skill 而 skill"。
+4. **一次任务可用多个 skill**：复杂任务可在不同阶段调用不同 skill（如先 planning-and-task-breakdown 规划，再 test-driven-development 实现）。
+
+**常见任务→skill 映射**（仅参考，具体以会话实际可用列表为准）：
+- 规划 / 任务拆解 → planning-and-task-breakdown
+- 代码审查 / 查 diff → review / code-review-and-quality 类 skill
+- bug 排查 / "为什么坏了" → investigate / diagnose / debugging-and-error-recovery
+- 测试补写 → gen-tests / tdd / test-driven-development / javascript-testing-patterns / python-testing-patterns
+- 重构 / 架构 → improve-codebase-architecture / code-simplification / deprecation-and-migration
+- 安全审计 → security-and-hardening
 - 安全模式（删除/危险操作前）→ careful
 - 文档 / ADR → documentation-and-adrs
+- 性能 → performance-optimization / sql-optimization-patterns
+- CI / 自动化 → ci-cd-and-automation
+- 可观测性 → observability-and-instrumentation
+
+> 入口文件 [`AGENTS.md`](AGENTS.md) §九"开发工作准则"同步此约束。
