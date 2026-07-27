@@ -295,7 +295,14 @@ router.post(
 			confidence_level: confidenceLevel,
 		});
 
-		// Build forecast records
+		// Build forecast records.
+		// NOTE: anomalyProbability is left null and isAnomaly is omitted (uses
+		// its schema default). This prediction path does NOT run anomaly
+		// detection — writing a hardcoded anomalyProbability:0 / isAnomaly:false
+		// would fabricate "0% chance, definitely not an anomaly" for every row,
+		// which is a dishonest claim about a quantity we never computed. null
+		// means "not assessed by this model", which is the truth. The dedicated
+		// /api/anomalies/detect endpoint is where real anomaly scores come from.
 		const forecasts = predictResult.timestamps.map((ts, i) => ({
 			modelId,
 			timeseriesId: model.timeseriesId,
@@ -308,8 +315,7 @@ router.post(
 				String(predictResult.upper_bound?.[i] ?? predictResult.values[i] ?? 0),
 			),
 			confidence: new Prisma.Decimal(confidenceLevel.toFixed(2)),
-			anomalyProbability: new Prisma.Decimal("0"),
-			isAnomaly: false,
+			anomalyProbability: null,
 		}));
 
 		// Batch insert forecasts

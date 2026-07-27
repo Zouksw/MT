@@ -23,8 +23,21 @@ import {
 
 const router = Router();
 
-// Get authenticated user ID, fallback to default for compatibility
-const getUser = (req: AuthRequest) => req.userId || "00000000-0000-0000-0000-000000000001";
+// Get the authenticated user ID. Throws if absent — previously this fell back
+// to a phantom UUID (00000000-...-001), silently attributing anomaly work to
+// a non-existent user. Every route that calls getUser is behind `authenticate`
+// (which rejects unauthenticated requests with 401), so req.userId is always
+// set by the time we get here. This guard is defense-in-depth: if a future
+// route forgets the authenticate middleware, it fails loudly here instead of
+// corrupting the DB with phantom-user rows.
+const getUser = (req: AuthRequest): string => {
+	if (!req.userId) {
+		throw new Error(
+			"getUser called without an authenticated userId — missing authenticate middleware",
+		);
+	}
+	return req.userId;
+};
 
 /**
  * @openapi

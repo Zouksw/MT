@@ -93,8 +93,8 @@ export default function AIAnomaliesPage() {
 			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
 			const response = await fetch("/api/inference/anomalies/visualize", {
 				method: "POST",
+				credentials: "include",
 				headers: {
-					credentials: "include",
 					"Content-Type": "application/json",
 					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},

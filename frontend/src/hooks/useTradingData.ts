@@ -189,6 +189,9 @@ export function useTradingData() {
 				if (signalRes.status === "fulfilled" && signalRes.value.ok) {
 					const data = await signalRes.value.json();
 					if (data.success && data.data) {
+						// Clear any stale error from a previous failed fetch now
+						// that the signal loaded successfully.
+						setError(null);
 						// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 						setSignal((prev: any) => {
 							if (prev?.direction && prev.direction !== data.data.direction) {
@@ -217,7 +220,12 @@ export function useTradingData() {
 				// Aborted requests throw AbortError — that's expected on fast commodity
 				// switches and must NOT clear loading state of the in-flight request.
 				if (err instanceof DOMException && err.name === "AbortError") return;
-				// Signal fetch failed — keep existing signal or null
+				// Signal fetch failed — surface it so the trading page's ErrorDisplay
+				// can tell the user the AI signal is unavailable (previously this was
+				// swallowed, rendering a blank signal column with no explanation).
+				setError(
+					err instanceof Error ? `AI signal unavailable: ${err.message}` : "AI signal unavailable",
+				);
 			} finally {
 				setSignalLoading(false);
 			}
