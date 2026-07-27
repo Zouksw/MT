@@ -49,11 +49,15 @@
 |---|---|---|
 | 启动后 5s | `schedulePredictionsFromPostgreSQL` + `scheduleBeefCutPredictions` | server.ts:147 |
 | 30 min | 订阅制预测刷新（遍历所有 commodity + cut 订阅，跑 inference） | predictionCache.ts:197 |
-| 启动后 15s + 24h | `verifyDuePredictions`（MAPE 验证，扫描到期预测） | server.ts:203 |
-| 启动即跑 | `scraperManager.runAll()`（全部 18 个采集器） | server.ts:109 |
-| 1h | commodity_prices, china_wholesale | server.ts:167 |
-| 6h | cme_futures, dce_futures, fred, fao, baltic_dry, shipping_index, weather | server.ts:179 |
-| 24h | world_bank, usda_psd, mla_nlrs, cepea, inac, abares, china_customs_stats, secex, usda_ams | server.ts:197 |
+| 启动后 15s + **6h** | `verifyDuePredictions`（MAPE 验证，扫描到期预测；round-46 从 24h 提频、批次 2000→5000） | server.ts |
+| 启动后 20s（一次性） | `invalidatePollutedPredictions`（round-46：作废 brl_usd/corn_cme/natural_gas_cme 的 pre-fix 污染预测，标 stale） | server.ts |
+| 启动后 30s + **10 min** | `evaluateAlertRules`（用户告警规则评估；round-44 修 bug：原 10h→10min） | server.ts |
+| 启动即跑 | `scraperManager.runAll()`（全部 19 个采集器） | server.ts:109 |
+| 1h | commodity_prices, china_wholesale | server.ts |
+| 6h | cme_futures, dce_futures, fred, fao, baltic_dry, shipping_index, weather | server.ts |
+| 24h | world_bank, usda_psd, mla_nlrs, cepea, inac, abares, china_customs_stats, secex, usda_ams | server.ts |
+
+**写后缓存失效（round-45）**：`upsertPrice`（helpers.ts）在真实写入（非 samePrice no-op）后 fire-and-forget 调 `invalidateCommodityCache(commodityId)`，SCAN-by-prefix 失效该 commodity 所有 model/horizon 的 cached prediction。对称 round-30 的 cut-series 失效。
 
 **采集器状态**：MLA + USDA-AMS 因 `MLA_API_KEY`/`USDA_MARS_API_KEY` 缺省处于 dormant（scraperManager 跳过不报错）。其他源可配 key 的（FRED、OPENWEATHER）同理。
 
@@ -99,7 +103,7 @@
 
 1. **本地 coverage 已修复（2026-07-27 实测）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33（backend 嵌套 override `test-exclude>minimatch`）+ round-36（frontend `coverageProvider:'v8'` + 移除 glob override）已修复。当前实测：**backend 48.58% / frontend 21.13%**，均过各自阈值（backend 45% / frontend 18%）。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
 2. **knip 本地无法运行**：knip 依赖 zod@4 ESM，本地 zod 解析失败。配置已就位（knip.json + 脚本），CI/未来版本兼容后即可用。
-3. **dead code 待处理**：`invalidateCommodityCache`（零调用）、`unsubscribeCommodity`（仅测试用）无生产调用方。可能是数据导入后缓存未失效的功能缺口——记录待查，不擅自删以免掩盖问题。详见 `docs/TECH-DEBT.md`（部分条目已过期，动手前重新核实）。
+3. **`invalidateCommodityCache` 已接入（round-45）**：原"零调用"的 commodity 缓存失效函数已在 `upsertPrice` 写后 fire-and-forget 接入（SCAN-by-prefix，对称 round-30 的 cut-series）。`unsubscribeCommodity` 仍仅测试用（订阅生命周期内部用，非死代码）。详见 `docs/TECH-DEBT.md`（部分条目已过期，动手前重新核实）。
 4. **PAT 凭据管理**：origin remote 仍含 HTTPS + token store（~/.git-credentials）。SSH key 方案已部分配置（~/.ssh/config 走 443），但公钥未加到 GitHub 账户。待用户完成 SSH 接入后可彻底移除 token。
 5. **数据采集器 dormant**：MLA + USDA-AMS 需 `MLA_API_KEY`/`USDA_MARS_API_KEY`。无 key 替代方案：admin CSV 上传（`/beef/import`）已就绪。
 6. **健康端点路径**：实际为 `/health` 与 `/health/ready`（非 `/api/health`）。`curl localhost:8000/health/ready` 返回 `{database, redis, inference, inferenceDetail:{alive,ready,readyVariants}}`。Chronos 当前 3/3 变体全 ready（详见 `docs/KNOWN-ISSUES.md` R1 已解决记录）。

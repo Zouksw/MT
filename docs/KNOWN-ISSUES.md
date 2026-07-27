@@ -73,7 +73,12 @@
 
 **对核心价值链的影响**：训练/预测跑在混合脏数据上；`mapeTracking.ts:143` 的 `verifyDuePredictions` 取 actuals **无 source 过滤** → 抓到另一源的值 → brl_usd 预测 MAPE ~96%（虚高，非真实误差）。
 **根因性质**：per-commodity 的数据治理问题，非单点代码 bug。需"规范单一权威源" + 验证层按 source 过滤。
-**计划**：round-41 根治（规范权威源 + mapeTracking source 过滤 + 回归测试）。本条登记后从"潜伏"转为"已跟踪"。
+
+**已解决（2026-07-27，round-41 + round-46，live 验证）**：
+- round-41 引入 `authoritativeSources.ts`（brl_usd→fred / corn_cme→cme / natural_gas_cme→fred）+ `authoritativeSourceWhere()` Prisma where 片段。`data-fetcher.ts`（训练）、`mapeTracking.ts`（actuals）、`inference.ts` 3 处直读、`marketService`、`correlationAnalysis` 全部按权威源过滤。
+- round-46 作废 pre-fix 污染预测（`invalidatePollutedPredictions`，标 `status='stale'`，覆盖 completed + verified 行），验证环提频 24h→6h、批次 2000→5000。
+- live 实测：fresh brl_usd `chronos_tiny` 预测返回 **≈5.08–5.10**（fred 量级，修复前会训练在 0.2 上）。3 commodity 污染预测全部 stale（brl_usd 3944 / corn_cme 3855 / natural_gas_cme 3860），verified 清零——`/ai/accuracy` 不再有 ~96% 噪声。post-fix 预测需等 horizon(10d) 到期后才有新真实 MAPE。
+- 数据层（两个源仍写同 slug）未动——靠读侧权威源过滤根治，避免 schema 迁移风险。
 
 ---
 
