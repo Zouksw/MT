@@ -606,6 +606,28 @@ router.get(
 );
 
 /**
+ * GET /api/beef/import/template
+ *
+ * Returns a CSV template (header + 2 example rows) that the admin import
+ * page offers for download. This documents the exact CSV contract the
+ * POST /import parser expects, so an operator never has to guess column
+ * names or formats. Public — viewing the template is not sensitive.
+ */
+router.get(
+	"/import/template",
+	asyncHandler(async (_req, res) => {
+		const csv =
+			"factoryCode,cutCode,price,date,currency,unit,grade\n" +
+			"AU-847,BRISKET_NAVEL,8.45,2026-07-25,USD,USD/kg,Choice\n" +
+			"BR-SIF2057,STRIPLOIN,12.30,2026-07-25,USD,USD/kg,M7\n";
+		// Force a download with a .csv filename rather than inline render.
+		res.setHeader("Content-Type", "text/csv; charset=utf-8");
+		res.setHeader("Content-Disposition", 'attachment; filename="beef-prices-template.csv"');
+		res.send(csv);
+	}),
+);
+
+/**
  * POST /api/beef/import
  *
  * Manual beef cut price import — the no-API-key real-data path. An admin

@@ -1,6 +1,6 @@
 "use client";
 
-import { Beef, DollarSign, Target, Warehouse } from "lucide-react";
+import { Beef, DollarSign, Target, Upload, Warehouse } from "lucide-react";
 import { BeefFreshnessBadge } from "@/components/beef/BeefFreshnessBadge";
 import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { SnapshotBanner } from "@/components/beef/SnapshotBanner";
@@ -110,6 +110,18 @@ export default function BeefOverview() {
 					title="No Beef Price Data Available"
 					description="Beef data sources require API key configuration. USDA MARS API provides US cut prices, MLA provides Australian livestock data. Contact your administrator to activate these sources."
 				/>
+				<div className="mt-4 flex justify-center">
+					<a
+						href="/beef/import"
+						className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+					>
+						<Upload className="size-4" />
+						Import prices via CSV
+					</a>
+				</div>
+				<p className="mt-2 text-center text-xs text-muted-foreground">
+					Admins can upload real cut-level prices without an API key.
+				</p>
 			</PageContainer>
 		);
 	}
@@ -119,6 +131,15 @@ export default function BeefOverview() {
 			<PageHeader
 				title="Beef Market Intelligence"
 				description="Factory-level and cut-level beef trading data across global markets"
+				actions={
+					<a
+						href="/beef/import"
+						className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+					>
+						<Upload className="size-4" />
+						Import Data
+					</a>
+				}
 			/>
 
 			{/* Honesty banner — shows only when no live data is present on the page. */}

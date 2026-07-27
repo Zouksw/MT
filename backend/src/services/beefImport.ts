@@ -76,6 +76,11 @@ export function parseBeefCSV(buffer: Buffer, delimiter = ","): Array<Record<stri
  * Import parsed beef price rows. Validates factoryCode + cutCode against the
  * DB, upserts each row. Per-row errors are collected (one bad row doesn't
  * abort the rest). The source is stamped 'manual:<uploaderEmail>'.
+ *
+ * The entire batch of valid rows is written inside a single transaction so a
+ * crash mid-import leaves no partial write. Insert vs update is determined by
+ * the upsert's returned `createdAt`/`updatedAt`, but with a clock-skew-safe
+ * comparison (equality within a 1ms tolerance) rather than exact equality.
  */
 export async function importBeefPrices(
 	rows: Array<Record<string, string>>,
@@ -90,6 +95,21 @@ export async function importBeefPrices(
 	// Cache factory + taxonomy lookups to avoid N+1 queries on repeated codes.
 	const factoryCache = new Map<string, string | null>();
 	const cutCache = new Map<string, boolean>();
+
+	// First pass: validate + resolve all rows, collecting valid upsert payloads
+	// and per-row errors. Validation reads happen outside the transaction so a
+	// slow lookup on a bad CSV doesn't hold a write lock.
+	interface PendingUpsert {
+		factoryId: string;
+		cutCode: string;
+		price: number;
+		currency: string;
+		unit: string;
+		grade: string | null;
+		date: Date;
+		rowNum: number;
+	}
+	const pending: PendingUpsert[] = [];
 
 	for (let i = 0; i < rows.length; i++) {
 		const row = rows[i];
@@ -159,34 +179,58 @@ export async function importBeefPrices(
 		const unit = (row.unit || "USD/kg").trim();
 		const grade = (row.grade || "").trim() || null;
 
+		pending.push({ factoryId, cutCode, price, currency, unit, grade, date, rowNum });
+	}
+
+	// Second pass: execute all valid upserts inside a single transaction so the
+	// import is atomic — either every valid row lands or none do. A failure
+	// rolls back the whole batch and is reported as a single error (the
+	// per-row validation above has already filtered out individual bad rows).
+	if (pending.length > 0) {
 		try {
-			const result = await prisma.beefCutPrice.upsert({
-				where: {
-					factoryId_cutCode_date_source: { factoryId, cutCode, date, source },
-				},
-				create: {
-					factoryId,
-					cutCode,
-					price,
-					currency,
-					unit,
-					source,
-					sourceRef: uploader,
-					date,
-					grade,
-				},
-				update: { price, currency, unit, grade },
+			await prisma.$transaction(async (tx) => {
+				for (const p of pending) {
+					const result = await tx.beefCutPrice.upsert({
+						where: {
+							factoryId_cutCode_date_source: {
+								factoryId: p.factoryId,
+								cutCode: p.cutCode,
+								date: p.date,
+								source,
+							},
+						},
+						create: {
+							factoryId: p.factoryId,
+							cutCode: p.cutCode,
+							price: p.price,
+							currency: p.currency,
+							unit: p.unit,
+							source,
+							sourceRef: uploader,
+							date: p.date,
+							grade: p.grade,
+						},
+						update: { price: p.price, currency: p.currency, unit: p.unit, grade: p.grade },
+					});
+					// Distinguish insert vs update: a freshly-created row has
+					// createdAt within 1ms of updatedAt. Exact equality is fragile
+					// under DB-side default-timestamp rounding / clock skew.
+					const delta = Math.abs(result.createdAt.getTime() - result.updatedAt.getTime());
+					if (delta <= 1) {
+						imported++;
+					} else {
+						updated++;
+					}
+				}
 			});
-			// Distinguish insert vs update by checking createdAt vs updatedAt.
-			if (result.createdAt.getTime() === result.updatedAt.getTime()) {
-				imported++;
-			} else {
-				updated++;
-			}
 		} catch (err) {
+			// The whole transaction rolled back — report it against every
+			// pending row so the operator knows which rows were affected.
 			const msg = err instanceof Error ? err.message : String(err);
-			errors.push({ row: rowNum, message: `DB error: ${msg}` });
-			skipped++;
+			for (const p of pending) {
+				errors.push({ row: p.rowNum, message: `DB error (batch rolled back): ${msg}` });
+				skipped++;
+			}
 		}
 	}
 
