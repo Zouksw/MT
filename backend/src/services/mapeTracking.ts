@@ -126,10 +126,16 @@ export async function invalidatePollutedPredictions(fixedAt: Date): Promise<numb
 	});
 	if (commodities.length === 0) return 0;
 
+	// Touch BOTH 'completed' (pending verification) AND 'verified' rows. The
+	// verified ones carry the bogus ~96% MAPE computed against the wrong source
+	// (e.g. brl_usd verified against fred ≈5.1 after training on
+	// exchange_rate_api ≈0.2) and would poison accuracy averages if left.
+	// getModelAccuracy / getAllModelAccuracy filter status='verified', so
+	// re-marking them 'stale' is what actually excludes them from the averages.
 	const result = await prisma.predictionLog.updateMany({
 		where: {
 			commodityId: { in: commodities.map((c) => c.id) },
-			status: "completed",
+			status: { in: ["completed", "verified"] },
 			predictedAt: { lt: fixedAt },
 		},
 		data: { status: "stale" },

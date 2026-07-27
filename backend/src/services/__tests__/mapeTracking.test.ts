@@ -252,6 +252,22 @@ describe("MAPE Tracking (real DB)", () => {
 						predictedAt: after,
 					},
 				});
+				// Verified-but-polluted: pre-fix prediction ALREADY verified against
+				// the wrong source (bogus ~96% MAPE). Must ALSO be marked stale —
+				// otherwise it poisons accuracy averages (round-46 follow-up).
+				const verifiedPolluted = await prisma.predictionLog.create({
+					data: {
+						modelId: "test-verified-polluted",
+						commodityId: brl.id,
+						horizon: 5,
+						predictedValues: [0.2, 0.2, 0.2],
+						actualValues: [5.1, 5.1, 5.1],
+						mape: 96.2,
+						status: "verified",
+						predictedAt: before,
+						verifiedAt: before,
+					},
+				});
 				// Non-conflict commodity, pre-fix — must NOT be touched.
 				const otherCommodity = await prisma.commodity.create({
 					data: {
@@ -282,6 +298,10 @@ describe("MAPE Tracking (real DB)", () => {
 						where: { id: polluted.id },
 						select: { status: true },
 					});
+					const verifiedPollutedNow = await prisma.predictionLog.findUnique({
+						where: { id: verifiedPolluted.id },
+						select: { status: true },
+					});
 					const cleanNow = await prisma.predictionLog.findUnique({
 						where: { id: clean.id },
 						select: { status: true },
@@ -292,11 +312,14 @@ describe("MAPE Tracking (real DB)", () => {
 					});
 
 					expect(pollutedNow?.status).toBe("stale");
+					expect(verifiedPollutedNow?.status).toBe("stale"); // verified-polluted also cleared
 					expect(cleanNow?.status).toBe("completed"); // post-fix survives
 					expect(unrelatedNow?.status).toBe("completed"); // non-conflict survives
 				} finally {
 					await prisma.predictionLog.deleteMany({
-						where: { id: { in: [polluted.id, clean.id, unrelated.id] } },
+						where: {
+							id: { in: [polluted.id, verifiedPolluted.id, clean.id, unrelated.id] },
+						},
 					});
 					await prisma.commodity.deleteMany({
 						where: { id: otherCommodity.id },
