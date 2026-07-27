@@ -14,7 +14,7 @@ import { evaluateAlertRules } from "@/services/alert-rules";
 import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
-import { verifyDuePredictions } from "@/services/mapeTracking";
+import { invalidatePollutedPredictions, verifyDuePredictions } from "@/services/mapeTracking";
 import {
 	scheduleBeefCutPredictions,
 	schedulePredictionsFromPostgreSQL,
@@ -196,10 +196,14 @@ function start(): void {
 	];
 	setInterval(() => runSourcesAndLog(DAILY_SOURCES, "Daily refresh"), DAILY);
 
-	// Daily: auto-verify predictions whose forecast horizon has elapsed,
-	// computing MAPE against actual prices so backtest/accuracy have real data.
-	// Runs immediately on startup (to catch up after downtime) then every 24h.
-	const DAILY_MS = 24 * MS_PER_HOUR;
+	// Every 6 hours: auto-verify predictions whose forecast horizon has
+	// elapsed, computing MAPE against actual prices so backtest/accuracy have
+	// real data. Runs immediately on startup (to catch up after downtime).
+	//
+	// Cadence raised 24h → 6h (round-46): the verification loop was falling
+	// behind — 106k completed vs 673 verified (0.6%). At 5k/24h that's a 53-day
+	// drain; at 5k/6h it's under 2 weeks. Each run is bounded by the take cap.
+	const VERIFICATION_INTERVAL = 6 * MS_PER_HOUR;
 	const runVerification = async () => {
 		try {
 			const n = await verifyDuePredictions();
@@ -209,7 +213,23 @@ function start(): void {
 		}
 	};
 	setTimeout(runVerification, 15000); // 15s delay lets scrapers finish first
-	setInterval(runVerification, DAILY_MS);
+	setInterval(runVerification, VERIFICATION_INTERVAL);
+
+	// One-shot (startup): mark predictions trained on polluted pre-fix data as
+	// `stale` so they don't inject bogus ~96% MAPE into the accuracy averages.
+	// See invalidatePollutedPredictions docs for the unrecoverable-data reasoning.
+	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for
+	// the 3 conflict commodities trained on conflicting-source data.
+	const ROUND41_FIX_TS = new Date("2026-07-27T11:26:00Z");
+	const runPollutionInvalidation = async () => {
+		try {
+			const n = await invalidatePollutedPredictions(ROUND41_FIX_TS);
+			if (n > 0) logger.info(`📊 Marked ${n} polluted predictions as stale (pre-fix data)`);
+		} catch (err) {
+			logger.warn(`📊 Pollution invalidation failed: ${err}`);
+		}
+	};
+	setTimeout(runPollutionInvalidation, 20000);
 
 	// Every 10 minutes: evaluate user-defined alert rules against latest prices.
 	// This closes the loop that previously made alert rules a dead-end feature

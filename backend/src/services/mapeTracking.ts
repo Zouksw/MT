@@ -95,6 +95,49 @@ export async function verifyPrediction(
 }
 
 /**
+ * Invalidate predictions that were trained on polluted (multi-source unit-
+ * conflicting) data and therefore cannot be meaningfully verified.
+ *
+ * Context (docs/KNOWN-ISSUES.md R2 + round-41): brl_usd / corn_cme /
+ * natural_gas_cme were each written by two sources with conflicting units /
+ * direction. Before round-41's authoritative-source fix, predictions for
+ * these commodities trained on a Frankenstein series (e.g. brl_usd trained on
+ * exchange_rate_api ≈0.2 then verified against fred ≈5.1 → bogus ~96% MAPE).
+ *
+ * Those pre-fix predictions are unrecoverable: PredictionLog has no `source`
+ * column, so we can't re-derive which source trained each row. Verifying them
+ * anyway would inject ~96% MAPE noise into the accuracy averages that the
+ * /ai/accuracy page displays. The honest action is to mark them `stale` so
+ * they're excluded from accuracy math (readers filter `status: "verified"`),
+ * and let the post-fix predictions populate accuracy going forward.
+ *
+ * `fixedAt` is the timestamp of the round-41 fix (the moment training started
+ * reading the authoritative source). Rows predictedAt < fixedAt for the three
+ * conflict commodities are marked stale. Idempotent — only touches
+ * status='completed' rows, and the update's where-clause is re-checked.
+ *
+ * @returns number of predictions marked stale
+ */
+export async function invalidatePollutedPredictions(fixedAt: Date): Promise<number> {
+	const conflictSlugs = ["brl_usd", "corn_cme", "natural_gas_cme"];
+	const commodities = await prisma.commodity.findMany({
+		where: { slug: { in: conflictSlugs } },
+		select: { id: true, slug: true },
+	});
+	if (commodities.length === 0) return 0;
+
+	const result = await prisma.predictionLog.updateMany({
+		where: {
+			commodityId: { in: commodities.map((c) => c.id) },
+			status: "completed",
+			predictedAt: { lt: fixedAt },
+		},
+		data: { status: "stale" },
+	});
+	return result.count;
+}
+
+/**
  * Auto-verify completed predictions whose forecast horizon has elapsed.
  *
  * For each completed prediction_log older than its horizon, fetch the actual
@@ -134,8 +177,12 @@ export async function verifyDuePredictions(): Promise<number> {
 		select: { id: true, commodityId: true, horizon: true, predictedAt: true },
 		// OLDEST first so the backlog drains. DESC kept re-sampling the same
 		// near-cutoff rows every run, starving older verifiable candidates.
+		// Batch raised 2000 → 5000 (round-46): with a 106k-row backlog the
+		// daily 2000-batch would take ~53 days to drain; 5000 + the 6h cadence
+		// in server.ts cuts that to under a week. Each row is one indexed
+		// lookup + one small actuals query, so 5000 is still cheap.
 		orderBy: { predictedAt: "asc" },
-		take: 2000,
+		take: 5000,
 	});
 
 	let verified = 0;
