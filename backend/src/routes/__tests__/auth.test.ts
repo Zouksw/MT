@@ -34,13 +34,17 @@ describe("Auth Routes (Integration)", () => {
 		try {
 			const client = await redis();
 			// SCAN + DEL avoids blocking Redis on a large keyspace (KEYS would).
+			// node-redis v4 scan returns {cursor: number, keys: string[]}.
 			for (const pattern of ["auth:attempts:*", "auth:lockout:*"]) {
-				let cursor = "0";
+				let cursor = 0;
 				do {
-					const [next, batch] = await client.scan(cursor, "MATCH", pattern, "COUNT", 100);
+					const { cursor: next, keys } = await client.scan(cursor, {
+						MATCH: pattern,
+						COUNT: 100,
+					});
 					cursor = next;
-					if (batch.length > 0) await client.del(batch);
-				} while (cursor !== "0");
+					if (keys.length > 0) await client.del(keys);
+				} while (cursor !== 0);
 			}
 		} catch {
 			// Redis unavailable — tests that need it will skip via dbAvailable.
