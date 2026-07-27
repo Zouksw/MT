@@ -161,7 +161,6 @@ jobs:
 
       - name: Generate coverage report
         run: cd backend && pnpm run test:coverage
-        continue-on-error: true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

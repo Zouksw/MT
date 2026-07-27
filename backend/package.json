@@ -36,7 +36,7 @@
 		"express-rate-limit": "^8.3.1",
 		"helmet": "^8.1.0",
 		"jsonwebtoken": "^9.0.2",
-		"multer": "^2.1.1",
+		"multer": "^2.2.0",
 		"nodemailer": "^8.0.5",
 		"papaparse": "^5.5.3",
 		"pg": "^8.11.0",
@@ -79,6 +79,7 @@
 			"picomatch": "^2.3.2",
 			"minimatch": "^3.1.4",
 			"brace-expansion": "^1.1.13",
+			"test-exclude>minimatch": "^10.2.5",
 			"uuid": "^11.1.1",
 			"ip-address": "^10.1.1",
 			"ws": ">=8.20.1"
