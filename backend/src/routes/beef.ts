@@ -4,6 +4,7 @@ import { success } from "@/lib/response";
 import type { AuthenticatedRequest } from "@/middleware/auth";
 import { authenticate, authorize } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
+import { getPagination } from "@/schemas/common";
 import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
 import { importBeefPrices, parseBeefCSV } from "@/services/beefImport";
 import { findForecastableFactoryForCut, generateBeefCutForecast } from "@/services/tradingSignals";
@@ -82,7 +83,7 @@ router.get(
 	}),
 );
 
-// Query beef cut prices with flexible filters
+// Query beef cut prices with flexible filters + pagination
 router.get(
 	"/prices",
 	asyncHandler(async (req, res) => {
@@ -122,14 +123,24 @@ router.get(
 			where.factoryId = { in: factories.map((f) => f.id) };
 		}
 
-		const prices = await prisma.beefCutPrice.findMany({
-			where,
-			orderBy: { date: "desc" },
-			take: 500,
-			include: {
-				factory: { select: { code: true, name: true, country: true } },
-			},
-		});
+		// Pagination — previously a hard take:500 that silently truncated large
+		// queries. Now page/limit with a total so callers know data was dropped.
+		// Response shape kept backward-compatible ({ prices, count, freshness })
+		// with an added `pagination` block; existing callers ignore the new field.
+		const { skip, take } = getPagination(req.query);
+
+		const [prices, total] = await Promise.all([
+			prisma.beefCutPrice.findMany({
+				where,
+				orderBy: { date: "desc" },
+				skip,
+				take,
+				include: {
+					factory: { select: { code: true, name: true, country: true } },
+				},
+			}),
+			prisma.beefCutPrice.count({ where }),
+		]);
 
 		// Attach the honesty-framework freshness tier to each row + a page-level
 		// summary so the UI can show a "demo snapshot mode" banner when no live
@@ -142,7 +153,18 @@ router.get(
 		}));
 		const freshness = pageFreshnessSummary(prices);
 
-		success(res, { prices: pricesWithFreshness, count: pricesWithFreshness.length, freshness });
+		success(res, {
+			prices: pricesWithFreshness,
+			count: pricesWithFreshness.length,
+			total,
+			freshness,
+			pagination: {
+				page: Math.floor(skip / take) + 1,
+				limit: take,
+				total,
+				totalPages: Math.ceil(total / take),
+			},
+		});
 	}),
 );
 
@@ -150,13 +172,29 @@ router.get(
 router.get(
 	"/prices/latest",
 	asyncHandler(async (req, res) => {
-		const { country, source } = req.query;
+		const { cutCode, factoryCode, country, source, grade } = req.query;
 
-		// Get the most recent date
+		// Build the filter applied to BOTH the latest-date lookup and the row
+		// fetch, so the "latest" reflects the active filter (e.g. latest price
+		// for a specific cut or factory), not the global latest date.
+		const where: Record<string, unknown> = {};
+		if (source && typeof source === "string") where.source = source;
+		if (cutCode && typeof cutCode === "string") where.cutCode = cutCode;
+		if (grade && typeof grade === "string") where.grade = grade;
+		if (factoryCode && typeof factoryCode === "string") {
+			const factory = await prisma.factory.findUnique({
+				where: { code: factoryCode as string },
+				select: { id: true },
+			});
+			if (factory) where.factoryId = factory.id;
+		}
+		if (country && typeof country === "string") {
+			where.factory = { country: country as string };
+		}
+
+		// Get the most recent date matching the filter
 		const latest = await prisma.beefCutPrice.findFirst({
-			where: {
-				...(source ? { source: source as string } : {}),
-			},
+			where,
 			orderBy: { date: "desc" },
 			select: { date: true },
 		});
@@ -165,14 +203,8 @@ router.get(
 			return success(res, { prices: [], date: null, freshness: null });
 		}
 
-		const factoryFilter = country ? { factory: { country: country as string } } : {};
-
 		const prices = await prisma.beefCutPrice.findMany({
-			where: {
-				date: latest.date,
-				...(source ? { source: source as string } : {}),
-				...factoryFilter,
-			},
+			where: { ...where, date: latest.date },
 			include: {
 				factory: { select: { code: true, name: true, country: true } },
 			},
@@ -286,32 +318,57 @@ router.get(
 	}),
 );
 
-// Price history for a specific cut
+// Price history for a specific cut — supports multi-factory comparison
+// (comma-separated factoryCode) and ISO date-range (from/to) for the
+// 产地对比 analysis (PRODUCT-SPEC §四 分析 > 产地对比).
 router.get(
 	"/prices/history/:cutCode",
 	asyncHandler(async (req, res) => {
 		const { cutCode } = req.params;
-		const { days = "90", factoryCode, source } = req.query;
+		const { days = "90", factoryCode, source, from, to } = req.query;
 
-		const daysNum = Math.min(Number(days) || 90, 730);
-		const since = new Date();
-		since.setDate(since.getDate() - daysNum);
+		// Date range: prefer explicit from/to; fall back to days=N window.
+		const dateFilter: Record<string, Date> = {};
+		if (from && typeof from === "string") {
+			dateFilter.gte = new Date(from);
+		} else {
+			const daysNum = Math.min(Number(days) || 90, 730);
+			const since = new Date();
+			since.setDate(since.getDate() - daysNum);
+			dateFilter.gte = since;
+		}
+		if (to && typeof to === "string") {
+			dateFilter.lte = new Date(to);
+		}
 
 		const where: Record<string, unknown> = {
 			cutCode,
-			date: { gte: since },
+			date: dateFilter,
 		};
 
 		if (source && typeof source === "string") {
 			where.source = source;
 		}
 
+		// factoryCode accepts a single code OR a comma-separated list for
+		// multi-factory comparison (the 产地对比 use case). Each code is
+		// resolved to a factoryId; the filter becomes an IN-clause.
 		if (factoryCode && typeof factoryCode === "string") {
-			const factory = await prisma.factory.findUnique({
-				where: { code: factoryCode },
-			});
-			if (factory) {
-				where.factoryId = factory.id;
+			const codes = factoryCode
+				.split(",")
+				.map((c) => c.trim())
+				.filter(Boolean);
+			if (codes.length === 1) {
+				const factory = await prisma.factory.findUnique({
+					where: { code: codes[0] },
+				});
+				if (factory) where.factoryId = factory.id;
+			} else {
+				const factories = await prisma.factory.findMany({
+					where: { code: { in: codes } },
+					select: { id: true },
+				});
+				where.factoryId = { in: factories.map((f) => f.id) };
 			}
 		}
 
