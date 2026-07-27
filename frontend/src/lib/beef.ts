@@ -9,10 +9,10 @@
  * app/beef/page.tsx, app/beef/factories/page.tsx, app/beef/cuts/[cutCode]/page.tsx.
  */
 
-export const BEEF_API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { API_BASE } from "@/lib/config";
 
 export async function beefFetcher(url: string) {
-	const res = await fetch(`${BEEF_API_BASE}${url}`, {
+	const res = await fetch(`${API_BASE}${url}`, {
 		headers: { "Content-Type": "application/json" },
 		credentials: "include",
 	});

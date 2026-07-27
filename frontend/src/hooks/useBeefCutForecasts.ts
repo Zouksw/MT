@@ -35,7 +35,7 @@ interface BatchResponse {
 	horizon: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { API_BASE } from "@/lib/config";
 
 async function batchFetcher(url: string): Promise<{ data: BatchResponse }> {
 	const token = tokenManager.getToken();

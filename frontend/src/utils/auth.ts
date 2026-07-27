@@ -1,3 +1,4 @@
+import { API_BASE } from "@/lib/config";
 import { tokenManager } from "@/lib/tokenManager";
 
 interface CachedUser {
@@ -7,8 +8,6 @@ interface CachedUser {
 	avatar?: string;
 	roles?: string[];
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export const getAuthToken = (): string | null => {
 	return tokenManager.getToken();

@@ -1,10 +1,9 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
+import { API_BASE } from "@/lib/config";
 import { tokenManager } from "@/lib/tokenManager";
 import { authFetch } from "@/utils/auth";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ── SWR fetcher with auth ──────────────────────────────────────────────────
 

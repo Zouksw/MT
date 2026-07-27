@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, ModelAccuracy, ModelWithBacktest } from "@/types/accuracy";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 import { getAuthToken } from "@/utils/auth";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function apiFetch<T>(url: string): Promise<T> {
 	const token = getAuthToken();

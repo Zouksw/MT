@@ -32,9 +32,10 @@ export function formatMape(mape: number | null): string {
 
 // ── Auth-aware fetch helper ──
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-export { API_BASE };
+// Re-export the shared base URL so existing callers (e.g. backtest/page.tsx)
+// don't need to change their import. The value now comes from lib/config,
+// the single source of truth.
+export { API_BASE } from "@/lib/config";
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
 	const { tokenManager } = await import("@/lib/tokenManager");

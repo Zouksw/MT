@@ -5,6 +5,7 @@ import type React from "react";
 import { useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
+import { API_BASE } from "@/lib/config";
 import { formatPrice, formatSignedPercent } from "@/lib/format";
 import { tokenManager } from "@/lib/tokenManager";
 
@@ -57,8 +58,6 @@ interface ApiResponse {
 	currentPrice?: number;
 	forecast?: Forecast;
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /** Authenticated fetcher — the forecast endpoint requires login (non-public). */
 async function forecastFetcher(url: string): Promise<{ data: ApiResponse }> {
