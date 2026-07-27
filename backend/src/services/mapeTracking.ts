@@ -9,6 +9,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
+import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
 
 export interface LogPredictionParams {
 	modelId: string;
@@ -151,29 +152,62 @@ export async function verifyDuePredictions(): Promise<number> {
 				continue;
 			}
 
-			// Fetch actual daily closes AFTER the prediction was made, up to horizon
-			const actualPrices = await prisma.commodityPrice.findMany({
-				where: {
-					commodityId: log.commodityId,
-					interval: "daily",
-					date: { gt: log.predictedAt },
-				},
-				orderBy: { date: "asc" },
-				take: log.horizon,
-				select: { close: true },
-			});
-
-			// Need enough actuals to compute a meaningful MAPE
-			if (actualPrices.length < Math.min(log.horizon, 3)) {
-				skippedNoActuals++;
-				noActualsByCommodity.set(
-					log.commodityId,
-					(noActualsByCommodity.get(log.commodityId) ?? 0) + 1,
-				);
-				continue;
+			// Fetch actuals AFTER the prediction was made, up to horizon.
+			// Dual-backend: cut-series predictions are logged with a virtual
+			// commodityId `cut:{factoryId}:{cutCode}` and their actuals live in
+			// BeefCutPrice (NOT CommodityPrice). Without this branch every cut
+			// prediction hits 0 actuals → chronos MAPE is never computed, so the
+			// /ai/accuracy page stays empty for the entire cut-forecast path
+			// (PRODUCT-SPEC §三 MAPE 验证). Commodity predictions read
+			// CommodityPrice as before.
+			let actualValues: number[];
+			if (isCutSeriesKey(log.commodityId)) {
+				const parsed = parseCutSeriesKey(log.commodityId);
+				if (!parsed) {
+					// Malformed key — can't resolve actuals; skip honestly.
+					skippedNoActuals++;
+					continue;
+				}
+				const cutActuals = await prisma.beefCutPrice.findMany({
+					where: {
+						factoryId: parsed.factoryId,
+						cutCode: parsed.cutCode,
+						date: { gt: log.predictedAt },
+					},
+					orderBy: { date: "asc" },
+					take: log.horizon,
+					select: { price: true },
+				});
+				if (cutActuals.length < Math.min(log.horizon, 3)) {
+					skippedNoActuals++;
+					noActualsByCommodity.set(
+						log.commodityId,
+						(noActualsByCommodity.get(log.commodityId) ?? 0) + 1,
+					);
+					continue;
+				}
+				actualValues = cutActuals.map((p) => Number(p.price));
+			} else {
+				const actualPrices = await prisma.commodityPrice.findMany({
+					where: {
+						commodityId: log.commodityId,
+						interval: "daily",
+						date: { gt: log.predictedAt },
+					},
+					orderBy: { date: "asc" },
+					take: log.horizon,
+					select: { close: true },
+				});
+				if (actualPrices.length < Math.min(log.horizon, 3)) {
+					skippedNoActuals++;
+					noActualsByCommodity.set(
+						log.commodityId,
+						(noActualsByCommodity.get(log.commodityId) ?? 0) + 1,
+					);
+					continue;
+				}
+				actualValues = actualPrices.map((p) => Number(p.close));
 			}
-
-			const actualValues = actualPrices.map((p) => Number(p.close));
 			const result = await verifyPrediction(log.id, actualValues);
 			if (result) verified++;
 		} catch {
