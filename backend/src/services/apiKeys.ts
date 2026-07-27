@@ -29,10 +29,7 @@ async function hashApiKey(apiKey: string): Promise<string> {
 /**
  * Verify an API key against its hash
  */
-async function verifyApiKey(
-	apiKey: string,
-	hashedKey: string,
-): Promise<boolean> {
+async function verifyApiKey(apiKey: string, hashedKey: string): Promise<boolean> {
 	return bcrypt.compare(apiKey, hashedKey);
 }
 
@@ -118,7 +115,16 @@ export async function createApiKey(params: {
 }
 
 /**
- * Validate an API key and return the associated user
+ * Validate an API key and return the associated user.
+ *
+ * NOTE (tech-debt TD-3, reverified 2026-07-27): this function is fully
+ * implemented and tested (services/__tests__/apiKeys.test.ts) but has ZERO
+ * production callers — no middleware reads an API-key header to authenticate
+ * requests. API keys can be created/listed/revoked via the routes, but a
+ * issued key currently authenticates nothing. Kept (not deleted) because API-
+ * key auth is a plausible future product feature (external integrations) and
+ * the implementation is correct; wiring it into middleware is tracked as a
+ * separate decision rather than re-implementing from scratch.
  */
 export async function validateApiKey(apiKey: string): Promise<{
 	user: { id: string; email: string; name: string; role: string };
@@ -272,11 +278,7 @@ export async function deleteApiKey(userId: string, apiKeyId: string) {
 /**
  * Update API key expiration
  */
-export async function updateApiKeyExpiration(
-	userId: string,
-	apiKeyId: string,
-	expiresIn?: number,
-) {
+export async function updateApiKeyExpiration(userId: string, apiKeyId: string, expiresIn?: number) {
 	// Verify ownership
 	const apiKey = await prisma.apiKey.findFirst({
 		where: {
