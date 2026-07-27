@@ -39,6 +39,7 @@ import {
 	getAllCachedPredictions,
 	getCachedPrediction,
 	getSubscribedCommodities,
+	invalidateCommodityCache,
 	invalidateCutSeriesCache,
 	subscribeCommodity,
 	unsubscribeCommodity,
@@ -205,6 +206,78 @@ describe("Prediction Cache — invalidateCutSeriesCache", () => {
 		(getRedisClient as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
 
 		const deleted = await invalidateCutSeriesCache("F4", "OFFLINE");
+		expect(deleted).toBe(0);
+		expect(mockRedis.scan).not.toHaveBeenCalled();
+	});
+});
+
+describe("Prediction Cache — invalidateCommodityCache", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("scans by commodityId prefix and deletes all model/horizon variants", async () => {
+		// Key pattern: prediction:{commodityId}:{modelId}:{horizon}
+		// The commodityId prefix must catch every variant regardless of which
+		// model/horizon was cached — callers (upsertPrice) don't know which
+		// combinations exist, so a prefix scan is the only correct approach.
+		const commodityId = "11111111-1111-4111-8111-111111111111";
+		mockRedis.scan.mockResolvedValueOnce({
+			cursor: 0,
+			keys: [
+				`prediction:${commodityId}:arima:10`,
+				`prediction:${commodityId}:chronos_tiny:7`,
+				`prediction:${commodityId}:stl_forecaster:14`,
+			],
+		});
+
+		const deleted = await invalidateCommodityCache(commodityId);
+
+		expect(deleted).toBe(3);
+		expect(mockRedis.scan).toHaveBeenCalledWith(0, {
+			MATCH: `prediction:${commodityId}:*`,
+			COUNT: 100,
+		});
+		expect(mockRedis.del).toHaveBeenCalledWith([
+			`prediction:${commodityId}:arima:10`,
+			`prediction:${commodityId}:chronos_tiny:7`,
+			`prediction:${commodityId}:stl_forecaster:14`,
+		]);
+	});
+
+	it("paginates across multiple SCAN batches until cursor returns 0", async () => {
+		const commodityId = "22222222-2222-4222-8222-222222222222";
+		mockRedis.scan
+			.mockResolvedValueOnce({
+				cursor: 7,
+				keys: [`prediction:${commodityId}:arima:10`],
+			})
+			.mockResolvedValueOnce({
+				cursor: 0,
+				keys: [`prediction:${commodityId}:naive_forecaster:5`],
+			});
+
+		const deleted = await invalidateCommodityCache(commodityId);
+
+		expect(deleted).toBe(2);
+		expect(mockRedis.scan).toHaveBeenCalledTimes(2);
+		expect(mockRedis.scan).toHaveBeenNthCalledWith(2, 7, {
+			MATCH: `prediction:${commodityId}:*`,
+			COUNT: 100,
+		});
+	});
+
+	it("returns 0 when no keys match (commodity never predicted)", async () => {
+		mockRedis.scan.mockResolvedValueOnce({ cursor: 0, keys: [] });
+		const deleted = await invalidateCommodityCache("33333333-3333-4333-8333-333333333333");
+		expect(deleted).toBe(0);
+		expect(mockRedis.del).not.toHaveBeenCalled();
+	});
+
+	it("returns 0 when Redis is unavailable (no throw)", async () => {
+		const { getRedisClient } = await import("@/lib/redis");
+		(getRedisClient as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+		const deleted = await invalidateCommodityCache("44444444-4444-4444-8444-444444444444");
 		expect(deleted).toBe(0);
 		expect(mockRedis.scan).not.toHaveBeenCalled();
 	});

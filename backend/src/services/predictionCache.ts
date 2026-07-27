@@ -236,22 +236,41 @@ export function getSubscribedCommodities(): string[] {
 }
 
 /**
- * Invalidate all cached predictions for a commodity
+ * Invalidate ALL cached predictions for a commodity, across every model and
+ * horizon. Used after a scraper writes fresh/changed prices via upsertPrice:
+ * any cached forecast built on the OLD price series is now stale and must be
+ * evicted so the next request recomputes against the new data — otherwise the
+ * platform serves predictions based on pre-scrape prices for up to 45 minutes
+ * (the TTL), which is dishonest after newer data has landed.
+ *
+ * Symmetric to invalidateCutSeriesCache (round-30) for the commodity side.
+ * The previous version required the caller to enumerate model + horizon, which
+ * is why it was never wired in (callers don't know which combinations are
+ * cached). This SCAN-by-prefix version evicts every variant regardless.
+ *
+ * Key pattern: prediction:{commodityId}:{modelId}:{horizon}
+ * Match:       prediction:{commodityId}:*
  */
-export async function invalidateCommodityCache(
-	commodityId: string,
-	horizon: number,
-	models: string[],
-): Promise<void> {
+export async function invalidateCommodityCache(commodityId: string): Promise<number> {
 	const client = await getRedisClient();
-	if (!client) return;
+	if (!client) return 0;
 
-	await Promise.all(
-		models.map(async (modelId) => {
-			const key = cacheKeys.prediction(commodityId, modelId, horizon);
-			await client.del(key);
-		}),
-	);
+	const pattern = `prediction:${commodityId}:*`;
+	let deleted = 0;
+	let cursor = 0;
+	do {
+		const { cursor: nextCursor, keys } = await client.scan(cursor, {
+			MATCH: pattern,
+			COUNT: 100,
+		});
+		cursor = nextCursor;
+		if (keys.length > 0) {
+			await client.del(keys);
+			deleted += keys.length;
+		}
+	} while (cursor !== 0);
+
+	return deleted;
 }
 
 /**

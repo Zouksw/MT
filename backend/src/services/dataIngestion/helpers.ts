@@ -7,6 +7,21 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
 
+/**
+ * Lazily import the commodity-prediction cache invalidator.
+ *
+ * Dynamic import (not a top-level import) breaks a would-be circular
+ * dependency: helpers is imported by every scraper, and predictionCache
+ * transitively reaches services that depend on the scraper layer. Resolving
+ * it lazily at call time keeps the module-load graph acyclic. Invalidation
+ * is best-effort — if the import or the Redis call fails, the cached
+ * prediction simply lives out its TTL.
+ */
+async function invalidateCommodityCache(commodityId: string): Promise<number> {
+	const mod = await import("@/services/predictionCache");
+	return mod.invalidateCommodityCache(commodityId);
+}
+
 /** Prisma-safe JSON cast — single place to handle the InputJsonValue type. */
 export function json(obj: Record<string, unknown>): Prisma.InputJsonValue {
 	return obj as Prisma.InputJsonValue;
@@ -116,6 +131,19 @@ export async function upsertPrice(data: {
 			metadata: data.metadata ? json(data.metadata) : undefined,
 		},
 	});
+
+	// Honesty fix (round-45, symmetric to round-30's cut-series invalidation):
+	// when a scraper actually wrote/changed a price, any cached prediction built
+	// on the old series is now stale. Evict it so the next request recomputes
+	// against fresh data instead of serving a stale forecast for up to the
+	// 45-min TTL. Fire-and-forget + dynamic import to avoid a circular dep
+	// (helpers → predictionCache → ... → helpers). Skipped on the samePrice
+	// no-op path above because nothing changed there.
+	void invalidateCommodityCache(data.commodityId).catch(() => {
+		// Redis down / unavailable — the cache will expire on its own TTL.
+		// Invalidation is best-effort; it must never break the price write.
+	});
+
 	return existed ? { inserted: 0, updated: 1 } : { inserted: 1, updated: 0 };
 }
 
