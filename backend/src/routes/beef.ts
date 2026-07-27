@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "@/lib";
+import { logger, prisma } from "@/lib";
 import { success } from "@/lib/response";
 import type { AuthenticatedRequest } from "@/middleware/auth";
 import { authenticate, authorize } from "@/middleware/auth";
@@ -738,6 +738,26 @@ router.post(
 
 		const uploader = req.user?.email ?? "unknown";
 		const result = await importBeefPrices(rows, uploader);
+
+		// Evict stale prediction caches for every cut pair that got new data.
+		// Without this, /api/beef/forecasts/:cutCode would return predictions
+		// built on the OLD price series for up to 45 min (the Redis TTL) —
+		// dishonest after the operator just provided newer data. Fire-and-forget
+		// (errors here must not fail the import, which already committed).
+		if (result.affectedCuts.length > 0) {
+			void (async () => {
+				const { invalidateCutSeriesCache } = await import("@/services/predictionCache");
+				let evicted = 0;
+				for (const cut of result.affectedCuts) {
+					evicted += await invalidateCutSeriesCache(cut.factoryId, cut.cutCode);
+				}
+				if (evicted > 0) {
+					logger.info(
+						`[BEEF IMPORT] Evicted ${evicted} stale prediction cache keys across ${result.affectedCuts.length} cut(s)`,
+					);
+				}
+			})().catch((err) => logger.warn(`[BEEF IMPORT] Cache eviction failed (non-fatal): ${err}`));
+		}
 
 		success(res, result, 201);
 	}),

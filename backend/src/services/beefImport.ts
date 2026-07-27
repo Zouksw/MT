@@ -46,6 +46,13 @@ export interface BeefImportResult {
 	updated: number;
 	skipped: number;
 	errors: Array<{ row: number; message: string }>;
+	/**
+	 * Distinct (factoryId, cutCode) pairs that had at least one row
+	 * successfully written. Callers use this to invalidate stale prediction
+	 * caches — a forecast cached against the pre-import price series is now
+	 * dishonest once newer data has landed.
+	 */
+	affectedCuts: Array<{ factoryId: string; cutCode: string }>;
 }
 
 /** Normalize a CSV header to the canonical lower-case key. */
@@ -186,6 +193,9 @@ export async function importBeefPrices(
 	// import is atomic — either every valid row lands or none do. A failure
 	// rolls back the whole batch and is reported as a single error (the
 	// per-row validation above has already filtered out individual bad rows).
+	// Track which (factoryId, cutCode) pairs were touched so the caller can
+	// evict their stale prediction caches after commit.
+	const touchedCuts = new Map<string, { factoryId: string; cutCode: string }>();
 	if (pending.length > 0) {
 		try {
 			await prisma.$transaction(async (tx) => {
@@ -221,6 +231,12 @@ export async function importBeefPrices(
 					} else {
 						updated++;
 					}
+					// Record the cut pair for post-import cache eviction.
+					// Keyed by `${factoryId}|${cutCode}` to dedupe across rows.
+					const dedupeKey = `${p.factoryId}|${p.cutCode}`;
+					if (!touchedCuts.has(dedupeKey)) {
+						touchedCuts.set(dedupeKey, { factoryId: p.factoryId, cutCode: p.cutCode });
+					}
 				}
 			});
 		} catch (err) {
@@ -234,5 +250,11 @@ export async function importBeefPrices(
 		}
 	}
 
-	return { imported, updated, skipped, errors };
+	return {
+		imported,
+		updated,
+		skipped,
+		errors,
+		affectedCuts: Array.from(touchedCuts.values()),
+	};
 }

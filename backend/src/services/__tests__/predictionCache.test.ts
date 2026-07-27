@@ -17,6 +17,7 @@ const mockRedis = {
 	get: vi.fn(),
 	setEx: vi.fn(),
 	del: vi.fn(),
+	scan: vi.fn(),
 };
 vi.mock("@/lib/redis", () => ({
 	getRedisClient: vi.fn(async () => mockRedis),
@@ -38,6 +39,7 @@ import {
 	getAllCachedPredictions,
 	getCachedPrediction,
 	getSubscribedCommodities,
+	invalidateCutSeriesCache,
 	subscribeCommodity,
 	unsubscribeCommodity,
 } from "@/services/predictionCache";
@@ -143,5 +145,67 @@ describe("Prediction Cache — getAllCachedPredictions", () => {
 
 		const map = await getAllCachedPredictions("c1", 10, ["arima", "naive_forecaster"]);
 		expect(map.size).toBe(0);
+	});
+});
+
+describe("Prediction Cache — invalidateCutSeriesCache", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("scans by cut-series prefix and deletes all matching keys", async () => {
+		// Single SCAN batch returning 2 keys, then cursor 0 (done).
+		mockRedis.scan.mockResolvedValueOnce({
+			cursor: 0,
+			keys: ["prediction:cut:F1:BRISKET:arima:10", "prediction:cut:F1:BRISKET:chronos_tiny:7"],
+		});
+
+		const deleted = await invalidateCutSeriesCache("F1", "BRISKET");
+
+		expect(deleted).toBe(2);
+		// SCAN must filter by the cut-series prefix wildcard.
+		expect(mockRedis.scan).toHaveBeenCalledWith(0, {
+			MATCH: "prediction:cut:F1:BRISKET:*",
+			COUNT: 100,
+		});
+		expect(mockRedis.del).toHaveBeenCalledWith([
+			"prediction:cut:F1:BRISKET:arima:10",
+			"prediction:cut:F1:BRISKET:chronos_tiny:7",
+		]);
+	});
+
+	it("paginates across multiple SCAN batches until cursor returns 0", async () => {
+		// First batch returns more keys + a non-zero cursor; second completes.
+		mockRedis.scan
+			.mockResolvedValueOnce({ cursor: 42, keys: ["prediction:cut:F2:RIB:arima:10"] })
+			.mockResolvedValueOnce({ cursor: 0, keys: ["prediction:cut:F2:RIB:chronos_base:14"] });
+
+		const deleted = await invalidateCutSeriesCache("F2", "RIB");
+
+		expect(deleted).toBe(2);
+		expect(mockRedis.scan).toHaveBeenCalledTimes(2);
+		// Second call continues from the cursor the first returned.
+		expect(mockRedis.scan).toHaveBeenNthCalledWith(2, 42, {
+			MATCH: "prediction:cut:F2:RIB:*",
+			COUNT: 100,
+		});
+	});
+
+	it("returns 0 when no keys match (clean cache)", async () => {
+		mockRedis.scan.mockResolvedValueOnce({ cursor: 0, keys: [] });
+
+		const deleted = await invalidateCutSeriesCache("F3", "NEVERCACHED");
+		expect(deleted).toBe(0);
+		expect(mockRedis.del).not.toHaveBeenCalled();
+	});
+
+	it("returns 0 when Redis is unavailable (no throw)", async () => {
+		// getRedisClient resolves to null → graceful no-op.
+		const { getRedisClient } = await import("@/lib/redis");
+		(getRedisClient as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+		const deleted = await invalidateCutSeriesCache("F4", "OFFLINE");
+		expect(deleted).toBe(0);
+		expect(mockRedis.scan).not.toHaveBeenCalled();
 	});
 });

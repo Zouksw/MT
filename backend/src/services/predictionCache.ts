@@ -255,6 +255,50 @@ export async function invalidateCommodityCache(
 }
 
 /**
+ * Invalidate ALL cached predictions for a cut-series key, across every model
+ * and horizon. Used after a manual beef-price import: when an operator uploads
+ * fresh CSV rows for a (factoryId, cutCode) pair, any cached forecast built on
+ * the OLD price series is now stale and must be evicted so the next request
+ * recomputes against the new data — otherwise the platform serves predictions
+ * based on pre-import prices for up to 45 minutes (the TTL), which would be
+ * dishonest after the operator has explicitly provided newer data.
+ *
+ * Unlike invalidateCommodityCache (which needs the caller to enumerate model
+ * + horizon), this scans by key prefix so it catches every variant regardless
+ * of which horizon the cache was filled with. SCAN (not KEYS) is used to avoid
+ * blocking Redis on large keyspaces.
+ */
+export async function invalidateCutSeriesCache(
+	factoryId: string,
+	cutCode: string,
+): Promise<number> {
+	const client = await getRedisClient();
+	if (!client) return 0;
+
+	// Match prediction:cut:{factoryId}:{cutCode}:* — the trailing wildcard
+	// covers every {modelId}:{horizon} suffix that was ever cached.
+	const pattern = `prediction:cut:${factoryId}:${cutCode}:*`;
+	let deleted = 0;
+	let cursor = 0;
+	do {
+		// SCAN with COUNT to limit work per iteration; returns {cursor, keys}.
+		// cursor 0 means the scan is complete. SCAN (not KEYS) avoids blocking
+		// Redis on large keyspaces.
+		const { cursor: nextCursor, keys } = await client.scan(cursor, {
+			MATCH: pattern,
+			COUNT: 100,
+		});
+		cursor = nextCursor;
+		if (keys.length > 0) {
+			await client.del(keys);
+			deleted += keys.length;
+		}
+	} while (cursor !== 0);
+
+	return deleted;
+}
+
+/**
  * Schedule predictions for active commodities that actually have price data.
  *
  * Previously this subscribed ALL active commodities (111), but 64% had zero
