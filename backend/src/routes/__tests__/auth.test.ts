@@ -8,13 +8,9 @@
 
 import type { Express } from "express";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	SEED_ADMIN,
-	createTestApp,
-	getPrisma,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { redis } from "@/lib/redis";
+import { createTestApp, getPrisma, isDbAvailable, SEED_ADMIN } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `auth-${Date.now()}`;
 
@@ -26,6 +22,29 @@ describe("Auth Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
 		dbAvailable = await isDbAvailable();
+	});
+
+	// Clear rate-limiter / lockout state in Redis before each test case.
+	// Without this, failed-login counts from earlier cases (or from OTHER test
+	// files sharing the same Redis instance) accumulate and cause spurious 429s
+	// that mask real assertion failures. Keys: auth:attempts:<email> and
+	// auth:lockout:<email>.
+	beforeEach(async () => {
+		if (!dbAvailable) return;
+		try {
+			const client = await redis();
+			// SCAN + DEL avoids blocking Redis on a large keyspace (KEYS would).
+			for (const pattern of ["auth:attempts:*", "auth:lockout:*"]) {
+				let cursor = "0";
+				do {
+					const [next, batch] = await client.scan(cursor, "MATCH", pattern, "COUNT", 100);
+					cursor = next;
+					if (batch.length > 0) await client.del(batch);
+				} while (cursor !== "0");
+			}
+		} catch {
+			// Redis unavailable — tests that need it will skip via dbAvailable.
+		}
 	});
 
 	afterAll(async () => {
@@ -135,9 +154,7 @@ describe("Auth Routes (Integration)", () => {
 
 			const token = loginRes.body.data.token;
 
-			const res = await request(app)
-				.get("/api/auth/me")
-				.set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
