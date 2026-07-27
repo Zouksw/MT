@@ -14,8 +14,6 @@ Run:  cd inference-service && source venv/bin/activate && pytest -q
 
 from typing import Any
 
-import pytest
-
 # A minimal valid payload reused across tests. Two values + two timestamps is
 # the smallest input the schema accepts (min_length=2 on `values`).
 BASE_PAYLOAD: dict[str, Any] = {

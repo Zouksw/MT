@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from services.inference_engine import list_models, MODEL_IDS
+from services.inference_engine import MODEL_IDS, list_models
 
 router = APIRouter()
 

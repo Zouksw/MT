@@ -1,0 +1,27 @@
+# Tooling configuration for the inference service.
+# This is NOT a packaging file — the service runs from source via `uvicorn main:app`.
+# It only configures static-analysis tools (ruff) so CI can lint Python the same
+# way biome lints the TS/React code on the backend/frontend.
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["venv", "experiments"]
+
+[tool.ruff.lint]
+# Curated rule set — aligns with the codebase's existing style:
+#   E/W  - pycodestyle (style basics)
+#   F    - pyflakes (real bugs: unused names, undefined, redefinition)
+#   I    - isort (import ordering — matches the sorted imports already in use)
+#   UP   - pyupgrade (modernize syntax to py310 idioms)
+select = ["E", "W", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files legitimately use long assert messages and may exceed line-length.
+"**/test_*.py" = ["E501"]
+# experiments/ is exploratory scratch code — keep it out of the lint contract.
+
+[tool.ruff.format]
+# Match biome's tab style on the TS side for cross-repo consistency? No — Python
+# convention is spaces. Keep PEP 8 default (4 spaces) which the existing code uses.
+quote-style = "double"

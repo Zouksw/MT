@@ -1,11 +1,14 @@
-"""Statistical forecasting models — ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL, SARIMAX."""
+"""Statistical forecasting models.
+
+ARIMA, Holt-Winters, Exponential Smoothing, Naive, STL, SARIMAX.
+"""
 
 import numpy as np
+from sktime.forecasting.naive import NaiveForecaster
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.seasonal import STL
-from sktime.forecasting.naive import NaiveForecaster
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 def _bootstrap_ci(
@@ -125,7 +128,7 @@ def predict_sarimax(
             "upper_bound": upper.tolist(),
             "n_factors": n_factors,
         }
-    except (np.linalg.LinAlgError, ValueError) as e:
+    except (np.linalg.LinAlgError, ValueError):
         # SARIMAX can fail to converge on messy real data; fall back to ARIMA
         # rather than crashing the prediction pipeline.
         return predict_arima(values, horizon, confidence_level)

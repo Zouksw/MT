@@ -34,8 +34,8 @@ CHRONOS_VARIANTS: dict[str, str] = {
 
 CHRONOS_AVAILABLE = False
 try:
-    from chronos import ChronosPipeline  # noqa: F401
     import torch  # noqa: F401
+    from chronos import ChronosPipeline  # noqa: F401
 
     CHRONOS_AVAILABLE = True
     logger.info("Chronos-forecasting importable")
@@ -71,7 +71,8 @@ if CHRONOS_AVAILABLE:
         else:
             CHRONOS_USABLE_VARIANTS[vid] = False
             CHRONOS_BLOCKED_VARIANTS[vid] = (
-                f"weights for {repo} not cached locally (set HF_ENDPOINT=https://hf-mirror.com and download)"
+                f"weights for {repo} not cached locally "
+                "(set HF_ENDPOINT=https://hf-mirror.com and download)"
             )
     usable = [v for v, ok in CHRONOS_USABLE_VARIANTS.items() if ok]
     blocked = [v for v, ok in CHRONOS_USABLE_VARIANTS.items() if not ok]
@@ -103,7 +104,10 @@ def predict(
     exog: list[list[float]] | None = None,
     future_exog: list[list[float]] | None = None,
 ) -> dict:
-    """Run prediction with the specified model. Returns dict with values, lower_bound, upper_bound."""
+    """Run prediction with the specified model.
+
+    Returns dict with values, lower_bound, upper_bound.
+    """
     if model_id not in _all_models:
         raise ValueError(f"Unknown model: {model_id}. Available: {MODEL_IDS}")
 
@@ -210,9 +214,8 @@ def readiness_state() -> dict:
 def _get_chronos_pipeline(repo_id: str):
     """Return a cached ChronosPipeline for repo_id, loading it on first use."""
     if repo_id not in _chronos_pipelines:
-        from chronos import ChronosPipeline
-
         import torch
+        from chronos import ChronosPipeline
 
         logger.info("Loading Chronos pipeline for %s (one-time cost)...", repo_id)
         t0 = time.time()
@@ -232,18 +235,34 @@ def list_models() -> list[dict]:
     a variant whose /predict would fail-fast.
     """
     models = [
-        {"id": "arima", "name": "ARIMA", "type": "statistical", "role": "baseline",
-         "description": "AutoRegressive Integrated Moving Average", "available": True},
-        {"id": "sarimax", "name": "SARIMAX", "type": "statistical", "role": "baseline",
-         "description": "ARIMA with exogenous variables (multivariate)", "available": True},
-        {"id": "holtwinters", "name": "Holt-Winters", "type": "statistical", "role": "baseline",
-         "description": "Triple exponential smoothing with trend and seasonality", "available": True},
-        {"id": "exponential_smoothing", "name": "Exponential Smoothing", "type": "statistical", "role": "baseline",
-         "description": "Simple exponential smoothing", "available": True},
-        {"id": "naive_forecaster", "name": "Naive Forecaster", "type": "statistical", "role": "baseline",
-         "description": "Last-value baseline forecaster (dumb baseline)", "available": True},
-        {"id": "stl_forecaster", "name": "STL Forecaster", "type": "statistical", "role": "baseline",
-         "description": "STL decomposition with damped-trend extrapolation", "available": True},
+        {
+            "id": "arima", "name": "ARIMA", "type": "statistical", "role": "baseline",
+            "description": "AutoRegressive Integrated Moving Average", "available": True,
+        },
+        {
+            "id": "sarimax", "name": "SARIMAX", "type": "statistical", "role": "baseline",
+            "description": "ARIMA with exogenous variables (multivariate)", "available": True,
+        },
+        {
+            "id": "holtwinters", "name": "Holt-Winters", "type": "statistical", "role": "baseline",
+            "description": "Triple exponential smoothing with trend and seasonality",
+            "available": True,
+        },
+        {
+            "id": "exponential_smoothing", "name": "Exponential Smoothing",
+            "type": "statistical", "role": "baseline",
+            "description": "Simple exponential smoothing", "available": True,
+        },
+        {
+            "id": "naive_forecaster", "name": "Naive Forecaster",
+            "type": "statistical", "role": "baseline",
+            "description": "Last-value baseline forecaster (dumb baseline)", "available": True,
+        },
+        {
+            "id": "stl_forecaster", "name": "STL Forecaster",
+            "type": "statistical", "role": "baseline",
+            "description": "STL decomposition with damped-trend extrapolation", "available": True,
+        },
     ]
     # Chronos variants — the primary ensemble.
     variant_meta = {
@@ -255,7 +274,10 @@ def list_models() -> list[dict]:
         name, desc = variant_meta[vid]
         entry = {
             "id": vid, "name": name, "type": "foundation", "role": "primary",
-            "description": f"{desc} — Amazon Chronos zero-shot pretrained time-series foundation model ({repo})",
+            "description": (
+                f"{desc} — Amazon Chronos zero-shot pretrained "
+                f"time-series foundation model ({repo})"
+            ),
             "available": CHRONOS_USABLE_VARIANTS.get(vid, False),
         }
         blocked = CHRONOS_BLOCKED_VARIANTS.get(vid)

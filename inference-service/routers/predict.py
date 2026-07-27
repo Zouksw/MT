@@ -1,10 +1,9 @@
 import math
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from services.inference_engine import predict, MODEL_IDS
+from services.inference_engine import MODEL_IDS, predict
 
 router = APIRouter()
 
@@ -15,15 +14,21 @@ MAX_BATCH_SIZE = 50  # /predict/batch is sequential; cap to bound latency
 
 
 class PredictRequest(BaseModel):
-    values: list[float] = Field(..., min_length=2, max_length=MAX_VALUES_LENGTH, description="Historical time series values")
+    values: list[float] = Field(
+        ..., min_length=2, max_length=MAX_VALUES_LENGTH, description="Historical time series values"
+    )
     timestamps: list[int] = Field(..., description="Timestamps in ms")
     model_id: str = Field(default="arima", description=f"One of: {MODEL_IDS}")
     horizon: int = Field(default=10, ge=1, le=100, description="Number of steps to forecast")
     confidence_level: float = Field(default=0.95, ge=0.8, le=0.99)
     # Exogenous (external) variables for SARIMAX. Optional — only the "sarimax"
     # model consumes them; other models ignore them. Shape: (n_obs, n_factors).
-    exog: list[list[float]] | None = Field(default=None, description="Historical exogenous variables (SARIMAX only)")
-    future_exog: list[list[float]] | None = Field(default=None, description="Forecast-window exogenous variables (SARIMAX only)")
+    exog: list[list[float]] | None = Field(
+        default=None, description="Historical exogenous variables (SARIMAX only)"
+    )
+    future_exog: list[list[float]] | None = Field(
+        default=None, description="Forecast-window exogenous variables (SARIMAX only)"
+    )
 
     @field_validator("values")
     @classmethod
@@ -52,7 +57,12 @@ def predict_handler(req: PredictRequest):
 
     if len(req.timestamps) > 0:
         last_ts = req.timestamps[-1]
-        step = max((req.timestamps[-1] - req.timestamps[-2]) if len(req.timestamps) > 1 else 86400000, 1)
+        step = max(
+            (req.timestamps[-1] - req.timestamps[-2])
+            if len(req.timestamps) > 1
+            else 86_400_000,
+            1,
+        )
     else:
         last_ts = 0
         step = 86400000
