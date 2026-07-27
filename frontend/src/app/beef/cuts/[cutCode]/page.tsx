@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { CutForecastSection } from "@/components/beef/CutForecastSection";
 import { CutPriceHistoryChart } from "@/components/beef/CutPriceHistoryChart";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -9,6 +10,17 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatPrice, formatPriceRange } from "@/lib/format";
+
+type PricePoint = {
+	date: string;
+	price: number;
+	source: string;
+	grade?: string;
+	factory?: { code: string; name: string; country: string };
+};
+
+/** Group key for the chart — controls the comparison dimension. */
+type GroupBy = "source" | "factory";
 
 export default function CutDetail() {
 	const params = useParams();
@@ -24,19 +36,48 @@ export default function CutDetail() {
 	);
 
 	const cut = cutData?.data ?? cutData;
-	const prices = priceData?.data?.prices ?? priceData?.prices ?? [];
+	const prices = (priceData?.data?.prices ?? priceData?.prices ?? []) as PricePoint[];
 
 	const displayName = cut?.nameZh
 		? `${cut.nameZh} (${cut.nameEn})`
 		: cut?.nameEn || cutCode.replace(/_/g, " ");
 
-	// Group prices by source for mini chart display
-	const bySource: Record<string, typeof prices> = {};
+	// Chart comparison dimension toggle: "by source" compares data origins /
+	// countries (e.g. USDA-AMS vs MLA); "by factory" compares individual
+	// producers within the same source. The backend already returns all
+	// factories for the cut — no extra API call needed, just a different
+	// grouping key. (PRODUCT-SPEC §5.2 产地对比 — both dimensions are useful.)
+	const [groupBy, setGroupBy] = useState<GroupBy>("source");
+
+	// Group prices into series for the chart. Switching the key re-derives the
+	// series without refetching.
+	const chartGroups = useMemo(() => {
+		const groups: Record<string, PricePoint[]> = {};
+		for (const p of prices) {
+			const key =
+				groupBy === "factory"
+					? `${p.factory?.name || "Unknown"} (${p.factory?.country || "?"})`
+					: `${p.source} (${p.factory?.country || "?"})`;
+			if (!groups[key]) groups[key] = [];
+			groups[key].push(p);
+		}
+		return groups;
+	}, [prices, groupBy]);
+
+	// bySource is still used by the per-source tables below (unchanged).
+	const bySource: Record<string, PricePoint[]> = {};
 	for (const p of prices) {
 		const key = `${p.source} (${p.factory?.country || "?"})`;
 		if (!bySource[key]) bySource[key] = [];
 		bySource[key].push(p);
 	}
+
+	// Distinct factories count — shown in the toggle so the user knows how many
+	// lines "by factory" will draw before committing to it.
+	const factoryCount = useMemo(
+		() => new Set(prices.map((p) => p.factory?.code).filter(Boolean)).size,
+		[prices],
+	);
 
 	// Compute price range
 	const allPrices = prices.map((p: { price: number }) => p.price);
@@ -108,16 +149,45 @@ export default function CutDetail() {
 				</div>
 			)}
 
-			{/* Price History Chart — multi-source line chart (PRODUCT-SPEC §5.2).
-			    Each source is one line so origins can be compared visually.
-			    The per-source tables below give exact values. */}
+			{/* Price History Chart — multi-line chart (PRODUCT-SPEC §5.2 产地对比).
+			    Two comparison dimensions: "by Source" (data origin / country)
+			    or "by Factory" (individual producers). The backend already
+			    returns all factories for the cut; switching just re-keys the
+			    series, no refetch. */}
 			{prices.length > 0 && (
 				<Card className="mb-6">
 					<CardHeader>
-						<CardTitle>Price History (90d) — by Source</CardTitle>
+						<div className="flex items-center justify-between gap-4 flex-wrap">
+							<CardTitle>Price History (90d)</CardTitle>
+							<div className="flex items-center gap-1 text-xs">
+								<button
+									type="button"
+									onClick={() => setGroupBy("source")}
+									className={`px-2 py-1 rounded transition-colors ${
+										groupBy === "source"
+											? "bg-primary text-primary-foreground"
+											: "bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-200 dark:hover:bg-gray-700"
+									}`}
+								>
+									by Source
+								</button>
+								<button
+									type="button"
+									onClick={() => setGroupBy("factory")}
+									className={`px-2 py-1 rounded transition-colors ${
+										groupBy === "factory"
+											? "bg-primary text-primary-foreground"
+											: "bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-200 dark:hover:bg-gray-700"
+									}`}
+									title={`${factoryCount} distinct factories`}
+								>
+									by Factory{factoryCount > 0 ? ` (${factoryCount})` : ""}
+								</button>
+							</div>
+						</div>
 					</CardHeader>
 					<CardBody>
-						<CutPriceHistoryChart bySource={bySource} />
+						<CutPriceHistoryChart bySource={chartGroups} />
 					</CardBody>
 				</Card>
 			)}
