@@ -8,7 +8,7 @@ import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
 import { error, success } from "@/lib/response";
 import { asyncHandler } from "@/middleware/errorHandler";
-import { healthCheck as inferenceHealth } from "@/services/inference";
+import { checkReadiness as inferenceReadiness } from "@/services/inference";
 
 const router = Router();
 
@@ -87,7 +87,14 @@ router.get("/", (_req: Request, res: Response) => {
  *                       properties:
  *                         database: { type: boolean }
  *                         redis: { type: boolean }
- *                         inference: { type: boolean }
+ *                         inference: { type: boolean, description: "true iff chronos ensemble ready (not just process alive)" }
+ *                         inferenceDetail:
+ *                           type: object
+ *                           description: "Liveness vs readiness split"
+ *                           properties:
+ *                             alive: { type: boolean }
+ *                             ready: { type: boolean }
+ *                             readyVariants: { type: array, items: { type: string } }
  *                     timestamp:
  *                       type: string
  *                       format: date-time
@@ -104,7 +111,17 @@ router.get(
 		const checks = {
 			database: false,
 			redis: false,
-			inference: false,
+			inference: false as boolean,
+			// Inference readiness detail: alive (process up) vs ready (chronos
+			// ensemble usable). They differ when the process is up but chronos
+			// weights are missing — baselines still serve, so the platform is
+			// degraded, not down. The flat `inference` boolean above stays
+			// backward-compatible (true iff ready).
+			inferenceDetail: {
+				alive: false,
+				ready: false,
+				readyVariants: [] as string[],
+			},
 		};
 
 		let allHealthy = true;
@@ -131,11 +148,25 @@ router.get(
 			checks.redis = false;
 		}
 
-		// Check inference service
+		// Check inference service — readiness (chronos usable), not just liveness.
+		// The process being up (alive) doesn't mean chronos is available; /ready
+		// probes the actual model ensemble. Report both so operators can see
+		// "degraded" vs "down".
 		try {
-			checks.inference = await inferenceHealth();
+			const readiness = await inferenceReadiness();
+			checks.inferenceDetail = {
+				alive: readiness.alive,
+				ready: readiness.ready,
+				readyVariants: readiness.readyVariants,
+			};
+			checks.inference = readiness.ready;
+			if (!readiness.ready && readiness.alive) {
+				logger.warn("[HEALTH] Inference process alive but chronos not ready", {
+					readyVariants: readiness.readyVariants,
+				});
+			}
 		} catch (error) {
-			logger.warn("[HEALTH] Inference service check failed", error);
+			logger.warn("[HEALTH] Inference readiness check failed", error);
 			checks.inference = false;
 		}
 

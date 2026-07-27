@@ -9,7 +9,9 @@ interface ErrorDetail {
 	field?: string;
 	issue?: string;
 	context?: Record<string, unknown>;
-	checks?: Record<string, boolean | string>;
+	// Health-check detail: the ready/not-ready booleans plus optional nested
+	// sub-objects (e.g. inference liveness-vs-readiness split).
+	checks?: Record<string, boolean | string | object>;
 }
 
 /**

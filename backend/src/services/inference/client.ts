@@ -28,6 +28,32 @@ export interface PredictionResult {
 	upperBound?: number[];
 }
 
+/**
+ * Shape of the inference service's /ready response body.
+ * Mirrors inference-service/services/inference_engine.py:readiness_state().
+ */
+export interface InferenceReadyState {
+	ready: boolean;
+	chronos_usable_variants: Record<string, boolean>;
+	chronos_pipelines_loaded: string[];
+	preload_failures: Record<string, string>;
+	ready_variants: string[];
+}
+
+/**
+ * Backend-facing readiness summary. `alive` is the liveness signal (process
+ * up), `ready` is the readiness signal (chronos ensemble usable). They differ
+ * when the inference process is up but chronos weights are missing — in that
+ * case statistical baselines still serve /predict, so the platform is
+ * degraded, not down.
+ */
+export interface InferenceReadiness {
+	alive: boolean;
+	ready: boolean;
+	readyVariants: string[];
+	detail?: InferenceReadyState;
+}
+
 const INFERENCE_URL = process.env.INFERENCE_URL || "http://localhost:10810";
 const CONNECT_TIMEOUT = 5000;
 const REQUEST_TIMEOUT = 120_000;
@@ -53,6 +79,52 @@ export async function healthCheck(): Promise<boolean> {
 	} catch {
 		// intentionally ignored — inference service unavailable
 		return false;
+	}
+}
+
+/**
+ * Probe the inference service's /ready endpoint.
+ *
+ * Unlike healthCheck() (which hits /health — a pure liveness probe that
+ * returns ok as long as the process is up), this hits /ready, which returns
+ * 200 only when at least one chronos variant has cached weights AND a loaded
+ * pipeline. On 503 the body still carries the diagnostic state (which
+ * variants are blocked, preload failures) so callers can report *why* chronos
+ * is unavailable rather than just that it is.
+ *
+ * Returns alive+ready so the health endpoint can distinguish "process down"
+ * from "process up, chronos degraded" — the latter still serves statistical
+ * baselines, so the platform is partially functional.
+ */
+export async function checkReadiness(): Promise<InferenceReadiness> {
+	// Liveness first: if /health fails, /ready would too, and there'd be no
+	// body to parse. Short-circuit to {alive:false, ready:false}.
+	const alive = await healthCheck();
+	if (!alive) {
+		return { alive: false, ready: false, readyVariants: [] };
+	}
+
+	try {
+		const res = await fetchWithTimeout(`${INFERENCE_URL}/ready`, {}, CONNECT_TIMEOUT);
+		// 200 = ready; 503 = not ready but body still has diagnostics.
+		const body = (await res.json().catch(() => null)) as InferenceReadyState | null;
+		if (!body || typeof body.ready !== "boolean") {
+			// No body or unexpected shape — trust the HTTP status only.
+			return { alive: true, ready: res.ok, readyVariants: [] };
+		}
+		return {
+			alive: true,
+			// Double-check both the HTTP status and the body's own flag:
+			// a 200 with ready=false (or vice versa) shouldn't happen, but
+			// if it does we treat the more conservative signal as truth.
+			ready: Boolean(res.ok && body.ready),
+			readyVariants: body.ready_variants ?? [],
+			detail: body,
+		};
+	} catch {
+		// Network/timeout on /ready specifically (process was alive per /health).
+		// Treat as not-ready rather than crashing the health endpoint.
+		return { alive: true, ready: false, readyVariants: [] };
 	}
 }
 
