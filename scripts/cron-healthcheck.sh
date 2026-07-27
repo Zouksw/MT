@@ -19,6 +19,18 @@ if ! curl -sf -o /dev/null -m 5 http://localhost:3000 2>/dev/null; then
     RESTARTED="${RESTARTED:+$RESTARTED }frontend"
 fi
 
+# Check inference service (port 10810) — the AI prediction engine.
+# /health is a liveness probe (process up). We DON'T probe /ready here:
+# chronos weights loading takes ~90s on cold start, and a 503 from /ready
+# during that window is expected, not a fault. Liveness is the right signal
+# for the auto-restart decision — if the process isn't responding at all,
+# PM2's max_restarts may not have caught it (e.g. process hung, not crashed).
+if ! curl -sf -o /dev/null -m 5 http://localhost:10810/health 2>/dev/null; then
+    echo "[$NOW] Inference service unhealthy, restarting..."
+    pm2 restart mt-inference 2>/dev/null || pm2 start /root/ecosystem.config.cjs --only mt-inference --env production 2>/dev/null
+    RESTARTED="${RESTARTED:+$RESTARTED }inference"
+fi
+
 # If PM2 daemon itself is down, resurrect
 if ! pm2 ping 2>/dev/null; then
     echo "[$NOW] PM2 daemon down, resurrecting..."
@@ -27,7 +39,7 @@ if ! pm2 ping 2>/dev/null; then
 fi
 
 if [ -z "$RESTARTED" ]; then
-    echo "[$NOW] All services healthy"
+    echo "[$NOW] All services healthy (backend, frontend, inference)"
 fi
 
 # Dependency-file integrity guard. Catches the recurring pnpm-store/venv
