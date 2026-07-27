@@ -1,6 +1,7 @@
 "use client";
 
-import { Beef, DollarSign, Target, Upload, Warehouse } from "lucide-react";
+import { Beef, DollarSign, Search, Target, Upload, Warehouse } from "lucide-react";
+import { useMemo, useState } from "react";
 import { BeefFreshnessBadge } from "@/components/beef/BeefFreshnessBadge";
 import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { SnapshotBanner } from "@/components/beef/SnapshotBanner";
@@ -51,6 +52,62 @@ export default function BeefOverview() {
 	const coldStorage = storageData?.data?.coldStorage ?? storageData?.coldStorage ?? [];
 	const cuts = cutsData?.data?.cuts ?? cutsData?.cuts ?? [];
 
+	// ── Origin filter + search + sort (PRODUCT-SPEC IA 进口/国产 split) ──────────
+	// Domestic = factory.country === "CN"; imported = everything else. "all"
+	// shows both. Currently all factories are overseas, so "domestic" honestly
+	// shows an empty state rather than fabricating CN data.
+	type OriginFilter = "all" | "imported" | "domestic";
+	const [originFilter, setOriginFilter] = useState<OriginFilter>("all");
+	const [search, setSearch] = useState("");
+	type SortKey = "cutCode" | "price" | "source";
+	const [sortKey, setSortKey] = useState<SortKey>("price");
+	const [sortDesc, setSortDesc] = useState(true);
+
+	const filteredPrices = useMemo(() => {
+		let rows = latestPrices;
+		if (originFilter !== "all") {
+			rows = rows.filter((p: { factory?: { country?: string } }) => {
+				const isDomestic = p.factory?.country === "CN";
+				return originFilter === "domestic" ? isDomestic : !isDomestic;
+			});
+		}
+		const q = search.trim().toLowerCase();
+		if (q) {
+			rows = rows.filter((p: { cutCode: string }) =>
+				p.cutCode.replace(/_/g, " ").toLowerCase().includes(q),
+			);
+		}
+		const sorted = [...rows].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+			if (sortKey === "price") {
+				return ((a.price as number) ?? 0) - ((b.price as number) ?? 0);
+			}
+			if (sortKey === "source") {
+				return String(a.source ?? "").localeCompare(String(b.source ?? ""));
+			}
+			return String(a.cutCode ?? "").localeCompare(String(b.cutCode ?? ""));
+		});
+		return sortDesc ? sorted.reverse() : sorted;
+	}, [latestPrices, originFilter, search, sortKey, sortDesc]);
+
+	function toggleSort(key: SortKey) {
+		if (sortKey === key) {
+			setSortDesc(!sortDesc);
+		} else {
+			setSortKey(key);
+			setSortDesc(key === "price"); // price defaults desc, others asc
+		}
+	}
+
+	// avgPrice reflects the active filter so the summary card tracks the view.
+	const avgPrice =
+		filteredPrices.length > 0
+			? formatPrice(
+					filteredPrices.reduce((s: number, p: { price: number }) => s + p.price, 0) /
+						filteredPrices.length,
+					false,
+				)
+			: "--";
+
 	// Group cuts by primal
 	const primalGroups: Record<string, typeof cuts> = {};
 	for (const cut of cuts) {
@@ -60,14 +117,6 @@ export default function BeefOverview() {
 	}
 
 	// Compute summary stats
-	const avgPrice =
-		latestPrices.length > 0
-			? formatPrice(
-					latestPrices.reduce((s: number, p: { price: number }) => s + p.price, 0) /
-						latestPrices.length,
-					false,
-				)
-			: "--";
 	const totalKills = weeklyKills.reduce(
 		(s: number, k: { headCount: number }) => s + k.headCount,
 		0,
@@ -183,65 +232,137 @@ export default function BeefOverview() {
 								description="Run scrapers to populate beef cut prices."
 							/>
 						)}
-						<div className="overflow-x-auto">
-							<table className="data-table">
-								<thead>
-									<tr>
-										<th className="text-left">Cut</th>
-										<th className="text-right">Price (USD/kg)</th>
-										<th className="text-left">7d Forecast</th>
-										<th className="text-left">Source</th>
-										<th className="text-left">Freshness</th>
-										<th className="text-left">Factory</th>
-										<th className="text-left">Grade</th>
-									</tr>
-								</thead>
-								<tbody>
-									{latestPrices
-										.slice(0, 20)
-										.map(
-											(p: {
-												cutCode: string;
-												price: number;
-												source: string;
-												freshness?: "live" | "proxy" | "snapshot";
-												dataDate?: string | null;
-												reason?: string;
-												grade?: string;
-												factory?: { code: string; name: string; country: string };
-											}) => (
-												<tr key={`${p.cutCode}-${p.source}-${p.factory?.code}`}>
-													<td>
-														<a
-															href={`/beef/cuts/${p.cutCode}`}
-															className="text-primary hover:underline"
-														>
-															{p.cutCode.replace(/_/g, " ")}
-														</a>
-													</td>
-													<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
-													<td>
-														<CutForecastCell forecast={cutForecasts?.[p.cutCode]} />
-													</td>
-													<td className="text-gray-500 text-xs">{p.source}</td>
-													<td>
-														<BeefFreshnessBadge
-															freshness={p.freshness}
-															dataDate={p.dataDate}
-															reason={p.reason}
-															compact
-														/>
-													</td>
-													<td className="text-xs">
-														{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}
-													</td>
-													<td className="text-xs text-gray-500">{p.grade || "--"}</td>
-												</tr>
-											),
-										)}
-								</tbody>
-							</table>
-						</div>
+						{latestPrices.length > 0 && (
+							<div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+								{/* Origin filter — PRODUCT-SPEC IA 进口/国产 split */}
+								<div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs">
+									{(["all", "imported", "domestic"] as const).map((opt) => (
+										<button
+											key={opt}
+											type="button"
+											onClick={() => setOriginFilter(opt)}
+											className={`px-3 py-1.5 font-medium capitalize transition-colors ${
+												originFilter === opt
+													? "bg-primary text-primary-foreground"
+													: "text-muted-foreground hover:bg-muted"
+											}`}
+										>
+											{opt}
+										</button>
+									))}
+								</div>
+								{/* Search box */}
+								<div className="relative flex-1 max-w-xs">
+									<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+									<input
+										type="text"
+										placeholder="Search cut…"
+										value={search}
+										onChange={(e) => setSearch(e.target.value)}
+										className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent focus:outline-none focus:ring-1 focus:ring-primary"
+									/>
+								</div>
+								<span className="text-xs text-muted-foreground sm:ml-auto">
+									{filteredPrices.length} of {latestPrices.length} rows
+								</span>
+							</div>
+						)}
+						{filteredPrices.length === 0 && latestPrices.length > 0 && !pricesErr && (
+							<EmptyState
+								type="data"
+								title={originFilter === "domestic" ? "No Domestic (CN) Prices" : "No Matching Cuts"}
+								description={
+									originFilter === "domestic"
+										? "No Chinese domestic factory data yet. Import CN prices via CSV to populate this view."
+										: "Try a different search or filter."
+								}
+							/>
+						)}
+						{filteredPrices.length > 0 && (
+							<div className="overflow-x-auto">
+								<table className="data-table">
+									<thead>
+										<tr>
+											<th className="text-left">
+												<button
+													type="button"
+													onClick={() => toggleSort("cutCode")}
+													className="inline-flex items-center gap-1 hover:text-primary"
+												>
+													Cut {sortKey === "cutCode" && (sortDesc ? "↓" : "↑")}
+												</button>
+											</th>
+											<th className="text-right">
+												<button
+													type="button"
+													onClick={() => toggleSort("price")}
+													className="inline-flex items-center gap-1 hover:text-primary"
+												>
+													Price (USD/kg) {sortKey === "price" && (sortDesc ? "↓" : "↑")}
+												</button>
+											</th>
+											<th className="text-left">7d Forecast</th>
+											<th className="text-left">
+												<button
+													type="button"
+													onClick={() => toggleSort("source")}
+													className="inline-flex items-center gap-1 hover:text-primary"
+												>
+													Source {sortKey === "source" && (sortDesc ? "↓" : "↑")}
+												</button>
+											</th>
+											<th className="text-left">Freshness</th>
+											<th className="text-left">Factory</th>
+											<th className="text-left">Grade</th>
+										</tr>
+									</thead>
+									<tbody>
+										{filteredPrices
+											.slice(0, 50)
+											.map(
+												(p: {
+													cutCode: string;
+													price: number;
+													source: string;
+													freshness?: "live" | "proxy" | "snapshot";
+													dataDate?: string | null;
+													reason?: string;
+													grade?: string;
+													factory?: { code: string; name: string; country: string };
+												}) => (
+													<tr key={`${p.cutCode}-${p.source}-${p.factory?.code}`}>
+														<td>
+															<a
+																href={`/beef/cuts/${p.cutCode}`}
+																className="text-primary hover:underline"
+															>
+																{p.cutCode.replace(/_/g, " ")}
+															</a>
+														</td>
+														<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
+														<td>
+															<CutForecastCell forecast={cutForecasts?.[p.cutCode]} />
+														</td>
+														<td className="text-gray-500 text-xs">{p.source}</td>
+														<td>
+															<BeefFreshnessBadge
+																freshness={p.freshness}
+																dataDate={p.dataDate}
+																reason={p.reason}
+																compact
+															/>
+														</td>
+														<td className="text-xs">
+															{p.factory ? `${p.factory.name} (${p.factory.country})` : "--"}
+														</td>
+														<td className="text-xs text-gray-500">{p.grade || "--"}</td>
+													</tr>
+												),
+											)}
+									</tbody>
+								</table>
+							</div>
+						)}
 					</CardBody>
 				</Card>
 

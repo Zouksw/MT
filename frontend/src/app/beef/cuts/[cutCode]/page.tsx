@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { CutForecastSection } from "@/components/beef/CutForecastSection";
+import { CutPriceHistoryChart } from "@/components/beef/CutPriceHistoryChart";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -105,6 +106,20 @@ export default function CutDetail() {
 						</span>
 					)}
 				</div>
+			)}
+
+			{/* Price History Chart — multi-source line chart (PRODUCT-SPEC §5.2).
+			    Each source is one line so origins can be compared visually.
+			    The per-source tables below give exact values. */}
+			{prices.length > 0 && (
+				<Card className="mb-6">
+					<CardHeader>
+						<CardTitle>Price History (90d) — by Source</CardTitle>
+					</CardHeader>
+					<CardBody>
+						<CutPriceHistoryChart bySource={bySource} />
+					</CardBody>
+				</Card>
 			)}
 
 			{/* AI Forecast — per-cut prediction (dual-backend, layer 1 integration).
