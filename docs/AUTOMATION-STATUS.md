@@ -1,0 +1,108 @@
+# 自动化基础设施状态
+
+> 最后更新：2026-07-27（round-25 ~ round-29）
+> 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
+
+## 一、CI/CD（GitHub Actions）
+
+**配置文件**：`.github/workflows/ci.yml`
+
+**触发**：push 到 main/develop（忽略 md/docs）、PR 到 main/develop、手动 workflow_dispatch。
+
+**Job 链路**（7 个，按依赖顺序）：
+
+| Job | 作用 | 失败阻断部署？ |
+|---|---|---|
+| `security-scan` | pnpm audit（high+）+ Snyk | 软失败（continue-on-error） |
+| `lint-and-typecheck` | backend/frontend 各跑 biome lint + tsc --noEmit | ✅ 硬阻断 |
+| `test-backend` | PostgreSQL + Redis 服务容器 → prisma migrate → vitest | ✅ 硬阻断 |
+| `test-frontend` | jest + next build | ✅ 硬阻断 |
+| `test-inference` | setup-python 3.10 → ruff check → pytest | ✅ 硬阻断（round-25 新增） |
+| `build` | 仅 main push；构建 backend dist + frontend .next，上传 artifact | 依赖前 5 个 job |
+| `deploy` | 仅 main push；SSH 到生产 → git pull → build → prisma migrate → pm2 reload | 依赖 build |
+| `rollback` | deploy 失败时自动 git revert + 重建 | failure() 触发 |
+
+**Coverage**：backend 跑 `test:coverage` 并上传 Codecov（continue-on-error=true，软失败）。frontend coverage 未在 CI 跑（jest.config.js 配了 70% 阈值但 CI 不强制）。
+
+## 二、定时任务（系统 crontab）
+
+`crontab -l` 共 5 条：
+
+| 频率 | 脚本 | 作用 |
+|---|---|---|
+| `0 2 * * *` | `backup-db.sh --compress` | 每日 2AM 数据库备份 |
+| `*/2 * * * *` | `watchdog-nextserver.sh` | 每 2 分钟杀重复 next-server（防 OOM） |
+| `*/5 * * * *` | `cron-healthcheck.sh` | 每 5 分钟探测 backend/frontend/inference + 自动重启 |
+| `0 3 * * *` | `cron-cleanup.sh` | 每日 3AM 磁盘清理（tmp/core/playwright/旧日志） |
+| `0 4 * * 0` | `cron-db-maintenance.sh` | 每周日 4AM VACUUM ANALYZE + session 清理 |
+
+**round-28 变更**：cron-healthcheck.sh 新增 inference(10810) 探测。现在 3 个服务都受 cron 自动重启保护。
+
+**敏感操作禁令**：`cron-cleanup.sh` 明确禁止 `pnpm store prune`（曾 3 次导致文件损坏，Round 5/7/10）。
+
+## 三、应用内定时器（setInterval，backend server.ts）
+
+无 cron 库，全部原生 setInterval：
+
+| 频率 | 任务 | 入口 |
+|---|---|---|
+| 启动后 5s | `schedulePredictionsFromPostgreSQL` + `scheduleBeefCutPredictions` | server.ts:147 |
+| 30 min | 订阅制预测刷新（遍历所有 commodity + cut 订阅，跑 inference） | predictionCache.ts:197 |
+| 启动后 15s + 24h | `verifyDuePredictions`（MAPE 验证，扫描到期预测） | server.ts:203 |
+| 启动即跑 | `scraperManager.runAll()`（全部 18 个采集器） | server.ts:109 |
+| 1h | commodity_prices, china_wholesale | server.ts:167 |
+| 6h | cme_futures, dce_futures, fred, fao, baltic_dry, shipping_index, weather | server.ts:179 |
+| 24h | world_bank, usda_psd, mla_nlrs, cepea, inac, abares, china_customs_stats, secex, usda_ams | server.ts:197 |
+
+**采集器状态**：MLA + USDA-AMS 因 `MLA_API_KEY`/`USDA_MARS_API_KEY` 缺省处于 dormant（scraperManager 跳过不报错）。其他源可配 key 的（FRED、OPENWEATHER）同理。
+
+## 四、PM2（生产进程管理）
+
+**配置**：`ecosystem.config.cjs`，3 个 fork 模式进程：
+
+| 进程 | 端口 | 重启策略 |
+|---|---|---|
+| mt-backend | 8000 | max_restarts:10, restart_delay:3s, min_uptime:10s |
+| mt-frontend | 3000 | 同上 |
+| mt-inference | 10810 | max_restarts:10, restart_delay:5s, min_uptime:15s, kill_timeout:10s |
+
+**无 cron_restart**（定时重启未使用）。保活靠 PM2 autorestart + cron-healthcheck 双保险。
+
+**inference 特殊配置**：`env_production` 设 `HF_ENDPOINT=https://hf-mirror.com`（huggingface.co 被墙，用镜像）。chronos 启动时预加载（main.py startup hook），冷加载 ~90s（3 个变体各 ~30s）。
+
+## 五、测试体系
+
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数 |
+|---|---|---|---|---|
+| backend | vitest 2 | vitest.config.ts | 47 | 579 pass / 1 skip |
+| frontend | jest 29 + Testing Library | jest.config.js | 22 | 278 pass |
+| inference | pytest 8 | conftest.py | 3 | 21 pass |
+| frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
+
+**集成测试**：backend `src/__tests__/integration/` 用真实 PostgreSQL（mt_db）+ in-process Express（supertest），DB 不可达自动 skip。
+
+**MAPE E2E 守护**：`services/__tests__/mapeTracking.test.ts:115-209` 覆盖 cut-series 预测的完整验证链路（PredictionLog → BeefCutPrice actuals → verifyDuePredictions → verified + MAPE）。守护 round-22 的正确性修复。
+
+## 六、代码质量工具
+
+| 工具 | 作用域 | 配置 | CI 强制？ |
+|---|---|---|---|
+| biome | backend/frontend TS | biome.json（tab, 100 列, noUnusedVariables:error） | ✅ lint job |
+| ruff | inference Python | pyproject.toml（py310, 100 列, E/W/F/I/UP） | ✅ test-inference job（round-25） |
+| husky + lint-staged | 根级 pre-commit | .husky/pre-commit → biome check --write | 本地 commit 时 |
+| knip | backend/frontend | knip.json（已配置，待 zod 兼容后启用） | 未启用 |
+
+## 七、已知限制与待办
+
+1. **本地 coverage 工具损坏**：pnpm install 引入 test-exclude/minimatch 版本解析问题，本地 `test:coverage` 崩（backend + frontend 均受影响）。CI 环境干净不受影响。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
+2. **knip 本地无法运行**：knip 依赖 zod@4 ESM，本地 zod 解析失败。配置已就位（knip.json + 脚本），CI/未来版本兼容后即可用。
+3. **dead code 待处理**：`invalidateCommodityCache`（零调用）、`unsubscribeCommodity`（仅测试用）无生产调用方。可能是数据导入后缓存未失效的功能缺口——记录待查，不擅自删以免掩盖问题。
+4. **PAT 凭据管理**：origin remote 仍含 HTTPS + token store（~/.git-credentials）。SSH key 方案已部分配置（~/.ssh/config 走 443），但公钥未加到 GitHub 账户。待用户完成 SSH 接入后可彻底移除 token。
+5. **数据采集器 dormant**：MLA + USDA-AMS 需 `MLA_API_KEY`/`USDA_MARS_API_KEY`。无 key 替代方案：admin CSV 上传（`/beef/import`）已就绪。
+
+## 八、部署产物（备选方案）
+
+当前生产用 PM2 直跑。另有完整备选：
+- `docker-compose.yml`（5 服务：postgres/redis/backend/frontend/nginx）
+- `deploy/docker/Dockerfile.{backend,frontend}`（两阶段构建）
+- `deploy/helm/`（k8s：Deployment + HPA + CronJob backup + Ingress + NetworkPolicy）

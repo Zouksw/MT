@@ -119,3 +119,94 @@ billing/支付/订阅**不是缺口，是明确的设计决策**（§九："❌ 
 | inference | 10810 | ✅ `/health` 200, `/ready` ready:true |
 | postgres | 5432 | ✅ |
 | redis | 6379 | ✅ |
+
+---
+
+# 全栈推进记录 — round 25-29（2026-07-27 续）
+
+**性质**：3 轮并行审计（CI/CD + 预测管道 + 测试体系）驱动的自动化基础设施补齐。不造新功能，让既有护栏生效。每批独立 commit + 测试 + live 验证。
+**测试基线**：backend vitest **579 pass**（+5）| frontend jest **278 pass** | inference pytest **21 pass** = **878 tests total**（+7）。
+
+---
+
+## 核心成果：inference-service 首次进入 CI 保护
+
+**这是本轮最重要的成果。** inference-service（6 模型 + chronos + FastAPI）此前完全游离于 CI 之外——`.github/workflows/ci.yml` 无任何 Python job，模型替换/路由变更无回归守门。现在：
+
+```
+push/PR → test-inference job
+  → setup-python 3.10
+  → pip install requirements.txt + requirements-dev.txt
+  → ruff check . （lint，零容忍）
+  → pytest -q （21 测试）
+```
+
+`test-inference` 与 test-backend/test-frontend 平行，纳入 `build.needs` 作为部署前置门。inference 侧从此和 TS 侧享有同级的 CI 保护。
+
+---
+
+## 批次 25 — inference-service 接入 CI
+
+**缺口**：ci.yml 零 Python 内容。
+
+**改动**：
+- 新建 `inference-service/pyproject.toml`：`[tool.ruff]` 配置（target py310, line-length 100, select E/W/F/I/UP；非打包文件，纯工具配置）
+- `requirements-dev.txt` 加 `ruff>=0.6`
+- ci.yml 新增 `test-inference` job + build.needs 加入
+- 修复全部 20 个 ruff baseline 违规（5 import 排序、2 unused import、1 unused var、12 E501）
+
+**验证**：`ruff check .` 全绿；`pytest -q` 21 passed。commit `d2063a0`。
+
+## 批次 26 — lint 落地 + 残留清理
+
+**改动**：
+- 删除 `backend/jest.setup.js`（vitest 已用 `src/test-setup.ts`，jest.setup.js 冗余）
+- 移除 backend `@typescript-eslint/*` 残留依赖（实际用 biome）
+- 激活 knip：新建 `knip.json`（backend/frontend workspace 配置）+ 加 knip 脚本
+
+**dead code 处理结论**：`invalidateCommodityCache`（零调用）、`unsubscribeCommodity`（仅测试用）无生产调用方，但可能是功能缺口（数据导入后缓存未失效），记录待查不擅自删。
+
+**验证**：type-check 通过；574 测试全绿。commit `8e3e0a1`（实际哈希见 git log）。
+
+## 批次 27 — readiness 集成
+
+**缺口**：inference 有 `/ready`（chronos 不可用返 503），但 backend 只探 `/health`（liveness），无法区分"进程挂了"vs"chronos 降级"。
+
+**改动**：
+- `client.ts` 新增 `checkReadiness()`：先 /health 判存活，再 /ready 判 chronos。返回 `{alive, ready, readyVariants, detail}`
+- `health.ts` /ready 端点升级：`checks.inferenceDetail = {alive, ready, readyVariants}`
+- `response.ts` ErrorDetail.checks 放宽允许嵌套对象
+- 新增 `inferenceClient.test.ts`：5 个单元测试
+
+**Live 验证**：
+```json
+"inferenceDetail": {
+  "alive": true, "ready": true,
+  "readyVariants": ["chronos_tiny", "chronos_mini", "chronos_base"]
+}
+```
+commit `9b8af4c`。
+
+## 批次 28 — cron 监控 inference
+
+**缺口**：cron-healthcheck.sh 探测 backend+frontend 但不探 inference。inference 进程挂起时 PM2 兜不住。
+
+**改动**：加 inference(10810) /health 探测 + 自动重启。故意只探 /health 不探 /ready（chronos 冷加载 90s 期间 /ready 返 503 是预期）。
+
+**重新定位说明**：原计划的 coverage 阈值硬化因本地 node_modules 损坏（test-exclude/minimatch）无法安全验证而推迟；MAPE E2E 守护测试经核查已在批次 22 完成。转向确定可验证的 cron 增益。commit `89229fa`。
+
+## 批次 29 — 文档收尾
+
+新建 `docs/AUTOMATION-STATUS.md`：自动化基础设施全景图（CI 7 jobs、crontab 5 条、应用内 setInterval 3 层、PM2 3 进程、测试体系、质量工具、已知限制）。
+
+---
+
+## 部署健康（2026-07-27 round-29 实测）
+
+| 服务 | 端口 | 状态 |
+|---|---|---|
+| backend | 8000 | ✅ `/health` 200, `/health/ready` 返回 inferenceDetail |
+| frontend | 3000 | ✅ |
+| inference | 10810 | ✅ `/health` 200, `/ready` ready:true（3 变体） |
+| cron-healthcheck | - | ✅ 3 服务全监控 |
+
