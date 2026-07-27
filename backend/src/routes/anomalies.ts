@@ -120,6 +120,7 @@ router.get(
 // GET /api/anomalies/:id - Get single anomaly
 router.get(
 	"/:id",
+	authenticate,
 	asyncHandler(async (req, res) => {
 		const anomaly = await getAnomaly(req.params.id);
 		return success(res, { anomaly });
@@ -347,6 +348,7 @@ router.delete(
 // GET /api/anomalies/stats - Get anomaly statistics
 router.get(
 	"/stats/timeseries/:timeseriesId",
+	authenticate,
 	asyncHandler(async (req, res) => {
 		const { timeseriesId } = req.params;
 		const { start, end } = req.query;

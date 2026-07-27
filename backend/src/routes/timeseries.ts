@@ -120,6 +120,7 @@ router.get(
 // GET /api/timeseries/:id - Get single timeseries
 router.get(
 	"/:id",
+	authenticate,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { id } = req.params;
 
@@ -170,6 +171,7 @@ router.get(
 // GET /api/timeseries/:id/data - Get timeseries data
 router.get(
 	"/:id/data",
+	authenticate,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { id } = req.params;
 		const params = limitSchema.parse(req.query);

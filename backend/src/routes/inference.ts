@@ -444,23 +444,26 @@ router.get(
 	}),
 );
 
-// === Train (no-op for statistical models, warmup for deep models) ===
+// === Train (removed — architecture is pretrained-model-only) ===
+// The previous handler returned a canned {status:"ready"} for every call,
+// implying training had occurred when nothing happened. The inference
+// architecture is foundation-model-only (Chronos) + ready statistical
+// models — none require per-request training. Rather than fabricate a
+// "trained" response, this endpoint now signals it is gone so callers stop
+// depending on a no-op. Use POST /api/inference/predict to run a model.
 
 router.post(
 	"/models/train",
 	authenticate,
 	checkAIAccess,
-	asyncHandler(async (req: Request, res: Response) => {
-		const { algorithm, commodityId } = req.body;
-		if (!algorithm) {
-			throw new BadRequestError("Missing required parameter: algorithm");
-		}
-
-		res.json({
-			modelId: algorithm,
-			status: "ready",
-			message: "Model is available for inference (statistical models need no training)",
-			commodityId: commodityId || null,
+	asyncHandler(async (_req: Request, res: Response) => {
+		res.status(410).json({
+			success: false,
+			error: {
+				code: "GONE",
+				message:
+					"Model training is not supported. The inference architecture serves pretrained foundation models (Chronos) and ready statistical models — none require training. Use POST /api/inference/predict to run a forecast.",
+			},
 		});
 	}),
 );

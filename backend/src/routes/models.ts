@@ -53,6 +53,7 @@ const router = Router();
 // GET /api/models - Get all forecasting models
 router.get(
 	"/",
+	authenticate,
 	asyncHandler(async (req, res) => {
 		const { timeseriesId, algorithm } = req.query;
 		const { skip, take } = getPagination(req.query);
@@ -96,6 +97,7 @@ router.get(
 // GET /api/models/:id - Get single model
 router.get(
 	"/:id",
+	authenticate,
 	asyncHandler(async (req, res) => {
 		const model = await getModel(req.params.id);
 		return success(res, { model });
@@ -384,6 +386,7 @@ router.post(
 // GET /api/models/:modelId/forecasts - Get forecasts from a model
 router.get(
 	"/:modelId/forecasts",
+	authenticate,
 	asyncHandler(async (req, res) => {
 		const { start, end } = req.query;
 		const params = limitSchema.parse(req.query);
