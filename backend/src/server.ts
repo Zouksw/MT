@@ -9,7 +9,7 @@
  */
 
 import { logger, prisma } from "@/lib";
-import { MS_PER_HOUR } from "@/lib/constants";
+import { MS_PER_HOUR, MS_PER_MINUTE } from "@/lib/constants";
 import { evaluateAlertRules } from "@/services/alert-rules";
 import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
@@ -215,7 +215,11 @@ function start(): void {
 	// This closes the loop that previously made alert rules a dead-end feature
 	// (rules could be created but nothing evaluated them). Runs on a shorter
 	// cadence than verification because price thresholds are time-sensitive.
-	const ALERT_EVAL_INTERVAL = 10 * MS_PER_HOUR; // 10 min
+	//
+	// Bug fix (round-44): was `10 * MS_PER_HOUR` = 10 HOURS despite the "10 min"
+	// comment — alerts fired 60× slower than intended. MS_PER_MINUTE, not
+	// MS_PER_HOUR, matches the documented cadence and the price-threshold intent.
+	const ALERT_EVAL_INTERVAL = 10 * MS_PER_MINUTE; // 10 min
 	const runAlertEvaluation = async () => {
 		try {
 			const n = await evaluateAlertRules();
