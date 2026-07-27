@@ -157,3 +157,57 @@ def test_predict_batch_rejects_non_list_body(client):
     """/predict/batch expects a JSON array; a single object is a 422."""
     resp = client.post("/predict/batch", json=BASE_PAYLOAD)
     assert resp.status_code == 422
+
+
+# ─── Input robustness (round-19): bad inputs must 422, not 500 ───────────────
+
+
+def test_predict_rejects_non_finite_in_values(client):
+    """null / NaN / inf in values crash np.array / torch.tensor deep in the
+    model code. The field_validator must reject them at the edge (422).
+
+    JSON cannot carry a literal NaN, so we send null — pydantic rejects None
+    in list[float] as a type error (also 422). Either way the bad input is
+    caught at the schema boundary, not deep in statsmodels.
+    """
+    payload = {**BASE_PAYLOAD, "values": [10.0, None, 12.0]}
+    resp = client.post("/predict", json=payload)
+    assert resp.status_code == 422
+
+
+def test_predict_rejects_oversized_values(client):
+    """A 10k+ point series risks OOM; capped at MAX_VALUES_LENGTH (422)."""
+    payload = {**BASE_PAYLOAD, "values": [1.0] * 10_001}
+    resp = client.post("/predict", json=payload)
+    assert resp.status_code == 422
+
+
+def test_predict_batch_rejects_oversized_batch(client):
+    """/predict/batch is sequential; capped at MAX_BATCH_SIZE (50). 51 → 422."""
+    requests = [{**BASE_PAYLOAD} for _ in range(51)]
+    resp = client.post("/predict/batch", json=requests)
+    assert resp.status_code == 422
+
+
+def test_predict_maps_engine_value_error_to_422(client, monkeypatch):
+    """A ValueError from the engine (e.g. SARIMAX exog mismatch) is a client
+    error and must surface as 422, not a generic 500."""
+
+    def fake_predict(**kwargs):
+        raise ValueError("exog must have same length as values")
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+    resp = client.post("/predict", json=BASE_PAYLOAD)
+    assert resp.status_code == 422
+
+
+def test_predict_maps_runtime_error_to_503(client, monkeypatch):
+    """A RuntimeError from the engine (e.g. chronos weights missing) is a
+    service-degraded condition and must surface as 503, not 500."""
+
+    def fake_predict(**kwargs):
+        raise RuntimeError("chronos_tiny weights not cached")
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+    resp = client.post("/predict", json=BASE_PAYLOAD)
+    assert resp.status_code == 503

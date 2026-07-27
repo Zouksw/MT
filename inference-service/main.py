@@ -38,6 +38,7 @@ def preload_chronos_pipelines():
             CHRONOS_USABLE_VARIANTS,
             CHRONOS_VARIANTS,
             _get_chronos_pipeline,
+            record_preload_failure,
         )
 
         for vid, repo in CHRONOS_VARIANTS.items():
@@ -45,6 +46,10 @@ def preload_chronos_pipelines():
                 try:
                     _get_chronos_pipeline(repo)
                 except Exception as e:
+                    # Record the failure so /ready can report it — a variant
+                    # whose weights are cached but whose pipeline failed to
+                    # construct must not be advertised as ready.
+                    record_preload_failure(repo, str(e))
                     logger.warning(f"Preload failed for {vid} ({repo}): {e}")
             else:
                 logger.info(f"Skipping preload for {vid} — weights not cached")

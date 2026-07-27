@@ -167,6 +167,45 @@ def _predict_chronos(
 # ChronosPipeline by repo_id for the process lifetime.
 _chronos_pipelines: dict[str, object] = {}
 
+# Record of chronos variants whose boot-time preload failed. A variant here
+# is technically usable (weights cached) but its pipeline failed to construct
+# — /predict will raise RuntimeError on first use. /ready exposes this so a
+# deployment can tell "all primary models failed to load" from "healthy".
+_preload_failures: dict[str, str] = {}
+
+
+def record_preload_failure(repo_id: str, error: str) -> None:
+    """Called by main.startup when a chronos pipeline fails to preload."""
+    _preload_failures[repo_id] = error
+
+
+def readiness_state() -> dict:
+    """Snapshot of chronos readiness for the /ready probe.
+
+    `ready` is True iff at least one primary (chronos) variant has both
+    cached weights AND a successfully preloaded pipeline. Baseline
+    statistical models are always available (no weights), so they don't
+    factor into readiness — only the primary ensemble does.
+    """
+    usable = {vid: ok for vid, ok in CHRONOS_USABLE_VARIANTS.items()}
+    loaded = {repo: True for repo in _chronos_pipelines}
+    failures = dict(_preload_failures)
+    # A variant is ready if weights are cached and it's in the pipeline cache
+    # and not in the failure log.
+    ready_variants = [
+        vid
+        for vid, repo in CHRONOS_VARIANTS.items()
+        if usable.get(vid) and repo in loaded and repo not in failures
+    ]
+    ready = len(ready_variants) > 0
+    return {
+        "ready": ready,
+        "chronos_usable_variants": usable,
+        "chronos_pipelines_loaded": sorted(loaded),
+        "preload_failures": failures,
+        "ready_variants": ready_variants,
+    }
+
 
 def _get_chronos_pipeline(repo_id: str):
     """Return a cached ChronosPipeline for repo_id, loading it on first use."""
