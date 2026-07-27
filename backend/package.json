@@ -20,7 +20,8 @@
 		"prisma:generate": "prisma generate",
 		"prisma:migrate": "prisma migrate dev",
 		"prisma:push": "prisma db push",
-		"prisma:seed": "tsx prisma/seed.ts"
+		"prisma:seed": "tsx prisma/seed.ts",
+		"knip": "knip"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
@@ -62,8 +63,6 @@
 		"@types/swagger-jsdoc": "^6.0.4",
 		"@types/swagger-ui-express": "^4.1.8",
 		"@types/uuid": "^9.0.7",
-		"@typescript-eslint/eslint-plugin": "^8.57.1",
-		"@typescript-eslint/parser": "^8.57.1",
 		"@vitest/coverage-v8": "2",
 		"knip": "^6.6.1",
 		"prisma": "^5.10.0",
