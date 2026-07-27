@@ -86,12 +86,29 @@
 
 ---
 
-## 当前已知缺口（本轮明确不做）
+## 当前已知缺口（对照 PRODUCT-SPEC §九）
 
-- **billing 无支付后端**（PLANS 硬编码，/cancel 仅改 plan 为 free）——超出本轮范围
-- **API-key scraper 待激活**（DATA-1 MLA + G6 USDA-AMS）——需用户提供 key
-- **18 个 scraper 零单测**——独立大工程
-- **settings/sessions + notifications 用 mock/localStorage**——非核心路径
+**注**：以下分类严格对照 `docs/PRODUCT-SPEC.md` 的"明确不做"边界。
+billing/支付/订阅**不是缺口，是明确的设计决策**（§九："❌ 付费墙/订阅"）——
+本项目是牛肉贸易**信息平台**（类牧集网 × IoTDB AINode），**不是交易平台**，
+没有交易撮合，也不需要支付后端。billing 路由保留的静态 PLANS 仅作 UI 占位。
+
+### 明确不做（PRODUCT-SPEC §九，非缺口）
+- ❌ 交易撮合（信息平台定位）
+- ❌ 付费墙/订阅（billing 已降级为静态占位，AI 分层留待用户基数）
+- ❌ 非牛肉商品进主 IA（crude_oil/gold 留在数据层）
+- ❌ 用户生成内容/社区
+
+### 待用户输入才能推进
+- **API-key scraper 激活**（DATA-1 MLA_API_KEY + G6 USDA_MARS_API_KEY）——
+  真实牛肉数据的自动采集路径。但管理员 CSV 上传（批次 17）已提供不依赖
+  key 的替代注入路径。
+
+### 后续可做（未阻塞，但超出本轮范围）
+- 资讯模块（M3，PRODUCT-SPEC §5.4——market dynamics feed，需后端模型）
+- 18 个 scraper 单测覆盖（独立工程）
+- settings/sessions + notifications 的 mock/localStorage 改为真实后端
+  （非核心路径，且 sessions/notifications 不影响信息平台核心价值）
 
 ## 部署健康（2026-07-27 实测）
 

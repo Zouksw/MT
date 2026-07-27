@@ -17,9 +17,19 @@ jest.mock("@/hooks/useRetryableFetch", () => ({
 	useRetryableFetch: jest.fn(),
 }));
 
+// Mock useBeefCutForecasts so we can control the per-cut forecast data that
+// feeds both the aiSummary hero card and the hotCuts forecast column.
+jest.mock("@/hooks/useBeefCutForecasts", () => ({
+	useBeefCutForecasts: jest.fn(() => ({ forecasts: undefined, isLoading: false })),
+}));
+
+import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 
 const mockUseRetryableFetch = useRetryableFetch as jest.MockedFunction<typeof useRetryableFetch>;
+const mockUseBeefCutForecasts = useBeefCutForecasts as jest.MockedFunction<
+	typeof useBeefCutForecasts
+>;
 
 describe("useDashboardStats", () => {
 	beforeEach(() => {
@@ -388,5 +398,75 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats?.timeseries.trend).toBeNull();
 		expect(result.current.stats?.forecasts.trend).toBeNull();
 		expect(result.current.stats?.alerts.trend).toBeNull();
+	});
+
+	it("merges per-cut forecasts into hotCuts rows (M2 §5.1 AI column)", async () => {
+		// The hot-cuts table must carry the 7-day forecast per row so the
+		// dashboard's 行情总览 shows the AI prediction alongside the price
+		// (PRODUCT-SPEC §5.1). A cut with a forecast gets it merged in;
+		// a cut without keeps forecast:null (honest "—").
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		const byKey: Record<string, any> = {
+			"/beef/cuts": { data: { cuts: [{ cutCode: "STRIPLOIN" }, { cutCode: "BRISKET" }] } },
+			"/beef/factories": { data: { factories: [] } },
+			"/beef/prices/latest": {
+				data: {
+					prices: [
+						{ price: 12, cutCode: "STRIPLOIN", date: "2026-07-27", factory: { country: "BR" } },
+						{ price: 8, cutCode: "BRISKET", date: "2026-07-27", factory: { country: "US" } },
+					],
+				},
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
+			return {
+				data: matched ? matched[1] : { total: 0, data: [] },
+				error: undefined,
+				isLoading: false,
+				isValidating: false,
+				isRetrying: false,
+				retryCount: 0,
+				manualRetry: jest.fn(),
+				mutate: jest.fn(),
+			};
+		});
+
+		// STRIPLOIN has a forecast; BRISKET does not.
+		mockUseBeefCutForecasts.mockReturnValue({
+			forecasts: {
+				STRIPLOIN: {
+					direction: "up",
+					predictedChange: 2.5,
+					confidence: 0.85,
+					modelsAgree: 3,
+					availableModels: 3,
+					predictedPrice: 12.3,
+					dataPoints: 30,
+					horizon: 7,
+				},
+			},
+			isLoading: false,
+		});
+
+		const { result } = renderHook(() => useDashboardStats());
+
+		await waitFor(() => {
+			expect(result.current.loading).toBe(false);
+		});
+
+		const hotCuts = result.current.stats?.beef.hotCuts ?? [];
+		const striploin = hotCuts.find((c) => c.cutCode === "STRIPLOIN");
+		const brisket = hotCuts.find((c) => c.cutCode === "BRISKET");
+
+		// STRIPLOIN row carries the merged forecast.
+		expect(striploin?.forecast).not.toBeNull();
+		expect(striploin?.forecast?.direction).toBe("up");
+		expect(striploin?.forecast?.predictedChange).toBe(2.5);
+
+		// BRISKET row has no forecast → honest null (renders as "—").
+		expect(brisket?.forecast).toBeNull();
 	});
 });

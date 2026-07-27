@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
+import { type CutForecastSummary, useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import type { Alert, Forecast } from "@/types/api";
 import { getAuthToken } from "@/utils/auth";
@@ -59,12 +59,17 @@ export interface DashboardStats {
 		 */
 		importedAvg: number | null;
 		domesticAvg: number | null;
-		/** Top-priced cuts for the 行情总览 hot-cuts table (max 6). */
+		/** Top-priced cuts for the 行情总览 hot-cuts table (max 6).
+		 * `forecast` is the per-cut 7-day consensus (merged from
+		 * useBeefCutForecasts) so the table can show the AI prediction column
+		 * per PRODUCT-SPEC §5.1. Null when the cut isn't forecastable
+		 * (stale/insufficient data) — an honest absence, not a fabricated 0. */
 		hotCuts: Array<{
 			cutCode: string;
 			price: number;
 			country: string;
 			source: string;
+			forecast: CutForecastSummary | null;
 		}>;
 	};
 	/**
@@ -314,7 +319,7 @@ export const useDashboardStats = () => {
 		domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
 		hotCuts: Array.from(hotCutAccum.entries())
 			.slice(0, 6)
-			.map(([cutCode, v]) => ({ cutCode, ...v })),
+			.map(([cutCode, v]) => ({ cutCode, ...v, forecast: null })),
 	};
 
 	// AI models — real count from the models registry (was hardcoded 8/8, a fake).
@@ -355,6 +360,20 @@ export const useDashboardStats = () => {
 			cutName: nameByCode.get(cutCode) || cutCode.replace(/_/g, " "),
 		};
 	}, [cutForecasts, cutsData]);
+
+	// Merge the per-cut 7-day forecast into the hot-cuts table rows
+	// (PRODUCT-SPEC §5.1 — the 行情总览 hot-cuts table must show the AI
+	// prediction alongside the price, matching the /beef page's 7d Forecast
+	// column). cutForecasts is keyed by cutCode; rows without a forecast keep
+	// forecast:null (honest absence, rendered as "—" by CutForecastCell).
+	const hotCutsWithForecast = useMemo(
+		() =>
+			beefPriceStats.hotCuts.map((c) => ({
+				...c,
+				forecast: cutForecasts?.[c.cutCode] ?? null,
+			})),
+		[beefPriceStats.hotCuts, cutForecasts],
+	);
 
 	// Latest 资讯 for the dashboard news strip (PRODUCT-SPEC §5.1 最新市场动态).
 	const recentNews = useMemo(() => {
@@ -401,6 +420,7 @@ export const useDashboardStats = () => {
 						factories: beefFactories.length,
 						prices: beefPrices.length,
 						...beefPriceStats,
+						hotCuts: hotCutsWithForecast,
 					},
 					aiSummary,
 					recentNews,
@@ -423,6 +443,7 @@ export const useDashboardStats = () => {
 					factories: beefFactories.length,
 					prices: beefPrices.length,
 					...beefPriceStats,
+					hotCuts: hotCutsWithForecast,
 				},
 				aiSummary,
 				recentNews,

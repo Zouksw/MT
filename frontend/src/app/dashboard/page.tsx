@@ -14,6 +14,7 @@ import {
 	Warehouse,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -223,6 +224,7 @@ export default function DashboardPage() {
 												<th className="px-5 py-2 font-medium">部位 Cut</th>
 												<th className="px-3 py-2 font-medium text-left">产地</th>
 												<th className="px-5 py-2 font-medium text-right">今日价</th>
+												<th className="px-5 py-2 font-medium text-left">7d Forecast</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -242,6 +244,9 @@ export default function DashboardPage() {
 														style={{ fontVariantNumeric: "tabular-nums" }}
 													>
 														{formatPrice(c.price, false)}
+													</td>
+													<td className="px-5 py-3">
+														<CutForecastCell forecast={c.forecast} />
 													</td>
 												</tr>
 											))}
