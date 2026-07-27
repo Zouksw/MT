@@ -30,6 +30,11 @@ export interface ModelWithBacktest extends ModelAccuracy {
 }
 
 export const MODEL_NAME_MAP: Record<string, string> = {
+	// Chronos ensemble (primary consensus)
+	chronos_tiny: "Chronos-T5-Tiny",
+	chronos_mini: "Chronos-T5-Mini",
+	chronos_base: "Chronos-T5-Base",
+	// Statistical baselines (comparison only)
 	arima: "ARIMA",
 	holtwinters: "Holt-Winters",
 	exponential_smoothing: "Exp. Smoothing",
@@ -38,7 +43,12 @@ export const MODEL_NAME_MAP: Record<string, string> = {
 };
 
 export const MODEL_COLORS: Record<string, string> = {
-	arima: "#8B6914",
+	// Chronos — gold family (primary)
+	chronos_tiny: "#D4A017",
+	chronos_mini: "#B8860B",
+	chronos_base: "#8B6914",
+	// Baselines — muted/distinct
+	arima: "#6B7280",
 	holtwinters: "#8B5CF6",
 	exponential_smoothing: "#EC4899",
 	naive_forecaster: "#F97316",

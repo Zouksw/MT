@@ -53,7 +53,10 @@ export default function AIPredictPage() {
 
 	// Form state
 	const [formTimeseries, setFormTimeseries] = useState("root.test2");
-	const [formModel, setFormModel] = useState("arima");
+	// Default to the smallest Chronos variant — the primary prediction engine
+	// per the chronos-ensemble architecture. Traditional statistical models
+	// remain selectable below as baselines for comparison.
+	const [formModel, setFormModel] = useState("chronos_tiny");
 	const [formHorizon, setFormHorizon] = useState("10");
 	const [formStartTime, setFormStartTime] = useState("");
 	const [formHistoryPoints, setFormHistoryPoints] = useState("50");
@@ -61,36 +64,56 @@ export default function AIPredictPage() {
 	// Validation state
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
-	// AI Node built-in algorithms
+	// Chronos variants are the primary prediction engine (foundation model,
+	// zero-shot). Traditional statistical models are retained as selectable
+	// baselines so users can A/B compare on the same series.
 	const models = [
 		{
-			id: "arima",
-			name: "ARIMA",
-			type: "Classic",
-			description: "Auto-Regressive Integrated Moving Average",
+			id: "chronos_tiny",
+			name: "Chronos-T5 Tiny",
+			type: "Primary",
+			description: "Foundation model (zero-shot, 32MB)",
 		},
 		{
-			id: "holtwinters",
-			name: "Holt-Winters",
-			type: "Classic",
-			description: "Triple Exponential Smoothing",
+			id: "chronos_mini",
+			name: "Chronos-T5 Mini",
+			type: "Primary",
+			description: "Foundation model (zero-shot, ~80MB)",
 		},
 		{
-			id: "exponential_smoothing",
-			name: "Exponential Smoothing",
-			type: "Classic",
-			description: "Simple Exponential Smoothing",
+			id: "chronos_base",
+			name: "Chronos-T5 Base",
+			type: "Primary",
+			description: "Foundation model (zero-shot, ~200MB)",
 		},
 		{
 			id: "naive_forecaster",
 			name: "Naive Forecaster",
 			type: "Baseline",
-			description: "Naive Prediction Method",
+			description: "Dumb baseline — last observed value",
+		},
+		{
+			id: "arima",
+			name: "ARIMA",
+			type: "Baseline",
+			description: "Auto-Regressive Integrated Moving Average",
+		},
+		{
+			id: "holtwinters",
+			name: "Holt-Winters",
+			type: "Baseline",
+			description: "Triple Exponential Smoothing",
+		},
+		{
+			id: "exponential_smoothing",
+			name: "Exponential Smoothing",
+			type: "Baseline",
+			description: "Simple Exponential Smoothing",
 		},
 		{
 			id: "stl_forecaster",
 			name: "STL Forecaster",
-			type: "Decomposition",
+			type: "Baseline",
 			description: "STL Decomposition Forecast",
 		},
 	];
@@ -308,18 +331,22 @@ export default function AIPredictPage() {
 								historical time series data from PostgreSQL.
 							</p>
 							<p className="mb-2">
-								<strong className="text-foreground">AI Node Built-in Algorithms:</strong>
+								<strong className="text-foreground">Primary Engine — Chronos:</strong>
 							</p>
 							<ul className="list-disc pl-4 space-y-1">
 								<li>
-									<strong className="text-foreground">ARIMA:</strong> Classic statistical method for
-									time series forecasting
+									<strong className="text-foreground">Chronos-T5:</strong> Pretrained foundation
+									model for zero-shot time series forecasting
 								</li>
 								<li>
-									<strong className="text-foreground">Holt-Winters:</strong> Triple exponential
-									smoothing for trend and seasonality
+									<strong className="text-foreground">Multi-size ensemble:</strong> Tiny / Mini /
+									Base variants vote in the weighted consensus
 								</li>
 							</ul>
+							<p className="mt-2 mb-2">
+								<strong className="text-foreground">Baselines (for comparison):</strong> Naive,
+								ARIMA, Holt-Winters, Exponential Smoothing, STL.
+							</p>
 						</div>
 					</div>
 				</div>

@@ -28,12 +28,18 @@ export const TRADING_COLORS = {
 	resistanceLine: "#EF4444",
 	anomalyDot: "#EF4444",
 
-	// Model-specific chart colors (for multi-model overlay)
+	// Model-specific chart colors (for multi-model overlay).
+	// Chronos variants use a gold family (primary engine); baselines stay muted.
 	modelColors: {
-		arima: "#8B6914",
-		holtwinters: "#8B6914",
+		// Primary — Chronos foundation model (gold family)
+		chronos_tiny: "#D4A017",
+		chronos_mini: "#B8860B",
+		chronos_base: "#8B6914",
+		// Baselines (muted for visual de-emphasis)
+		arima: "#64748B",
+		holtwinters: "#94A3B8",
 		exponential_smoothing: "#8B5CF6",
-		naive_forecaster: "#64748B",
+		naive_forecaster: "#9CA3AF",
 		stl_forecaster: "#EC4899",
 	} as Record<string, string>,
 

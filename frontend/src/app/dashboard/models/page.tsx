@@ -20,6 +20,11 @@ interface ModelAccuracy {
 }
 
 const modelDescMap: Record<string, string> = {
+	// Primary engine — Chronos foundation model (zero-shot)
+	chronos_tiny: "Chronos-T5 Tiny — foundation model, zero-shot (32MB)",
+	chronos_mini: "Chronos-T5 Mini — foundation model, zero-shot (~80MB)",
+	chronos_base: "Chronos-T5 Base — foundation model, zero-shot (~200MB)",
+	// Baselines — retained for A/B comparison
 	arima: "AutoRegressive Integrated Moving Average",
 	holtwinters: "Triple exponential smoothing",
 	exponential_smoothing: "Simple exponential smoothing",

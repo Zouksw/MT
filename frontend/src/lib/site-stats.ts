@@ -6,12 +6,11 @@
  * codebase — a credibility-damaging contradiction. This constant is the ONE
  * place these numbers live; every page imports from here.
  *
- * Numbers reflect the real backend state as of 2026-07-19:
- *  - 5 statistical models in the user-facing consensus (backend ALL_MODELS:
- *    ARIMA, Holt-Winters, Exp. Smoothing, STL, Naive). NOTE: inference-service
- *    also exposes chronos (/models returns 6), but chronos is NOT wired into
- *    the backend signals/batch consensus the user sees — so the honest
- *    user-facing count is 5, not 6. See known-issues DATA-4.
+ * Numbers reflect the real backend state as of 2026-07-27:
+ *  - 3 Chronos T5 foundation-model variants in the user-facing consensus
+ *    (chronos_tiny / chronos_mini / chronos_base) — a multi-size ensemble.
+ *    The 5 statistical models (ARIMA etc.) are retained as baselines for the
+ *    /ai accuracy-comparison page but are NOT part of the main vote.
  *  - 74 beef cut taxonomies defined (BeefCutTaxonomy count).
  *  - 21 factories tracked.
  *  - 7 data sources CONFIGURED, but only 2 currently produce data
@@ -22,8 +21,8 @@
  */
 
 export const SITE_STATS = {
-	/** Number of AI prediction models (matches backend ALL_MODELS). */
-	aiModels: 5,
+	/** Number of AI prediction models in the consensus ensemble (chronos variants). */
+	aiModels: 3,
 	/** Beef cut taxonomies defined in BeefCutTaxonomy. */
 	beefCuts: 74,
 	/** Factories with beef price data. */
@@ -38,6 +37,11 @@ export const SITE_STATS = {
  * Labels for the AI models (for display where the raw IDs aren't user-friendly).
  */
 export const AI_MODEL_LABELS: Record<string, string> = {
+	// Chronos ensemble (primary)
+	chronos_tiny: "Chronos-T5-Tiny",
+	chronos_mini: "Chronos-T5-Mini",
+	chronos_base: "Chronos-T5-Base",
+	// Statistical baselines
 	arima: "ARIMA",
 	holtwinters: "Holt-Winters",
 	exponential_smoothing: "Exp. Smoothing",

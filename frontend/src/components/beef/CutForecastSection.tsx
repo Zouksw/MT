@@ -80,6 +80,9 @@ const directionConfig: Record<
 };
 
 const MODEL_LABELS: Record<string, string> = {
+	chronos_tiny: "Chronos-T5-Tiny",
+	chronos_mini: "Chronos-T5-Mini",
+	chronos_base: "Chronos-T5-Base",
 	arima: "ARIMA",
 	holtwinters: "Holt-Winters",
 	exponential_smoothing: "Exp. Smoothing",
