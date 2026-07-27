@@ -20,9 +20,8 @@ import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { API_BASE } from "@/lib/config";
 import { formatDecimal } from "@/lib/format";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface SourceInfo {
 	id: string;
