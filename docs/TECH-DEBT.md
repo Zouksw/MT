@@ -31,10 +31,14 @@
 **当时规模**：237 LOC + 1 依赖（bullmq）
 **回收**：删 `predictionQueue.ts` + `server.ts:133` 调用 + 考虑卸 `bullmq`。**前提**：确认无分布式预测计划。
 
+**已清理（2026-07-27 复核）**：`predictionQueue.ts` 已不存在，`server.ts` 无 `initPredictionQueue()` 调用，`bullmq` 不在 backend/package.json 依赖中。本条 STALE。
+
 ### TD-2 — 多租户：为单租户产品搭的组织层
 **审计**：2026-07-06，§2.2
 **当时证据**：`schema.prisma` 定义 `organizations` + `organization_members`；`organization_members` 0 代码引用；`organizations` 仅 `datasetService.ts:105` 一处硬编码 `id: "default-org-id"`，无真正租户隔离；DB 实测 organizations 行数极少。
 **回收**：删 `organization_members` 表；`organizations` 要么删要么把 `Dataset.organization_id` 改可选。
+
+**复核（2026-07-27）**：`organization_members` 已删（schema 无此 model，0 引用）。`organizations` 仍存在（`schema.prisma:307`），仅 1 生产引用：`datasetService.ts:103` `prisma.organizations.upsert`（default org）。删除需 schema 迁移，单列轮次。
 
 ### TD-3 — API Key 系统：发得出、验不了
 **审计**：2026-07-06，§2.3
@@ -60,6 +64,8 @@
 **审计**：2026-07-06，§3.2
 **当时证据**：importer 计数 = 0。
 
+**已清理（2026-07-27 复核）**：`riskMetrics.ts` 已不存在，全仓无 `riskMetrics` 引用。本条 STALE。
+
 ---
 
 ## 二、前端
@@ -71,6 +77,8 @@
 ### TD-9 — 死 ui 组件 + shadcn 重复对
 **审计**：2026-07-06，§5
 **当时证据**：死 ui 组件（0 importer）：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx`、小写 `select.tsx`。shadcn 重复：`button.tsx`(1) vs `Button/`(41)、`card.tsx`(3) vs `Card/`(28)、`select.tsx`(0) vs `Select/`(15)。PascalCase 胜出，小写 shadcn 版是死重。
+
+**复核（2026-07-27）**：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx` 已删除（4/5 清理）。**小写 `select.tsx` 仍存在且 0 importer**（PascalCase `Select/` 被 12 文件引用，是活跃实现）。round-43 删除 `select.tsx`。
 
 ### TD-10 — MSW 全套白搭
 **审计**：2026-07-06，§5

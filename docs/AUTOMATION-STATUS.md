@@ -1,7 +1,8 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-07-27（round-25 ~ round-29）
+> 最后更新：2026-07-27（round-25 ~ round-29；round-40 修订过期数据）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
+> §九 数字严谨要求：下列计数为"截至 2026-07-27 live 实测"，运行对应命令获取当前值。
 
 ## 一、CI/CD（GitHub Actions）
 
@@ -72,12 +73,14 @@
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数 |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-07-27 实测） |
 |---|---|---|---|---|
-| backend | vitest 2 | vitest.config.ts | 47 | 579 pass / 1 skip |
-| frontend | jest 29 + Testing Library | jest.config.js | 22 | 278 pass |
-| inference | pytest 8 | conftest.py | 3 | 21 pass |
+| backend | vitest 2 | vitest.config.ts | 47 | **583 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 22 | **278 pass** |
+| inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
+
+> 三者合计 **908 全绿**（583 + 278 + 47）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试**：backend `src/__tests__/integration/` 用真实 PostgreSQL（mt_db）+ in-process Express（supertest），DB 不可达自动 skip。
 
@@ -94,11 +97,12 @@
 
 ## 七、已知限制与待办
 
-1. **本地 coverage 工具损坏**：pnpm install 引入 test-exclude/minimatch 版本解析问题，本地 `test:coverage` 崩（backend + frontend 均受影响）。CI 环境干净不受影响。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
+1. **本地 coverage 已修复（2026-07-27 实测）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33（backend 嵌套 override `test-exclude>minimatch`）+ round-36（frontend `coverageProvider:'v8'` + 移除 glob override）已修复。当前实测：**backend 48.58% / frontend 21.13%**，均过各自阈值（backend 45% / frontend 18%）。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
 2. **knip 本地无法运行**：knip 依赖 zod@4 ESM，本地 zod 解析失败。配置已就位（knip.json + 脚本），CI/未来版本兼容后即可用。
-3. **dead code 待处理**：`invalidateCommodityCache`（零调用）、`unsubscribeCommodity`（仅测试用）无生产调用方。可能是数据导入后缓存未失效的功能缺口——记录待查，不擅自删以免掩盖问题。
+3. **dead code 待处理**：`invalidateCommodityCache`（零调用）、`unsubscribeCommodity`（仅测试用）无生产调用方。可能是数据导入后缓存未失效的功能缺口——记录待查，不擅自删以免掩盖问题。详见 `docs/TECH-DEBT.md`（部分条目已过期，动手前重新核实）。
 4. **PAT 凭据管理**：origin remote 仍含 HTTPS + token store（~/.git-credentials）。SSH key 方案已部分配置（~/.ssh/config 走 443），但公钥未加到 GitHub 账户。待用户完成 SSH 接入后可彻底移除 token。
 5. **数据采集器 dormant**：MLA + USDA-AMS 需 `MLA_API_KEY`/`USDA_MARS_API_KEY`。无 key 替代方案：admin CSV 上传（`/beef/import`）已就绪。
+6. **健康端点路径**：实际为 `/health` 与 `/health/ready`（非 `/api/health`）。`curl localhost:8000/health/ready` 返回 `{database, redis, inference, inferenceDetail:{alive,ready,readyVariants}}`。Chronos 当前 3/3 变体全 ready（详见 `docs/KNOWN-ISSUES.md` R1 已解决记录）。
 
 ## 八、部署产物（备选方案）
 

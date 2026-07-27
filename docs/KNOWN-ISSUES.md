@@ -50,8 +50,30 @@
 **现状（截至 2026-07-20）**：
 - inference-service `/models` 当时返回 6（5 统计 + chronos），但后端 `tradingSignals.ts:25` `ALL_MODELS` 只列 5（无 chronos）→ `signals/batch` 共识只跑 5 模型。
 - 直连 `/predict` model_id=chronos 当时返回 HTTP 500：`Can't load the configuration of 'amazon/chronos-t5-tiny'`，根因 huggingface.co 不可达（`[Errno 101] Network is unreachable`）。
-**注意**：此后 `ecosystem.config.cjs` 已为 inference 配置 `HF_ENDPOINT=https://hf-mirror.com` 并预下载权重到 `/root/.cache/huggingface`（见该文件注释），状态可能已改善——**需重新 live 验证**，勿沿用"chronos 不可用"结论。
-**性质**：chronos 进后端共识的前提是网络可达 + 权重可加载。若直接把 chronos 加进 ALL_MODELS 而它仍 500，会引入永久失败的模型调用。建议：先 live 验证 `/predict?model_id=chronos_tiny` 返回 200，再接入。
+
+**已解决（2026-07-27 live 验证）**：`HF_ENDPOINT=https://hf-mirror.com` 镜像方案生效，权重预下载到 `/root/.cache/huggingface`。`curl localhost:10810/ready` 返回：
+```json
+{"ready":true,"chronos_usable_variants":{"chronos_tiny":true,"chronos_mini":true,"chronos_base":true},"chronos_pipelines_loaded":["amazon/chronos-t5-base","amazon/chronos-t5-mini","amazon/chronos-t5-tiny"],"ready_variants":["chronos_tiny","chronos_mini","chronos_base"]}
+```
+即 3/3 Chronos 变体全可用、pipeline 已加载。`/health/ready` 的 `inferenceDetail.ready=true`。**不再适用"chronos 可能不可用"结论。**
+> 注：chronos 是否已加入后端 `ALL_MODELS` 共识（`tradingSignals.ts`）是另一个问题——若共识仍只跑统计模型，那是产品决策（chronos 调用慢/成本），非"不可用"。改动前重新核实 `ALL_MODELS` 当前内容。
+
+---
+
+### R2 — brl_usd / corn_cme / natural_gas_cme 单位冲突（核心价值链潜伏 bug）
+
+**来源**：`docs/reviews/2026-07-12-round-28.md` R28-3（commit 447b655 删除了该 round 文件，bug 未重新登记；本条 2026-07-27 重新核实并登记）
+**现状（截至 2026-07-27 live 核实）**：同一 commodity 由两个源写入、单位/量纲/方向冲突，混在同一张表：
+
+| Commodity | 源 A（行数） | 源 B | 冲突 | 偏差 |
+|---|---|---|---|---|
+| `brl_usd`（汇率） | `exchange_rate_api`（`commodityPrices.ts:40-44`，写 `1/data.rates.BRL` ≈0.19，**方向反了**：1 BRL = 0.19 USD） | `fred` `DEXBZUS`（`cmeFutures.ts:156-161`，≈5.0，方向正确：1 USD = 5 BRL） | 方向相反 | **~32×** |
+| `corn_cme`（USD/bu） | `cme`（473 行） | `usda_ams`（cents vs dollars） | 单位混用 | **~115×** |
+| `natural_gas_cme`（USD/MMBtu） | `fred` | `cme`（含历史 spike） | 量纲混 | **~29×** |
+
+**对核心价值链的影响**：训练/预测跑在混合脏数据上；`mapeTracking.ts:143` 的 `verifyDuePredictions` 取 actuals **无 source 过滤** → 抓到另一源的值 → brl_usd 预测 MAPE ~96%（虚高，非真实误差）。
+**根因性质**：per-commodity 的数据治理问题，非单点代码 bug。需"规范单一权威源" + 验证层按 source 过滤。
+**计划**：round-41 根治（规范权威源 + mapeTracking source 过滤 + 回归测试）。本条登记后从"潜伏"转为"已跟踪"。
 
 ---
 
