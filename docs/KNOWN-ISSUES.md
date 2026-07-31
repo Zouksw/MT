@@ -42,6 +42,20 @@
 
 ---
 
+### D3 — 数据层静默失效已被暴露（2026-07-31 live 实测，round-48~50）
+
+**来源**：2026-07-31 live DB 审计（round-48 dataHealth service 引入后首次量化）
+**现状（截至 2026-07-31 实测）**：
+- 18 注册 scraper 中**仅 2 个**近 3 天写了真实价格行（`exchange_rate_api` 18 行、`fred` 8 行）。其余 16 个 dormant（缺 key / Cloudflare block / 网络不可达 / empty）。
+- `beef_cut_prices` **近 14 天 0 行**（MLA/USDA-AMS 缺 key，bridge 仅补 1 个 cut）。
+- 预测生成 ~2300/天 vs 验证 ~636/天峰值 → backlog 持续增长：**102k completed vs 1036 verified（verificationRatio 0.01）**。大部分 completed 因 commodity 无新 actuals 永不可验证。
+- `/health/ready` 之前对此**完全不可见**（只报 infra green）。
+**性质**：与 D1 同源（数据源失效），但本条聚焦**可观测性缺口**——数据停滞之前被 infra-green 掩盖。
+**已解决（round-48~50，可观测性层）**：dataHealth service → `/health/ready.checks.dataLayer` + `/sources/freshness.summary.dataHealth` + cron-healthcheck 数据探针，三层暴露。**数据层本身未修**（仍需用户提供 MLA/USDA key 等，见 D1）——本条只让停滞可见、可追踪。
+**后续（数据层修复，需用户输入）**：见 D1 解决路径。数据流入后 verificationRatio 自然回升，`hasVerificationDebt` 会自动转 false。
+
+---
+
 ## 二、推理服务
 
 ### R1 — Chronos 接入后端共识 + 网络可用性

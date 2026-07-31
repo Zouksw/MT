@@ -33,7 +33,7 @@
 |---|---|---|
 | `0 2 * * *` | `backup-db.sh --compress` | 每日 2AM 数据库备份 |
 | `*/2 * * * *` | `watchdog-nextserver.sh` | 每 2 分钟杀重复 next-server（防 OOM） |
-| `*/5 * * * *` | `cron-healthcheck.sh` | 每 5 分钟探测 backend/frontend/inference + 自动重启 |
+| `*/5 * * * *` | `cron-healthcheck.sh` | 每 5 分钟探测 backend/frontend/inference + 自动重启 + **数据新鲜度探针**（round-49：读 /health/ready 的 dataLayer，anyDataFlowing=false 或 verification debt 高时记入 healthcheck.log，不重启） |
 | `0 3 * * *` | `cron-cleanup.sh` | 每日 3AM 磁盘清理（tmp/core/playwright/旧日志） |
 | `0 4 * * 0` | `cron-db-maintenance.sh` | 每周日 4AM VACUUM ANALYZE + session 清理 |
 
@@ -89,6 +89,25 @@
 **集成测试**：backend `src/__tests__/integration/` 用真实 PostgreSQL（mt_db）+ in-process Express（supertest），DB 不可达自动 skip。
 
 **MAPE E2E 守护**：`services/__tests__/mapeTracking.test.ts:115-209` 覆盖 cut-series 预测的完整验证链路（PredictionLog → BeefCutPrice actuals → verifyDuePredictions → verified + MAPE）。守护 round-22 的正确性修复。
+
+## 五½、数据层可观测性（round-48~50）
+
+**问题**：`/health/ready` 之前只报 infra（database/redis/inference）全 green，但数据层可能静默失效——18 注册 scraper 仅 2 个在写、103k 预测不可验证、beef_cut_prices 近 14 天 0 行。operator 看到 all-green 实则数据停滞。
+
+**dataHealth service**（`backend/src/services/dataHealth.ts`）：
+- 按 source 分组查 `commodity_prices` + `beef_cut_prices` 近 N 天行数 + latestDate（UNION ALL + max() 单次 SQL 往返）。
+- 合并 `scraperManager.getHealth()` 的 scraper 报告状态；dormant scraper（0 行）也出现（不掩盖）；非 scraper 写入源（manual import / bridge）标 `not_a_scraper`。
+- 预测验证 backlog：completed/verified/stale 计数 + verificationRatio + hasVerificationDebt（<0.05 阈值）。
+
+**三层暴露链路**（让数据停滞可见，而非假装 all-green）：
+
+| 层 | 端点/脚本 | 字段 | 影响 HTTP 状态？ |
+|---|---|---|---|
+| API | `GET /health/ready` | `checks.dataLayer`（anyDataFlowing/freshSourceCount/registeredSourceCount/predictionBacklog/verified/verificationRatio/hasVerificationDebt） | ❌ 不影响（infra SLA 不变，data 停滞是运营问题，best-effort try/catch） |
+| API | `GET /api/market/sources/freshness` | `summary.dataHealth`（同上 + predictionStale） | ❌ |
+| 运维 | `cron-healthcheck.sh`（每 5min） | 读 /health/ready 的 dataLayer → anyDataFlowing=false 记 `DATA-STALE`，debt 高记 `DATA-OK but verification debt high`，不重启 | — |
+
+**live 实测差距**（正是要暴露的）：`summary.healthy: 18`（scraper 都跑了）vs `dataHealth.freshSourceCount: 2`（只 2 个真写数据），`verificationRatio: 0.01`。
 
 ## 六、代码质量工具
 
