@@ -42,6 +42,45 @@ if [ -z "$RESTARTED" ]; then
     echo "[$NOW] All services healthy (backend, frontend, inference)"
 fi
 
+# Data-layer freshness probe (round-48). /health/ready now reports a dataLayer
+# snapshot alongside infra checks. A service can be "up" while the DATA layer is
+# silently failing (all scrapers dormant, no fresh prices). This surfaces that
+# state in the healthcheck log every 5 min so an operator notices — it does NOT
+# restart anything (a restart can't fix a missing API key or a Cloudflare block;
+# those need human action). Parses the JSON with python3 (available on the box).
+# shellcheck disable=SC2155
+DATA_LAYER=$(curl -sf -m 6 http://localhost:8000/health/ready 2>/dev/null | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin).get("data", {}).get("checks", {}).get("dataLayer")
+    if d is None:
+        print("UNKNOWN")
+    else:
+        print("{flowing}|{fresh}|{registered}|ratio={ratio:.4f}|debt={debt}".format(
+            flowing=d.get("anyDataFlowing"),
+            fresh=d.get("freshSourceCount"),
+            registered=d.get("registeredSourceCount"),
+            ratio=d.get("verificationRatio", 0),
+            debt=d.get("hasVerificationDebt")))
+except Exception:
+    print("PARSE_ERROR")
+' 2>/dev/null || echo "PROBE_FAILED")
+
+case "$DATA_LAYER" in
+    PROBE_FAILED|PARSE_ERROR|UNKNOWN)
+        echo "[$NOW] DATA-LAYER: could not read data health ($DATA_LAYER)"
+        ;;
+    False*)
+        echo "[$NOW] DATA-STALE: no sources writing fresh data ($DATA_LAYER) — scrapers dormant?"
+        ;;
+    *)
+        # Flowing=true. Warn only when verification debt is severe.
+        case "$DATA_LAYER" in
+            *debt=True*) echo "[$NOW] DATA-OK but verification debt high ($DATA_LAYER)" ;;
+        esac
+        ;;
+esac
+
 # Dependency-file integrity guard. Catches the recurring pnpm-store/venv
 # corruption pattern early (Round 5 js-yaml, Round 7 venv, Round 10
 # is-core-module/core.json) before a silent failure surfaces as a confusing
