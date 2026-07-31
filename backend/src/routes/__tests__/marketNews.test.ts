@@ -29,6 +29,15 @@ describe("Market News Routes (Integration)", () => {
 		app = createTestApp();
 		dbAvailable = await isDbAvailable();
 		if (!dbAvailable) return;
+		// Idempotent setup: a previous run that crashed mid-test could leave an
+		// orphan article with CREATED_TITLE (afterAll only cleans via createdId,
+		// which never gets set when the create assertion fails). Delete any such
+		// leftover so this run starts clean — otherwise the create test hits a
+		// title-collision 400 that masks the real behaviour under test.
+		const prisma = getPrisma();
+		await prisma.marketNews
+			.deleteMany({ where: { title: { startsWith: "[test]" } } })
+			.catch(() => {});
 		token = await getAdminToken(app);
 	});
 
