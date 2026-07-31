@@ -125,4 +125,56 @@ describe("Inference Routes (Integration)", () => {
 			expect(typeof res.body.statistics.total).toBe("number");
 		});
 	});
+
+	// Regression guard for round-41 authoritative-source filtering
+	// (docs/KNOWN-ISSUES.md R2). brl_usd is written by two sources with
+	// conflicting direction: exchange_rate_api ≈ 0.2 (inverted) vs fred
+	// DEXBZUS ≈ 5.0 (correct). Without the filter, /predict/visualize and
+	// /anomalies read by commodityId alone and mix both → training/anomaly
+	// math on a Frankenstein series. These tests pin that only the fred
+	// magnitude appears in the response, so removing the filter fails loudly.
+	describe("authoritative-source filtering on conflict commodities (round-41)", () => {
+		it("/predict/visualize returns ONLY fred-magnitude history for brl_usd (no 0.2 leak)", async () => {
+			if (!dbAvailable) return;
+
+			const res = await request(app)
+				.post("/api/inference/predict/visualize")
+				.set("Authorization", `Bearer ${token}`)
+				.send({
+					commodityId: "brl_usd",
+					algorithm: "arima",
+					horizon: 5,
+					historyPoints: 20,
+				});
+
+			expect(res.status).toBe(200);
+			const historical: Array<{ value: number }> = res.body.data.historical;
+			expect(historical.length).toBeGreaterThan(0);
+			// fred DEXBZUS values are ≈ 5.x; exchange_rate_api's inverted values
+			// are ≈ 0.2. Every returned value must be ≥ 1.0 (fred magnitude) —
+			// any value < 1.0 means the inverted source leaked in.
+			for (const point of historical) {
+				expect(point.value).toBeGreaterThanOrEqual(1.0);
+			}
+		});
+
+		it("/anomalies does not flag spurious anomalies from mixed-source brl_usd values", async () => {
+			if (!dbAvailable) return;
+
+			const res = await request(app)
+				.post("/api/inference/anomalies")
+				.set("Authorization", `Bearer ${token}`)
+				.send({ commodityId: "brl_usd", threshold: 2.5, historyPoints: 50 });
+
+			expect(res.status).toBe(200);
+			expect(res.body.statistics).toBeDefined();
+			// With the filter, the series is a clean ~5.x line (low variance) →
+			// few/no anomalies. WITHOUT the filter, mixing 0.2 and 5.0 produces
+			// huge z-scores → many "anomalies" that are really just unit mixing.
+			// Assert the anomaly count is small (< 50% of points) — if the filter
+			// were removed this would spike near 100%.
+			const total = res.body.statistics.total as number;
+			expect(total).toBeLessThan(25);
+		});
+	});
 });
