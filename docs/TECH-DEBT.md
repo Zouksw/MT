@@ -129,10 +129,10 @@
 | 包 | 路径 | 为什么留着 |
 |---|---|---|
 | `vite@5.4.21` | `@vitest/coverage-v8@3 → vitest@3 → vite@5`（GHSA-fx2h server.fs.deny bypass，patched >=6.4.3） | vitest 3 peer-locked 到 vite 5。修复需 vitest 4（拉 vite 6+），但 **vitest 4 的 rolldown 依赖需 Node 20.12+**（`util.styleText`），本机 Node 18.20.8 不兼容（实测 Startup Error）。**前置条件：升级 Node 到 20+**，之后 vitest 3→4 即可清除此 high。 |
-| `brace-expansion@1.1.18` | `swagger-jsdoc → glob → minimatch@3 → brace-expansion@1`（DoS，patched >=5.0.8） | minimatch@3 需 brace-expansion@^1，与 5.x API 完全不兼容——全局 override 到 ^5 会破坏 swagger（同 round-42 的 qs 问题）。无安全 override，需升级 swagger-jsdoc/minimatch 主版本。 |
+| `brace-expansion`（**pnpm audit 误报**） | audit 报 `<=5.0.7` 笼统覆盖 2.x，但实际安装的是 `@2.1.4`（glob@10→minimatch@9）和 `@5.0.9`（glob@11→minimatch@10），**两者均含 fix**（CVE-2025-5889 在 1.1.12 修复，2.x 携带 patched code）。round-54 已移除配错的全局 `minimatch:^3.1.4`/`brace-expansion:^1.1.13` override（它曾强制 glob@10/11 降到 minimatch@3 → 拉 vulnerable @1.1.18）。现无 `@1.x` 安装。剩余 audit 报警是 pnpm 版本范围检查器粒度问题，非真实漏洞。 |
 
-**round-53 已做**：vitest 2→3（消除 critical + 2 high）、tsx 4.21→4.23、vite override ^5.4.21（修复 vitest 3 拉到 ESM-only vite 7 的 ERR_REQUIRE_ESM）、marketNews orphan 测试隔离修复。
-**后续（需环境前置）**：Node 20 升级 → vitest 4 → 清除 vite high；swagger-jsdoc 主版本升级 → 清除 brace-expansion high。
+**round-53/54 已做**：vitest 2→3（消除 critical + 2 high）、tsx 4.21→4.23、vite override ^5.4.21（修复 vitest 3 拉到 ESM-only vite 7 的 ERR_REQUIRE_ESM）、marketNews orphan 测试隔离修复、**移除全局 minimatch/brace-expansion override**（round-54，让 glob@10/11 拿到正确的 minimatch@9/10）。
+**后续（需环境前置）**：Node 20 升级 → vitest 4 → 清除 vite high（唯一真实剩余 high）。
 | 双 Tailwind 配置（v3+v4） | 两份 palette 已漂移 | 维护双倍 |
 
 ---
