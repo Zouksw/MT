@@ -77,14 +77,14 @@
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-07-27 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-07-31 实测） |
 |---|---|---|---|---|
-| backend | vitest 2 | vitest.config.ts | 47 | **583 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 22 | **278 pass** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 52 | **613 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 23 | **283 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **908 全绿**（583 + 278 + 47）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **943 全绿**（613 + 283 + 47，截至 2026-07-31 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试**：backend `src/__tests__/integration/` 用真实 PostgreSQL（mt_db）+ in-process Express（supertest），DB 不可达自动 skip。
 

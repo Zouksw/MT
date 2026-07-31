@@ -119,6 +119,20 @@
 | Storybook（10 devDeps） | 5 故事 / 92 组件 | 工具链闲置 |
 | MSW（205 行） | 0 测试用 | 完全闲置 |
 | axios 依赖 | 1 文件用 | 单点依赖 |
+
+---
+
+## 五、dev 工具链漏洞（round-53 核实，2026-07-31）
+
+`pnpm audit` backend 当前 **5 vuln（0 critical / 2 high / 3 moderate）**——round-53 从 13（1 critical/7 high）降下来。剩余 2 high 均 **dev-only / transitive，不可达生产**：
+
+| 包 | 路径 | 为什么留着 |
+|---|---|---|
+| `vite@5.4.21` | `@vitest/coverage-v8@3 → vitest@3 → vite@5`（GHSA-fx2h server.fs.deny bypass，patched >=6.4.3） | vitest 3 peer-locked 到 vite 5。修复需 vitest 4（拉 vite 6+），但 **vitest 4 的 rolldown 依赖需 Node 20.12+**（`util.styleText`），本机 Node 18.20.8 不兼容（实测 Startup Error）。**前置条件：升级 Node 到 20+**，之后 vitest 3→4 即可清除此 high。 |
+| `brace-expansion@1.1.18` | `swagger-jsdoc → glob → minimatch@3 → brace-expansion@1`（DoS，patched >=5.0.8） | minimatch@3 需 brace-expansion@^1，与 5.x API 完全不兼容——全局 override 到 ^5 会破坏 swagger（同 round-42 的 qs 问题）。无安全 override，需升级 swagger-jsdoc/minimatch 主版本。 |
+
+**round-53 已做**：vitest 2→3（消除 critical + 2 high）、tsx 4.21→4.23、vite override ^5.4.21（修复 vitest 3 拉到 ESM-only vite 7 的 ERR_REQUIRE_ESM）、marketNews orphan 测试隔离修复。
+**后续（需环境前置）**：Node 20 升级 → vitest 4 → 清除 vite high；swagger-jsdoc 主版本升级 → 清除 brace-expansion high。
 | 双 Tailwind 配置（v3+v4） | 两份 palette 已漂移 | 维护双倍 |
 
 ---
