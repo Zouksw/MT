@@ -12,6 +12,7 @@
 import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { NotFoundError } from "@/middleware/errorHandler";
+import { getDataHealth } from "@/services/dataHealth";
 import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 
 export interface PriceHistoryParams {
@@ -292,6 +293,30 @@ export async function getSourceFreshness() {
 	const staleSources = freshness.filter((f) => f.stale);
 	const healthySources = freshness.filter((f) => !f.stale);
 
+	// Data-health snapshot (round-48): the freshness summary above tracks
+	// scraper RUNS (ingestion logs), which can show "healthy" while the actual
+	// price writes are 0 (silent failures) or while predictions pile up
+	// unverifiable. getDataHealth reads the actual price tables + prediction
+	// verification debt, so the board sees both "scrapers ran" AND "data is
+	// real + predictions verify". Best-effort: a failure doesn't break the
+	// existing freshness response.
+	let dataHealth: Record<string, unknown> | null = null;
+	try {
+		const dh = await getDataHealth(3);
+		dataHealth = {
+			anyDataFlowing: dh.anyDataFlowing,
+			freshSourceCount: dh.freshSourceCount,
+			registeredSourceCount: dh.registeredSourceCount,
+			predictionBacklog: dh.predictionBacklog,
+			predictionVerified: dh.predictionVerified,
+			predictionStale: dh.predictionStale,
+			verificationRatio: dh.verificationRatio,
+			hasVerificationDebt: dh.hasVerificationDebt,
+		};
+	} catch {
+		// Keep null — the freshness fields above still answer.
+	}
+
 	return {
 		freshness,
 		summary: {
@@ -299,6 +324,10 @@ export async function getSourceFreshness() {
 			healthy: healthySources.length,
 			stale: staleSources.length,
 			staleSources: staleSources.map((s) => s.source),
+			// Actual data writes + prediction verification debt (round-48).
+			// Differs from healthy/stale above: those count scraper runs, this
+			// counts real price rows written + whether predictions can verify.
+			dataHealth,
 		},
 	};
 }
