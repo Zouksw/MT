@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { API_BASE } from "@/lib/config";
 import { formatDecimal } from "@/lib/format";
+import { type DataHealth, DataHealthCard } from "./DataHealthCard";
 
 interface SourceInfo {
 	id: string;
@@ -87,6 +88,26 @@ interface CommodityFreshnessSummary {
 	stale: number;
 	noData: number;
 	coverage: number;
+}
+
+/**
+ * Actual data-flow health from getDataHealth (round-48). Surfaced alongside
+ * the scraper-run freshness above because the two can disagree: a scraper can
+ * "run healthy" (ingestion log success) while writing 0 real price rows (silent
+ * failure), and predictions can pile up unverifiable. This makes that gap
+ * visible instead of letting healthy=18 hide freshSourceCount=2.
+ *
+ * `null`/optional fields when the backend couldn't compute them.
+ * Component + type live in DataHealthCard.tsx (Next.js page files can't export
+ * non-Page symbols).
+ */
+interface FreshnessSummary {
+	total: number;
+	healthy: number;
+	stale: number;
+	staleSources: string[];
+	/** Actual price-row writes + prediction verification debt (round-48). */
+	dataHealth: DataHealth | null;
 }
 
 function timeAgo(date: string | null): string {
@@ -159,6 +180,7 @@ function BeefRelevanceBadge({ relevance }: { relevance?: "direct" | "adjacent" |
 export default function DataSourcesPage() {
 	const [sources, setSources] = useState<SourceInfo[]>([]);
 	const [freshness, setFreshness] = useState<FreshnessItem[]>([]);
+	const [freshnessSummary, setFreshnessSummary] = useState<FreshnessSummary | null>(null);
 	const [commodityFreshness, setCommodityFreshness] = useState<CommodityFreshnessItem[]>([]);
 	const [commoditySummary, setCommoditySummary] = useState<CommodityFreshnessSummary | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -193,7 +215,12 @@ export default function DataSourcesPage() {
 
 			if (freshnessRes.status === "fulfilled" && freshnessRes.value.ok) {
 				const data = await freshnessRes.value.json();
-				if (data.success) setFreshness(data.data.freshness || []);
+				if (data.success) {
+					setFreshness(data.data.freshness || []);
+					// Capture the summary (round-48) which carries the dataHealth
+					// snapshot — the honest "actual writes vs scraper runs" view.
+					setFreshnessSummary(data.data.summary ?? null);
+				}
 			}
 
 			if (commodityRes.status === "fulfilled" && commodityRes.value.ok) {
@@ -394,6 +421,18 @@ export default function DataSourcesPage() {
 						</span>
 					</div>
 				</div>
+			)}
+
+			{/* Data-flow health (round-48). The stats above count scraper RUNS
+			    (healthy = ingestion log success), which can read 18/18 while
+			    only 2 sources actually write price rows. This card surfaces the
+			    gap + prediction verification debt so silent data staleness is
+			    visible instead of hidden behind an all-green board. */}
+			{freshnessSummary?.dataHealth && (
+				<DataHealthCard
+					dataHealth={freshnessSummary.dataHealth}
+					scraperHealthy={freshnessSummary.healthy ?? healthy}
+				/>
 			)}
 
 			<LoadingState loading={loading} skeletonType="table">
