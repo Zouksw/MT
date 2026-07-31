@@ -94,6 +94,11 @@
 - live 实测：fresh brl_usd `chronos_tiny` 预测返回 **≈5.08–5.10**（fred 量级，修复前会训练在 0.2 上）。3 commodity 污染预测全部 stale（brl_usd 3944 / corn_cme 3855 / natural_gas_cme 3860），verified 清零——`/ai/accuracy` 不再有 ~96% 噪声。post-fix 预测需等 horizon(10d) 到期后才有新真实 MAPE。
 - 数据层（两个源仍写同 slug）未动——靠读侧权威源过滤根治，避免 schema 迁移风险。
 
+**round-56 补充（2026-07-31，cmeFutures 单位 bug 根治）**：发现 corn_cme 冲突的根因不只是"两个源"，而是 cme 爬虫**从未做 cents→USD 转换**——Stooq 返回 CME 谷物/牲畜/软商品期货的 cents 报价（corn 473 cents/bu），但声明的 unit 是 USD/bu，爬虫直接存了 473 → 与 USDA 的 4.5 差 100×。
+- 修复：`cmeFutures.ts` FUTURES 表加 `priceFactor`（grains/livestock/softs/soybean-oil = 0.01，energy/metals/soybean-meal = 1），写入时 `close * priceFactor`。导出 FUTURES 表 + 15 测试守护契约。
+- authoritative override 调整：corn_cme `cme → usda_ams`。因 Stooq 当前被墙（返回 HTML 非 CSV，cme 无新行），cme 只有 2 条 pre-fix 错误行（473），usda_ams 有 128 条正确 USD/bu 行。待 Stooq 恢复后 cme 会写转换后的 USD 值，届时可切回 cme。
+- **遗留（数据源可达性，非代码）**：Stooq 被墙是 cme_futures 持续 empty 的根因（同 CEPEA/INAC 的网络阻塞模式）。需替代数据源或代理。
+
 ---
 
 ## 三、潜伏 bug（重构副产物，已修，留作记录）

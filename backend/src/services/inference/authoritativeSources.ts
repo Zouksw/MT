@@ -41,15 +41,19 @@
  *   - brl_usd         → fred DEXBZUS (30-year daily, official central-bank rate,
  *                       correct direction). exchange_rate_api's inverted value
  *                       is excluded from prediction training/verification.
- *   - corn_cme        → cme (futures, the slug name implies CME futures; the
- *                       USDA cash series lives on a different unit and is better
- *                       read from its own commodity).
+ *   - corn_cme        → usda_ams (128 rows in correct USD/bu ≈ 4.5). The cme
+ *                       source writes cents/bu and round-56 added a priceFactor
+ *                       0.01 conversion, BUT Stooq (cme's upstream) is currently
+ *                       blocked, so cme only has 2 stale pre-fix rows at 473.
+ *                       usda_ams is the correct read until Stooq recovers and cme
+ *                       writes fresh converted USD values. Revisit once cme has
+ *                       post-fix rows.
  *   - natural_gas_cme → fred DHHNGSP (7400+ daily points vs cme's 2; the slug
  *                       gets a continuous history only from fred).
  */
 const AUTHORITATIVE_SOURCES: Record<string, string> = {
 	brl_usd: "fred",
-	corn_cme: "cme",
+	corn_cme: "usda_ams",
 	natural_gas_cme: "fred",
 };
 

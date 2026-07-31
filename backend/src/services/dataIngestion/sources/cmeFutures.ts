@@ -14,9 +14,31 @@ import { logger } from "@/lib";
 import { ensureCommodity, formatDateYMD, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
-const FUTURES: Record<
+export const FUTURES: Record<
 	string,
-	{ ticker: string; slug: string; name: string; category: string; unit: string }
+	{
+		ticker: string;
+		slug: string;
+		name: string;
+		category: string;
+		unit: string;
+		/**
+		 * Multiplier applied to Stooq's raw quote before writing, to convert
+		 * from the exchange's native quote unit into the `unit` declared above.
+		 *
+		 * Stooq returns CME futures in their native trading units:
+		 *   - grains (ZC/ZS/ZW): cents/bu       → USD/bu      needs /100 → 0.01
+		 *   - livestock (LE/GF/HE): cents/cwt   → USD/cwt     needs /100 → 0.01
+		 *   - softs (KC/SB/CT) + soybean oil (ZL): cents/lb   → USD/lb      needs /100 → 0.01
+		 *   - soybean meal (ZM): USD/ton (already USD)                     → 1
+		 *   - energy/metals (CL/NG/GC): already USD                        → 1
+		 *
+		 * Default 1 (no conversion). The cent-quoted contracts get 0.01.
+		 * Without this, corn_cme stored 473 (cents) next to USDA's 4.5 (USD)
+		 * → 100× unit conflict (docs/KNOWN-ISSUES.md R2).
+		 */
+		priceFactor?: number;
+	}
 > = {
 	LE: {
 		ticker: "le.f",
@@ -24,6 +46,7 @@ const FUTURES: Record<
 		name: "Live Cattle Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
+		priceFactor: 0.01,
 	},
 	GF: {
 		ticker: "gf.f",
@@ -31,6 +54,7 @@ const FUTURES: Record<
 		name: "Feeder Cattle Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
+		priceFactor: 0.01,
 	},
 	HE: {
 		ticker: "he.f",
@@ -38,6 +62,7 @@ const FUTURES: Record<
 		name: "Lean Hogs Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
+		priceFactor: 0.01,
 	},
 	ZC: {
 		ticker: "zc.f",
@@ -45,6 +70,7 @@ const FUTURES: Record<
 		name: "Corn Futures (CME)",
 		category: "futures",
 		unit: "USD/bu",
+		priceFactor: 0.01,
 	},
 	ZS: {
 		ticker: "zs.f",
@@ -52,6 +78,7 @@ const FUTURES: Record<
 		name: "Soybean Futures (CME)",
 		category: "futures",
 		unit: "USD/bu",
+		priceFactor: 0.01,
 	},
 	ZW: {
 		ticker: "zw.f",
@@ -59,6 +86,7 @@ const FUTURES: Record<
 		name: "Wheat Futures (CME)",
 		category: "futures",
 		unit: "USD/bu",
+		priceFactor: 0.01,
 	},
 	ZM: {
 		ticker: "zm.f",
@@ -73,6 +101,7 @@ const FUTURES: Record<
 		name: "Soybean Oil Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
+		priceFactor: 0.01,
 	},
 	KC: {
 		ticker: "kc.f",
@@ -80,6 +109,7 @@ const FUTURES: Record<
 		name: "Coffee Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
+		priceFactor: 0.01,
 	},
 	SB: {
 		ticker: "sb.f",
@@ -87,6 +117,7 @@ const FUTURES: Record<
 		name: "Sugar #11 Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
+		priceFactor: 0.01,
 	},
 	CT: {
 		ticker: "ct.f",
@@ -94,6 +125,7 @@ const FUTURES: Record<
 		name: "Cotton #2 Futures (CME)",
 		category: "futures",
 		unit: "USD/lb",
+		priceFactor: 0.01,
 	},
 	CL: {
 		ticker: "cl.f",
@@ -327,14 +359,19 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 				metadata: { source: "cme", productSymbol: symbol },
 			});
 
+			// Convert Stooq's native quote (cents for grains/livestock/softs)
+			// into the declared USD unit. priceFactor defaults to 1 (no-op) for
+			// energy/metals/soybean-meal which Stooq already returns in USD.
+			// See the FUTURES table docstring for the per-contract rationale.
+			const f = cfg.priceFactor ?? 1;
 			const r = await upsertPrice({
 				commodityId: commodity.id,
 				date: bar.date,
 				source: "cme",
-				open: bar.open,
-				high: bar.high,
-				low: bar.low,
-				close: bar.close,
+				open: bar.open * f,
+				high: bar.high * f,
+				low: bar.low * f,
+				close: bar.close * f,
 				volume: bar.volume,
 				metadata: { productSymbol: symbol, stooqTicker: cfg.ticker },
 			});

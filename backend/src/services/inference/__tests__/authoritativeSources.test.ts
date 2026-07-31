@@ -26,9 +26,12 @@ describe("authoritative source resolution", () => {
 			expect(getAuthoritativeSource("brl_usd")).toBe("fred");
 		});
 
-		it("resolves corn_cme → cme (futures, USD-cents/bu)", () => {
-			// usda_ams writes USD/bu ≈ 4.5; cme futures ≈ 473 cents. 100× off.
-			expect(getAuthoritativeSource("corn_cme")).toBe("cme");
+		it("resolves corn_cme → usda_ams (correct USD/bu; cme Stooq-blocked, see round-56)", () => {
+			// usda_ams writes USD/bu ≈ 4.5 (128 rows, correct unit). cme writes
+			// cents/bu (473) and round-56 added a priceFactor conversion, but
+			// Stooq (cme's upstream) is currently blocked → cme only has 2 stale
+			// pre-fix rows. usda_ams is the correct read until Stooq recovers.
+			expect(getAuthoritativeSource("corn_cme")).toBe("usda_ams");
 		});
 
 		it("resolves natural_gas_cme → fred (DHHNGSP, 7400+ daily points)", () => {
