@@ -10,8 +10,9 @@ interface ErrorDetail {
 	issue?: string;
 	context?: Record<string, unknown>;
 	// Health-check detail: the ready/not-ready booleans plus optional nested
-	// sub-objects (e.g. inference liveness-vs-readiness split).
-	checks?: Record<string, boolean | string | object>;
+	// sub-objects (e.g. inference liveness-vs-readiness split, data-layer
+	// health snapshot). `null` allowed for checks not yet computed.
+	checks?: Record<string, boolean | string | object | null>;
 }
 
 /**

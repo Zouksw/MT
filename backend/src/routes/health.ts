@@ -8,6 +8,7 @@ import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
 import { error, success } from "@/lib/response";
 import { asyncHandler } from "@/middleware/errorHandler";
+import { getDataHealth } from "@/services/dataHealth";
 import { checkReadiness as inferenceReadiness } from "@/services/inference";
 
 const router = Router();
@@ -122,6 +123,21 @@ router.get(
 				ready: false,
 				readyVariants: [] as string[],
 			},
+			// Data-layer health (round-48): infra can be all-green while the DATA
+			// layer is silently failing (scrapers dormant, no fresh prices,
+			// predictions unverifiable). Surfaced here so an operator sees the
+			// difference between "service up" and "data flowing". Does NOT affect
+			// the HTTP status — data staleness is an operational concern, not a
+			// service-down condition (the SLA is infra readiness).
+			dataLayer: null as null | {
+				anyDataFlowing: boolean;
+				freshSourceCount: number;
+				registeredSourceCount: number;
+				predictionBacklog: number;
+				predictionVerified: number;
+				verificationRatio: number;
+				hasVerificationDebt: boolean;
+			},
 		};
 
 		let allHealthy = true;
@@ -168,6 +184,26 @@ router.get(
 		} catch (error) {
 			logger.warn("[HEALTH] Inference readiness check failed", error);
 			checks.inference = false;
+		}
+
+		// Data-layer snapshot (best-effort: never fails the readiness check).
+		// A short 3-day window is the freshness bar — a source writing less
+		// often than that is effectively stale to a daily user.
+		try {
+			const dh = await getDataHealth(3);
+			checks.dataLayer = {
+				anyDataFlowing: dh.anyDataFlowing,
+				freshSourceCount: dh.freshSourceCount,
+				registeredSourceCount: dh.registeredSourceCount,
+				predictionBacklog: dh.predictionBacklog,
+				predictionVerified: dh.predictionVerified,
+				verificationRatio: dh.verificationRatio,
+				hasVerificationDebt: dh.hasVerificationDebt,
+			};
+		} catch (error) {
+			// Data-health is observability; a failure here must not flip the
+			// service to 503. Logged for diagnosis.
+			logger.warn("[HEALTH] Data-layer health check failed", error);
 		}
 
 		if (allHealthy) {
