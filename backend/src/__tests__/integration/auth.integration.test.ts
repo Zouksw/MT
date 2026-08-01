@@ -12,6 +12,7 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { errorHandler } from "@/middleware/errorHandler";
 import { authRouter } from "@/routes/auth";
+import { requireDb } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `real-auth-${Date.now()}`;
 const TEST_PASSWORD = "SecurePass123!";
@@ -19,20 +20,6 @@ let _TEST_PASSWORD_HASH: string;
 
 let prisma: PrismaClient;
 let app: express.Application;
-let dbAvailable = false;
-
-// Check if database is available before running tests
-async function checkDatabaseAvailable(): Promise<boolean> {
-	try {
-		const p = new PrismaClient({ log: ["error"] });
-		await p.$connect();
-		await p.$executeRaw`SELECT 1`;
-		await p.$disconnect();
-		return true;
-	} catch {
-		return false;
-	}
-}
 
 async function hashPassword(password: string): Promise<string> {
 	// Use real bcrypt, not the mock from jest.setup.js
@@ -43,8 +30,7 @@ async function hashPassword(password: string): Promise<string> {
 
 describe("Auth Integration Tests", () => {
 	beforeAll(async () => {
-		dbAvailable = await checkDatabaseAvailable();
-		if (!dbAvailable) return;
+		await requireDb("auth integration");
 
 		prisma = new PrismaClient({ log: ["error"] });
 		_TEST_PASSWORD_HASH = await hashPassword(TEST_PASSWORD);
@@ -56,7 +42,6 @@ describe("Auth Integration Tests", () => {
 	});
 
 	afterAll(async () => {
-		if (!dbAvailable) return;
 		// Clean up test data
 		try {
 			await prisma.user.deleteMany({
@@ -68,17 +53,8 @@ describe("Auth Integration Tests", () => {
 		await prisma.$disconnect();
 	});
 
-	// Skip all tests if database is unavailable
-	beforeEach(() => {
-		if (!dbAvailable) {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			return;
-		}
-	});
-
 	describe("Full auth lifecycle: register → login → me → logout", () => {
 		test("should complete full registration → login → access → logout cycle", async () => {
-			if (!dbAvailable) return;
 			const email = `${TEST_PREFIX}-lifecycle@example.com`;
 
 			// 1. Register
@@ -135,7 +111,6 @@ describe("Auth Integration Tests", () => {
 
 	describe("Registration validation", () => {
 		test("should reject invalid email", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app)
 				.post("/auth/register")
 				.send({ email: "not-an-email", password: TEST_PASSWORD });
@@ -144,7 +119,6 @@ describe("Auth Integration Tests", () => {
 		});
 
 		test("should reject weak password", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app)
 				.post("/auth/register")
 				.send({ email: `${TEST_PREFIX}-weak@example.com`, password: "short" });
@@ -159,7 +133,6 @@ describe("Auth Integration Tests", () => {
 			// covered above). Kept here so the auth.test.ts deletion loses no
 			// coverage — the field-presence check is part of the register
 			// validation contract.
-			if (!dbAvailable) return;
 			const response = await request(app)
 				.post("/auth/register")
 				.send({ email: `${TEST_PREFIX}-nopass@example.com`, name: "No Password" });
@@ -168,7 +141,6 @@ describe("Auth Integration Tests", () => {
 		});
 
 		test("should reject duplicate email", async () => {
-			if (!dbAvailable) return;
 			const email = `${TEST_PREFIX}-dup-${Date.now()}@example.com`;
 
 			// First registration — may succeed (201) or get rate-limited (429)
@@ -192,7 +164,6 @@ describe("Auth Integration Tests", () => {
 
 	describe("Login validation", () => {
 		test("should reject non-existent user with 401", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app)
 				.post("/auth/login")
 				.send({
@@ -205,7 +176,6 @@ describe("Auth Integration Tests", () => {
 		});
 
 		test("should reject wrong password with 401", async () => {
-			if (!dbAvailable) return;
 			const email = `${TEST_PREFIX}-wrongpw@example.com`;
 
 			// Register first
@@ -225,7 +195,6 @@ describe("Auth Integration Tests", () => {
 
 	describe("Token refresh", () => {
 		test("should reject invalid refresh token", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app)
 				.post("/auth/refresh")
 				.send({ refreshToken: "invalid-token-value" });
@@ -234,7 +203,6 @@ describe("Auth Integration Tests", () => {
 		});
 
 		test("should reject missing refresh token", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app).post("/auth/refresh").send({});
 
 			expect(response.status).toBe(400);
@@ -243,21 +211,18 @@ describe("Auth Integration Tests", () => {
 
 	describe("Protected endpoints", () => {
 		test("should require authentication for /auth/me", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app).get("/auth/me");
 
 			expect(response.status).toBe(401);
 		});
 
 		test("should require authentication for /auth/logout", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app).post("/auth/logout");
 
 			expect(response.status).toBe(401);
 		});
 
 		test("should reject malformed JWT", async () => {
-			if (!dbAvailable) return;
 			const response = await request(app).get("/auth/me").set("Authorization", "Bearer not-a-jwt");
 
 			expect(response.status).toBe(401);
