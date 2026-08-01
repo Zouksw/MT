@@ -62,16 +62,12 @@ export function verifyRefreshToken(token: string): { userId: string } {
 	return { userId: payload.userId };
 }
 
-/**
- * Extract token from Authorization header
- * @returns The token without "Bearer " prefix, or null if not found
- */
-export function extractToken(authHeader: string | undefined): string | null {
-	if (!authHeader?.startsWith("Bearer ")) {
-		return null;
-	}
-	return authHeader.substring(7);
-}
+// NOTE: Bearer-token extraction is intentionally NOT centralized here. The
+// auth middleware (src/middleware/auth.ts) inlines the `Bearer ` prefix check
+// because the only thing it needs is the raw token string, and a shared helper
+// would add an import for no behavioural gain. Keep that inline logic and this
+// comment in sync — if a second caller ever needs extraction, reintroduce a
+// helper here rather than duplicating the prefix parsing a third time.
 
 /**
  * Decode a token without verification (for blacklist extraction)
@@ -92,7 +88,6 @@ export const jwtUtils = {
 	generateRefreshToken,
 	verifyToken,
 	verifyRefreshToken,
-	extractToken,
 	decodeToken,
 };
 

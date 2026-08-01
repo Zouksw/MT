@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
 import { describe, expect, it, vi } from "vitest";
 import {
 	decodeToken,
-	extractToken,
 	generateRefreshToken,
 	generateToken,
 	jwtUtils,
@@ -167,39 +166,6 @@ describe("JWT Utilities", () => {
 
 		it("should throw for invalid refresh token", () => {
 			expect(() => verifyRefreshToken("invalid")).toThrow("Invalid token");
-		});
-	});
-
-	describe("extractToken", () => {
-		it("should extract token from valid Bearer header", () => {
-			const header = "Bearer valid-token-123";
-			const token = extractToken(header);
-
-			expect(token).toBe("valid-token-123");
-		});
-
-		it("should return null for missing header", () => {
-			expect(extractToken(undefined)).toBeNull();
-		});
-
-		it("should return null for header without Bearer prefix", () => {
-			expect(extractToken("Basic credentials")).toBeNull();
-			expect(extractToken("just-a-token")).toBeNull();
-		});
-
-		it("should return null for empty string", () => {
-			expect(extractToken("")).toBeNull();
-		});
-
-		it('should handle lowercase "bearer"', () => {
-			expect(extractToken("bearer token")).toBeNull(); // Case sensitive
-		});
-
-		it("should handle Bearer with extra spaces", () => {
-			const header = "Bearer   token-with-spaces";
-			const token = extractToken(header);
-
-			expect(token).toBe("  token-with-spaces"); // Preserves after prefix
 		});
 	});
 
