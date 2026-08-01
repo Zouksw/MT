@@ -28,7 +28,10 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 
 	beforeAll(async () => {
 		ctx = await createTestContext("apiKeys");
-		if (!ctx.available) return;
+		if (!ctx.available)
+			throw new Error(
+				"apiKeys: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
+			);
 
 		// Create a real test user with a real bcrypt-hashed password
 		const hash = await bcrypt.hash("TestPass123!", 4);
@@ -47,9 +50,7 @@ describe("apiKeys service (real DB + bcrypt)", () => {
 		await destroyTestContext(ctx);
 	});
 
-	beforeEach(() => {
-		if (!ctx?.available) return;
-	});
+	beforeEach(() => {});
 
 	describe("generateApiKey", () => {
 		it("should generate key with iotd_ prefix", () => {

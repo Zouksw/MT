@@ -29,16 +29,17 @@ describe("MAPE Tracking (real DB)", () => {
 
 	beforeAll(async () => {
 		ctx = await createTestContext("mape");
-		if (!ctx.available) return;
+		if (!ctx.available)
+			throw new Error(
+				"mapeTracking: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
+			);
 	});
 
 	afterAll(async () => {
 		await destroyTestContext(ctx);
 	});
 
-	beforeEach(() => {
-		if (!ctx?.available) return;
-	});
+	beforeEach(() => {});
 
 	describe("logPrediction + verifyPrediction", () => {
 		// These cases log under literal "test-commodity-*" commodityIds (no
@@ -50,7 +51,6 @@ describe("MAPE Tracking (real DB)", () => {
 		// in getModelAccuracy is the read-side defense, but this stops the
 		// pollution at the source.
 		afterEach(async () => {
-			if (!ctx?.available) return;
 			try {
 				await ctx.prisma.predictionLog.deleteMany({
 					where: { commodityId: { startsWith: "test-commodity-" } },
@@ -151,7 +151,6 @@ describe("MAPE Tracking (real DB)", () => {
 		});
 
 		it("should return accuracy structure", async () => {
-			if (!ctx?.available) return;
 			const { model, commodity } = fx();
 			fxLogId = await logPrediction({
 				modelId: model,
@@ -175,7 +174,6 @@ describe("MAPE Tracking (real DB)", () => {
 		// actively-verified model. It must be present (null only when there are
 		// zero verified rows) and, when verified rows exist, be an ISO timestamp.
 		it("exposes lastVerifiedAt as a freshness signal (ISO string when verified rows exist)", async () => {
-			if (!ctx?.available) return;
 			const { model, commodity } = fx();
 			fxLogId = await logPrediction({
 				modelId: model,
@@ -198,7 +196,6 @@ describe("MAPE Tracking (real DB)", () => {
 		// pollution out of production accuracy reads. A row whose commodityId
 		// contains "test" (any case) must NOT be counted even when verified.
 		it("excludes verified rows whose commodityId contains 'test' (test-artifact pollution defense)", async () => {
-			if (!ctx?.available) return;
 			// Seed a verified row under a TEST-bearing commodityId using a
 			// distinct model so it can't bleed into other cases. The commodityId
 			// is prefixed with ctx.prefix so destroyTestContext reclaims it even
@@ -270,8 +267,6 @@ describe("MAPE Tracking (real DB)", () => {
 		// test locks in the fix: actuals for a cut: key must come from
 		// BeefCutPrice.
 		it("verifies a cut-keyed prediction using BeefCutPrice actuals", async () => {
-			if (!ctx?.available) return;
-
 			const prisma = ctx.prisma;
 			const suffix = `${ctx.prefix}-cutvfy`;
 
@@ -365,7 +360,6 @@ describe("MAPE Tracking (real DB)", () => {
 			// excluded from accuracy math. Post-fix predictions for the same
 			// commodities stay 'completed' and verify normally.
 			it("marks pre-fix predictions for conflict commodities as stale, leaves post-fix and clean-commodity rows untouched", async () => {
-				if (!ctx?.available) return;
 				const prisma = ctx.prisma;
 
 				// Resolve the seeded brl_usd commodity (a known conflict slug).
@@ -477,7 +471,6 @@ describe("MAPE Tracking (real DB)", () => {
 			});
 
 			it("is idempotent — running twice does not change already-stale rows or count them again", async () => {
-				if (!ctx?.available) return;
 				const prisma = ctx.prisma;
 				const brl = await prisma.commodity.findUnique({
 					where: { slug: "brl_usd" },
@@ -513,7 +506,6 @@ describe("MAPE Tracking (real DB)", () => {
 			});
 
 			it("returns 0 on the no-op path (fixedAt before any prediction)", async () => {
-				if (!ctx?.available) return;
 				// The contract: invalidatePollutedPredictions marks rows with
 				// predictedAt < fixedAt. With fixedAt at the Unix epoch, NOTHING is
 				// older → the update matches 0 rows regardless of seed state.
@@ -535,7 +527,6 @@ describe("MAPE Tracking (real DB)", () => {
 			// inverse of invalidatePollutedPredictions: stale→completed ONLY for
 			// predictedAt >= fixedAt on conflict slugs.
 			it("restores post-fix stale rows to completed but leaves pre-fix stale rows stale", async () => {
-				if (!ctx?.available) return;
 				const prisma = ctx.prisma;
 
 				const brl = await prisma.commodity.findUnique({
@@ -596,7 +587,6 @@ describe("MAPE Tracking (real DB)", () => {
 			});
 
 			it("is idempotent — a second run restores nothing", async () => {
-				if (!ctx?.available) return;
 				const fixedAt = new Date("2026-07-27T11:26:00Z");
 				// First run restores whatever is mis-staled; second run must find
 				// nothing (rows already completed, not stale).

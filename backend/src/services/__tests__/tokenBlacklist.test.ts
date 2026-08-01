@@ -38,6 +38,10 @@ describe("tokenBlacklist service (real Redis)", () => {
 
 	beforeAll(async () => {
 		ctx = await createTestContext("tokenBlacklist");
+		if (!ctx.available)
+			throw new Error(
+				"tokenBlacklist: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
+			);
 	});
 
 	afterAll(async () => {
@@ -47,9 +51,7 @@ describe("tokenBlacklist service (real Redis)", () => {
 		await destroyTestContext(ctx);
 	});
 
-	beforeEach(() => {
-		if (!ctx?.available) return;
-	});
+	beforeEach(() => {});
 
 	describe("blacklistToken", () => {
 		it("should blacklist a valid token and verify via Redis", async () => {

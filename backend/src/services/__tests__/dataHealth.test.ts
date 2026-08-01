@@ -21,6 +21,10 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 
 	beforeAll(async () => {
 		ctx = await createTestContext("datahealth");
+		if (!ctx.available)
+			throw new Error(
+				"dataHealth: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
+			);
 	});
 
 	afterAll(async () => {
@@ -28,7 +32,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("returns a well-formed snapshot with the expected fields", async () => {
-		if (!ctx.available) return;
 		const snap = await getDataHealth(3);
 
 		expect(snap.windowDays).toBe(3);
@@ -42,7 +45,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("anyDataFlowing is true when at least one source wrote rows in the window", async () => {
-		if (!ctx.available) return;
 		const snap = await getDataHealth(365); // wide window → seed data counts
 		// The seed DB has FRED/exchange_rate_api history, so data IS flowing
 		// over a 365-day window.
@@ -51,7 +53,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("counts a fresh source with its row counts and latest date", async () => {
-		if (!ctx.available) return;
 		const snap = await getDataHealth(365);
 		// FRED is seeded and should appear as a producer.
 		const fred = snap.sources.find((s) => s.source === "fred");
@@ -61,7 +62,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("freshSourceCount counts only sources with rows in the window", async () => {
-		if (!ctx.available) return;
 		const snap = await getDataHealth(3);
 		// freshSourceCount must equal the number of sources whose row sum > 0.
 		const producers = snap.sources.filter(
@@ -74,7 +74,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("registeredSourceCount matches the scraper manager's registered set", async () => {
-		if (!ctx.available) return;
 		const snap = await getDataHealth(3);
 		// In the test process scrapers aren't registered (registration happens
 		// at server startup), so this is 0 here; in production it's 19. The
@@ -84,7 +83,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("verificationRatio is between 0 and 1 (inclusive)", async () => {
-		if (!ctx.available) return;
 		const snap = await getDataHealth(3);
 		expect(snap.verificationRatio).toBeGreaterThanOrEqual(0);
 		expect(snap.verificationRatio).toBeLessThanOrEqual(1);
@@ -93,7 +91,6 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("includes non-scraper source columns that wrote rows (e.g. manual import)", async () => {
-		if (!ctx.available) return;
 		// Insert a row under a source string that isn't a registered scraper,
 		// into the commodity_prices table, within the window — getDataHealth
 		// must surface it (status 'not_a_scraper') so manual imports are seen.

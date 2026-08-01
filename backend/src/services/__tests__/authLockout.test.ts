@@ -24,6 +24,10 @@ describe("authLockout service (real Redis)", () => {
 
 	beforeAll(async () => {
 		ctx = await createTestContext("authLockout");
+		if (!ctx.available)
+			throw new Error(
+				"authLockout: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
+			);
 	});
 
 	afterAll(async () => {
@@ -31,7 +35,6 @@ describe("authLockout service (real Redis)", () => {
 	});
 
 	beforeEach(() => {
-		if (!ctx?.available) return;
 		testId = `${ctx.prefix}-${Date.now()}`;
 	});
 

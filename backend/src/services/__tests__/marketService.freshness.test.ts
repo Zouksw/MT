@@ -21,6 +21,10 @@ describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 
 	beforeAll(async () => {
 		ctx = await createTestContext("freshness");
+		if (!ctx.available)
+			throw new Error(
+				"marketService freshness: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
+			);
 	});
 
 	afterAll(async () => {
@@ -28,7 +32,6 @@ describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 	});
 
 	it("summary includes the legacy healthy/stale counts AND the dataHealth snapshot", async () => {
-		if (!ctx.available) return;
 		const result = await getSourceFreshness();
 
 		// Legacy contract still intact.
@@ -57,7 +60,6 @@ describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 	});
 
 	it("dataHealth.freshSourceCount can be lower than summary.healthy (the gap this exposes)", async () => {
-		if (!ctx.available) return;
 		const result = await getSourceFreshness();
 		const dh = result.summary.dataHealth;
 		if (!dh) return;
@@ -77,7 +79,6 @@ describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 	// (the silent-failure pattern). Pre-round-58 the freshness table showed
 	// successRate/stale with no empty signal, masking never-writing scrapers.
 	it("each freshness row carries an `empty` flag and summary aggregates emptySources", async () => {
-		if (!ctx.available) return;
 		const result = await getSourceFreshness();
 
 		expect(result.freshness.length).toBeGreaterThan(0);
