@@ -14,7 +14,11 @@ import { evaluateAlertRules } from "@/services/alert-rules";
 import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
-import { invalidatePollutedPredictions, verifyDuePredictions } from "@/services/mapeTracking";
+import {
+	invalidatePollutedPredictions,
+	restorePostFixConflictPredictions,
+	verifyDuePredictions,
+} from "@/services/mapeTracking";
 import {
 	scheduleBeefCutPredictions,
 	schedulePredictionsFromPostgreSQL,
@@ -225,6 +229,17 @@ function start(): void {
 		try {
 			const n = await invalidatePollutedPredictions(ROUND41_FIX_TS);
 			if (n > 0) logger.info(`📊 Marked ${n} polluted predictions as stale (pre-fix data)`);
+			// Symmetric restore: a prior run left post-fix conflict-commodity
+			// predictions stuck at `stale` (they trained on the
+			// authoritative-source-filtered series and are legitimate, but
+			// verifyDuePredictions only reads `completed`, so they were trapped).
+			// Restored rows re-enter the verification queue so brl_usd /
+			// corn_cme / natural_gas_cme accuracy can populate. Idempotent.
+			const restored = await restorePostFixConflictPredictions(ROUND41_FIX_TS);
+			if (restored > 0)
+				logger.info(
+					`📊 Restored ${restored} post-fix conflict-commodity predictions stale→completed`,
+				);
 		} catch (err) {
 			logger.warn(`📊 Pollution invalidation failed: ${err}`);
 		}

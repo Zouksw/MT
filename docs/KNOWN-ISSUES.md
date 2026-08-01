@@ -104,6 +104,12 @@
 - authoritative override 调整：corn_cme `cme → usda_ams`。因 Stooq 当前被墙（返回 HTML 非 CSV，cme 无新行），cme 只有 2 条 pre-fix 错误行（473），usda_ams 有 128 条正确 USD/bu 行。待 Stooq 恢复后 cme 会写转换后的 USD 值，届时可切回 cme。
 - **遗留（数据源可达性，非代码）**：Stooq 被墙是 cme_futures 持续 empty 的根因（同 CEPEA/INAC 的网络阻塞模式）。需替代数据源或代理。
 
+**round-58 补充（2026-08-01，post-fix 预测误标 stale 根治）**：调查发现 3 个 conflict commodity 的 **post-fix chronos 预测被错误标 `status='stale'`**（brl_usd 208 / corn_cme 144 / natural_gas_cme 179 = **531 条**），而所有非 conflict commodity 的 post-fix 预测正常为 `completed`。`verifyDuePredictions` 只读 `completed` → 这 531 条**永远不进验证环** → brl_usd/corn_cme/natural_gas_cme 的准确率永不为 chronos 产新 verified 记录。
+- **根因**：`invalidatePollutedPredictions` 是代码里唯一写 `stale` 的地方，live 实测（直接调函数）返回 0——**它不是凶手**。这 531 条是历史某次运行（boundary 未钉死前 / 时间戳 mis-resolved）误标后遗留。一旦 stale，无代码路径回收。
+- **修复**：新增 `restorePostFixConflictPredictions(fixedAt)`——`invalidatePollutedPredictions` 的对称逆操作，仅对 `predictedAt >= fixedAt` 的 conflict-commodity stale 行标回 `completed`（pre-fix 行保持 stale，因确为污染数据不可恢复）。幂等。接入 `server.ts` 启动一次性调用（在 pollution invalidation 之后）。
+- **live 实测**：恢复后 531 条全部回 `completed`（brl_usd 624 / corn_cme 432 / natural_gas_cme 537 post-fix 全 completed，0 stale）。重启后再跑 restore 返回 0（幂等）。这些预测现 re-enter 验证队列，horizon(10d) 到期后会产出 brl_usd 等的真实 chronos MAPE。
+- **顺带根治 flaky 测试**：`invalidatePollutedPredictions — returns 0` 之前用 far-FUTURE cutoff（2099），在 real DB 上 `lt:2099` 匹配全部行 → 期望 0 实得 1710 → flaky。改为 epoch(1970) cutoff（`lt:1970` 真正匹配 0 行），是真正的 no-op 路径。
+
 ---
 
 ## 三、潜伏 bug（重构副产物，已修，留作记录）

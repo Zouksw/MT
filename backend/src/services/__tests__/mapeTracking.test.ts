@@ -14,6 +14,7 @@ import {
 	getModelAccuracy,
 	invalidatePollutedPredictions,
 	logPrediction,
+	restorePostFixConflictPredictions,
 	verifyDuePredictions,
 	verifyPrediction,
 } from "@/services/mapeTracking";
@@ -399,15 +400,97 @@ describe("MAPE Tracking (real DB)", () => {
 				}
 			});
 
-			it("returns 0 when no conflict commodities exist (env without seed)", async () => {
+			it("returns 0 on the no-op path (fixedAt before any prediction)", async () => {
 				if (!ctx?.available) return;
-				// Pass a fixedAt in the future so even if seed rows exist, none are
-				// pre-fix — but the contract is: 0 commodities matched → 0 marked.
-				// We can't easily remove seed commodities, so this asserts the
-				// function resolves gracefully when the slug set is empty by testing
-				// the no-op path via a far-future cutoff (no rows qualify).
-				const n = await invalidatePollutedPredictions(new Date("2099-01-01T00:00:00Z"));
+				// The contract: invalidatePollutedPredictions marks rows with
+				// predictedAt < fixedAt. With fixedAt at the Unix epoch, NOTHING is
+				// older → the update matches 0 rows regardless of seed state.
+				// (The previous version used a far-FUTURE cutoff, which on the real
+				// DB matched every conflict-commodity row and flaked against the
+				// `expect 0` assertion. An epoch cutoff is the true no-op.)
+				const n = await invalidatePollutedPredictions(new Date("1970-01-01T00:00:00Z"));
 				expect(n).toBe(0);
+			});
+		});
+
+		describe("restorePostFixConflictPredictions — recover mis-staled post-fix rows", () => {
+			// REGRESSION (round-58): a historical run left ~531 post-fix chronos
+			// predictions for the 3 conflict commodities stuck at status='stale'
+			// even though they trained on the authoritative-source-filtered series.
+			// Once stale, verifyDuePredictions (which reads status='completed')
+			// never reclaimed them, so brl_usd / corn_cme / natural_gas_cme accuracy
+			// never populated. restorePostFixConflictPredictions is the symmetric
+			// inverse of invalidatePollutedPredictions: stale→completed ONLY for
+			// predictedAt >= fixedAt on conflict slugs.
+			it("restores post-fix stale rows to completed but leaves pre-fix stale rows stale", async () => {
+				if (!ctx?.available) return;
+				const prisma = ctx.prisma;
+
+				const brl = await prisma.commodity.findUnique({
+					where: { slug: "brl_usd" },
+					select: { id: true },
+				});
+				if (!brl) return; // seed absent — skip cleanly
+
+				const fixedAt = new Date("2026-07-27T11:26:00Z");
+				const before = new Date("2026-07-15T00:00:00Z"); // pre-fix (genuinely polluted)
+				const after = new Date("2026-07-28T00:00:00Z"); // post-fix (mis-staled)
+
+				// Pre-fix row — was legitimately staled; must STAY stale.
+				const preFix = await prisma.predictionLog.create({
+					data: {
+						modelId: "test-restore-prefix",
+						commodityId: brl.id,
+						horizon: 5,
+						predictedValues: [1, 2, 3],
+						status: "stale",
+						predictedAt: before,
+					},
+				});
+				// Post-fix row — mis-staled; must be restored to completed.
+				const postFix = await prisma.predictionLog.create({
+					data: {
+						modelId: "test-restore-postfix",
+						commodityId: brl.id,
+						horizon: 5,
+						predictedValues: [1, 2, 3],
+						status: "stale",
+						predictedAt: after,
+					},
+				});
+
+				try {
+					const restored = await restorePostFixConflictPredictions(fixedAt);
+					// At least the postFix row should be counted.
+					expect(restored).toBeGreaterThanOrEqual(1);
+
+					const preAfter = await prisma.predictionLog.findUnique({
+						where: { id: preFix.id },
+						select: { status: true },
+					});
+					const postAfter = await prisma.predictionLog.findUnique({
+						where: { id: postFix.id },
+						select: { status: true },
+					});
+					// Pre-fix stays stale (genuinely polluted, unrecoverable).
+					expect(preAfter?.status).toBe("stale");
+					// Post-fix is restored to completed so verifyDuePredictions can pick it up.
+					expect(postAfter?.status).toBe("completed");
+				} finally {
+					await prisma.predictionLog.deleteMany({
+						where: { id: { in: [preFix.id, postFix.id] } },
+					});
+				}
+			});
+
+			it("is idempotent — a second run restores nothing", async () => {
+				if (!ctx?.available) return;
+				const fixedAt = new Date("2026-07-27T11:26:00Z");
+				// First run restores whatever is mis-staled; second run must find
+				// nothing (rows already completed, not stale).
+				await restorePostFixConflictPredictions(fixedAt);
+				const second = await restorePostFixConflictPredictions(fixedAt);
+				expect(second).toBe(0);
 			});
 		});
 	});
