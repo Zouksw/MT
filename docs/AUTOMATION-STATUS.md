@@ -79,16 +79,21 @@
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-01 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 54 | **637 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 23 | **285 pass** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 55 | **625 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 24 | **288 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **969 全绿**（637 + 285 + 47，截至 2026-08-01 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **960 全绿**（625 + 288 + 47，截至 2026-08-01 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
-**集成测试**：backend `src/__tests__/integration/` 用真实 PostgreSQL（mt_db）+ in-process Express（supertest），DB 不可达自动 skip。
+**集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
-**MAPE E2E 守护**：`services/__tests__/mapeTracking.test.ts:115-209` 覆盖 cut-series 预测的完整验证链路（PredictionLog → BeefCutPrice actuals → verifyDuePredictions → verified + MAPE）。守护 round-22 的正确性修复。
+**测试系统重构（round-60，2026-08-01）**——目标"先进测试系统：只保留真正有意义的测试"。三准则贯穿：每个留存的测试 ① 真测生产代码 ② 真行为断言 ③ 失败显式报红。
+- **同义反复根治**：`alertRules.test.ts` 17 case 改测**真** `isConditionMet`（export 出来；mutation 验证能捕生产漂移，原测本地副本 = 永绿）；`injection-auth.test.ts` 删 SQLi/XSS 同义反复块（测测试内手写对象/Prisma 保证，非本仓代码；backend 无 sanitizer 可 redirect），保留 7 真 authz 测试。
+- **silent-skip → fail-loud**：16 文件（8 routes + 6 createTestContext + 2 integration）全显式失败。新增 `testApp.ts:requireDb(label)` helper（包装 isDbAvailable，false 时 throw actionable error）。
+- **结构冗余合并**：`ai.test.ts` 并入 `signals.test.ts`（独有 3 case 迁移，重叠 4 删）；`user.test.ts` 删 billing 块（被 billing.test.ts 完全覆盖）；前端 `__mocks__/recharts.tsx` + `html2canvas.tsx` 抽公共 manual mock（去 ~70 行重复 factory，case 不变）。
+
+**MAPE E2E 守护**：`services/__tests__/mapeTracking.test.ts` 覆盖 cut-series 预测的完整验证链路（PredictionLog → BeefCutPrice actuals → verifyDuePredictions → verified + MAPE）。守护 round-22 的正确性修复。
 
 ## 五½、数据层可观测性（round-48~50）
 
