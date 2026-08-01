@@ -59,6 +59,14 @@ export interface DashboardStats {
 		 */
 		importedAvg: number | null;
 		domesticAvg: number | null;
+		/**
+		 * Period-over-period % change in imported / domestic average, latest day
+		 * vs the previous distinct day with data (PRODUCT-SPEC §5.1 ↓1.2%/↑0.5%
+		 * trend badges). Computed by the backend (round-57) and surfaced here;
+		 * null when either period lacks data on that origin.
+		 */
+		importedTrendPct: number | null;
+		domesticTrendPct: number | null;
 		/** Top-priced cuts for the 行情总览 hot-cuts table (max 6).
 		 * `forecast` is the per-cut 7-day consensus (merged from
 		 * useBeefCutForecasts) so the table can show the AI prediction column
@@ -255,6 +263,10 @@ export const useDashboardStats = () => {
 	const beefCuts = cutsData?.data?.cuts ?? cutsData?.cuts ?? [];
 	const beefFactories = factoriesData?.data?.factories ?? factoriesData?.factories ?? [];
 	const beefPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
+	// Backend-computed origin-split trend (round-57): imported/domestic avg %
+	// change vs the previous distinct day. Null when backend can't compute it
+	// (no prior day) — keeps the hero trend badges honest.
+	const beefTrend = pricesData?.data?.trend ?? null;
 
 	// Derived live beef-price board from /beef/prices/latest.
 	// Each record has { price, date, cutCode, factory?: { country } }. We
@@ -317,6 +329,9 @@ export const useDashboardStats = () => {
 		latestDate,
 		importedAvg: importedCount > 0 ? importedSum / importedCount : null,
 		domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
+		// From the backend trend (round-57); null when not computable.
+		importedTrendPct: beefTrend?.importedTrendPct ?? null,
+		domesticTrendPct: beefTrend?.domesticTrendPct ?? null,
 		hotCuts: Array.from(hotCutAccum.entries())
 			.slice(0, 6)
 			.map(([cutCode, v]) => ({ cutCode, ...v, forecast: null })),

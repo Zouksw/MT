@@ -7,6 +7,7 @@ import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/error
 import { getPagination } from "@/schemas/common";
 import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
 import { importBeefPrices, parseBeefCSV } from "@/services/beefImport";
+import { computeBeefTrend } from "@/services/beefTrends";
 import { findForecastableFactoryForCut, generateBeefCutForecast } from "@/services/tradingSignals";
 
 const router = Router();
@@ -219,11 +220,46 @@ router.get(
 		}));
 		const freshness = pageFreshnessSummary(prices);
 
+		// Origin-split trend (round-57, PRODUCT-SPEC §5.1): compute the % change
+		// in imported / domestic average vs the PREVIOUS DISTINCT day with data.
+		// "Previous distinct day" (not "7 days ago") handles irregular beef-data
+		// cadence honestly. Falls back to nulls when there's no prior day.
+		const previous = await prisma.beefCutPrice.findFirst({
+			where: { ...where, date: { lt: latest.date } },
+			orderBy: { date: "desc" },
+			select: { date: true },
+		});
+		let trend = {
+			importedTrendPct: null as number | null,
+			domesticTrendPct: null as number | null,
+			latestDate: latest.date.toISOString() as string | null,
+			previousDate: null as string | null,
+		};
+		if (previous) {
+			const previousRows = await prisma.beefCutPrice.findMany({
+				where: { ...where, date: previous.date },
+				include: { factory: { select: { country: true } } },
+			});
+			trend = computeBeefTrend(
+				pricesWithFreshness.map((p) => ({
+					price: p.price,
+					country: p.factory?.country,
+				})),
+				previousRows.map((p) => ({
+					price: Number(p.price),
+					country: p.factory?.country,
+				})),
+				latest.date,
+				previous.date,
+			);
+		}
+
 		success(res, {
 			prices: pricesWithFreshness,
 			date: latest.date,
 			count: pricesWithFreshness.length,
 			freshness,
+			trend,
 		});
 	}),
 );

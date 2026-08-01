@@ -193,6 +193,17 @@ export default function DashboardPage() {
 							icon={<Globe className="size-5" />}
 							variant="primary"
 							loading={loading}
+							// Day-over-day % change in the imported average (round-57).
+							// Mirrors the spec §5.1 mockup's ↓1.2%/↑0.5% trend badge. Null
+							// (no prior day) hides the badge — honest absence, not a fake 0.
+							trend={
+								beef?.importedTrendPct == null
+									? undefined
+									: {
+											value: Math.abs(beef.importedTrendPct),
+											isPositive: beef.importedTrendPct >= 0,
+										}
+							}
 						/>
 						<StatCard
 							title="国产均价 (Domestic)"
@@ -201,6 +212,14 @@ export default function DashboardPage() {
 							icon={<Beef className="size-5" />}
 							variant="info"
 							loading={loading}
+							trend={
+								beef?.domesticTrendPct == null
+									? undefined
+									: {
+											value: Math.abs(beef.domesticTrendPct),
+											isPositive: beef.domesticTrendPct >= 0,
+										}
+							}
 						/>
 						<AIPredictionCard summary={stats?.aiSummary ?? null} loading={loading} />
 					</div>

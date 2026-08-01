@@ -469,4 +469,88 @@ describe("useDashboardStats", () => {
 		// BRISKET row has no forecast → honest null (renders as "—").
 		expect(brisket?.forecast).toBeNull();
 	});
+
+	it("surfaces the backend beef-price trend on the hero cards (round-57, §5.1)", async () => {
+		// /beef/prices/latest now returns a `trend` object with origin-split %
+		// change vs the previous day. The hook must pass it through so the hero
+		// 进口/国产 cards can render ↓1.2%/↑0.5% badges instead of hiding them.
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		const byKey: Record<string, any> = {
+			"/beef/cuts": { data: { cuts: [] } },
+			"/beef/factories": { data: { factories: [] } },
+			"/beef/prices/latest": {
+				data: {
+					prices: [{ price: 50, cutCode: "X", date: "2026-07-31", factory: { country: "BR" } }],
+					trend: {
+						importedTrendPct: -12.1,
+						domesticTrendPct: 3.4,
+						latestDate: "2026-07-31T00:00:00.000Z",
+						previousDate: "2026-07-24T00:00:00.000Z",
+					},
+				},
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
+			return {
+				data: matched ? matched[1] : { total: 0, data: [] },
+				error: undefined,
+				isLoading: false,
+				isValidating: false,
+				isRetrying: false,
+				retryCount: 0,
+				manualRetry: jest.fn(),
+				mutate: jest.fn(),
+			};
+		});
+		mockUseBeefCutForecasts.mockReturnValue({ forecasts: {}, isLoading: false });
+
+		const { result } = renderHook(() => useDashboardStats());
+		await waitFor(() => {
+			expect(result.current.loading).toBe(false);
+		});
+
+		expect(result.current.stats?.beef.importedTrendPct).toBe(-12.1);
+		expect(result.current.stats?.beef.domesticTrendPct).toBe(3.4);
+	});
+
+	it("renders null trends when the backend omits the trend field (honest absence)", async () => {
+		// Older backend / transient error → no trend field. The hook must not
+		// crash and must surface null (StatCard hides the badge) rather than a
+		// fabricated 0%.
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		const byKey: Record<string, any> = {
+			"/beef/cuts": { data: { cuts: [] } },
+			"/beef/factories": { data: { factories: [] } },
+			"/beef/prices/latest": {
+				data: { prices: [{ price: 50, cutCode: "X", date: "2026-07-31" }] },
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
+			return {
+				data: matched ? matched[1] : { total: 0, data: [] },
+				error: undefined,
+				isLoading: false,
+				isValidating: false,
+				isRetrying: false,
+				retryCount: 0,
+				manualRetry: jest.fn(),
+				mutate: jest.fn(),
+			};
+		});
+		mockUseBeefCutForecasts.mockReturnValue({ forecasts: {}, isLoading: false });
+
+		const { result } = renderHook(() => useDashboardStats());
+		await waitFor(() => {
+			expect(result.current.loading).toBe(false);
+		});
+
+		expect(result.current.stats?.beef.importedTrendPct).toBeNull();
+		expect(result.current.stats?.beef.domesticTrendPct).toBeNull();
+	});
 });
