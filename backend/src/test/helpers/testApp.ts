@@ -11,8 +11,8 @@
  * production/staging, so in-process tests under NODE_ENV=test never hit 429.
  */
 
-import type { Express } from "express";
 import { PrismaClient } from "@prisma/client";
+import type { Express } from "express";
 
 import { createApp } from "@/app";
 
@@ -56,6 +56,32 @@ export async function isDbAvailable(): Promise<boolean> {
 		return true;
 	} catch {
 		return false;
+	}
+}
+
+/**
+ * Fail-loud DB precondition for integration test suites.
+ *
+ * Call this inside a suite's `beforeAll`. If PostgreSQL (mt_db) is unreachable
+ * the suite FAILS with a clear error instead of silently passing every case
+ * via the old `if (!dbAvailable) return;` guard (which made every case a vacuous
+ * green when the DB was down — a CI hazard: a broken DB looked healthy).
+ *
+ * The label identifies which suite failed, so the error names the file/feature:
+ *   await requireDb("signals routes");
+ *
+ * This mirrors the existing fail-loud pattern in correlationAnalysis.test.ts
+ * (beforeAll throws on unreachable infra). CI has postgres+redis provisioned
+ * (ci.yml), so a real CI run exercises these suites; only a genuinely broken
+ * environment goes red — which is the honest signal.
+ */
+export async function requireDb(label: string): Promise<void> {
+	if (!(await isDbAvailable())) {
+		throw new Error(
+			`${label}: integration suite requires PostgreSQL (mt_db) to be reachable. ` +
+				"Start the DB (docker-compose up) or run only unit tests. Aborting — a silent " +
+				"skip would report false-green and mask the gap.",
+		);
 	}
 }
 
