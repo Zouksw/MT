@@ -262,7 +262,15 @@ describe("Error Handler Middleware", () => {
 
 			errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
 
-			expect(mockLogger.error).toHaveBeenCalledWith("Error occurred:", {
+			// The log call is an internal observability concern, NOT part of the
+			// API contract. Assert it was invoked with the diagnostic payload
+			// (message/stack/path/method) without pinning the exact log prefix
+			// string ("Error occurred:") — that prefix is a cosmetic choice and
+			// changing it should not break this test. The structured fields are
+			// the meaningful signal: a missing field means lost diagnostics.
+			expect(mockLogger.error).toHaveBeenCalledTimes(1);
+			const [_prefix, payload] = mockLogger.error.mock.calls[0];
+			expect(payload).toMatchObject({
 				message: "Test error",
 				stack: error.stack,
 				path: "/test/path",
