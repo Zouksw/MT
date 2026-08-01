@@ -6,6 +6,21 @@
 
 ---
 
+> ## ⚠️ 2026-08-01 更新前置说明（动手前必读）
+>
+> 本文档 §1.3 / §2.2 / §3.1 / §4.1 / §6 把 **R1（前端最后一公里：消费 `/api/beef/forecasts`）描述为"未接入/前端 0%"**——**该断层现已闭合**，后续轮次已落地：
+> - `frontend/src/hooks/useBeefCutForecasts.ts`（NEW）消费 `GET /api/beef/forecasts?horizon=7` 批量端点（§3.1 层 2）。
+> - `/beef`（Latest Cut Prices 表行级预测列）、`/beef/cuts/[cutCode]`（部位详情页预测区，§3.1 层 1）、`/dashboard` 三处页面均已接入。
+> - 即 **R1 + R2 + F1 + F2 已完成**；MarketForecastBoard 切 cut 维度（§3.1 层 3 / F3）待复核。
+>
+> 另：§3.3 引用的 stl_forecaster MAPE **32.41%** 是 2026-07-26 快照（493 verified）。**2026-08-01 重核**（1106 verified）：stl_forecaster avg MAPE 降至 **20.56%**（仍显著高于 naive_forecaster 2.22%，stl 配置排查建议仍成立，但数字已变）。
+>
+> §1.1 测试基线（563/258/9）**已过时**：2026-08-01 实测 **backend 637 pass / 1 skip，frontend 285，inference 47 = 969 全绿**（运行各 `pnpm test` / `pytest -q` 获取当前数）。
+>
+> 本文保留作历史记录（loop 当时决策依据）；**当前真实状态以本前置说明 + `docs/KNOWN-ISSUES.md`（最新）为准**。下文未逐条改写。
+
+---
+
 ## 与 v1 的关键差异（先读这个）
 
 v1 之后发生了三件事，改变了核心论断：

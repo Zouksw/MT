@@ -1,8 +1,8 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-07-27（round-25 ~ round-29；round-40 修订过期数据）
+> 最后更新：2026-08-01（round-25 ~ round-29；round-40/53/57 修订过期数据）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
-> §九 数字严谨要求：下列计数为"截至 2026-07-27 live 实测"，运行对应命令获取当前值。
+> §九 数字严谨要求：下列计数为"截至 2026-08-01 live 实测"，运行对应命令获取当前值。
 
 ## 一、CI/CD（GitHub Actions）
 
@@ -77,14 +77,14 @@
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-07-31 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-01 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 52 | **613 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 23 | **283 pass** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 54 | **637 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 23 | **285 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **943 全绿**（613 + 283 + 47，截至 2026-07-31 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **969 全绿**（637 + 285 + 47，截至 2026-08-01 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试**：backend `src/__tests__/integration/` 用真实 PostgreSQL（mt_db）+ in-process Express（supertest），DB 不可达自动 skip。
 
@@ -120,7 +120,7 @@
 
 ## 七、已知限制与待办
 
-1. **本地 coverage 已修复（2026-07-27 实测）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33（backend 嵌套 override `test-exclude>minimatch`）+ round-36（frontend `coverageProvider:'v8'` + 移除 glob override）已修复。当前实测：**backend 48.58% / frontend 21.13%**，均过各自阈值（backend 45% / frontend 18%）。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
+1. **本地 coverage 已修复（2026-08-01 实测）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33（backend 嵌套 override `test-exclude>minimatch`）+ round-36（frontend `coverageProvider:'v8'` + 移除 glob override）已修复。当前实测：**backend 48.92% / frontend 21.46%**，均过各自阈值（backend 45% / frontend 18%）。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
 2. **knip 本地无法运行**：knip 依赖 zod@4 ESM，本地 zod 解析失败。配置已就位（knip.json + 脚本），CI/未来版本兼容后即可用。
 3. **`invalidateCommodityCache` 已接入（round-45）**：原"零调用"的 commodity 缓存失效函数已在 `upsertPrice` 写后 fire-and-forget 接入（SCAN-by-prefix，对称 round-30 的 cut-series）。`unsubscribeCommodity` 仍仅测试用（订阅生命周期内部用，非死代码）。详见 `docs/TECH-DEBT.md`（部分条目已过期，动手前重新核实）。
 4. **PAT 凭据管理**：origin remote 仍含 HTTPS + token store（~/.git-credentials）。SSH key 方案已部分配置（~/.ssh/config 走 443），但公钥未加到 GitHub 账户。待用户完成 SSH 接入后可彻底移除 token。
