@@ -91,12 +91,8 @@ describe("JWT Utilities", () => {
 		});
 
 		it("should have longer expiration than access token", () => {
-			const accessDecoded = jwt.decode(
-				generateToken("user-123"),
-			) as jwt.JwtPayload;
-			const refreshDecoded = jwt.decode(
-				generateRefreshToken("user-123"),
-			) as jwt.JwtPayload;
+			const accessDecoded = jwt.decode(generateToken("user-123")) as jwt.JwtPayload;
+			const refreshDecoded = jwt.decode(generateRefreshToken("user-123")) as jwt.JwtPayload;
 
 			expect(refreshDecoded.exp).toBeGreaterThan(accessDecoded.exp as number);
 		});
@@ -113,11 +109,9 @@ describe("JWT Utilities", () => {
 		});
 
 		it("should throw for expired token", () => {
-			const expiredToken = jwt.sign(
-				{ userId: "user-123" },
-				"test-secret-key-for-testing",
-				{ expiresIn: "-1h" },
-			);
+			const expiredToken = jwt.sign({ userId: "user-123" }, "test-secret-key-for-testing", {
+				expiresIn: "-1h",
+			});
 
 			expect(() => verifyToken(expiredToken)).toThrow("Token expired");
 		});
@@ -158,9 +152,7 @@ describe("JWT Utilities", () => {
 		it("should throw if token is not refresh type", () => {
 			const accessRefreshToken = generateToken("user-123");
 
-			expect(() => verifyRefreshToken(accessRefreshToken)).toThrow(
-				"Invalid refresh token",
-			);
+			expect(() => verifyRefreshToken(accessRefreshToken)).toThrow("Invalid refresh token");
 		});
 
 		it("should throw for expired refresh token", () => {
@@ -230,11 +222,9 @@ describe("JWT Utilities", () => {
 		});
 
 		it("should decode expired token without throwing", () => {
-			const expiredToken = jwt.sign(
-				{ userId: "user-123" },
-				"test-secret-key-for-testing",
-				{ expiresIn: "-1h" },
-			);
+			const expiredToken = jwt.sign({ userId: "user-123" }, "test-secret-key-for-testing", {
+				expiresIn: "-1h",
+			});
 
 			const decoded = decodeToken(expiredToken);
 			expect(decoded).toBeDefined();
@@ -251,14 +241,11 @@ describe("JWT Utilities", () => {
 	});
 
 	describe("jwtUtils export object", () => {
-		it("should export all functions as a group", () => {
-			expect(jwtUtils.generateToken).toBe(generateToken);
-			expect(jwtUtils.generateRefreshToken).toBe(generateRefreshToken);
-			expect(jwtUtils.verifyToken).toBe(verifyToken);
-			expect(jwtUtils.verifyRefreshToken).toBe(verifyRefreshToken);
-			expect(jwtUtils.extractToken).toBe(extractToken);
-			expect(jwtUtils.decodeToken).toBe(decodeToken);
-		});
+		// NOTE: a previous test here asserted `jwtUtils.generateToken ===
+		// generateToken` for each fn — a const-equal-to-itself identity check
+		// that cannot fail unless the import breaks and tests nothing
+		// behavioral. Removed (round-58 quality pass). The barrel's end-to-end
+		// behavior is covered by the test below.
 
 		it("should work when called through the export object", () => {
 			const token = jwtUtils.generateToken("user-123");
@@ -302,11 +289,19 @@ describe("JWT Utilities", () => {
 			vi.restoreAllMocks();
 		});
 
-		it("should generate different JTIs for each token", () => {
-			const decoded1 = jwt.decode(generateToken("user-123")) as jwt.JwtPayload;
-			const decoded2 = jwt.decode(generateToken("user-123")) as jwt.JwtPayload;
-
-			expect(decoded1.jti).toBe(decoded2.jti); // Mocked UUID is same
+		it("should attach a jti claim to every token", () => {
+			// NOTE: the previous test was named "should generate different
+			// JTIs" but asserted `jti === jti` (equality, not difference) with
+			// a comment "Mocked UUID is same" — i.e. it tested the uuid mock
+			// constant, not production uniqueness. uuid is mocked file-wide
+			// (line 31), so real per-token JTI uniqueness can't be exercised
+			// here. This replacement asserts the actual contract the mock
+			// permits: every token carries a non-empty jti claim (the
+			// blacklist-extraction + uniqueness guarantee depends on its
+			// presence, not its value under the mock).
+			const decoded = jwt.decode(generateToken("user-123")) as jwt.JwtPayload;
+			expect(decoded.jti).toBeTruthy();
+			expect(typeof decoded.jti).toBe("string");
 		});
 	});
 
