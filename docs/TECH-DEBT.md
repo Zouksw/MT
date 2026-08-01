@@ -123,39 +123,37 @@
 
 ---
 
-## 三½、零生产 caller 的死代码（2026-08-01 全量审计，live grep 验证）
+## 三½、零生产 caller 的死代码（2026-08-01 全量审计；2026-08-01 重核并修正多处事实错误）
 
-> 三路冗余诊断（后端/前端/测试）复核 TECH-DEBT 后新发现。每条均 `command grep -rn <symbol> backend/src|frontend/src --include="*.ts*"`（排除 `__tests__`/`*.test.*`/定义文件）返回空验证。**动手删前仍需重核**（代码可能已变）。
+> 原审计 2026-08-01 经多轮清理后已过期。本次（commit 7947790 同批）逐项 live grep 重核，发现 5 处事实错误并修正：
+> - `invalidateAllSession`（少了个 s）实为 `invalidateAllSessions`，且被 `authService.ts:288` `changePassword` 调用 → **LIVE**，从死代码表移除。
+> - `requireOwnedDataset` 原判"无 caller"错：它在同文件被 `updateDataset`/`deleteDataset`/`importDatasetData`（140/151/168）调用，三者均经 `routes/datasets.ts` live → **LIVE**（内部 helper），从死代码表移除。
+> - `MS_PER_SECOND` 原判"无 caller"错：`MS_PER_MINUTE = 60 * MS_PER_SECOND`（constants.ts:4）消费它，且 constants.test.ts 直测 → **LIVE**（衍生常量），从死代码表移除。
+> - `getAlertRule`、`requireCommodity` import、`extractToken` 已分别在 commit f197800 / 7947790 删除 → 表项清掉。
+> 教训：诊断 agent / 历史报告的结论须 live 重核，否则会把 live 代码误删（`invalidateAllSessions` 险些中招）。
 
-### 后端死代码（13 项）
+### 后端零外部 caller 的函数（2026-08-01 重核，6 项）
 
-| 符号 | 位置 | 性质 |
-|---|---|---|
-| `validateApiKey` | `services/apiKeys.ts:129` | TD-3 已知，能发 key 但不验；保留作 future infra 候选 |
-| `getAlertRule` | `services/alert-rules.ts:99` | 连测试都没引用 |
-| `requireOwnedDataset` | `services/datasetService.ts:125` | 无 caller |
-| `trackUsage` / `checkLimit` | `services/usageService.ts:46,59` | paywall 脚手架，从未调用 |
-| `invalidateAllSession` | `services/authService.ts:261` | 无 caller |
-| `unsubscribeCommodity` / `getSubscribedCommodities` | `services/predictionCache.ts:222,234` | 订阅生命周期内部用（`subscribeCommodity` 活，这俩 0 caller）|
-| `removeFromBlacklist` / `getBlacklistStats` / `clearBlacklist` / `checkTokenBlacklist` | `services/tokenBlacklist.ts:113,130,154,206` | 仅 `blacklistToken`+`isTokenBlacklisted` 活 |
-| `extractToken` | `lib/jwt.ts:69` | 无 caller |
-| **`cacheKeys` 5/6 成员** | `lib/cache.ts:64-69`（`query`/`timeseriesData`/`userSession`/`rateLimit`/`timeseriesList`）| 仅 `cacheKeys.prediction` 有 4 caller，其余 5 个 0 caller |
-| `requireCommodity` import | `routes/marketData.ts:21` | import 了但函数从未在文件内调用（dead import）|
-| `MS_PER_SECOND` const | `lib/constants.ts` | 无 caller（MIN/HOUR/DAY 活）|
+| 符号 | 位置 | 性质 | 处置 |
+|---|---|---|---|
+| `validateApiKey` | `services/apiKeys.ts:129` | TD-3 已知，能发 key 但不验 | **保留**（round-43 决策：API key 认证是 future infra 候选）|
+| `trackUsage` / `checkLimit` | `services/usageService.ts:46,59` | paywall 脚手架，从未调用 | **保留**（PRODUCT-SPEC §九 不做付费墙，但留作 future quota 候选；删须产品决策）|
+| `unsubscribeCommodity` / `getSubscribedCommodities` | `services/predictionCache.ts:222,234` | `subscribeCommodity` 活，这俩 0 caller | **保留**（订阅生命周期配对——`subscribe`/`unsubscribe` 是完整 API surface，管理面可能用；非 orphan）|
+| `removeFromBlacklist` / `getBlacklistStats` / `clearBlacklist` / `checkTokenBlacklist` | `services/tokenBlacklist.ts:113,130,154,206` | 仅 `blacklistToken`+`isTokenBlacklisted` 活 | **保留**（黑名单管理面 = revoke/audit/clear 是合法安全 surface；`checkTokenBlacklist` 是 `isTokenBlacklisted` 的 throw 版封装，留作中间件备选）|
+| **`cacheKeys` 5/6 成员** | `lib/cache.ts:67`（`query`/`timeseriesData`/`userSession`/`rateLimit`/`timeseriesList`）| 仅 `cacheKeys.prediction` 有 4 caller（predictionCache×2 + inference×2），其余 5 个 0 caller | 待决策（已预留 cache namespace，但当前 0 用；删 5 成员风险低，可下一轮）|
 
-### 前端死代码（4 项）
+### 前端孤岛页（2 项，未变）
 
 | 符号/文件 | 位置 | 性质 |
 |---|---|---|
-| `WatchlistPanel.tsx` | `components/trading/` | 0 importer（新发现，连 `lib/watchlist.ts` 的 `useWatchlists` 也只喂它）|
-| `useMarketForecasts.ts` | `hooks/` | 仅 `useDashboardStats.ts:85` 一个**注释**引用，0 真实 import |
 | `app/apikeys/show/[id]/page.tsx` | 0 入站链接 | 孤岛页（直接 URL 可达）|
 | `app/apikeys/edit/[id]/page.tsx` | 0 入站链接 | 孤岛页 |
 
-### 删除策略（遵循 §五 code-simplification + AGENTS §十）
-- **leaf-level 死代码**（仅被自己的自测引用）→ 可删函数+其自测（删测试不算回退：测的是不存在的代码）。
+### 处置原则（遵循 §五 code-simplification + AGENTS §十.5）
+- **leaf-level 死代码**（仅被自己的自测引用，无管理面/API surface 意图）→ 可删函数+其自测（删测试不算回退：测的是不存在的代码）。
+- **API surface 配对**（subscribe/unsubscribe、blacklist add/remove/stats）→ 非孤立，属"管理面未来要用"的 surface，**不删**（AGENTS §十.5 外科手术原则——不顺手删非己所造、可能有产品意图的代码）。
 - **孤岛页**（apikeys show/edit）→ 产品决策（是否保留直接 URL 访问），先标记不删。
-- **TD-3 `validateApiKey`** → 保留加注释（产品可能需要 API key 认证，round-43 决策）。
+- **TD-3 `validateApiKey`** / **paywall `trackUsage`/`checkLimit`** → 保留加注释，删须产品决策（PRODUCT-SPEC §九 约束相关）。
 - 守护"测试数不得回退"硬约束：删死代码自测时，对应生产代码也已删，覆盖率分母同步缩小，不构成回退。
 
 ---
