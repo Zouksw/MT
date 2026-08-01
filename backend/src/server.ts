@@ -13,6 +13,7 @@ import { MS_PER_HOUR, MS_PER_MINUTE } from "@/lib/constants";
 import { evaluateAlertRules } from "@/services/alert-rules";
 import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
+import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import {
 	invalidatePollutedPredictions,
@@ -60,23 +61,11 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
 
 		for (const [source, result] of Object.entries(results)) {
 			try {
-				// Skipped (e.g. missing API key) is a distinct state from "ran but
-				// produced nothing" — record it as an error with the reason so the
-				// freshness board surfaces dormant sources instead of masking them.
-				let status: string;
-				let errorMessage: string | undefined;
-				if (result.skipped) {
-					status = "error";
-					errorMessage = result.skipReason ?? "skipped";
-				} else if (result.error) {
-					// Thrown source (caught in the run loop above) — hard failure.
-					status = "error";
-					errorMessage = result.error;
-				} else if (result.inserted === 0 && result.updated === 0) {
-					status = "warning";
-				} else {
-					status = "success";
-				}
+				// Shared 0-row honesty contract (helpers.classifyIngestionStatus):
+				// skipped/error → "error", 0-row → "warning", wrote rows → "success".
+				// Centralized so the scheduled path, manual single-source refresh,
+				// and refresh-all all record the same status for the same outcome.
+				const { status, errorMessage } = classifyIngestionStatus(result);
 				await prisma.ingestionLog.create({
 					data: {
 						source,

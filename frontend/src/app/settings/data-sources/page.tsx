@@ -59,6 +59,14 @@ interface FreshnessItem {
 	lastInserted: number;
 	lastUpdated: number;
 	totalRuns: number;
+	/**
+	 * True when the most-recent run wrote 0 rows (silent failure / dormant
+	 * source). Distinct from `stale` (recency): a source can run every cycle
+	 * yet never write. Surfaced (round-58) so the board distinguishes
+	 * "ran + wrote" from "ran + produced nothing" instead of reading both as
+	 * healthy via successRate.
+	 */
+	empty?: boolean;
 }
 
 interface IngestionLog {
@@ -106,6 +114,9 @@ interface FreshnessSummary {
 	healthy: number;
 	stale: number;
 	staleSources: string[];
+	/** Sources whose last run wrote 0 rows (round-58). */
+	emptyCount?: number;
+	emptySources?: string[];
 	/** Actual price-row writes + prediction verification debt (round-48). */
 	dataHealth: DataHealth | null;
 }
@@ -470,8 +481,20 @@ export default function DataSourcesPage() {
 												</div>
 											</div>
 											<div className="flex items-center gap-4 text-xs text-muted-foreground">
-												{fresh && (
-													<span className="hidden sm:inline">{fresh.successRate}% success</span>
+												{fresh && fresh.empty ? (
+													// empty: last run wrote 0 rows — show this instead of a
+													// misleading "N% success" (successRate counts runs that
+													// didn't throw, not runs that wrote data). Round-58.
+													<span
+														className="hidden sm:inline font-medium text-amber-600 dark:text-amber-400"
+														title="Most recent run wrote 0 rows (silent failure / dormant source)"
+													>
+														0 rows last run
+													</span>
+												) : (
+													fresh && (
+														<span className="hidden sm:inline">{fresh.successRate}% success</span>
+													)
 												)}
 												<span className="w-20 text-right">{timeAgo(source.lastRun)}</span>
 												{source.lastResult && (

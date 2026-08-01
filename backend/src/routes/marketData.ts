@@ -7,6 +7,7 @@ import { type AuthenticatedRequest, authenticate, authorize } from "@/middleware
 import { cacheRoute } from "@/middleware/cacheDecorator";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { scraperManager } from "@/services/dataIngestion";
+import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import { detectFieldMapping, type FieldMapping } from "@/services/dataIngestion/normalizer";
 import { importRows, parseCSV } from "@/services/dataIngestion/sources/manualImport";
 import {
@@ -528,10 +529,15 @@ router.post(
 			const result = await scraperManager.runSource(sourceId);
 			const elapsed = Date.now() - startTime;
 
+			// Shared 0-row honesty contract (helpers.classifyIngestionStatus):
+			// a manual refresh that returns 0 rows is logged as "warning", not
+			// "success" — matches the scheduled path so successRate reflects real
+			// writes, not "the scraper didn't throw".
+			const { status } = classifyIngestionStatus(result);
 			await prisma.ingestionLog.create({
 				data: {
 					source: sourceId,
-					status: "success",
+					status,
 					inserted: result.inserted,
 					updated: result.updated,
 					durationMs: elapsed,
@@ -576,10 +582,14 @@ router.post(
 				});
 			} else {
 				const r = result as { inserted: number; updated: number };
+				// Shared 0-row honesty contract (helpers.classifyIngestionStatus):
+				// 0-row refresh-all run logs as "warning", matching the scheduled
+				// path and the single-source refresh.
+				const { status } = classifyIngestionStatus(r);
 				await prisma.ingestionLog.create({
 					data: {
 						source,
-						status: "success",
+						status,
 						inserted: r.inserted,
 						updated: r.updated,
 						durationMs: elapsed,

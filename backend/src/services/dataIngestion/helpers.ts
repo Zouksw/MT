@@ -6,6 +6,37 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
+import type { ScraperResult } from "./scraperManager";
+
+/**
+ * Classify a scraper run into an IngestionLog `status`.
+ *
+ * This is the single source of truth for the 0-row honesty contract: a run
+ * that returned without throwing but wrote no rows (`inserted === 0 &&
+ * updated === 0`) is `warning`, not `success`. Without this, scrapers that are
+ * reachable enough to return but produce nothing (Cloudflare block, page
+ * reformat, upstream empty, missing key surfaced as skipped) read as "healthy"
+ * on the freshness board and inflate `successRate`. The same classifier is
+ * shared by the scheduled path (server.ts), the manual single-source refresh,
+ * and refresh-all so all writers agree on the contract.
+ *
+ * @returns status + optional errorMessage (for skipped/error cases)
+ */
+export function classifyIngestionStatus(
+	result: Pick<ScraperResult, "inserted" | "updated" | "skipped" | "skipReason" | "error">,
+): { status: string; errorMessage?: string } {
+	if (result.skipped) {
+		return { status: "error", errorMessage: result.skipReason ?? "skipped" };
+	}
+	if (result.error) {
+		// Thrown source (caught by the caller) — hard failure.
+		return { status: "error", errorMessage: result.error };
+	}
+	if (result.inserted === 0 && result.updated === 0) {
+		return { status: "warning" };
+	}
+	return { status: "success" };
+}
 
 /**
  * Lazily import the commodity-prediction cache invalidator.

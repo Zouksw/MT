@@ -70,4 +70,35 @@ describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 		expect(dh.freshSourceCount).toBeGreaterThanOrEqual(0);
 		expect(dh.freshSourceCount).toBeLessThanOrEqual(dh.registeredSourceCount + 50);
 	});
+
+	// REGRESSION (round-58): per-source `empty` flag + summary.emptySources.
+	// A source whose last run wrote 0 rows must be flagged empty:true so the
+	// board can distinguish "ran + wrote" from "ran + produced nothing"
+	// (the silent-failure pattern). Pre-round-58 the freshness table showed
+	// successRate/stale with no empty signal, masking never-writing scrapers.
+	it("each freshness row carries an `empty` flag and summary aggregates emptySources", async () => {
+		if (!ctx.available) return;
+		const result = await getSourceFreshness();
+
+		expect(result.freshness.length).toBeGreaterThan(0);
+		for (const f of result.freshness) {
+			expect(f).toHaveProperty("empty");
+			expect(typeof f.empty).toBe("boolean");
+			// empty:true implies the last run wrote 0 rows.
+			if (f.empty) {
+				expect(f.lastInserted).toBe(0);
+				expect(f.lastUpdated).toBe(0);
+			}
+		}
+		// summary.emptySources mirrors the per-source flag set.
+		expect(result.summary).toHaveProperty("emptySources");
+		expect(result.summary).toHaveProperty("emptyCount");
+		expect(Array.isArray(result.summary.emptySources)).toBe(true);
+		expect(result.summary.emptyCount).toBe(result.summary.emptySources.length);
+		// Every name in emptySources must correspond to an empty:true row.
+		for (const name of result.summary.emptySources) {
+			const row = result.freshness.find((f) => f.source === name);
+			expect(row?.empty).toBe(true);
+		}
+	});
 });

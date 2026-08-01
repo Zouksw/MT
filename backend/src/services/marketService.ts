@@ -288,10 +288,20 @@ export async function getSourceFreshness() {
 		lastInserted: stat.lastInserted,
 		lastUpdated: stat.lastUpdated,
 		totalRuns: stat.total,
+		// "empty" = the most-recent run wrote 0 rows. Distinct from `stale`
+		// (which is recency-only): a source can run every cycle (stale:false)
+		// yet never write a price (empty:true) — the silent-failure pattern
+		// that inflated successRate before round-58 unified the status
+		// contract. Derived from already-fetched lastInserted/lastUpdated, so
+		// no extra query.
+		empty: stat.lastInserted === 0 && stat.lastUpdated === 0,
 	}));
 
 	const staleSources = freshness.filter((f) => f.stale);
 	const healthySources = freshness.filter((f) => !f.stale);
+	// Sources whose last run wrote 0 rows — the per-source analog of
+	// dataHealth.freshSourceCount's "wrote rows vs ran" gap.
+	const emptySources = freshness.filter((f) => f.empty);
 
 	// Data-health snapshot (round-48): the freshness summary above tracks
 	// scraper RUNS (ingestion logs), which can show "healthy" while the actual
@@ -324,6 +334,12 @@ export async function getSourceFreshness() {
 			healthy: healthySources.length,
 			stale: staleSources.length,
 			staleSources: staleSources.map((s) => s.source),
+			// Sources whose last run wrote 0 rows. Symmetric to staleSources;
+			// surfaces the "ran but produced nothing" sources so the board can
+			// label them per-row instead of relying only on the summary-level
+			// dataHealth.freshSourceCount gap.
+			emptyCount: emptySources.length,
+			emptySources: emptySources.map((s) => s.source),
 			// Actual data writes + prediction verification debt (round-48).
 			// Differs from healthy/stale above: those count scraper runs, this
 			// counts real price rows written + whether predictions can verify.
