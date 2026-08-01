@@ -1,12 +1,20 @@
 /**
- * Security Tests: Injection Prevention & Authentication
+ * Security Tests: Authentication & Authorization (application layer)
  *
- * Tests SQL injection prevention, XSS protection, authentication bypass
- * prevention, and privilege escalation blocking.
+ * This file exercises the REAL datasets route stack with a mocked auth
+ * middleware + prisma, covering two application-layer security concerns:
+ *   - Authentication Bypass: unauthenticated/malformed/wrong-scheme requests
+ *     are rejected at the route boundary (401).
+ *   - Privilege Escalation: a VIEWER cannot delete/update/import datasets they
+ *     do not own (403) — the ownership gate enforced by datasetsRouter.
  *
- * SQL injection and XSS tests verify that input reaches Prisma's parameterized
- * queries safely (no raw SQL). Prisma inherently prevents SQL injection by
- * using parameterized queries.
+ * SQL injection and XSS are NOT tested here. The backend has no application-
+ * layer sanitizer/validator module (it relies entirely on Prisma's
+ * parameterized queries for SQL safety, and stores XSS payloads as plain data
+ * for the frontend to render safely). Testing Prisma's parameterization would
+ * test a third-party guarantee, not this codebase — the previous SQLi/XSS
+ * blocks here asserted objects the tests constructed themselves (tautological)
+ * and were removed.
  */
 
 import express from "express";
@@ -44,11 +52,7 @@ vi.mock("@/middleware/cacheDecorator", () => ({
 }));
 
 vi.mock("@/middleware/auth", () => ({
-	authenticate: (
-		req: Record<string, unknown>,
-		_res: Record<string, unknown>,
-		next: () => void,
-	) => {
+	authenticate: (req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
 		if (req.headers.authorization === "Bearer valid-admin-token") {
 			req.user = { id: "admin-user-id", role: "admin" };
 			req.userId = "admin-user-id";
@@ -58,9 +62,7 @@ vi.mock("@/middleware/auth", () => ({
 			req.userId = "viewer-user-id";
 			next();
 		} else {
-			_res
-				.status(401)
-				.json({ success: false, error: { message: "Unauthorized" } });
+			_res.status(401).json({ success: false, error: { message: "Unauthorized" } });
 		}
 	},
 }));
@@ -78,68 +80,6 @@ vi.mock("@/services/tokenBlacklist", () => ({
 
 import { prisma } from "@/lib";
 import { datasetsRouter } from "@/routes/datasets";
-
-/**
- * SQL Injection Prevention Tests
- *
- * These tests verify that malicious SQL payloads in search parameters
- * are passed to Prisma as data parameters (not raw SQL). Prisma uses
- * parameterized queries, so these payloads should never execute as SQL.
- */
-describe("Security: SQL Injection Prevention", () => {
-	const sqlInjectionPayloads = [
-		"'; DROP TABLE users; --",
-		"' OR '1'='1",
-		"' UNION SELECT * FROM users --",
-		"admin'--",
-		"' OR 1=1 --",
-	];
-
-	sqlInjectionPayloads.forEach((payload) => {
-		test(`Prisma receives injection payload as data parameter: "${payload.slice(0, 20)}..."`, () => {
-			// Verify that the payload is treated as a plain string
-			// Prisma parameterizes all queries — this is inherently safe
-			const searchParam = payload;
-			const where = {
-				OR: [
-					{ name: { contains: searchParam, mode: "insensitive" } },
-					{ description: { contains: searchParam, mode: "insensitive" } },
-				],
-			};
-
-			// This verifies the parameter is passed as data, not interpolated into SQL
-			expect(where.OR[0].name.contains).toBe(payload);
-			expect(typeof where.OR[0].name.contains).toBe("string");
-		});
-	});
-});
-
-/**
- * XSS Prevention Tests
- *
- * Verify that XSS payloads are stored as-is (as data) and not executed.
- * The API stores data; the frontend is responsible for rendering it safely.
- */
-describe("Security: XSS Prevention", () => {
-	const xssPayloads = [
-		'<script>alert("XSS")</script>',
-		"<img src=x onerror=alert(1)>",
-		'"><script>alert(document.cookie)</script>',
-		"javascript:alert('XSS')",
-		"<svg/onload=alert(1)>",
-	];
-
-	xssPayloads.forEach((payload) => {
-		test(`XSS payload is stored as data, not executed: "${payload.slice(0, 30)}"`, () => {
-			// The payload should be stored as a plain string
-			const storedName = payload;
-			expect(typeof storedName).toBe("string");
-			// JSON serialization does not execute scripts
-			const serialized = JSON.stringify({ name: storedName });
-			expect(serialized).toContain(payload.replace(/"/g, '\\"'));
-		});
-	});
-});
 
 /**
  * Authentication Bypass Prevention Tests
@@ -169,16 +109,12 @@ describe("Security: Authentication Bypass", () => {
 	});
 
 	test("should reject request with empty token", async () => {
-		const response = await request(app)
-			.get("/datasets")
-			.set("Authorization", "Bearer ");
+		const response = await request(app).get("/datasets").set("Authorization", "Bearer ");
 		expect(response.status).toBe(401);
 	});
 
 	test("should reject request with wrong auth scheme", async () => {
-		const response = await request(app)
-			.get("/datasets")
-			.set("Authorization", "Basic dXNlcjpwYXNz");
+		const response = await request(app).get("/datasets").set("Authorization", "Basic dXNlcjpwYXNz");
 		expect(response.status).toBe(401);
 	});
 });
