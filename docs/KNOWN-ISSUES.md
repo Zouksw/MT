@@ -110,6 +110,14 @@
 - **live 实测**：恢复后 531 条全部回 `completed`（brl_usd 624 / corn_cme 432 / natural_gas_cme 537 post-fix 全 completed，0 stale）。重启后再跑 restore 返回 0（幂等）。这些预测现 re-enter 验证队列，horizon(10d) 到期后会产出 brl_usd 等的真实 chronos MAPE。
 - **顺带根治 flaky 测试**：`invalidatePollutedPredictions — returns 0` 之前用 far-FUTURE cutoff（2099），在 real DB 上 `lt:2099` 匹配全部行 → 期望 0 实得 1710 → flaky。改为 epoch(1970) cutoff（`lt:1970` 真正匹配 0 行），是真正的 no-op 路径。
 
+**round-59 成熟度核查（2026-08-01 live 实测，非 bug 确认）**：用户要"验证 brl_usd chronos MAPE 成熟产出"。实查后**确认是时间阻塞，非代码 bug**——不要按 bug 处理：
+- **chronos 预测健康生成**：3 conflict commodity × 3 chronos 变体自 2026-07-27 12:29 起持续产（brl_usd 239 / corn_cme 166 / natural_gas_cme 209 completed，最新 `predicted_at` 已到 `2026-08-01 13:35`）。
+- **0 条 verified 是因为还没到期**：`verifyDuePredictions` 的成熟判定 = `predictedAt + horizon(10d) ≤ now`。最早 chronos 预测（07-27 12:29）+ 10d = **08-06 12:29** 才首次到期。今天 08-01 < 08-06 → **chronos 预测尚未进 due 批次**。
+- **日志 "Verified 0 of 5000 (5000 no actuals)" 不是 verify 坏了**：那 5000 due 行是**旧 stat 模型 backlog**（5 个 frozen commodity 的 4 月数据：wheat_cn/crude_oil_wti/crude_oil_brent/copper_lme/gold_lbma，各自 ~4000 条，latest price 全停在 `2026-04-29`）。它们永不可验证（3 个月无 actuals），但它们是最旧的 due 行，ASC 排序 + take 5000 每 run 都先抓它们。verify loop 本身健康（6h cadence 正常 fire：13:35/19:35/21:41/21:42）。
+- **DB 佐证 verify 历史正常**：6 stat 模型各 verified 203 条（07-07 ~ 07-27 11:54，round-41 切换前）；chronos_tiny 仅 1 verified（07-31，边缘到期）；chronos_mini/base 0。切换后 stat 停止后台生成（by design），chronos 待 08-06 后才开始批量到期。
+- **预期**：08-06 后 chronos 首批到期预测进 due 批次，但 conflict commodity（brl_usd/corn_cme/natural_gas_cme）即便到期也需权威源（fred/usda_ams）有窗口内 actuals：fred 最新 07-24/07-27（5-8d lag，FRED 日汇率延迟），usda_ams 最新 04-29（月度数据，3mo lag）。**corn_cme 大概率仍 0 verified**（usda_ams 3 个月无新数据）；brl_usd/natural_gas_cme 视 fred 是否补数。
+- **动作**：不代码改动。08-06 后复查 `[MAPE] Verified N` 日志 + `prediction_logs WHERE model_id LIKE 'chronos%' AND verified_at IS NOT NULL`。若届时仍 0，再查 actuals 源 lag（运营/数据源问题，非 verify 代码）。
+
 ---
 
 ## 三、潜伏 bug（重构副产物，已修，留作记录）
