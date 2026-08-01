@@ -14,25 +14,22 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, getAdminToken, getPrisma, isDbAvailable } from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `usr-${Date.now()}`;
 
 let app: Express;
 const prisma = getPrisma();
-let dbAvailable = false;
 let token: string;
 
 describe("Watchlist Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
-		dbAvailable = await isDbAvailable();
-		if (!dbAvailable) return;
+		await requireDb("user");
 		token = await getAdminToken(app);
 	});
 
 	afterAll(async () => {
-		if (!dbAvailable) return;
 		try {
 			await prisma.watchlist.deleteMany({
 				where: { name: { startsWith: TEST_PREFIX } },
@@ -42,13 +39,8 @@ describe("Watchlist Routes (Integration)", () => {
 		}
 	});
 
-	beforeEach(() => {
-		if (!dbAvailable) return;
-	});
-
 	describe("GET /api/watchlists", () => {
 		it("should return watchlists (may be empty for admin)", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/watchlists").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
@@ -59,7 +51,6 @@ describe("Watchlist Routes (Integration)", () => {
 
 	describe("POST /api/watchlists", () => {
 		it("should create a watchlist", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`)
@@ -71,7 +62,6 @@ describe("Watchlist Routes (Integration)", () => {
 		});
 
 		it("should reject duplicate watchlist name", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/watchlists")
 				.set("Authorization", `Bearer ${token}`)
@@ -86,7 +76,6 @@ describe("Watchlist Routes (Integration)", () => {
 		let commodityId: string;
 
 		it("should add commodity to watchlist", async () => {
-			if (!dbAvailable) return;
 			// Get a real commodity
 			const [row] = await prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM commodities WHERE slug = 'wheat_cme' LIMIT 1
@@ -113,7 +102,6 @@ describe("Watchlist Routes (Integration)", () => {
 		});
 
 		it("should list watchlist with items and latest prices", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/watchlists").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);

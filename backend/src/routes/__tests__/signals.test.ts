@@ -7,10 +7,9 @@
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, getAdminToken, isDbAvailable } from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
-let dbAvailable = false;
 let token: string;
 
 function authHeaders(t?: string) {
@@ -20,18 +19,12 @@ function authHeaders(t?: string) {
 describe("Signals Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
-		dbAvailable = await isDbAvailable();
-		if (!dbAvailable) return;
+		await requireDb("signals");
 		token = await getAdminToken(app);
-	});
-
-	beforeEach(() => {
-		if (!dbAvailable) return;
 	});
 
 	describe("GET /api/signals/models", () => {
 		it("should return model list", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/signals/models").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
@@ -41,7 +34,6 @@ describe("Signals Routes (Integration)", () => {
 		});
 
 		it("should reject unauthenticated request", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/signals/models");
 			expect(res.status).toBe(401);
 		});
@@ -49,7 +41,6 @@ describe("Signals Routes (Integration)", () => {
 
 	describe("GET /api/signals/models/accuracy", () => {
 		it("should return accuracy data", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/signals/models/accuracy").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
@@ -62,7 +53,6 @@ describe("Signals Routes (Integration)", () => {
 		// These fields are forwarded by getAllModelAccuracy; the route must not
 		// strip them. chronos_* rows are isPrimary=true.
 		it("forwards lastVerifiedAt + isPrimary fields per model row", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/signals/models/accuracy").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
@@ -82,7 +72,6 @@ describe("Signals Routes (Integration)", () => {
 
 	describe("GET /api/signals/models/:modelId/backtest", () => {
 		it("should return backtest for a valid model", async () => {
-			if (!dbAvailable) return;
 			const modelsRes = await request(app).get("/api/signals/models").set(authHeaders(token));
 			const modelId = modelsRes.body.data.models[0];
 
@@ -99,7 +88,6 @@ describe("Signals Routes (Integration)", () => {
 
 	describe("GET /api/signals/commodities", () => {
 		it("should return available commodities", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/signals/commodities").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
@@ -110,7 +98,6 @@ describe("Signals Routes (Integration)", () => {
 
 	describe("GET /api/signals/correlation", () => {
 		it("should compute correlation between two commodities", async () => {
-			if (!dbAvailable) return;
 			const commRes = await request(app).get("/api/signals/commodities").set(authHeaders(token));
 			const commodities = commRes.body.data;
 			if (commodities.length < 2) return;
@@ -124,7 +111,6 @@ describe("Signals Routes (Integration)", () => {
 		});
 
 		it("should reject missing params", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/signals/correlation").set(authHeaders(token));
 
 			expect(res.status).toBe(400);
@@ -139,7 +125,6 @@ describe("Signals Routes (Integration)", () => {
 	// single file owns the whole /api/signals surface (no split coverage).
 	describe("GET /api/signals/:commodity (per-commodity signal generation)", () => {
 		it("should generate a real signal for a commodity", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/signals/wheat_cme?timeseriesPath=root.trading.wheat_cme.price&horizon=10")
 				.set(authHeaders(token));
@@ -156,7 +141,6 @@ describe("Signals Routes (Integration)", () => {
 
 	describe("GET /api/signals/models/:modelId/accuracy (per-model)", () => {
 		it("should return accuracy for a specific model", async () => {
-			if (!dbAvailable) return;
 			const modelsRes = await request(app).get("/api/signals/models").set(authHeaders(token));
 			const modelId = modelsRes.body.data.models[0];
 
@@ -171,7 +155,6 @@ describe("Signals Routes (Integration)", () => {
 
 	describe("GET /api/signals/models/:modelId/predictions", () => {
 		it("should return predictions with pagination", async () => {
-			if (!dbAvailable) return;
 			const modelsRes = await request(app).get("/api/signals/models").set(authHeaders(token));
 			const modelId = modelsRes.body.data.models[0];
 

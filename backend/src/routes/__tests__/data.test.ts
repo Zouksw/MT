@@ -8,30 +8,22 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	getPrisma,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `ds-${Date.now()}`;
 
 let app: Express;
 const prisma = getPrisma();
-let dbAvailable = false;
 let token: string;
 
 describe("Dataset Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
-		dbAvailable = await isDbAvailable();
-		if (!dbAvailable) return;
+		await requireDb("data");
 		token = await getAdminToken(app);
 	});
 
 	afterAll(async () => {
-		if (!dbAvailable) return;
 		try {
 			await prisma.dataset.deleteMany({
 				where: { slug: { startsWith: TEST_PREFIX } },
@@ -41,16 +33,9 @@ describe("Dataset Routes (Integration)", () => {
 		}
 	});
 
-	beforeEach(() => {
-		if (!dbAvailable) return;
-	});
-
 	describe("GET /api/datasets", () => {
 		it("should return datasets list with pagination", async () => {
-			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/datasets")
-				.set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/datasets").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -60,7 +45,6 @@ describe("Dataset Routes (Integration)", () => {
 		});
 
 		it("should paginate correctly", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/datasets?page=1&limit=2")
 				.set("Authorization", `Bearer ${token}`);
@@ -73,7 +57,6 @@ describe("Dataset Routes (Integration)", () => {
 
 	describe("POST /api/datasets", () => {
 		it("should create a dataset", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)
@@ -91,7 +74,6 @@ describe("Dataset Routes (Integration)", () => {
 		});
 
 		it("should reject duplicate slug", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)
@@ -105,7 +87,6 @@ describe("Dataset Routes (Integration)", () => {
 		});
 
 		it("should reject missing required fields", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)
@@ -117,7 +98,6 @@ describe("Dataset Routes (Integration)", () => {
 
 	describe("GET /api/datasets/:id", () => {
 		it("should return 404 for missing dataset", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/datasets/nonexistent-id")
 				.set("Authorization", `Bearer ${token}`);
@@ -126,7 +106,6 @@ describe("Dataset Routes (Integration)", () => {
 		});
 
 		it("should return dataset by ID", async () => {
-			if (!dbAvailable) return;
 			// First create one
 			const createRes = await request(app)
 				.post("/api/datasets")
@@ -152,7 +131,6 @@ describe("Dataset Routes (Integration)", () => {
 
 	describe("PATCH /api/datasets/:id", () => {
 		it("should update dataset", async () => {
-			if (!dbAvailable) return;
 			const createRes = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)
@@ -177,7 +155,6 @@ describe("Dataset Routes (Integration)", () => {
 
 	describe("DELETE /api/datasets/:id", () => {
 		it("should delete dataset and return 404 on re-fetch", async () => {
-			if (!dbAvailable) return;
 			const createRes = await request(app)
 				.post("/api/datasets")
 				.set("Authorization", `Bearer ${token}`)

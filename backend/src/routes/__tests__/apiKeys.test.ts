@@ -5,31 +5,23 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	getPrisma,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `ak-${Date.now()}`;
 
 let app: Express;
 const prisma = getPrisma();
-let dbAvailable = false;
 let token: string;
 let createdKeyId: string;
 
 describe("API Keys Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
-		dbAvailable = await isDbAvailable();
-		if (!dbAvailable) return;
+		await requireDb("apiKeys");
 		token = await getAdminToken(app);
 	});
 
 	afterAll(async () => {
-		if (!dbAvailable) return;
 		try {
 			await prisma.apiKey.deleteMany({
 				where: { name: { startsWith: TEST_PREFIX } },
@@ -39,13 +31,8 @@ describe("API Keys Routes (Integration)", () => {
 		}
 	});
 
-	beforeEach(() => {
-		if (!dbAvailable) return;
-	});
-
 	describe("POST /api/api-keys", () => {
 		it("should create an API key", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/api-keys")
 				.set({ Authorization: `Bearer ${token}` })
@@ -60,7 +47,6 @@ describe("API Keys Routes (Integration)", () => {
 		});
 
 		it("should reject without name", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/api-keys")
 				.set({ Authorization: `Bearer ${token}` })
@@ -72,7 +58,6 @@ describe("API Keys Routes (Integration)", () => {
 
 	describe("GET /api/api-keys", () => {
 		it("should list API keys", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/api-keys")
 				.set({ Authorization: `Bearer ${token}` });
@@ -85,7 +70,6 @@ describe("API Keys Routes (Integration)", () => {
 
 	describe("DELETE /api/api-keys/:id/revoke", () => {
 		it("should revoke the created key", async () => {
-			if (!dbAvailable) return;
 			if (!createdKeyId) return;
 			const res = await request(app)
 				.delete(`/api/api-keys/${createdKeyId}/revoke`)
@@ -98,7 +82,6 @@ describe("API Keys Routes (Integration)", () => {
 
 	describe("DELETE /api/api-keys/:id", () => {
 		it("should delete the created key", async () => {
-			if (!dbAvailable) return;
 			if (!createdKeyId) return;
 			const res = await request(app)
 				.delete(`/api/api-keys/${createdKeyId}`)
@@ -110,7 +93,6 @@ describe("API Keys Routes (Integration)", () => {
 	});
 
 	it("should reject unauthenticated request", async () => {
-		if (!dbAvailable) return;
 		const res = await request(app).get("/api/api-keys");
 		expect(res.status).toBe(401);
 	});

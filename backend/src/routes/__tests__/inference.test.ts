@@ -13,10 +13,9 @@
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, getAdminToken, isDbAvailable } from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
-let dbAvailable = false;
 let token: string;
 
 // crude_oil_cme is a seeded commodity with >10k daily price points, so a
@@ -26,15 +25,12 @@ const TEST_SLUG = "crude_oil_cme";
 describe("Inference Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
-		dbAvailable = await isDbAvailable();
-		if (!dbAvailable) return;
+		await requireDb("inference");
 		token = await getAdminToken(app);
 	});
 
 	describe("POST /api/inference/predict — slug/UUID resolution", () => {
 		it("accepts a commodity SLUG and returns a prediction (regression)", async () => {
-			if (!dbAvailable) return;
-
 			const res = await request(app)
 				.post("/api/inference/predict")
 				.set("Authorization", `Bearer ${token}`)
@@ -51,8 +47,6 @@ describe("Inference Routes (Integration)", () => {
 		});
 
 		it("still accepts a raw UUID (no resolution needed)", async () => {
-			if (!dbAvailable) return;
-
 			// Look up the UUID for the slug so the test does not hardcode an id
 			// that may drift across reseeds.
 			const slugRes = await request(app)
@@ -78,8 +72,6 @@ describe("Inference Routes (Integration)", () => {
 		});
 
 		it("returns 400 for an unknown commodity slug", async () => {
-			if (!dbAvailable) return;
-
 			const res = await request(app)
 				.post("/api/inference/predict")
 				.set("Authorization", `Bearer ${token}`)
@@ -93,8 +85,6 @@ describe("Inference Routes (Integration)", () => {
 		});
 
 		it("accepts a slug in /predict/visualize and returns historical + prediction", async () => {
-			if (!dbAvailable) return;
-
 			const res = await request(app)
 				.post("/api/inference/predict/visualize")
 				.set("Authorization", `Bearer ${token}`)
@@ -113,8 +103,6 @@ describe("Inference Routes (Integration)", () => {
 		});
 
 		it("accepts a slug in /anomalies and returns anomaly statistics", async () => {
-			if (!dbAvailable) return;
-
 			const res = await request(app)
 				.post("/api/inference/anomalies")
 				.set("Authorization", `Bearer ${token}`)
@@ -135,8 +123,6 @@ describe("Inference Routes (Integration)", () => {
 	// magnitude appears in the response, so removing the filter fails loudly.
 	describe("authoritative-source filtering on conflict commodities (round-41)", () => {
 		it("/predict/visualize returns ONLY fred-magnitude history for brl_usd (no 0.2 leak)", async () => {
-			if (!dbAvailable) return;
-
 			const res = await request(app)
 				.post("/api/inference/predict/visualize")
 				.set("Authorization", `Bearer ${token}`)
@@ -159,8 +145,6 @@ describe("Inference Routes (Integration)", () => {
 		});
 
 		it("/anomalies does not flag spurious anomalies from mixed-source brl_usd values", async () => {
-			if (!dbAvailable) return;
-
 			const res = await request(app)
 				.post("/api/inference/anomalies")
 				.set("Authorization", `Bearer ${token}`)

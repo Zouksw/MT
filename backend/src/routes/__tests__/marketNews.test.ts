@@ -13,10 +13,9 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, getAdminToken, getPrisma, isDbAvailable } from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
-let dbAvailable = false;
 let token: string;
 
 // A throwaway article created during the run; cleaned up in afterAll so the
@@ -27,8 +26,7 @@ const CREATED_TITLE = `[test] Brazil beef outlook — integration test fixture`;
 describe("Market News Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
-		dbAvailable = await isDbAvailable();
-		if (!dbAvailable) return;
+		await requireDb("marketNews");
 		// Idempotent setup: a previous run that crashed mid-test could leave an
 		// orphan article with CREATED_TITLE (afterAll only cleans via createdId,
 		// which never gets set when the create assertion fails). Delete any such
@@ -51,7 +49,6 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("GET /api/news — list", () => {
 		it("returns paginated news with the standard envelope", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/news?page=1&pageSize=10")
 				.set("Authorization", `Bearer ${token}`);
@@ -66,7 +63,6 @@ describe("Market News Routes (Integration)", () => {
 		});
 
 		it("honors the pageSize query param (frontend useList convention)", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/news?pageSize=2")
 				.set("Authorization", `Bearer ${token}`);
@@ -77,7 +73,6 @@ describe("Market News Routes (Integration)", () => {
 		});
 
 		it("filters by category", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/news?category=TRADE_POLICY")
 				.set("Authorization", `Bearer ${token}`);
@@ -90,7 +85,6 @@ describe("Market News Routes (Integration)", () => {
 		});
 
 		it("rejects an unknown category with 400", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/news?category=NOT_A_CATEGORY")
 				.set("Authorization", `Bearer ${token}`);
@@ -102,7 +96,6 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("GET /api/news/stats", () => {
 		it("returns total/published/drafts/thisWeek counts", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/news/stats").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
@@ -115,7 +108,6 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("POST /api/news — create", () => {
 		it("creates an article and returns it with 201", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/news")
 				.set("Authorization", `Bearer ${token}`)
@@ -137,7 +129,7 @@ describe("Market News Routes (Integration)", () => {
 		});
 
 		it("rejects a duplicate title with 400", async () => {
-			if (!dbAvailable || !createdId) return;
+			if (!createdId) return;
 			const res = await request(app)
 				.post("/api/news")
 				.set("Authorization", `Bearer ${token}`)
@@ -154,7 +146,6 @@ describe("Market News Routes (Integration)", () => {
 		});
 
 		it("rejects an invalid payload with 400", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.post("/api/news")
 				.set("Authorization", `Bearer ${token}`)
@@ -166,7 +157,7 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("GET /api/news/:id — detail", () => {
 		it("returns the full article and bumps the view count", async () => {
-			if (!dbAvailable || !createdId) return;
+			if (!createdId) return;
 			// Snapshot views, fetch, then assert it grew.
 			const before = await request(app)
 				.get(`/api/news/${createdId}`)
@@ -177,7 +168,6 @@ describe("Market News Routes (Integration)", () => {
 		});
 
 		it("returns 404 for an unknown id", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app)
 				.get("/api/news/00000000-0000-0000-0000-000000000000")
 				.set("Authorization", `Bearer ${token}`);
@@ -188,7 +178,7 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("PATCH /api/news/:id — update", () => {
 		it("updates fields and returns the patched article", async () => {
-			if (!dbAvailable || !createdId) return;
+			if (!createdId) return;
 			const res = await request(app)
 				.patch(`/api/news/${createdId}`)
 				.set("Authorization", `Bearer ${token}`)
@@ -202,7 +192,7 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("DELETE /api/news/:id — delete", () => {
 		it("deletes the article and confirms it is gone", async () => {
-			if (!dbAvailable || !createdId) return;
+			if (!createdId) return;
 			const del = await request(app)
 				.delete(`/api/news/${createdId}`)
 				.set("Authorization", `Bearer ${token}`);
@@ -221,7 +211,6 @@ describe("Market News Routes (Integration)", () => {
 
 	describe("permission model", () => {
 		it("rejects unauthenticated requests", async () => {
-			if (!dbAvailable) return;
 			const res = await request(app).get("/api/news");
 			expect(res.status).toBe(401);
 		});
