@@ -104,12 +104,48 @@ describe("MAPE Tracking (real DB)", () => {
 			expect(accuracy).toHaveProperty("predictionCount");
 			expect(accuracy).toHaveProperty("verifiedCount");
 		});
+
+		// REGRESSION: lastVerifiedAt is the freshness signal the accuracy
+		// comparison page needs to distinguish a frozen historical MAPE from an
+		// actively-verified model. It must be present (null only when there are
+		// zero verified rows) and, when verified rows exist, be an ISO timestamp.
+		it("exposes lastVerifiedAt as a freshness signal (ISO string when verified rows exist)", async () => {
+			const accuracy = await getModelAccuracy("test-model-mape");
+			expect(accuracy).toHaveProperty("lastVerifiedAt");
+			// test-model-mape has seeded verified rows on the real DB, so this
+			// must be a parseable ISO timestamp, not null.
+			expect(accuracy.lastVerifiedAt).not.toBeNull();
+			expect(() => new Date(accuracy.lastVerifiedAt as string).getTime()).not.toThrow();
+		});
 	});
 
 	describe("getAllModelAccuracy", () => {
 		it("should return array of model accuracies", async () => {
 			const all = await getAllModelAccuracy();
 			expect(Array.isArray(all)).toBe(true);
+		});
+
+		// REGRESSION: getAllModelAccuracy must forward last7dMape/last30dMape/
+		// lastVerifiedAt (previously dropped at this boundary) and tag each row
+		// with isPrimary so the comparison page can split the chronos ensemble
+		// (primary consensus) from statistical baselines. chronos_* → true,
+		// everything else → false.
+		it("forwards freshness fields + isPrimary role tag per model", async () => {
+			const all = await getAllModelAccuracy();
+			expect(all.length).toBeGreaterThan(0);
+			for (const row of all) {
+				expect(row).toHaveProperty("last7dMape");
+				expect(row).toHaveProperty("last30dMape");
+				expect(row).toHaveProperty("lastVerifiedAt");
+				expect(row).toHaveProperty("isPrimary");
+				expect(typeof row.isPrimary).toBe("boolean");
+				// chronos ensemble is the primary consensus; stats are baselines.
+				expect(row.isPrimary).toBe(row.modelId.startsWith("chronos_"));
+			}
+			// The primary chronos models must be present and tagged true.
+			const chronos = all.filter((r) => r.modelId.startsWith("chronos_"));
+			expect(chronos.length).toBeGreaterThan(0);
+			expect(chronos.every((r) => r.isPrimary)).toBe(true);
 		});
 	});
 

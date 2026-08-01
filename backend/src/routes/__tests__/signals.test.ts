@@ -7,11 +7,7 @@
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, isDbAvailable } from "@/test/helpers/testApp";
 
 let app: Express;
 let dbAvailable = false;
@@ -36,9 +32,7 @@ describe("Signals Routes (Integration)", () => {
 	describe("GET /api/signals/models", () => {
 		it("should return model list", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/signals/models")
-				.set(authHeaders(token));
+			const res = await request(app).get("/api/signals/models").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -56,22 +50,40 @@ describe("Signals Routes (Integration)", () => {
 	describe("GET /api/signals/models/accuracy", () => {
 		it("should return accuracy data", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/signals/models/accuracy")
-				.set(authHeaders(token));
+			const res = await request(app).get("/api/signals/models/accuracy").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
 			expect(res.body.data).toBeDefined();
+		});
+
+		// REGRESSION: the comparison page needs freshness + role metadata to
+		// present MAPE honestly (sample-size gating, primary/baseline split).
+		// These fields are forwarded by getAllModelAccuracy; the route must not
+		// strip them. chronos_* rows are isPrimary=true.
+		it("forwards lastVerifiedAt + isPrimary fields per model row", async () => {
+			if (!dbAvailable) return;
+			const res = await request(app).get("/api/signals/models/accuracy").set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			const rows = res.body.data.accuracy ?? res.body.data;
+			expect(Array.isArray(rows)).toBe(true);
+			expect(rows.length).toBeGreaterThan(0);
+			for (const row of rows) {
+				expect(row).toHaveProperty("lastVerifiedAt");
+				expect(row).toHaveProperty("isPrimary");
+				expect(typeof row.isPrimary).toBe("boolean");
+			}
+			const chronos = rows.filter((r: { modelId: string }) => r.modelId.startsWith("chronos_"));
+			expect(chronos.length).toBeGreaterThan(0);
+			expect(chronos.every((r: { isPrimary: boolean }) => r.isPrimary === true)).toBe(true);
 		});
 	});
 
 	describe("GET /api/signals/models/:modelId/backtest", () => {
 		it("should return backtest for a valid model", async () => {
 			if (!dbAvailable) return;
-			const modelsRes = await request(app)
-				.get("/api/signals/models")
-				.set(authHeaders(token));
+			const modelsRes = await request(app).get("/api/signals/models").set(authHeaders(token));
 			const modelId = modelsRes.body.data.models[0];
 
 			const res = await request(app)
@@ -88,9 +100,7 @@ describe("Signals Routes (Integration)", () => {
 	describe("GET /api/signals/commodities", () => {
 		it("should return available commodities", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/signals/commodities")
-				.set(authHeaders(token));
+			const res = await request(app).get("/api/signals/commodities").set(authHeaders(token));
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -101,16 +111,12 @@ describe("Signals Routes (Integration)", () => {
 	describe("GET /api/signals/correlation", () => {
 		it("should compute correlation between two commodities", async () => {
 			if (!dbAvailable) return;
-			const commRes = await request(app)
-				.get("/api/signals/commodities")
-				.set(authHeaders(token));
+			const commRes = await request(app).get("/api/signals/commodities").set(authHeaders(token));
 			const commodities = commRes.body.data;
 			if (commodities.length < 2) return;
 
 			const res = await request(app)
-				.get(
-					`/api/signals/correlation?a=${commodities[0].slug}&b=${commodities[1].slug}`,
-				)
+				.get(`/api/signals/correlation?a=${commodities[0].slug}&b=${commodities[1].slug}`)
 				.set(authHeaders(token));
 
 			expect(res.status).toBe(200);
@@ -119,9 +125,7 @@ describe("Signals Routes (Integration)", () => {
 
 		it("should reject missing params", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/signals/correlation")
-				.set(authHeaders(token));
+			const res = await request(app).get("/api/signals/correlation").set(authHeaders(token));
 
 			expect(res.status).toBe(400);
 		});

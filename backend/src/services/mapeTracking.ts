@@ -315,6 +315,7 @@ export async function getModelAccuracy(
 	verifiedCount: number;
 	last7dMape: number | null;
 	last30dMape: number | null;
+	lastVerifiedAt: string | null;
 }> {
 	const since = new Date(Date.now() - days * 86400000);
 
@@ -348,6 +349,13 @@ export async function getModelAccuracy(
 	const last7d = new Date(Date.now() - 7 * 86400000);
 	const last7dLogs = verified.filter((l) => l.verifiedAt && l.verifiedAt >= last7d);
 
+	// Most-recent verification timestamp — `verified` is ordered desc, so the
+	// first row is the latest. Surfaced as a freshness signal so the accuracy
+	// comparison page can show when a model's MAPE was last backed by real data
+	// (a frozen historical baseline vs an actively-verified primary model).
+	const lastVerifiedAt =
+		verified.length > 0 ? (verified[0].verifiedAt?.toISOString() ?? null) : null;
+
 	return {
 		modelId,
 		avgMape: computeAvg(verified),
@@ -355,6 +363,7 @@ export async function getModelAccuracy(
 		verifiedCount: verified.length,
 		last7dMape: computeAvg(last7dLogs),
 		last30dMape: computeAvg(verified),
+		lastVerifiedAt,
 	};
 }
 
@@ -370,12 +379,20 @@ export async function getAllModelAccuracy(
 		avgMape: number | null;
 		predictionCount: number;
 		verifiedCount: number;
+		last7dMape: number | null;
+		last30dMape: number | null;
+		lastVerifiedAt: string | null;
+		isPrimary: boolean;
 	}>
 > {
 	// Primary chronos ensemble + baselines for the accuracy-comparison page.
 	// Importing here (not at module top) avoids a circular dependency:
 	// tradingSignals imports predictionCache which imports mapeTracking.
 	const { getAllModels, BASELINE_MODELS } = await import("./tradingSignals");
+	const primary = new Set(getAllModels());
+	// Order matters: primary (chronos) first, then baselines — matches the
+	// MODEL_NAME_MAP grouping and the primary-vs-baseline visual split on the
+	// accuracy page.
 	const models = [...getAllModels(), ...BASELINE_MODELS];
 
 	const results = await Promise.all(
@@ -386,6 +403,16 @@ export async function getAllModelAccuracy(
 				avgMape: accuracy.avgMape,
 				predictionCount: accuracy.predictionCount,
 				verifiedCount: accuracy.verifiedCount,
+				// Forwarded from getModelAccuracy — previously dropped at this
+				// boundary, so the comparison page had no way to show trend or
+				// freshness. last7d/30d feed the trend chart; lastVerifiedAt
+				// feeds a "how stale is this MAPE?" badge.
+				last7dMape: accuracy.last7dMape,
+				last30dMape: accuracy.last30dMape,
+				lastVerifiedAt: accuracy.lastVerifiedAt,
+				// Primary (chronos ensemble) vs statistical baseline. Drives the
+				// role badge + the honesty banner on the comparison page.
+				isPrimary: primary.has(modelId),
 			};
 		}),
 	);
