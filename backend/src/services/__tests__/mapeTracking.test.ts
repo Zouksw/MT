@@ -97,10 +97,45 @@ describe("MAPE Tracking (real DB)", () => {
 	});
 
 	describe("getModelAccuracy", () => {
+		// Self-contained fixture: create + verify a row in this scope, then
+		// clean it up. Previously these tests read LEAKED rows from prior runs
+		// (commodityId "test-commodity-mape"), which (a) polluted production
+		// prediction_logs and (b) made the test depend on stale state. The
+		// EXCLUDE_TEST_ARTIFACTS filter in getModelAccuracy now rejects any
+		// commodityId containing "test" (case-insensitive), so a fixture with a
+		// "test" token would be filtered out and the assertions would fail.
+		// Using a non-TEST commodityId keeps the fixture counted AND lets the
+		// test own its lifecycle.
+		const FX_MODEL = "fx-model-accuracy";
+		const FX_COMMODITY = "fx-commodity-accuracy-scope";
+		let fxLogId: string | undefined;
+
+		afterEach(async () => {
+			if (!ctx?.available || !fxLogId) return;
+			try {
+				await ctx.prisma.predictionLog.deleteMany({
+					where: { commodityId: FX_COMMODITY },
+				});
+			} catch {
+				/* best-effort cleanup */
+			}
+			fxLogId = undefined;
+		});
+
 		it("should return accuracy structure", async () => {
-			const accuracy = await getModelAccuracy("test-model-mape");
+			if (!ctx?.available) return;
+			fxLogId = await logPrediction({
+				modelId: FX_MODEL,
+				commodityId: FX_COMMODITY,
+				timeseriesPath: "root.fx.accuracy",
+				horizon: 3,
+				predictedValues: [100, 110, 120],
+			});
+			await verifyPrediction(fxLogId, [105, 112, 122]);
+
+			const accuracy = await getModelAccuracy(FX_MODEL);
 			expect(accuracy).toBeDefined();
-			expect(accuracy).toHaveProperty("modelId");
+			expect(accuracy.modelId).toBe(FX_MODEL);
 			expect(accuracy).toHaveProperty("avgMape");
 			expect(accuracy).toHaveProperty("predictionCount");
 			expect(accuracy).toHaveProperty("verifiedCount");
@@ -111,12 +146,57 @@ describe("MAPE Tracking (real DB)", () => {
 		// actively-verified model. It must be present (null only when there are
 		// zero verified rows) and, when verified rows exist, be an ISO timestamp.
 		it("exposes lastVerifiedAt as a freshness signal (ISO string when verified rows exist)", async () => {
-			const accuracy = await getModelAccuracy("test-model-mape");
+			if (!ctx?.available) return;
+			fxLogId = await logPrediction({
+				modelId: FX_MODEL,
+				commodityId: FX_COMMODITY,
+				timeseriesPath: "root.fx.freshness",
+				horizon: 3,
+				predictedValues: [100, 110, 120],
+			});
+			await verifyPrediction(fxLogId, [105, 112, 122]);
+
+			const accuracy = await getModelAccuracy(FX_MODEL);
 			expect(accuracy).toHaveProperty("lastVerifiedAt");
-			// test-model-mape has seeded verified rows on the real DB, so this
-			// must be a parseable ISO timestamp, not null.
+			// The fixture row we just verified is counted, so this must be a
+			// parseable ISO timestamp, not null.
 			expect(accuracy.lastVerifiedAt).not.toBeNull();
 			expect(() => new Date(accuracy.lastVerifiedAt as string).getTime()).not.toThrow();
+		});
+
+		// DEFENSE: the EXCLUDE_TEST_ARTIFACTS filter must keep test-fixture
+		// pollution out of production accuracy reads. A row whose commodityId
+		// contains "test" (any case) must NOT be counted even when verified.
+		it("excludes verified rows whose commodityId contains 'test' (test-artifact pollution defense)", async () => {
+			if (!ctx?.available) return;
+			// Seed a verified row under a TEST-bearing commodityId using a
+			// distinct model so it can't bleed into other cases.
+			const polluteModel = "fx-pollute-guard";
+			const polluteCommodity = "test-commodity-pollution-guard";
+			const id = await logPrediction({
+				modelId: polluteModel,
+				commodityId: polluteCommodity,
+				timeseriesPath: "root.fx.pollute",
+				horizon: 3,
+				predictedValues: [100, 110, 120],
+			});
+			await verifyPrediction(id, [105, 112, 122]);
+			try {
+				const accuracy = await getModelAccuracy(polluteModel);
+				// The verified row exists in the table …
+				const rawCount = await ctx.prisma.predictionLog.count({
+					where: { modelId: polluteModel, status: "verified" },
+				});
+				expect(rawCount).toBeGreaterThanOrEqual(1);
+				// … but the accuracy read must exclude it (verifiedCount 0,
+				// avgMape null) because the commodityId bears "test".
+				expect(accuracy.verifiedCount).toBe(0);
+				expect(accuracy.avgMape).toBeNull();
+			} finally {
+				await ctx.prisma.predictionLog.deleteMany({
+					where: { commodityId: polluteCommodity },
+				});
+			}
 		});
 	});
 

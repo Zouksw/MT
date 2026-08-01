@@ -344,6 +344,34 @@ export async function verifyDuePredictions(): Promise<number> {
 }
 
 /**
+ * Prisma where-fragment that excludes non-real (test-artifact) commodityIds
+ * from accuracy aggregation.
+ *
+ * The mapeTracking integration tests run against the live database and have
+ * leaked rows into production `prediction_logs` (see KNOWN-ISSUES): synthetic
+ * cut-series keys like `cut:...:TESTCUT_MAPE-...` and `test-model-*` model
+ * rows. Without this filter, `getModelAccuracy("chronos_tiny")` picks up a
+ * TESTCUT row and reports `verifiedCount:1, mape:4.63` — making chronos look
+ * verified when no production commodity prediction has actually matured.
+ *
+ * Real commodityIds are either a UUID (a Commodity PK) or a cut-series key
+ * `cut:{factoryId}:{cutCode}` derived from a real factory + taxonomy. Neither
+ * contains the literal token `TEST`, which every test fixture embeds in its
+ * cutCode / modelId. Filtering on `NOT contains "TEST"` is therefore both
+ * precise (zero real data matches) and exhaustive (all known fixtures match).
+ *
+ * Returned as a spread-safe `{}`-shaped fragment so callers merge it into
+ * their existing `where` without restructuring.
+ */
+const EXCLUDE_TEST_ARTIFACTS = {
+	// Case-insensitive: leaked fixtures use both "TESTCUT_..." (cut-series
+	// verification test) and "test-commodity-..." (logPrediction tests). Prisma
+	// only allows `mode: "insensitive"` on a top-level filter, so this uses the
+	// `NOT` array form rather than `commodityId: { not: { contains } }`.
+	NOT: [{ commodityId: { contains: "test", mode: "insensitive" } }],
+} as const satisfies Prisma.PredictionLogWhereInput;
+
+/**
  * Get model accuracy (average MAPE) over a time window
  */
 export async function getModelAccuracy(
@@ -365,6 +393,7 @@ export async function getModelAccuracy(
 		modelId,
 		status: "verified",
 		verifiedAt: { gte: since },
+		...EXCLUDE_TEST_ARTIFACTS,
 	};
 	if (commodityId) where.commodityId = commodityId;
 
@@ -377,6 +406,7 @@ export async function getModelAccuracy(
 	const totalCount = await prisma.predictionLog.count({
 		where: {
 			modelId,
+			...EXCLUDE_TEST_ARTIFACTS,
 			...(commodityId ? { commodityId } : {}),
 			predictedAt: { gte: since },
 		},
