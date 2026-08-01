@@ -72,6 +72,11 @@
 即 3/3 Chronos 变体全可用、pipeline 已加载。`/health/ready` 的 `inferenceDetail.ready=true`。**不再适用"chronos 可能不可用"结论。**
 > 注：chronos 是否已加入后端 `ALL_MODELS` 共识（`tradingSignals.ts`）是另一个问题——若共识仍只跑统计模型，那是产品决策（chronos 调用慢/成本），非"不可用"。改动前重新核实 `ALL_MODELS` 当前内容。
 
+**共识决策已落地（2026-07-27 commit 8992154，2026-08-01 live 复核）**：主共识已**切到 chronos-only**——`tradingSignals.ts:29` `ALL_MODELS = ["chronos_tiny","chronos_mini","chronos_base"]`（不再是 line 65 描述的"只跑 5 统计模型"）。6 个统计模型保留为 `BASELINE_MODELS`（`tradingSignals.ts:34`），仅供 `/ai predict` 按需调用 + `/ai/accuracy` 对比页展示。
+- **对预测产出的影响（by design，非 bug）**：`schedulePredictionsFromPostgreSQL`（后台调度）经 `getAllModels()` 只订阅 chronos → `prediction_logs` 里 stat 模型最后记录 `2026-07-26`（commit 切换前夜），之后再不生成新记录；chronos 持续生成（最新 `2026-08-01`）。MAPE 验证环只为 chronos 产新 verified 记录（chronos horizon 10d 到期后）。
+- **过渡期准确率展示（2026-08-01 round-58 已诚实化）**：`/ai/accuracy` 对比页之前会把 chronos 的 1-sample MAPE 与 stat 的冻结历史 MAPE 并列，误导"chronos 更差"。现加 sample-size gate（`MIN_VERIFIED_SAMPLE=5`，under-sampled 显示 "Insufficient data"）+ Last Verified 新鲜度列 + Primary/Baseline 角色徽章 + AccuracyTransitionBanner。后端 `getAllModelAccuracy` 暴露 `verifiedCount`/`lastVerifiedAt`/`isPrimary` 元数据供前端 gating。
+- **stl_forecaster MAPE 异常仍开**：`/ai/accuracy` 显示 stl 20.56%（live 2026-08-01 实测，133 verified），仍远高于 naive 2.22%。但这是 **pre-fix 冻结数据**——`statistical_models.py:192-213` 的 damped-trend 修复（commit 1532b04，合成数据 8.5%）已在代码里，因 stat 不再进后台调度，该修复**无新生产记录可证**。是否从 baseline 移除 stl 是独立产品决策（单列轮次）。
+
 ---
 
 ### R2 — brl_usd / corn_cme / natural_gas_cme 单位冲突（核心价值链潜伏 bug）
