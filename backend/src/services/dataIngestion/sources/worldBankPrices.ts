@@ -13,7 +13,7 @@ import { ensureCommodity, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 /** FRED monthly commodity price series (no API key needed via CSV download) */
-const FRED_MONTHLY: Record<
+export const FRED_MONTHLY: Record<
 	string,
 	{
 		seriesId: string;
@@ -72,14 +72,14 @@ const FRED_MONTHLY: Record<
 	},
 	CORN: {
 		seriesId: "PMAIZMTUSDM",
-		slug: "corn_cbOT",
+		slug: "corn_cbot",
 		name: "Corn (CBOT)",
 		category: "grain",
 		unit: "USD/ton",
 	},
 	SOYBEANS: {
 		seriesId: "PSOYBUSDM",
-		slug: "soybeans_cbOT",
+		slug: "soybeans_cbot",
 		name: "Soybeans (CBOT)",
 		category: "grain",
 		unit: "USD/ton",
@@ -164,7 +164,13 @@ async function fetchFredMonthly(
 		const r = await upsertPrice({
 			commodityId: commodity.id,
 			date,
-			source: "world_bank",
+			// Attribute to the real writer. The data is a FRED CSV download
+			// (config.seriesId, e.g. POILWTIUSDM); labelling it "world_bank"
+			// surfaced it under the "World Bank Pink Sheet" label on the
+			// data-sources board even though WB never wrote these rows. The
+			// world_bank source string is now reserved for genuine WB rows (of
+			// which there are none while the WB API stays 404).
+			source: "fred",
 			open: value,
 			high: value * 1.02,
 			low: value * 0.98,
@@ -187,10 +193,15 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 	let inserted = 0;
 	let updated = 0;
 
-	// Try World Bank API first
+	// Liveness probe for the World Bank commodity API. This is a DIAGNOSTIC
+	// signal only — it never gates the FRED write path below. The WB API was
+	// the original primary source, but it currently returns 404 (verified
+	// 2026-08-01) and even when reachable its response (data[1]) is not parsed
+	// into price rows. FRED is the real writer (see file header). Probing here
+	// keeps an observable "is WB back?" signal in the logs without the previous
+	// bug where `wbSuccess=true` skipped FRED and silently wrote 0 rows while
+	// logging "API restored — using primary source".
 	const wbUrl = "https://api.worldbank.org/v2/commodity?format=json&per_page=5000&date=2020:2026";
-	let wbSuccess = false;
-
 	try {
 		const res = await fetch(wbUrl, {
 			headers: { Accept: "application/json" },
@@ -199,27 +210,34 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 		if (res.ok) {
 			const data = (await res.json()) as unknown[];
 			if (Array.isArray(data?.[1]) && data[1].length > 0) {
-				wbSuccess = true;
-				logger.info("[WORLD_BANK] API restored — using primary source");
+				logger.info(
+					"[WORLD_BANK] API reachable (liveness OK) — response not parsed; FRED remains the write path",
+				);
+			} else {
+				logger.info("[WORLD_BANK] API reachable but empty — FRED remains the write path");
 			}
+		} else {
+			logger.info(`[WORLD_BANK] API offline (HTTP ${res.status}) — FRED remains the write path`);
 		}
-	} catch {
-		// WB API offline — use FRED fallback
+	} catch (err) {
+		logger.info(
+			`[WORLD_BANK] API unreachable (${err instanceof Error ? err.message : "error"}) — FRED remains the write path`,
+		);
 	}
 
-	if (!wbSuccess) {
-		logger.info("[WORLD_BANK] API offline — using FRED monthly fallback");
-
-		for (const [, config] of Object.entries(FRED_MONTHLY)) {
-			try {
-				const r = await fetchFredMonthly(config);
-				inserted += r.inserted;
-				updated += r.updated;
-			} catch (err) {
-				logger.warn(
-					`[WORLD_BANK/FRED] ${config.seriesId} failed: ${err instanceof Error ? err.message : err}`,
-				);
-			}
+	// FRED monthly CSV download is the real data writer (file header's primary
+	// source). Runs unconditionally — it is not a "fallback". Each series is a
+	// no-key CSV fetch, so a single failure degrades that series only.
+	logger.info("[WORLD_BANK] Fetching FRED monthly series");
+	for (const [, config] of Object.entries(FRED_MONTHLY)) {
+		try {
+			const r = await fetchFredMonthly(config);
+			inserted += r.inserted;
+			updated += r.updated;
+		} catch (err) {
+			logger.warn(
+				`[WORLD_BANK/FRED] ${config.seriesId} failed: ${err instanceof Error ? err.message : err}`,
+			);
 		}
 	}
 
