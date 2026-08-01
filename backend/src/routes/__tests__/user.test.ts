@@ -1,19 +1,20 @@
 /**
- * User Feature Route Integration Tests
+ * Watchlist Route Integration Tests
  *
- * Drives the in-process Express app via supertest.
- * Uses real admin token and cleans up test data.
+ * Drives the in-process Express app via supertest with real DB + admin token.
+ * Covers the watchlist surface (list/create/items) + cleanup.
+ *
+ * NOTE: this file previously also tested GET /api/billing/plans and
+ * /subscription, but those overlapped billing.test.ts entirely (which is
+ * stricter — plans asserts id+name+price+features, plus covers usage/cancel/
+ * 401). The billing blocks were removed; billing coverage lives in
+ * billing.test.ts. This file now owns watchlists only.
  */
 
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	createTestApp,
-	getAdminToken,
-	getPrisma,
-	isDbAvailable,
-} from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, getPrisma, isDbAvailable } from "@/test/helpers/testApp";
 
 const TEST_PREFIX = `usr-${Date.now()}`;
 
@@ -22,7 +23,7 @@ const prisma = getPrisma();
 let dbAvailable = false;
 let token: string;
 
-describe("User Feature Routes (Integration)", () => {
+describe("Watchlist Routes (Integration)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
 		dbAvailable = await isDbAvailable();
@@ -48,9 +49,7 @@ describe("User Feature Routes (Integration)", () => {
 	describe("GET /api/watchlists", () => {
 		it("should return watchlists (may be empty for admin)", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/watchlists")
-				.set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/watchlists").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
@@ -115,9 +114,7 @@ describe("User Feature Routes (Integration)", () => {
 
 		it("should list watchlist with items and latest prices", async () => {
 			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/watchlists")
-				.set("Authorization", `Bearer ${token}`);
+			const res = await request(app).get("/api/watchlists").set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			const wl = res.body.data.watchlists.find(
@@ -125,35 +122,6 @@ describe("User Feature Routes (Integration)", () => {
 			);
 			expect(wl).toBeDefined();
 			expect(wl.itemCount).toBeGreaterThanOrEqual(1);
-		});
-	});
-
-	describe("GET /api/billing/plans", () => {
-		it("should return all plans with features", async () => {
-			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/billing/plans")
-				.set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data.plans).toHaveLength(3);
-			expect(res.body.data.plans[0]).toHaveProperty("name");
-			expect(res.body.data.plans[0]).toHaveProperty("price");
-		});
-	});
-
-	describe("GET /api/billing/subscription", () => {
-		it("should return current subscription", async () => {
-			if (!dbAvailable) return;
-			const res = await request(app)
-				.get("/api/billing/subscription")
-				.set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data).toHaveProperty("plan");
-			expect(res.body.data).toHaveProperty("limits");
 		});
 	});
 });

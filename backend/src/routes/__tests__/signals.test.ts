@@ -130,4 +130,59 @@ describe("Signals Routes (Integration)", () => {
 			expect(res.status).toBe(400);
 		});
 	});
+
+	// ─── ai-specific endpoints (migrated from the removed ai.test.ts) ──────
+	// ai.test.ts overlapped this file on model-list / accuracy / backtest /
+	// correlation (all already covered above). These three cases are the ones
+	// ai.test.ts uniquely covered: per-commodity signal generation, per-model
+	// accuracy, and the predictions pagination endpoint. Migrated here so a
+	// single file owns the whole /api/signals surface (no split coverage).
+	describe("GET /api/signals/:commodity (per-commodity signal generation)", () => {
+		it("should generate a real signal for a commodity", async () => {
+			if (!dbAvailable) return;
+			const res = await request(app)
+				.get("/api/signals/wheat_cme?timeseriesPath=root.trading.wheat_cme.price&horizon=10")
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(res.body.data).toHaveProperty("direction");
+			expect(["up", "down", "flat"]).toContain(res.body.data.direction);
+			expect(res.body.data).toHaveProperty("confidence");
+			expect(res.body.data).toHaveProperty("individualForecasts");
+			expect(res.body.data.individualForecasts).toHaveLength(3);
+		});
+	});
+
+	describe("GET /api/signals/models/:modelId/accuracy (per-model)", () => {
+		it("should return accuracy for a specific model", async () => {
+			if (!dbAvailable) return;
+			const modelsRes = await request(app).get("/api/signals/models").set(authHeaders(token));
+			const modelId = modelsRes.body.data.models[0];
+
+			const res = await request(app)
+				.get(`/api/signals/models/${modelId}/accuracy`)
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+		});
+	});
+
+	describe("GET /api/signals/models/:modelId/predictions", () => {
+		it("should return predictions with pagination", async () => {
+			if (!dbAvailable) return;
+			const modelsRes = await request(app).get("/api/signals/models").set(authHeaders(token));
+			const modelId = modelsRes.body.data.models[0];
+
+			const res = await request(app)
+				.get(`/api/signals/models/${modelId}/predictions?limit=10`)
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(res.body.data).toHaveProperty("predictions");
+			expect(res.body.data).toHaveProperty("total");
+		});
+	});
 });
