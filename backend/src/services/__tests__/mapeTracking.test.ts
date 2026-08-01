@@ -41,6 +41,25 @@ describe("MAPE Tracking (real DB)", () => {
 	});
 
 	describe("logPrediction + verifyPrediction", () => {
+		// These cases log under literal "test-commodity-*" commodityIds (no
+		// ctx.prefix), so destroyTestContext's prefix sweep does NOT reclaim
+		// them. Without this afterEach they leak into production
+		// prediction_logs after every test run — the root cause of the
+		// test-artifact pollution fixed in Layer 1-3 (see KNOWN-ISSUES).
+		// deleteMany is idempotent and cheap; the EXCLUDE_TEST_ARTIFACTS filter
+		// in getModelAccuracy is the read-side defense, but this stops the
+		// pollution at the source.
+		afterEach(async () => {
+			if (!ctx?.available) return;
+			try {
+				await ctx.prisma.predictionLog.deleteMany({
+					where: { commodityId: { startsWith: "test-commodity-" } },
+				});
+			} catch {
+				/* best-effort cleanup */
+			}
+		});
+
 		it("should log and verify a prediction with MAPE", async () => {
 			const id = await logPrediction({
 				modelId: "test-model-mape",
@@ -104,17 +123,26 @@ describe("MAPE Tracking (real DB)", () => {
 		// EXCLUDE_TEST_ARTIFACTS filter in getModelAccuracy now rejects any
 		// commodityId containing "test" (case-insensitive), so a fixture with a
 		// "test" token would be filtered out and the assertions would fail.
-		// Using a non-TEST commodityId keeps the fixture counted AND lets the
-		// test own its lifecycle.
-		const FX_MODEL = "fx-model-accuracy";
-		const FX_COMMODITY = "fx-commodity-accuracy-scope";
+		// Using a ctx.prefix-derived commodityId keeps the fixture counted AND
+		// lets destroyTestContext clean it up centrally (no per-test cleanup).
+		// NB: derived inside each test (not at describe-body top level) because
+		// ctx is assigned in beforeAll, which runs AFTER collection — reading
+		// ctx.prefix at module-load time throws "Cannot read 'prefix' of
+		// undefined".
+		const fx = () => ({
+			model: `${ctx.prefix}-fx-model`,
+			commodity: `${ctx.prefix}-fx-commodity`,
+		});
 		let fxLogId: string | undefined;
 
 		afterEach(async () => {
+			// Defensive local cleanup in addition to destroyTestContext's
+			// prefix-based sweep, so a failure mid-suite doesn't leak between
+			// the getModelAccuracy cases (they share the fx commodity).
 			if (!ctx?.available || !fxLogId) return;
 			try {
 				await ctx.prisma.predictionLog.deleteMany({
-					where: { commodityId: FX_COMMODITY },
+					where: { commodityId: { startsWith: `${ctx.prefix}-fx-` } },
 				});
 			} catch {
 				/* best-effort cleanup */
@@ -124,18 +152,19 @@ describe("MAPE Tracking (real DB)", () => {
 
 		it("should return accuracy structure", async () => {
 			if (!ctx?.available) return;
+			const { model, commodity } = fx();
 			fxLogId = await logPrediction({
-				modelId: FX_MODEL,
-				commodityId: FX_COMMODITY,
+				modelId: model,
+				commodityId: commodity,
 				timeseriesPath: "root.fx.accuracy",
 				horizon: 3,
 				predictedValues: [100, 110, 120],
 			});
 			await verifyPrediction(fxLogId, [105, 112, 122]);
 
-			const accuracy = await getModelAccuracy(FX_MODEL);
+			const accuracy = await getModelAccuracy(model);
 			expect(accuracy).toBeDefined();
-			expect(accuracy.modelId).toBe(FX_MODEL);
+			expect(accuracy.modelId).toBe(model);
 			expect(accuracy).toHaveProperty("avgMape");
 			expect(accuracy).toHaveProperty("predictionCount");
 			expect(accuracy).toHaveProperty("verifiedCount");
@@ -147,16 +176,17 @@ describe("MAPE Tracking (real DB)", () => {
 		// zero verified rows) and, when verified rows exist, be an ISO timestamp.
 		it("exposes lastVerifiedAt as a freshness signal (ISO string when verified rows exist)", async () => {
 			if (!ctx?.available) return;
+			const { model, commodity } = fx();
 			fxLogId = await logPrediction({
-				modelId: FX_MODEL,
-				commodityId: FX_COMMODITY,
+				modelId: model,
+				commodityId: commodity,
 				timeseriesPath: "root.fx.freshness",
 				horizon: 3,
 				predictedValues: [100, 110, 120],
 			});
 			await verifyPrediction(fxLogId, [105, 112, 122]);
 
-			const accuracy = await getModelAccuracy(FX_MODEL);
+			const accuracy = await getModelAccuracy(model);
 			expect(accuracy).toHaveProperty("lastVerifiedAt");
 			// The fixture row we just verified is counted, so this must be a
 			// parseable ISO timestamp, not null.
@@ -170,9 +200,11 @@ describe("MAPE Tracking (real DB)", () => {
 		it("excludes verified rows whose commodityId contains 'test' (test-artifact pollution defense)", async () => {
 			if (!ctx?.available) return;
 			// Seed a verified row under a TEST-bearing commodityId using a
-			// distinct model so it can't bleed into other cases.
-			const polluteModel = "fx-pollute-guard";
-			const polluteCommodity = "test-commodity-pollution-guard";
+			// distinct model so it can't bleed into other cases. The commodityId
+			// is prefixed with ctx.prefix so destroyTestContext reclaims it even
+			// if this test errors before its own cleanup runs.
+			const polluteModel = `${ctx.prefix}-fx-pollute`;
+			const polluteCommodity = `${ctx.prefix}-test-pollution-guard`;
 			const id = await logPrediction({
 				modelId: polluteModel,
 				commodityId: polluteCommodity,

@@ -27,15 +27,10 @@ function resolveDbUrl(): string {
 	// CI sets DATABASE_URL to mt_test
 	// test-setup.ts sets it to mt_test
 	// Fallback for direct runs: try the real DB (integration tests need seed data)
-	return (
-		process.env.DATABASE_URL ||
-		"postgresql://mt_user:mt_password@localhost:5432/mt_db"
-	);
+	return process.env.DATABASE_URL || "postgresql://mt_user:mt_password@localhost:5432/mt_db";
 }
 
-export async function createTestContext(
-	suiteName: string,
-): Promise<TestContext> {
+export async function createTestContext(suiteName: string): Promise<TestContext> {
 	const prefix = `${suiteName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 	const dbUrl = resolveDbUrl();
 
@@ -84,16 +79,28 @@ export async function destroyTestContext(ctx: TestContext): Promise<void> {
 			where: { name: { startsWith: ctx.prefix } },
 		});
 	} catch {}
-		try {
-			await ctx.prisma.watchlist.deleteMany({
-				where: { name: { startsWith: ctx.prefix } },
-			});
-		} catch {}
-		try {
-			await ctx.prisma.dataset.deleteMany({
-				where: { slug: { startsWith: ctx.prefix } },
-			});
-		} catch {}
+	try {
+		await ctx.prisma.watchlist.deleteMany({
+			where: { name: { startsWith: ctx.prefix } },
+		});
+	} catch {}
+	try {
+		await ctx.prisma.dataset.deleteMany({
+			where: { slug: { startsWith: ctx.prefix } },
+		});
+	} catch {}
+	// prediction_logs: tests create rows under commodityIds/timeseriesPaths
+	// derived from ctx.prefix (e.g. the mapeTracking fx-* fixtures and
+	// cut-series keys `cut:{prefix-factoryId}:{prefix-cutCode}`). Without
+	// this, leaked rows accumulate in production prediction_logs — which
+	// polluted the /accuracy display (chronos_tiny showed a TESTCUT row's
+	// MAPE as if it were real). See KNOWN-ISSUES + the EXCLUDE_TEST_ARTIFACTS
+	// filter in mapeTracking.getModelAccuracy.
+	try {
+		await ctx.prisma.predictionLog.deleteMany({
+			where: { commodityId: { startsWith: ctx.prefix } },
+		});
+	} catch {}
 	try {
 		await ctx.prisma.user.deleteMany({
 			where: { email: { startsWith: ctx.prefix } },
