@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, ModelAccuracy, ModelWithBacktest } from "@/types/accuracy";
-import { MODEL_NAME_MAP } from "@/types/accuracy";
+import { MIN_VERIFIED_SAMPLE, MODEL_NAME_MAP } from "@/types/accuracy";
 import { getAuthToken } from "@/utils/auth";
 
 async function apiFetch<T>(url: string): Promise<T> {
@@ -71,13 +71,27 @@ export function useAccuracyData() {
 	}, [accuracy, backtests]);
 
 	const overallAccuracy = useMemo(() => {
-		const valid = models.filter((m) => m.avgMape !== null && m.avgMape !== undefined);
+		// Gate on sample size, not just non-null MAPE. A model with 1 verified
+		// prediction has a "MAPE" that is really just one error measurement —
+		// folding it into the platform-wide average would let an under-sampled
+		// primary model (chronos during the consensus transition) drag the
+		// headline figure around. Must stay in lockstep with the per-row gate in
+		// the comparison table (MIN_VERIFIED_SAMPLE).
+		const valid = models.filter(
+			(m) =>
+				m.avgMape !== null && m.avgMape !== undefined && m.verifiedCount >= MIN_VERIFIED_SAMPLE,
+		);
 		if (valid.length === 0) return null;
 		return valid.reduce((sum, m) => sum + (m.avgMape ?? 0), 0) / valid.length;
 	}, [models]);
 
 	const bestModel = useMemo(() => {
-		const valid = models.filter((m) => m.avgMape !== null && m.avgMape !== undefined);
+		// Same sample-size gate: "best model" must be backed by enough verified
+		// predictions to be a meaningful claim, otherwise the crown is withheld.
+		const valid = models.filter(
+			(m) =>
+				m.avgMape !== null && m.avgMape !== undefined && m.verifiedCount >= MIN_VERIFIED_SAMPLE,
+		);
 		if (valid.length === 0) return null;
 		return valid.reduce((best, m) =>
 			(m.avgMape ?? Infinity) < (best.avgMape ?? Infinity) ? m : best,
