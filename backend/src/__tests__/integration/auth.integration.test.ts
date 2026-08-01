@@ -9,15 +9,7 @@ import { PrismaClient } from "@prisma/client";
 // Build a minimal Express app with real routes + error handler
 import express from "express";
 import request from "supertest";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	test,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { errorHandler } from "@/middleware/errorHandler";
 import { authRouter } from "@/routes/auth";
 
@@ -44,9 +36,7 @@ async function checkDatabaseAvailable(): Promise<boolean> {
 
 async function hashPassword(password: string): Promise<string> {
 	// Use real bcrypt, not the mock from jest.setup.js
-	const realBcrypt = (await vi.importActual(
-		"bcryptjs",
-	)) as typeof import("bcryptjs");
+	const realBcrypt = (await vi.importActual("bcryptjs")) as typeof import("bcryptjs");
 	const salt = await realBcrypt.genSalt(4); // Low rounds for speed
 	return realBcrypt.hash(password, salt);
 }
@@ -109,9 +99,7 @@ describe("Auth Integration Tests", () => {
 			expect(typeof regToken).toBe("string");
 
 			// 2. Login
-			const login = await request(app)
-				.post("/auth/login")
-				.send({ email, password: TEST_PASSWORD });
+			const login = await request(app).post("/auth/login").send({ email, password: TEST_PASSWORD });
 
 			expect(login.status).toBe(200);
 			expect(login.body).toMatchObject({
@@ -125,9 +113,7 @@ describe("Auth Integration Tests", () => {
 			const loginToken = login.body.data.token;
 
 			// 3. Access protected endpoint
-			const me = await request(app)
-				.get("/auth/me")
-				.set("Authorization", `Bearer ${loginToken}`);
+			const me = await request(app).get("/auth/me").set("Authorization", `Bearer ${loginToken}`);
 
 			expect(me.status).toBe(200);
 			expect(me.body.data.user).toBeDefined();
@@ -141,9 +127,7 @@ describe("Auth Integration Tests", () => {
 			expect(logout.status).toBe(200);
 
 			// 5. Verify token is blacklisted
-			const retry = await request(app)
-				.get("/auth/me")
-				.set("Authorization", `Bearer ${loginToken}`);
+			const retry = await request(app).get("/auth/me").set("Authorization", `Bearer ${loginToken}`);
 
 			expect(retry.status).toBe(401);
 		});
@@ -164,6 +148,21 @@ describe("Auth Integration Tests", () => {
 			const response = await request(app)
 				.post("/auth/register")
 				.send({ email: `${TEST_PREFIX}-weak@example.com`, password: "short" });
+
+			expect(response.status).toBe(400);
+		});
+
+		test("should reject missing password", async () => {
+			// Migrated from the now-removed auth.test.ts: this was the one
+			// registration-validation case that file covered which this file
+			// did not (invalid email + weak password + duplicate email already
+			// covered above). Kept here so the auth.test.ts deletion loses no
+			// coverage — the field-presence check is part of the register
+			// validation contract.
+			if (!dbAvailable) return;
+			const response = await request(app)
+				.post("/auth/register")
+				.send({ email: `${TEST_PREFIX}-nopass@example.com`, name: "No Password" });
 
 			expect(response.status).toBe(400);
 		});
@@ -259,9 +258,7 @@ describe("Auth Integration Tests", () => {
 
 		test("should reject malformed JWT", async () => {
 			if (!dbAvailable) return;
-			const response = await request(app)
-				.get("/auth/me")
-				.set("Authorization", "Bearer not-a-jwt");
+			const response = await request(app).get("/auth/me").set("Authorization", "Bearer not-a-jwt");
 
 			expect(response.status).toBe(401);
 		});
