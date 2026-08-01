@@ -3,46 +3,18 @@
  *
  * Regression coverage for the alert-rule evaluation pipeline that was
  * previously dead code (rules could be created but never evaluated).
- * Tests the threshold-matching + cooldown logic in isolation.
+ * Tests the threshold-matching logic of the REAL production isConditionMet
+ * (alert-rules.ts), exercising every operator's truth table.
+ *
+ * Previously this file defined a LOCAL mirror of isConditionMet and tested
+ * that copy — a tautology that stayed green if production drifted. It now
+ * imports the exported production function, so any operator-semantics change
+ * in alert-rules.ts is caught here.
  */
 
 import { describe, expect, it } from "vitest";
-
-// The condition-matching logic is the core of evaluateAlertRules. We test the
-// pure evaluation function directly to avoid needing a live DB for the math.
-// Re-implement the same logic shape to verify the truth table; the production
-// code lives in alert-rules.ts isConditionMet().
-
-interface AlertCondition {
-	type: "threshold" | "anomaly" | "pattern";
-	operator?: ">" | "<" | ">=" | "<=" | "=" | "!=";
-	value?: number;
-	threshold?: number;
-}
-
-// Mirror of alert-rules.ts isConditionMet — kept in sync so the truth table
-// is documented and any change to the operator semantics is caught.
-function isConditionMet(condition: AlertCondition, value: number): boolean {
-	if (condition.type !== "threshold") return false;
-	const target = condition.threshold ?? condition.value;
-	if (target == null || !Number.isFinite(target)) return false;
-	switch (condition.operator) {
-		case ">":
-			return value > target;
-		case "<":
-			return value < target;
-		case ">=":
-			return value >= target;
-		case "<=":
-			return value <= target;
-		case "=":
-			return Math.abs(value - target) < 0.0001;
-		case "!=":
-			return Math.abs(value - target) >= 0.0001;
-		default:
-			return false;
-	}
-}
+import { isConditionMet } from "../alert-rules";
+import type { AlertCondition } from "../alert-types";
 
 describe("alert rule condition matching", () => {
 	describe("threshold > operator", () => {

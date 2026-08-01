@@ -205,8 +205,12 @@ export async function evaluateAlertRules(): Promise<number> {
 /**
  * Check whether a value satisfies an alert condition.
  * Supports threshold-type rules with >, <, >=, <=, =, != operators.
+ *
+ * Exported so the truth-table regression test (alertRules.test.ts) exercises
+ * the REAL production function rather than a locally-mirrored copy (which
+ * drifted silently if this changed — a tautology). Pure function, no I/O.
  */
-function isConditionMet(condition: AlertCondition, value: number): boolean {
+export function isConditionMet(condition: AlertCondition, value: number): boolean {
 	if (condition.type !== "threshold") return false;
 
 	const target = condition.threshold ?? condition.value;
