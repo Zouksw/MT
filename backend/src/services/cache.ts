@@ -58,13 +58,13 @@ export async function set(key: string, value: unknown, ttlSeconds?: number): Pro
 	}
 }
 
+// Cache key builders. Pruned to the one key family actually consumed in
+// production (prediction:{ts}:{algo}:{horizon}, used by predictionCache.ts +
+// routes/inference.ts). The query/timeseriesData/userSession/rateLimit/
+// timeseriesList builders were carried over from an earlier cache design but
+// had zero callers (verified 2026-08-01 via `command grep -rn 'cacheKeys\.<m>'`
+// across backend/src excluding tests). Re-add a builder when its caller lands.
 export const cacheKeys = {
 	prediction: (timeseries: string, algorithm: string, horizon: number) =>
 		`prediction:${timeseries}:${algorithm}:${horizon}`,
-	query: (sql: string) => `query:${Buffer.from(sql).toString("base64")}`,
-	timeseriesData: (timeseriesId: string, from: Date, to: Date) =>
-		`ts:data:${timeseriesId}:${from.getTime()}:${to.getTime()}`,
-	userSession: (userId: string) => `session:user:${userId}`,
-	rateLimit: (identifier: string, endpoint: string) => `ratelimit:${identifier}:${endpoint}`,
-	timeseriesList: (datasetId?: string) => `ts:list:${datasetId || "all"}`,
 };

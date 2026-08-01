@@ -94,19 +94,6 @@ export async function createAlertRule(params: {
 }
 
 /**
- * Get alert rule by ID.
- */
-export async function getAlertRule(id: string): Promise<AlertRule | null> {
-	const rule = await prisma.alertRule.findUnique({
-		where: { id },
-	});
-
-	if (!rule) return null;
-
-	return mapRule(rule);
-}
-
-/**
  * Evaluate all enabled alert rules against the latest data.
  *
  * This is the missing piece that made alert rules a dead-end feature: rules

@@ -18,7 +18,6 @@ import {
 	getPricesBySource,
 	getSourceFreshness,
 	listCommodities,
-	requireCommodity,
 } from "@/services/marketService";
 
 const router = Router();

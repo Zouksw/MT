@@ -6,7 +6,9 @@ import "@testing-library/jest-dom";
 // isolates the rendering-layer honesty gates (MapeBadge sample-size gate,
 // Primary/Baseline role tags, transition banner) from the fetch logic, which
 // is covered by useAccuracyData.test.ts.
-type UseAccuracyDataReturn = ReturnType<typeof useAccuracyDataReal>;
+import type { useAccuracyData as realUseAccuracyData } from "@/hooks/useAccuracyData";
+
+type UseAccuracyDataReturn = ReturnType<typeof realUseAccuracyData>;
 let mockReturnValue: UseAccuracyDataReturn;
 const useAccuracyDataReal = (): UseAccuracyDataReturn => mockReturnValue;
 jest.mock("@/hooks/useAccuracyData", () => ({

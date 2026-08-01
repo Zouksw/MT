@@ -75,8 +75,14 @@
 ## 二、前端
 
 ### TD-8 — 3 套并行数据获取系统 + axios 单点依赖
-**审计**：2026-07-06，§3.1
+**审计**：2026-07-06，§3.1；**2026-08-01 复核**
 **当时证据**：`lib/api.ts`（SWR，14 文件）、`utils/auth.ts`（authFetch，16 文件）、`lib/market-data.ts`（**axios**，唯一用 axios 的文件，3 文件）、页面内联 `useCallback(fetch)`（~13）、`beefFetcher` **3 份字面复制**（`beef/page.tsx:13` / `beef/factories/page.tsx:10` / `beef/cuts/[cutCode]/page.tsx:11` 逐字节相同）。35 处裸 `fetch()` vs 14 处 SWR 抽象。
+
+**复核（2026-08-01）**：
+- **beefFetcher 复制已清理** ✅：单一定义 `lib/beef.ts:14`，5 文件 import（不再字面复制）。本子条 STALE。
+- **仍存**：axios 单点依赖——`lib/market-data.ts:3` 是唯一用 axios 的文件（`package.json` 仍列 axios 依赖）。
+- **仍存**：**46 处裸 `fetch()`**（跨 26 文件，如 `useTradingData.ts` 7 处、`settings/data-sources/page.tsx` 6 处）vs 10 SWR / 8 `useRetryableFetch`。标准已立（`useRetryableFetch`）但迁移未完。
+- **`useRetryableFetch`** 是推荐的统一抽象（8 consumer：beef 页/hook + dashboard + MarketForecastBoard），是收敛方向。
 
 ### TD-9 — 死 ui 组件 + shadcn 重复对
 **审计**：2026-07-06，§5
@@ -85,12 +91,16 @@
 **复核（2026-07-27，修正先前误判）**：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx` 已删除（4/5 清理）。**小写 `select.tsx` 不是死文件**——它是 PascalCase `Select/index.tsx` 的底层实现（`Select/index.tsx:11` `import { SelectContent, SelectItem, ... } from "../select"`）。12 个页面经 `@/components/ui/Select` → `Select/index.tsx` → `select.tsx` 间接依赖它。删除会破坏整个 Select 组件。先前"0 importer"判断只查了 `@/components/ui/select` 直接导入，漏了相对路径 `../select` 的内部 re-export。**本条 RESCINDED，select.tsx 必须保留。**
 
 ### TD-10 — MSW 全套白搭
-**审计**：2026-07-06，§5
+**审计**：2026-07-06，§5；**2026-08-01 复核**
 **当时证据**：`mocks/handlers.ts`（188 行）+ `server.ts`（17 行），`setupMsw()` 被 0 个测试 import。20 个测试里 9 个用 `jest.mock`。
 
+**复核（2026-08-01）**：**已清理** ✅——`mocks/` 目录已删（`ls mocks/` 不存在），全仓 0 处 `setupMsw` 引用。本条 STALE。
+
 ### TD-11 — 双图标库
-**审计**：2026-07-06，§5
+**审计**：2026-07-06，§5；**2026-08-01 复核**
 **当时证据**：lucide（63 文件）vs phosphor（6 文件，仅 marketing 页）。phosphor 近乎 vestigial。
+
+**复核（2026-08-01）**：**已清理** ✅——phosphor = 0 文件（`grep -rl "@phosphor"` 全空），lucide 增至 72 文件。单图标库。本条 STALE。
 
 ### TD-12 — 双 Tailwind 配置（v3+v4）
 **审计**：2026-07-06，§6
@@ -101,10 +111,52 @@
 ## 三、Schema
 
 ### TD-13 — 死/伪模型
-**审计**：2026-07-06，§4（按 `prisma.<model>` 查询点数）
+**审计**：2026-07-06，§4；**2026-08-01 复核**
 **当时证据**：
 - `organization_members`、`saved_queries`：**0 代码引用**（死模型）
 - `organizations`（硬编码 default-org）、`coldStorage`、`weeklyKill`、`usageRecord`：仅 1 点（边缘）
+
+**复核（2026-08-01，live grep `prisma.<model>` 全 backend/src 排除测试）**：
+- `organization_members`、`saved_queries`：**schema 已无此 model**（`grep -in 'saved_queries\|savedquery' schema.prisma` 全空）→ 本子条 STALE，已删。
+- `organizations`（1 ref，`datasetService.ts:103` 硬编码 default-org）、`coldStorage`（1 ref，`routes/beef.ts:472`）、`weeklyKill`（1 ref，`routes/beef.ts:444`）、`usageRecord`（1 ref，`usageService.ts:74`）：**仍 EDGE 但 LIVE**——各有一个真实查询，非死模型。删除需 schema 迁移，单列轮次。
+- **结论**：当前 31 个 model 全部有 ≥1 生产引用，**无死模型**。本条整体 STALE（除 organizations 的单租户脚手架语义）。
+
+---
+
+## 三½、零生产 caller 的死代码（2026-08-01 全量审计，live grep 验证）
+
+> 三路冗余诊断（后端/前端/测试）复核 TECH-DEBT 后新发现。每条均 `command grep -rn <symbol> backend/src|frontend/src --include="*.ts*"`（排除 `__tests__`/`*.test.*`/定义文件）返回空验证。**动手删前仍需重核**（代码可能已变）。
+
+### 后端死代码（13 项）
+
+| 符号 | 位置 | 性质 |
+|---|---|---|
+| `validateApiKey` | `services/apiKeys.ts:129` | TD-3 已知，能发 key 但不验；保留作 future infra 候选 |
+| `getAlertRule` | `services/alert-rules.ts:99` | 连测试都没引用 |
+| `requireOwnedDataset` | `services/datasetService.ts:125` | 无 caller |
+| `trackUsage` / `checkLimit` | `services/usageService.ts:46,59` | paywall 脚手架，从未调用 |
+| `invalidateAllSession` | `services/authService.ts:261` | 无 caller |
+| `unsubscribeCommodity` / `getSubscribedCommodities` | `services/predictionCache.ts:222,234` | 订阅生命周期内部用（`subscribeCommodity` 活，这俩 0 caller）|
+| `removeFromBlacklist` / `getBlacklistStats` / `clearBlacklist` / `checkTokenBlacklist` | `services/tokenBlacklist.ts:113,130,154,206` | 仅 `blacklistToken`+`isTokenBlacklisted` 活 |
+| `extractToken` | `lib/jwt.ts:69` | 无 caller |
+| **`cacheKeys` 5/6 成员** | `lib/cache.ts:64-69`（`query`/`timeseriesData`/`userSession`/`rateLimit`/`timeseriesList`）| 仅 `cacheKeys.prediction` 有 4 caller，其余 5 个 0 caller |
+| `requireCommodity` import | `routes/marketData.ts:21` | import 了但函数从未在文件内调用（dead import）|
+| `MS_PER_SECOND` const | `lib/constants.ts` | 无 caller（MIN/HOUR/DAY 活）|
+
+### 前端死代码（4 项）
+
+| 符号/文件 | 位置 | 性质 |
+|---|---|---|
+| `WatchlistPanel.tsx` | `components/trading/` | 0 importer（新发现，连 `lib/watchlist.ts` 的 `useWatchlists` 也只喂它）|
+| `useMarketForecasts.ts` | `hooks/` | 仅 `useDashboardStats.ts:85` 一个**注释**引用，0 真实 import |
+| `app/apikeys/show/[id]/page.tsx` | 0 入站链接 | 孤岛页（直接 URL 可达）|
+| `app/apikeys/edit/[id]/page.tsx` | 0 入站链接 | 孤岛页 |
+
+### 删除策略（遵循 §五 code-simplification + AGENTS §十）
+- **leaf-level 死代码**（仅被自己的自测引用）→ 可删函数+其自测（删测试不算回退：测的是不存在的代码）。
+- **孤岛页**（apikeys show/edit）→ 产品决策（是否保留直接 URL 访问），先标记不删。
+- **TD-3 `validateApiKey`** → 保留加注释（产品可能需要 API key 认证，round-43 决策）。
+- 守护"测试数不得回退"硬约束：删死代码自测时，对应生产代码也已删，覆盖率分母同步缩小，不构成回退。
 
 ---
 
