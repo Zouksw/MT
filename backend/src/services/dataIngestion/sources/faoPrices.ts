@@ -20,23 +20,67 @@ const FAO_INDICES: Record<string, { itemCode: string; slug: string }> = {
 	oils_index: { itemCode: "21017", slug: "fao_oils_index" },
 };
 
-async function fetchWithRetry(url: string): Promise<Response | null> {
-	for (let attempt = 0; attempt < 2; attempt++) {
-		try {
-			const res = await fetch(url, {
-				headers: { Accept: "application/json" },
-				signal: AbortSignal.timeout(30000),
-			});
-			if (res.ok) return res;
-			logger.warn(`[FAO] API returned ${res.status} (attempt ${attempt + 1})`);
-		} catch (err) {
-			logger.warn(
-				`[FAO] Fetch failed (attempt ${attempt + 1}): ${err instanceof Error ? err.message : err}`,
-			);
+/**
+ * Fetch with at most one retry, but ONLY for transient HTTP failures.
+ *
+ * Bug being fixed (round-63, 2026-08-02): the previous version retried
+ * EVERY failure — deterministic server errors (5xx / 521-origin-down /
+ * 404) AND network timeouts — with a 30s timeout. When the FAO origin
+ * was unreachable from this host (HTTP 000 / connection timeout), 5
+ * indices × 2 attempts × 30s + sleeps ≈ 272s, stalling the whole
+ * scraper batch ~5 minutes every run. The scraper then returned 0 rows
+ * but was logged "succeeded" by scraperManager — masking the outage as
+ * a silent no-op.
+ *
+ * Fix strategy:
+ * - Timeout cut 30s → 8s (aligns with the 10-15s convention in sibling
+ *   scrapers; FAO returns JSON, 8s is ample for a healthy response).
+ * - Network errors (timeout / DNS / refused): NO retry. If the host is
+ *   unreachable, retrying 2s later hits the same condition; the retry
+ *   only doubled the stall. (A flapping network would 50/50, but FAO
+ *   is a single origin — it's either up or down, not flapping per-
+ *   request.) Log once, return null.
+ * - HTTP 429 (rate limit) / 5xx-other-than-521: retry once (these are
+ *   conventionally transient and a retry is cheap when the host
+ *   actually responded).
+ * - HTTP 4xx-other-than-429 / 521 (Cloudflare origin-down): no retry
+ *   (deterministic; the origin is hard-down, retrying cannot help).
+ */
+export async function fetchWithRetry(url: string): Promise<Response | null> {
+	try {
+		const res = await fetch(url, {
+			headers: { Accept: "application/json" },
+			signal: AbortSignal.timeout(8000),
+		});
+		if (res.ok) return res;
+
+		// 429 and 5xx-except-521 are conventionally transient — one retry.
+		const transient = res.status === 429 || (res.status >= 500 && res.status !== 521);
+		if (transient) {
+			logger.warn(`[FAO] API returned ${res.status} (retrying once)`);
+			await new Promise((r) => setTimeout(r, 2000));
+			try {
+				const retry = await fetch(url, {
+					headers: { Accept: "application/json" },
+					signal: AbortSignal.timeout(8000),
+				});
+				if (retry.ok) return retry;
+				logger.warn(`[FAO] Retry returned ${retry.status} (giving up)`);
+			} catch (err) {
+				logger.warn(`[FAO] Retry failed: ${err instanceof Error ? err.message : err}`);
+			}
+		} else {
+			// 4xx / 521 — deterministic, no retry.
+			logger.warn(`[FAO] API returned ${res.status} (not retried)`);
 		}
-		if (attempt === 0) await new Promise((r) => setTimeout(r, 2000));
+		return null;
+	} catch (err) {
+		// Network timeout / DNS failure / connection refused — single
+		// attempt, no retry. The host is unreachable; a 2s-later retry
+		// hits the same condition and only doubles the stall.
+		logger.warn(`[FAO] Fetch failed (not retried): ${err instanceof Error ? err.message : err}`);
+		return null;
 	}
-	return null;
 }
 
 async function fetchFAOPrices(): Promise<ScraperResult> {
