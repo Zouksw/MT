@@ -79,12 +79,12 @@
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-02 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 55 | **633 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 56 | **640 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **287 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **967 全绿**（633 + 287 + 47，截至 2026-08-02 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **974 全绿**（640 + 287 + 47，截至 2026-08-02 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -104,6 +104,11 @@
 - **P1 止血（commit c0c4944）**：`schedulePredictionsFromPostgreSQL`（`predictionCache.ts`）加 `STALE_WINDOW_DAYS=7` recency gate。15 个 frozen 商品（最新价 2-3 个月前）此前每 30 分钟仍生成新 chronos 预测（永不可验证）。加 gate 后 frozen 商品不再被订阅——live 实测订阅数 15+ → 4。+3 测试（mutation-verified）。
 - **P2 排空（commit 013fa1b）**：新增 `markUnverifiablePredictions()`（`mapeTracking.ts`）+ 第 4 状态 `unverifiable`（区别于 `stale`=污染源）。server.ts 启动钩子。dataHealth 加第 4 桶 `predictionUnverifiable`，`verificationRatio` 分母排除 unverifiable。live 实测：`predictionBacklog` 107,393 → 14,888；`verificationRatio` **0.006 → 0.522**；`hasVerificationDebt` **true → false**；verify loop 日志从 `Verified 0 of 5000 (5000 no actuals)` 变 `Verified 5000 of 5000 (0 no actuals)`。+6 测试。
 - **预期终态**：08-06 后 chronos 首批到期预测进 due 批次时，verify loop 不再被 92k 死积压挤占窗口。frozen 商品数据源恢复后，新预测按正常路径验证。
+
+**Scraper 健康（round-63，2026-08-02）**——19 源逐项 live 审计（详见 KNOWN-ISSUES D1 round-63 表）。修了 2 个代码缺陷：
+- **faoPrices stall（commit 4bae943）**：`fetchWithRetry` 重试所有失败（含 5xx/网络超时）致 fao scraper 单次跑 **272s**，stall 整个 scraper batch ~4.5min。改为 8s 超时 + 仅 transient(429/5xx≠521) 重试 + 网络错误不重试。live：**272s → 40s**（6.8×）。+7 测试（mutation-verified）。
+- **balticDry dead URL（commit 0a7598e）**：primary `api.balticexchange.com` 恒 404（付费 API）。删 dead path，改单源 FRED（需 `FRED_API_KEY`）。
+- **结论**：fao/baltic 修复**不直接产新数据**（FAO origin down + baltic 需 FRED key），但消除 batch stall + 死代码。19 源中 2 个产数（fred/exchange_rate_api）、1 个预期月度（world_bank）、2 个仅 key 门控（MLA/USDA-AMS，最高 ROI）、其余需网络/反爬/headless。
 
 ## 五½、数据层可观测性（round-48~50）
 

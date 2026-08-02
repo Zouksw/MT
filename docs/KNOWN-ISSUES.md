@@ -31,6 +31,32 @@
 
 **桥接兜底（已上线）**：`beefPriceBridge.ts` 把 5 个 STRONG 映射的 CommodityPrice slug 复制到 BeefCutPrice，但只有 `aus_cube_roll_m9` 有上游行（180 行，最新 2026-04-29）。
 
+**round-63 全量 scraper 审计（2026-08-02 live 实测，19 源逐项核实）**：每个 scraper 都"成功"返回 0 行（scraperManager 计 succeeded），但实际状态分 5 类：
+
+| scraper | 分类 | 状态/动作 |
+|---|---|---|
+| `fred` | ✅ 正常 | 62004 行，最新 2026-08-01 |
+| `exchange_rate_api` | ✅ 正常 | 120 行，最新 2026-08-01 |
+| `worldBankPrices` | ✅ 正常（月度节奏） | 48 行，最新 2026-06-01（FRED 月度序列，7 月点 mid-Aug 发布，30d 窗口内 0 行是预期）|
+| `fao_prices` | 🔧 **round-63 已修** | fetchWithRetry 重试所有失败（含 5xx/超时）致 272s stall。已改为：8s 超时、仅 transient(429/5xx≠521) 重试、网络错误不重试。**272s → 40s**（6.8×）。FAO origin 当前 down，恢复后自动产数 |
+| `balticDry` | 🔧 **round-63 已修** | primary `api.balticexchange.com` 恒 404（付费 API）。删 dead path，改单源 FRED（需 `FRED_API_KEY`）|
+| `shippingIndex` | 🚧 策略错误（需 headless） | SSE 改 SPA，所有路径 302→/home，HTML regex 无效。需 Playwright 或找 JSON API |
+| `dceFutures` | 🚧 端点失效 + 反爬 | DCE/CZCE 静态 JSON 路径 404，DCE root 412 anti-bot。需真实端点 + 反爬处理 |
+| `chinaWholesale` | 🌐 地域封锁（.gov.cn） | 需中国出口 |
+| `chinaCustomsStats` | 🌐 地域封锁（.gov.cn） | 需中国出口/交互式 session |
+| `secexData` | 🌐 403 封锁 | ComexStat API 拒绝当前 caller（巴西地域）|
+| `abaresData` | 📄 策略错误 | ABARES 发 PDF/Excel 报告非 HTML，regex 无效。需报告文件解析器 |
+| `cepeaData` | 🛡️ Cloudflare 挑战 | 需 headless 浏览器 |
+| `inacData` | 🌐 host 不可达 | 连接超时（地域封锁或 URL 失效）|
+| `cmeFutures` | 🛡️ Stooq 被墙 | Stooq 返 HTML 非 CSV（同 CEPEA/INAC 网络阻塞模式）|
+| `usdaAms` | 🔑 缺 key | `USDA_MARS_API_KEY=""`（端到端可用，仅 key 门控）|
+| `mlaNlrs` | 🔑 缺 key | `MLA_API_KEY=""`（端到端可用，仅 key 门控）|
+| `usdaPsd` | 🔑/🌐 待核 | 需复核（USDA PSD，可能是 key 或网络）|
+| `weatherData` | 🔑 缺 key | weather API key 门控 |
+| `commodityPrices`/`manualImport` | (工具型) | 非 scraper，人工导入/聚合 |
+
+**结论**：19 源中 2 个产数（fred/exchange_rate_api），1 个预期月度（world_bank），2 个 round-63 已修代码缺陷（fao stall + baltic dead URL），2 个仅 key 门控（MLA/USDA-AMS，最高 ROI），其余 11 个需网络/反爬/headless（非代码可修）。**fao/baltic 修复不直接产新数据**（FAO origin down + baltic 需 FRED key），但消除了 scraper batch 的 4.5min stall + 死代码路径。
+
 ---
 
 ### D2 — MAPE 验证环断裂（数据层后果）
