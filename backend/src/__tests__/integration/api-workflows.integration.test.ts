@@ -33,16 +33,15 @@ describe("API Workflow Integration Tests", () => {
 
 	afterAll(async () => {
 		// requireDb in beforeAll guarantees the DB is up here.
-		// Clean up any test data we created
+		// Clean up any test data we created.
+		// (The watchlist cleanup was removed in round-65 when the Watchlist
+		// workflow section was deleted — no watchlists are created here now.)
 		try {
 			await prisma.user.deleteMany({
 				where: { email: { startsWith: TEST_PREFIX } },
 			});
 			await prisma.dataset.deleteMany({
 				where: { slug: { startsWith: TEST_PREFIX } },
-			});
-			await prisma.watchlist.deleteMany({
-				where: { name: { startsWith: TEST_PREFIX } },
 			});
 		} catch {
 			/* ignore cleanup errors */
@@ -348,57 +347,19 @@ describe("API Workflow Integration Tests", () => {
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
 		});
-	});
 
-	// ─── Watchlist Workflow ───────────────────────────────────────────
-
-	describe("Watchlist: create → add items → list → remove", () => {
-		let token: string;
-		let watchlistId: string;
-
-		beforeAll(async () => {
-			token = await getAdminToken(app);
-		});
-
-		test("should create a watchlist", async () => {
+		// /api/analytics/correlation (a separate endpoint from /signals/correlation
+		// above) has NO dedicated route test — this is its only coverage. Moved
+		// here from the deleted Portfolio section so the analytics correlation
+		// contract stays pinned (core value chain: correlation analysis).
+		test("should compute pairwise correlation between commodities", async () => {
 			const res = await request(app)
-				.post("/api/watchlists")
-				.set("Authorization", `Bearer ${token}`)
-				.send({ name: `${TEST_PREFIX}-watchlist` });
-
-			expect(res.status).toBe(201);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data.watchlist.name).toBe(`${TEST_PREFIX}-watchlist`);
-			watchlistId = res.body.data.watchlist.id;
-		});
-
-		test("should add commodity to watchlist", async () => {
-			const slug = await getRealCommoditySlug();
-			const [commodity] = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM commodities WHERE slug = ${slug} LIMIT 1
-      `;
-
-			const res = await request(app)
-				.post(`/api/watchlists/${watchlistId}/items`)
-				.set("Authorization", `Bearer ${token}`)
-				.send({ commodityId: commodity.id });
-
-			expect(res.status).toBe(201);
-			expect(res.body.success).toBe(true);
-		});
-
-		test("should list watchlists with items and prices", async () => {
-			const res = await request(app).get("/api/watchlists").set("Authorization", `Bearer ${token}`);
+				.get("/api/analytics/correlation?slugs=wheat_cme,corn_cme,gold_cme")
+				.set("Authorization", `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			expect(res.body.data.watchlists.length).toBeGreaterThanOrEqual(1);
-
-			const wl = res.body.data.watchlists.find(
-				(w: { name: string }) => w.name === `${TEST_PREFIX}-watchlist`,
-			);
-			expect(wl).toBeDefined();
-			expect(wl.itemCount).toBeGreaterThanOrEqual(1);
+			expect(res.body.data).toHaveProperty("correlations");
 		});
 	});
 
@@ -456,71 +417,14 @@ describe("API Workflow Integration Tests", () => {
 		});
 	});
 
-	// ─── Billing Workflow ────────────────────────────────────────────
-
-	describe("Billing: subscription and usage", () => {
-		let token: string;
-
-		beforeAll(async () => {
-			token = await getAdminToken(app);
-		});
-
-		test("should get current subscription", async () => {
-			const res = await request(app)
-				.get("/api/billing/subscription")
-				.set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data).toHaveProperty("plan");
-			expect(res.body.data).toHaveProperty("limits");
-			expect(res.body.data.limits).toHaveProperty("watchlistItems");
-		});
-	});
-
-	// ─── API Keys Workflow ───────────────────────────────────────────
-
-	describe("API Keys: list existing keys", () => {
-		let token: string;
-
-		beforeAll(async () => {
-			token = await getAdminToken(app);
-		});
-
-		test("should list API keys", async () => {
-			const res = await request(app).get("/api/api-keys").set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data).toHaveProperty("apiKeys");
-			expect(Array.isArray(res.body.data.apiKeys)).toBe(true);
-		});
-	});
-
-	// ─── Portfolio & Correlation ─────────────────────────────────────
-
-	describe("Portfolio: list and analytics", () => {
-		let token: string;
-
-		beforeAll(async () => {
-			token = await getAdminToken(app);
-		});
-
-		test("should list portfolios", async () => {
-			const res = await request(app).get("/api/portfolios").set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-		});
-
-		test("should compute correlation between commodities", async () => {
-			const res = await request(app)
-				.get("/api/analytics/correlation?slugs=wheat_cme,corn_cme,gold_cme")
-				.set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data).toHaveProperty("correlations");
-		});
-	});
+	// NOTE (round-65): the Billing / API Keys / Portfolio describe blocks were
+	// removed — each was a single happy-path envelope assertion (status 200 +
+	// success true + a top-level data key) fully duplicated by the deeper
+	// dedicated route tests:
+	//   - Billing    → routes/__tests__/billing.test.ts (5 tests, plan/limits contract)
+	//   - API Keys   → routes/__tests__/apiKeys.test.ts (6 tests)
+	//   - Portfolio  → /api/portfolios list (no unique assertions beyond 200)
+	// The Portfolio section's ONE valuable assertion (/api/analytics/correlation,
+	// the only route-layer coverage of that endpoint) was moved into the Signals
+	// block above so the correlation contract is not lost.
 });

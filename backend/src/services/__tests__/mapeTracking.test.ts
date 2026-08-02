@@ -353,6 +353,62 @@ describe("MAPE Tracking (real DB)", () => {
 			}
 		});
 
+		// ─── Shared helpers for the conflict-prediction tests below ────────────
+		// Both invalidatePollutedPredictions and restorePostFixConflictPredictions
+		// seed rows against the seeded brl_usd commodity (a known conflict slug)
+		// and clean them up afterward. These helpers absorb the repeated
+		// findUnique(brl_usd) + create(predictionLog) + finally-deleteMany
+		// scaffolding that the 5 tests below hand-rolled. Behaviour unchanged.
+		const FIXED_AT = new Date("2026-07-27T11:26:00Z"); // round-41 authoritative-source fix timestamp
+
+		async function getBrlUsdId(): Promise<string | null> {
+			const brl = await ctx.prisma.commodity.findUnique({
+				where: { slug: "brl_usd" },
+				select: { id: true },
+			});
+			return brl?.id ?? null; // null → seed absent in this env → caller skips cleanly
+		}
+
+		// Seed a throwaway prediction_log row against a commodity. Common defaults
+		// (horizon=5, predictedValues=[1,2,3]) match what every test below used.
+		async function seedConflictRow(opts: {
+			commodityId: string;
+			modelId: string;
+			status: "completed" | "stale" | "verified";
+			predictedAt: Date;
+			predictedValues?: number[];
+			mape?: number;
+			actualValues?: number[];
+			verifiedAt?: Date;
+		}) {
+			return ctx.prisma.predictionLog.create({
+				data: {
+					modelId: opts.modelId,
+					commodityId: opts.commodityId,
+					horizon: 5,
+					predictedValues: opts.predictedValues ?? [1, 2, 3],
+					status: opts.status,
+					predictedAt: opts.predictedAt,
+					...(opts.mape != null ? { mape: opts.mape } : {}),
+					...(opts.actualValues ? { actualValues: opts.actualValues } : {}),
+					...(opts.verifiedAt ? { verifiedAt: opts.verifiedAt } : {}),
+				},
+			});
+		}
+
+		// Clean up the rows a test created (prediction_logs always; commodities
+		// only when the test made a throwaway non-conflict commodity). Mirrors the
+		// cleanup pattern already used by markUnverifiablePredictions' helper.
+		async function cleanupConflictRows(ids: string[], commodityIds: string[] = []) {
+			if (ids.length) await ctx.prisma.predictionLog.deleteMany({ where: { id: { in: ids } } });
+			if (commodityIds.length) {
+				await ctx.prisma.commodityPrice.deleteMany({
+					where: { commodityId: { in: commodityIds } },
+				});
+				await ctx.prisma.commodity.deleteMany({ where: { id: { in: commodityIds } } });
+			}
+		}
+
 		describe("invalidatePollutedPredictions — mark pre-fix conflict-commodity predictions stale", () => {
 			// REGRESSION (round-46): brl_usd / corn_cme / natural_gas_cme predictions
 			// made BEFORE round-41's authoritative-source fix trained on conflicting-
@@ -362,55 +418,39 @@ describe("MAPE Tracking (real DB)", () => {
 			// commodities stay 'completed' and verify normally.
 			it("marks pre-fix predictions for conflict commodities as stale, leaves post-fix and clean-commodity rows untouched", async () => {
 				const prisma = ctx.prisma;
+				const brlId = await getBrlUsdId();
+				if (!brlId) return; // seed absent in this env — skip cleanly
 
-				// Resolve the seeded brl_usd commodity (a known conflict slug).
-				const brl = await prisma.commodity.findUnique({
-					where: { slug: "brl_usd" },
-					select: { id: true },
-				});
-				if (!brl) return; // seed absent in this env — skip cleanly
-
-				const fixedAt = new Date("2026-07-27T11:26:00Z");
 				const before = new Date("2026-07-15T00:00:00Z"); // pre-fix (polluted)
 				const after = new Date("2026-07-28T00:00:00Z"); // post-fix (clean)
 
 				// Polluted: conflict commodity, pre-fix.
-				const polluted = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-polluted",
-						commodityId: brl.id,
-						horizon: 5,
-						predictedValues: [1, 2, 3],
-						status: "completed",
-						predictedAt: before,
-					},
+				const polluted = await seedConflictRow({
+					commodityId: brlId,
+					modelId: "test-polluted",
+					status: "completed",
+					predictedAt: before,
 				});
 				// Post-fix: same commodity, after the fix — must NOT be marked stale.
-				const clean = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-clean-postfix",
-						commodityId: brl.id,
-						horizon: 5,
-						predictedValues: [5, 5, 5],
-						status: "completed",
-						predictedAt: after,
-					},
+				const clean = await seedConflictRow({
+					commodityId: brlId,
+					modelId: "test-clean-postfix",
+					status: "completed",
+					predictedAt: after,
+					predictedValues: [5, 5, 5],
 				});
 				// Verified-but-polluted: pre-fix prediction ALREADY verified against
 				// the wrong source (bogus ~96% MAPE). Must ALSO be marked stale —
 				// otherwise it poisons accuracy averages (round-46 follow-up).
-				const verifiedPolluted = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-verified-polluted",
-						commodityId: brl.id,
-						horizon: 5,
-						predictedValues: [0.2, 0.2, 0.2],
-						actualValues: [5.1, 5.1, 5.1],
-						mape: 96.2,
-						status: "verified",
-						predictedAt: before,
-						verifiedAt: before,
-					},
+				const verifiedPolluted = await seedConflictRow({
+					commodityId: brlId,
+					modelId: "test-verified-polluted",
+					status: "verified",
+					predictedAt: before,
+					predictedValues: [0.2, 0.2, 0.2],
+					actualValues: [5.1, 5.1, 5.1],
+					mape: 96.2,
+					verifiedAt: before,
 				});
 				// Non-conflict commodity, pre-fix — must NOT be touched.
 				const otherCommodity = await prisma.commodity.create({
@@ -421,88 +461,58 @@ describe("MAPE Tracking (real DB)", () => {
 						unit: "rate",
 					},
 				});
-				const unrelated = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-unrelated",
-						commodityId: otherCommodity.id,
-						horizon: 5,
-						predictedValues: [1, 2, 3],
-						status: "completed",
-						predictedAt: before,
-					},
+				const unrelated = await seedConflictRow({
+					commodityId: otherCommodity.id,
+					modelId: "test-unrelated",
+					status: "completed",
+					predictedAt: before,
 				});
 
 				try {
-					const marked = await invalidatePollutedPredictions(fixedAt);
-
+					const marked = await invalidatePollutedPredictions(FIXED_AT);
 					// At least the one polluted row was marked.
 					expect(marked).toBeGreaterThanOrEqual(1);
 
-					const pollutedNow = await prisma.predictionLog.findUnique({
-						where: { id: polluted.id },
-						select: { status: true },
+					const statuses = await prisma.predictionLog.findMany({
+						where: { id: { in: [polluted.id, verifiedPolluted.id, clean.id, unrelated.id] } },
+						select: { id: true, status: true },
 					});
-					const verifiedPollutedNow = await prisma.predictionLog.findUnique({
-						where: { id: verifiedPolluted.id },
-						select: { status: true },
-					});
-					const cleanNow = await prisma.predictionLog.findUnique({
-						where: { id: clean.id },
-						select: { status: true },
-					});
-					const unrelatedNow = await prisma.predictionLog.findUnique({
-						where: { id: unrelated.id },
-						select: { status: true },
-					});
-
-					expect(pollutedNow?.status).toBe("stale");
-					expect(verifiedPollutedNow?.status).toBe("stale"); // verified-polluted also cleared
-					expect(cleanNow?.status).toBe("completed"); // post-fix survives
-					expect(unrelatedNow?.status).toBe("completed"); // non-conflict survives
+					const statusOf = (id: string) => statuses.find((r) => r.id === id)?.status;
+					expect(statusOf(polluted.id)).toBe("stale");
+					expect(statusOf(verifiedPolluted.id)).toBe("stale"); // verified-polluted also cleared
+					expect(statusOf(clean.id)).toBe("completed"); // post-fix survives
+					expect(statusOf(unrelated.id)).toBe("completed"); // non-conflict survives
 				} finally {
-					await prisma.predictionLog.deleteMany({
-						where: {
-							id: { in: [polluted.id, verifiedPolluted.id, clean.id, unrelated.id] },
-						},
-					});
-					await prisma.commodity.deleteMany({
-						where: { id: otherCommodity.id },
-					});
+					await cleanupConflictRows(
+						[polluted.id, verifiedPolluted.id, clean.id, unrelated.id],
+						[otherCommodity.id],
+					);
 				}
 			});
 
 			it("is idempotent — running twice does not change already-stale rows or count them again", async () => {
-				const prisma = ctx.prisma;
-				const brl = await prisma.commodity.findUnique({
-					where: { slug: "brl_usd" },
-					select: { id: true },
-				});
-				if (!brl) return;
+				const brlId = await getBrlUsdId();
+				if (!brlId) return;
 
-				const fixedAt = new Date("2026-07-27T11:26:00Z");
 				const before = new Date("2026-07-10T00:00:00Z");
-				const row = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-idempotent",
-						commodityId: brl.id,
-						horizon: 5,
-						predictedValues: [1, 2, 3],
-						status: "completed",
-						predictedAt: before,
-					},
+				const row = await seedConflictRow({
+					commodityId: brlId,
+					modelId: "test-idempotent",
+					status: "completed",
+					predictedAt: before,
 				});
 				try {
-					const first = await invalidatePollutedPredictions(fixedAt);
-					const second = await invalidatePollutedPredictions(fixedAt);
+					const first = await invalidatePollutedPredictions(FIXED_AT);
+					const second = await invalidatePollutedPredictions(FIXED_AT);
 					// Second run finds nothing new (row already 'stale', not 'completed').
 					expect(second).toBeLessThan(first);
-					const after = await prisma.predictionLog.findUnique({
+					const after = await ctx.prisma.predictionLog.findUnique({
 						where: { id: row.id },
 						select: { status: true },
 					});
 					expect(after?.status).toBe("stale");
 				} finally {
-					await prisma.predictionLog.deleteMany({ where: { id: row.id } });
+					await cleanupConflictRows([row.id]);
 				}
 			});
 
@@ -529,70 +539,55 @@ describe("MAPE Tracking (real DB)", () => {
 			// predictedAt >= fixedAt on conflict slugs.
 			it("restores post-fix stale rows to completed but leaves pre-fix stale rows stale", async () => {
 				const prisma = ctx.prisma;
+				const brlId = await getBrlUsdId();
+				if (!brlId) return; // seed absent — skip cleanly
 
-				const brl = await prisma.commodity.findUnique({
-					where: { slug: "brl_usd" },
-					select: { id: true },
-				});
-				if (!brl) return; // seed absent — skip cleanly
-
-				const fixedAt = new Date("2026-07-27T11:26:00Z");
 				const before = new Date("2026-07-15T00:00:00Z"); // pre-fix (genuinely polluted)
 				const after = new Date("2026-07-28T00:00:00Z"); // post-fix (mis-staled)
 
 				// Pre-fix row — was legitimately staled; must STAY stale.
-				const preFix = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-restore-prefix",
-						commodityId: brl.id,
-						horizon: 5,
-						predictedValues: [1, 2, 3],
-						status: "stale",
-						predictedAt: before,
-					},
+				const preFix = await seedConflictRow({
+					commodityId: brlId,
+					modelId: "test-restore-prefix",
+					status: "stale",
+					predictedAt: before,
 				});
 				// Post-fix row — mis-staled; must be restored to completed.
-				const postFix = await prisma.predictionLog.create({
-					data: {
-						modelId: "test-restore-postfix",
-						commodityId: brl.id,
-						horizon: 5,
-						predictedValues: [1, 2, 3],
-						status: "stale",
-						predictedAt: after,
-					},
+				const postFix = await seedConflictRow({
+					commodityId: brlId,
+					modelId: "test-restore-postfix",
+					status: "stale",
+					predictedAt: after,
 				});
 
 				try {
-					const restored = await restorePostFixConflictPredictions(fixedAt);
+					const restored = await restorePostFixConflictPredictions(FIXED_AT);
 					// At least the postFix row should be counted.
 					expect(restored).toBeGreaterThanOrEqual(1);
 
-					const preAfter = await prisma.predictionLog.findUnique({
-						where: { id: preFix.id },
-						select: { status: true },
-					});
-					const postAfter = await prisma.predictionLog.findUnique({
-						where: { id: postFix.id },
-						select: { status: true },
-					});
+					const [preAfter, postAfter] = await prisma.predictionLog
+						.findMany({
+							where: { id: { in: [preFix.id, postFix.id] } },
+							select: { id: true, status: true },
+						})
+						.then((rows) => [
+							rows.find((r) => r.id === preFix.id)?.status,
+							rows.find((r) => r.id === postFix.id)?.status,
+						]);
 					// Pre-fix stays stale (genuinely polluted, unrecoverable).
-					expect(preAfter?.status).toBe("stale");
+					expect(preAfter).toBe("stale");
 					// Post-fix is restored to completed so verifyDuePredictions can pick it up.
-					expect(postAfter?.status).toBe("completed");
+					expect(postAfter).toBe("completed");
 				} finally {
-					await prisma.predictionLog.deleteMany({
-						where: { id: { in: [preFix.id, postFix.id] } },
-					});
+					await cleanupConflictRows([preFix.id, postFix.id]);
 				}
 			});
 
 			it("is idempotent — a second run restores nothing", async () => {
-				const fixedAt = new Date("2026-07-27T11:26:00Z");
 				// First run restores whatever is mis-staled; second run must find
 				// nothing (rows already completed, not stale).
-				await restorePostFixConflictPredictions(fixedAt);
-				const second = await restorePostFixConflictPredictions(fixedAt);
+				await restorePostFixConflictPredictions(FIXED_AT);
+				const second = await restorePostFixConflictPredictions(FIXED_AT);
 				expect(second).toBe(0);
 			});
 		});

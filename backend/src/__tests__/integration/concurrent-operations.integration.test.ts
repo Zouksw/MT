@@ -314,35 +314,26 @@ describe("Concurrent Operations Integration Tests", () => {
 		// The old `toHaveProperty("isLocked")` + `typeof boolean` accepted both
 		// false AND true, so it would have passed even if a fresh identifier
 		// were wrongly reported as locked. Pin to the actual unlocked state.
-		test("should handle empty string identifier in lockout check", async () => {
-			const info = await checkAccountLockout("");
+		// Table-driven: each row is a degenerate identifier that must still
+		// resolve to the unlocked state (empty / very long / special-chars).
+		test.each([
+			["empty string", ""],
+			["very long (10k chars)", "a".repeat(10000)],
+			["special characters", "test@example.com\n\r\t\x00"],
+		])("lockout check handles %s identifier (unlocked, 5 remaining)", async (_label, id) => {
+			const info = await checkAccountLockout(id);
 			expect(info.isLocked).toBe(false);
 			expect(info.remainingAttempts).toBe(5);
 		});
 
-		test("should handle very long identifier strings", async () => {
-			const longId = "a".repeat(10000);
-			const info = await checkAccountLockout(longId);
-			expect(info.isLocked).toBe(false);
-		});
-
-		test("should handle special characters in identifier", async () => {
-			const specialId = "test@example.com\n\r\t\x00";
-			const info = await checkAccountLockout(specialId);
-			expect(info.isLocked).toBe(false);
-		});
-
-		test("should handle empty token in blacklist check", async () => {
-			// Empty token is never in the set → false in dev/CI. See the
-			// isTokenBlacklisted contract above.
-			const result = await isTokenBlacklisted("");
-			expect(result).toBe(false);
-		});
-
-		test("should handle malformed token in blacklist", async () => {
-			// Malformed token's id is its first 32 chars (extractTokenId
-			// fallback) — not in the set → false in dev/CI.
-			const result = await isTokenBlacklisted("not-a-valid-jwt");
+		// Empty/malformed tokens are never in the blacklist set → false in
+		// dev/CI. extractTokenId's fallback (first 32 chars) keeps a malformed
+		// token's id stable but unmatched.
+		test.each([
+			["empty", ""],
+			["malformed (not a JWT)", "not-a-valid-jwt"],
+		])("blacklist check returns false for %s token", async (_label, token) => {
+			const result = await isTokenBlacklisted(token);
 			expect(result).toBe(false);
 		});
 	});

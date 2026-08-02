@@ -307,89 +307,55 @@ describe("Error Handler Middleware", () => {
 	});
 
 	describe("Error Classes", () => {
-		describe("BadRequestError", () => {
-			it("should create 400 error", () => {
-				const error = new BadRequestError("Invalid input");
-
-				expect(error).toBeInstanceOf(ApiError);
-				expect(error.statusCode).toBe(400);
-				expect(error.message).toBe("Invalid input");
-				expect(error.isOperational).toBe(true);
-			});
-		});
-
-		describe("UnauthorizedError", () => {
-			it("should create 401 error with default message", () => {
-				const error = new UnauthorizedError();
-
-				expect(error.statusCode).toBe(401);
-				expect(error.message).toBe("Unauthorized");
-				expect(error.isOperational).toBe(true);
-			});
-
-			it("should create 401 error with custom message", () => {
-				const error = new UnauthorizedError("Custom message");
-
-				expect(error.message).toBe("Custom message");
-			});
-		});
-
-		describe("ForbiddenError", () => {
-			it("should create 403 error with default message", () => {
-				const error = new ForbiddenError();
-
-				expect(error.statusCode).toBe(403);
-				expect(error.message).toBe("Forbidden");
-				expect(error.isOperational).toBe(true);
-			});
-
-			it("should create 403 error with custom message", () => {
-				const error = new ForbiddenError("Custom message");
-
-				expect(error.message).toBe("Custom message");
-			});
-		});
-
-		describe("NotFoundError", () => {
-			it("should create 404 error with default message", () => {
-				const error = new NotFoundError();
-
-				expect(error.statusCode).toBe(404);
-				expect(error.message).toBe("Resource not found");
-				expect(error.isOperational).toBe(true);
-			});
-
-			it("should create 404 error with custom resource", () => {
-				const error = new NotFoundError("User");
-
-				expect(error.message).toBe("User not found");
-			});
-		});
-
-		describe("ConflictError", () => {
-			it("should create 409 error", () => {
-				const error = new ConflictError("Resource already exists");
-
-				expect(error.statusCode).toBe(409);
-				expect(error.message).toBe("Resource already exists");
-				expect(error.isOperational).toBe(true);
-			});
-		});
-
-		describe("ServiceUnavailableError", () => {
-			it("should create 503 error with default message", () => {
-				const error = new ServiceUnavailableError();
-
-				expect(error.statusCode).toBe(503);
-				expect(error.message).toBe("Service temporarily unavailable");
-				expect(error.isOperational).toBe(true);
-			});
-
-			it("should create 503 error with custom message", () => {
-				const error = new ServiceUnavailableError("Database down");
-
-				expect(error.message).toBe("Database down");
-			});
+		// Table-driven: each row pins one HTTP error class's statusCode, default
+		// message (when constructed with no arg), and custom-message passthrough.
+		// NotFoundError is special — its arg is a resource name and the message
+		// appends " not found" (e.g. "User" → "User not found"); the others pass
+		// the message through verbatim.
+		it.each([
+			["BadRequestError", BadRequestError, 400, undefined, "Invalid input", "Invalid input"],
+			[
+				"UnauthorizedError",
+				UnauthorizedError,
+				401,
+				"Unauthorized",
+				"Custom message",
+				"Custom message",
+			],
+			["ForbiddenError", ForbiddenError, 403, "Forbidden", "Custom message", "Custom message"],
+			["NotFoundError", NotFoundError, 404, "Resource not found", "User", "User not found"],
+			[
+				"ConflictError",
+				ConflictError,
+				409,
+				undefined,
+				"Resource already exists",
+				"Resource already exists",
+			],
+			[
+				"ServiceUnavailableError",
+				ServiceUnavailableError,
+				503,
+				"Service temporarily unavailable",
+				"Database down",
+				"Database down",
+			],
+		] as const)("%s: statusCode + default/custom message + isOperational + instanceof ApiError", (_name, Ctor, statusCode, defaultMsg, customArg, expectedCustomMsg) => {
+			// Default message (construct with no arg). BadRequestError and
+			// ConflictError require a message (no default), so skip when undefined.
+			if (defaultMsg !== undefined) {
+				const e = new (Ctor as new () => InstanceType<typeof Ctor>)();
+				expect(e.statusCode).toBe(statusCode);
+				expect(e.message).toBe(defaultMsg);
+				expect(e.isOperational).toBe(true);
+				expect(e).toBeInstanceOf(ApiError);
+			}
+			// Custom message / resource passthrough.
+			const e = new (Ctor as new (arg: string) => InstanceType<typeof Ctor>)(customArg as string);
+			expect(e.statusCode).toBe(statusCode);
+			expect(e.message).toBe(expectedCustomMsg);
+			expect(e.isOperational).toBe(true);
+			expect(e).toBeInstanceOf(ApiError);
 		});
 	});
 });
