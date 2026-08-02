@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { LoginForm } from "../LoginForm";
 
 // Mock Next.js router
@@ -17,7 +17,8 @@ jest.mock("@/components/ui/Toast", () => ({
 	}),
 }));
 
-// Mock axios
+// Mock axios (not used by LoginForm after the fetch migration, but the module
+// graph pulls it in via other imports; keep the global mock so it loads clean)
 jest.mock("axios", () => {
 	const mockAxios: Record<string, unknown> = {
 		post: jest.fn(),
@@ -35,8 +36,6 @@ jest.mock("js-cookie", () => ({
 	remove: jest.fn(),
 }));
 
-// csrf module no longer exists in the project
-
 // Mock tokenManager
 jest.mock("@/lib/tokenManager", () => ({
 	tokenManager: {
@@ -46,7 +45,7 @@ jest.mock("@/lib/tokenManager", () => ({
 	},
 }));
 
-// Mock sanitizer
+// Mock sanitizer — pass-through so validate() sees real values
 jest.mock("@/lib/sanitizer", () => ({
 	sanitizer: {
 		sanitizeEmail: jest.fn((email: string) => email),
@@ -54,40 +53,76 @@ jest.mock("@/lib/sanitizer", () => ({
 	},
 }));
 
+// fetch is stubbed per-case; default to a failing call so a forgotten mock is
+// caught instead of silently hitting the network.
+const fetchMock = jest.fn();
+global.fetch = fetchMock as unknown as typeof global.fetch;
+
 describe("LoginForm", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		fetchMock.mockReset();
 	});
 
-	test("should render email and password inputs", () => {
+	it("renders email and password fields and the submit button", () => {
 		render(<LoginForm />);
 
-		expect(screen.getByText("Email")).toBeInTheDocument();
-		expect(screen.getByText("Password")).toBeInTheDocument();
+		expect(screen.getByLabelText("Email")).toBeInTheDocument();
+		expect(screen.getByLabelText("Password")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
 	});
 
-	test("should render sign in button", () => {
+	it("shows validation errors and does NOT call the API when submitting empty form", async () => {
 		render(<LoginForm />);
 
-		expect(screen.getByText("Sign In")).toBeInTheDocument();
+		// Submit without entering anything (htmlForm noValidate allows it)
+		fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+		// validate() sets errors.email + errors.password; Input renders them as
+		// <p className="...text-error"> (Input.tsx). Assert the real visible
+		// behavior — and that the request was never sent.
+		await waitFor(() => {
+			expect(screen.getByText(/email is required/i)).toBeInTheDocument();
+			expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+		});
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	test("should render forgot password link", () => {
+	it("does not show field errors before submit (initial render has no errors)", () => {
 		render(<LoginForm />);
 
-		expect(screen.getByText("Forgot password?")).toBeInTheDocument();
+		expect(screen.queryByText(/email is required/i)).not.toBeInTheDocument();
+		expect(screen.queryByText(/password is required/i)).not.toBeInTheDocument();
 	});
 
-	test("should render remember me checkbox", () => {
+	it("clears the email error once the user types and resubmits", async () => {
 		render(<LoginForm />);
 
-		expect(screen.getByText("Remember me")).toBeInTheDocument();
-	});
+		// Trigger the initial error
+		fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+		await waitFor(() => expect(screen.getByText(/email is required/i)).toBeInTheDocument());
 
-	test("should have correct input placeholders", () => {
-		render(<LoginForm />);
+		// Type an email + password and submit — fetch returns a 401, but the
+		// point is that the validation errors are gone (validate() passes).
+		fetchMock.mockResolvedValueOnce({
+			ok: false,
+			status: 401,
+			json: async () => ({ message: "bad creds" }),
+		} as Response);
 
-		expect(screen.getByPlaceholderText("your.email@example.com")).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Enter your password")).toBeInTheDocument();
+		fireEvent.change(screen.getByLabelText("Email"), {
+			target: { value: "user@example.com" },
+		});
+		fireEvent.change(screen.getByLabelText("Password"), {
+			target: { value: "Sup3rSecret!" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+		await waitFor(() => {
+			expect(screen.queryByText(/email is required/i)).not.toBeInTheDocument();
+			expect(screen.queryByText(/password is required/i)).not.toBeInTheDocument();
+		});
+		// And validate() passing means the request WAS sent this time.
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });

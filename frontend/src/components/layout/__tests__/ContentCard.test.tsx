@@ -105,16 +105,13 @@ describe("ContentCard", () => {
 		expect(card).not.toBeInTheDocument();
 	});
 
-	it("should render children even when loading prop is set (prop accepted but not yet implemented)", () => {
-		render(
-			<ContentCard loading={true}>
-				<p>Content</p>
-			</ContentCard>,
-		);
-
-		// loading prop is accepted in the interface but not yet implemented
-		expect(screen.getByText("Content")).toBeInTheDocument();
-	});
+	// NOTE: a `loading` prop is declared in ContentCardProps but ContentCard
+	// never destructures or reads it (verified: component body uses 6 of 9
+	// props, loading not among them), and zero callers pass it (grep across
+	// src). Testing `loading={true}` renders identical output to omitting it —
+	// a no-op assertion over dead code. Removed rather than left as a
+	// false-confidence "coverage" test. If `loading` is implemented later,
+	// add a real skeleton-state assertion at that time.
 
 	it("should render with custom className", () => {
 		const { container } = render(
