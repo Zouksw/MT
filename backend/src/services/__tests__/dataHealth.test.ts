@@ -41,6 +41,11 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 		expect(typeof snap.registeredSourceCount).toBe("number");
 		expect(typeof snap.predictionBacklog).toBe("number");
 		expect(typeof snap.predictionVerified).toBe("number");
+		// Both non-default status buckets must be present — a prior regression
+		// (round-62) dropped predictionStale from the health route while the
+		// service still emitted it, silently hiding ~11k stale rows from
+		// operators. Asserting here catches a service-level drop.
+		expect(typeof snap.predictionStale).toBe("number");
 		expect(typeof snap.predictionUnverifiable).toBe("number");
 		expect(typeof snap.verificationRatio).toBe("number");
 	});

@@ -135,6 +135,11 @@ router.get(
 				registeredSourceCount: number;
 				predictionBacklog: number;
 				predictionVerified: number;
+				// stale = polluted-source pre-fix data (restorePostFixConflict
+				// state machine). unverifiable = frozen-source data (round-62).
+				// Both buckets are surfaced so an operator sees the full
+				// prediction-status breakdown, not just backlog + verified.
+				predictionStale: number;
 				predictionUnverifiable: number;
 				verificationRatio: number;
 				hasVerificationDebt: boolean;
@@ -198,6 +203,7 @@ router.get(
 				registeredSourceCount: dh.registeredSourceCount,
 				predictionBacklog: dh.predictionBacklog,
 				predictionVerified: dh.predictionVerified,
+				predictionStale: dh.predictionStale,
 				predictionUnverifiable: dh.predictionUnverifiable,
 				verificationRatio: dh.verificationRatio,
 				hasVerificationDebt: dh.hasVerificationDebt,
