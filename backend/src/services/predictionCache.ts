@@ -12,6 +12,7 @@
 import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
 import { getBeefCutSeries, isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
+import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
@@ -323,28 +324,48 @@ export async function invalidateCutSeriesCache(
  * Previously this subscribed ALL active commodities (111), but 64% had zero
  * CommodityPrice rows — every 30-min refresh fired 3 model predictions that
  * all failed with "Insufficient price data", wasting inference-service work
- * and polluting logs. Now we only subscribe commodities with ≥2 daily prices
- * (the inference engine's minimum for fitting a model).
+ * and polluting logs. The first fix required ≥2 daily prices (the inference
+ * engine's minimum for fitting a model).
+ *
+ * Recency gate (round-62, 2026-08-02): a count-only gate still subscribed
+ * commodities whose latest price was months old (15 commodities frozen since
+ * 2026-04-29 / 2026-06-01 with thousands of historical rows). Every 30-min
+ * refresh generated 3 chronos predictions for each that could NEVER be
+ * verified (no new actuals ever arrive) — ~92k permanently-unverifiable rows
+ * accumulated, diluting verificationRatio to 0.006 and starving the verify
+ * loop's batch of real candidates. Now we additionally require ≥2 daily
+ * prices WITHIN STALE_WINDOW_DAYS (7), mirroring the beef-cut scheduler
+ * (scheduleBeefCutPredictions) and findForecastableFactoryForCut. A frozen
+ * commodity (e.g. wheat_cn, latest 2026-04-29) has 0 in-window rows → not
+ * subscribed → no new unverifiable predictions generated.
  */
 export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
-	// Sub-query: commodities that have at least 2 daily price rows. The
-	// inference engine needs ≥2 points to fit any model; fewer is guaranteed
-	// to fail, so we exclude them upfront.
+	// Recency window: only subscribe commodities with fresh data. Same
+	// constant the beef-cut path uses (STALE_WINDOW_DAYS=7), so a commodity
+	// is subscribed iff its forecast would not be honesty-gated on read.
+	const since = new Date();
+	since.setDate(since.getDate() - STALE_WINDOW_DAYS);
+
+	// Sub-query: active commodities with ≥2 daily prices WITHIN the window.
+	// The _count is now window-scoped, so the >=2 check below is both the
+	// inference-minimum gate AND the recency gate in one predicate.
 	const commodities = await prisma.commodity.findMany({
 		where: {
 			isActive: true,
-			prices: { some: { interval: "daily" } },
+			prices: { some: { interval: "daily", date: { gte: since } } },
 		},
 		select: {
 			id: true,
-			_count: { select: { prices: { where: { interval: "daily" } } } },
+			_count: {
+				select: { prices: { where: { interval: "daily", date: { gte: since } } } },
+			},
 		},
 	});
 
 	const MODELS = getAllModels();
 	let subscribed = 0;
 	for (const commodity of commodities) {
-		// _count.prices is the daily-price count for this commodity
+		// _count.prices is now the in-window daily-price count.
 		if (commodity._count.prices >= 2) {
 			subscribeCommodity(commodity.id, MODELS, 10);
 			subscribed++;
@@ -353,7 +374,7 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 
 	const skipped = commodities.length - subscribed;
 	logger.info(
-		`[PREDICT] Subscribed ${subscribed} commodities to prediction refresh (${skipped} had <2 daily prices, skipped)`,
+		`[PREDICT] Subscribed ${subscribed} commodities to prediction refresh (${skipped} active commodities had <2 daily prices in last ${STALE_WINDOW_DAYS}d, skipped)`,
 	);
 
 	return subscribed;
@@ -377,7 +398,8 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 export async function scheduleBeefCutPredictions(): Promise<number> {
 	// Find (factoryId, cutCode) pairs with ≥2 non-bridge points and a recent
 	// latest date. The freshness gate matches findForecastableFactoryForCut.
-	const STALE_WINDOW_DAYS = 7;
+	// STALE_WINDOW_DAYS is imported from beefFreshness (shared with the
+	// commodity scheduler above and findForecastableFactoryForCut).
 	const since = new Date();
 	since.setDate(since.getDate() - STALE_WINDOW_DAYS);
 

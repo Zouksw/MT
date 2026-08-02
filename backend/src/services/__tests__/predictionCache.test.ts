@@ -35,12 +35,14 @@ vi.mock("@/lib", async () => {
 	return { ...actual, prisma: { commodity: { findMany: vi.fn() } } };
 });
 
+import { prisma } from "@/lib";
 import {
 	getAllCachedPredictions,
 	getCachedPrediction,
 	getSubscribedCommodities,
 	invalidateCommodityCache,
 	invalidateCutSeriesCache,
+	schedulePredictionsFromPostgreSQL,
 	subscribeCommodity,
 	unsubscribeCommodity,
 } from "@/services/predictionCache";
@@ -280,5 +282,56 @@ describe("Prediction Cache — invalidateCommodityCache", () => {
 		const deleted = await invalidateCommodityCache("44444444-4444-4444-8444-444444444444");
 		expect(deleted).toBe(0);
 		expect(mockRedis.scan).not.toHaveBeenCalled();
+	});
+});
+
+describe("Prediction Cache — schedulePredictionsFromPostgreSQL (recency gate)", () => {
+	// The prisma mock at module setup exposes commodity.findMany as a vi.fn().
+	// Each test controls what findMany resolves to, simulating the DB result of
+	// the windowed query. _count.prices is the IN-WINDOW daily count (the gate
+	// now scopes both the relation filter and the _count to the STALE_WINDOW).
+
+	beforeEach(() => {
+		// Reset subscription state so subscribed counts are deterministic.
+		for (const id of getSubscribedCommodities()) unsubscribeCommodity(id);
+		(prisma.commodity.findMany as ReturnType<typeof vi.fn>).mockReset();
+	});
+
+	it("subscribes a commodity with ≥2 daily prices within the freshness window", async () => {
+		// fresh commodity: 5 in-window rows → passes the ≥2 gate
+		(prisma.commodity.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+			{ id: "fresh-commodity-1", _count: { prices: 5 } },
+		]);
+
+		const n = await schedulePredictionsFromPostgreSQL();
+
+		expect(n).toBe(1);
+		expect(getSubscribedCommodities()).toContain("fresh-commodity-1");
+	});
+
+	it("does NOT subscribe a frozen commodity (0 in-window rows are excluded by the SQL relation filter)", async () => {
+		// frozen commodity: latest price months ago → the `prices: { some: { date: { gte: since } } }`
+		// relation filter returns it with _count 0 (or not at all). Either way
+		// it must not be subscribed. Simulate the "returned but 0 in-window"
+		// case to prove the >=2 gate catches it even if the SQL were loosened.
+		(prisma.commodity.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+			{ id: "frozen-commodity-1", _count: { prices: 0 } },
+		]);
+
+		const n = await schedulePredictionsFromPostgreSQL();
+
+		expect(n).toBe(0);
+		expect(getSubscribedCommodities()).not.toContain("frozen-commodity-1");
+	});
+
+	it("requires ≥2 in-window rows (a single recent row is not enough to fit a model)", async () => {
+		(prisma.commodity.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+			{ id: "edge-commodity-1", _count: { prices: 1 } },
+		]);
+
+		const n = await schedulePredictionsFromPostgreSQL();
+
+		expect(n).toBe(0);
+		expect(getSubscribedCommodities()).not.toContain("edge-commodity-1");
 	});
 });
