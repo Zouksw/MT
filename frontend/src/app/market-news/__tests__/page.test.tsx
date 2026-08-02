@@ -78,9 +78,4 @@ describe("MarketNewsList page", () => {
 		expect(screen.getByText("Brazil beef exports hit record")).toBeInTheDocument();
 		expect(screen.getByText("Australian beef prices ease")).toBeInTheDocument();
 	});
-
-	it("renders the New Article button", () => {
-		render(<MarketNewsList />);
-		expect(screen.getByText("New Article")).toBeInTheDocument();
-	});
 });

@@ -7,6 +7,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import type { ComponentProps } from "react";
 
 // recharts + html2canvas are auto-resolved from <rootDir>/__mocks__/ (manual
 // mocks shared with AnomalyChart.test.tsx) — no per-file factory needed.
@@ -37,6 +38,23 @@ const defaultHistoricalData = [
 	{ timestamp: 1699999800000, value: 25.0 },
 ];
 
+type PredictionChartProps = ComponentProps<typeof PredictionChart>;
+
+// Shared render helper — every behaviour test renders the chart with the same
+// defaults; only a few override one prop (algorithm / onExport / historical /
+// prediction). Absorbs ~8 repeated JSX blocks.
+function renderChart(overrides: Partial<PredictionChartProps> = {}) {
+	return render(
+		<PredictionChart
+			timeseries="root.test.temp"
+			historicalData={defaultHistoricalData}
+			predictionData={defaultPredictionData}
+			algorithm="arima"
+			{...overrides}
+		/>,
+	);
+}
+
 describe("PredictionChart", () => {
 	it("should render loading spinner when no data", () => {
 		render(
@@ -53,57 +71,25 @@ describe("PredictionChart", () => {
 	});
 
 	it("should render chart header with timeseries name and algorithm", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByText(/Prediction Chart: root\.test\.temp/)).toBeInTheDocument();
 		expect(screen.getByText(/ARIMA/)).toBeInTheDocument();
 	});
 
 	it("should display data point count", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-			/>,
-		);
-
+		renderChart();
 		// 3 historical + 3 prediction = 6 data points
 		expect(screen.getByText(/6 data points/)).toBeInTheDocument();
 	});
 
 	it("should render export buttons", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByLabelText("Export chart as PNG image")).toBeInTheDocument();
 		expect(screen.getByLabelText("Export chart data as CSV spreadsheet")).toBeInTheDocument();
 	});
 
 	it("should render expand/collapse button", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-			/>,
-		);
-
+		renderChart();
 		const expandBtn = screen.getByLabelText("Expand chart to full size");
 		expect(expandBtn).toBeInTheDocument();
 
@@ -111,38 +97,15 @@ describe("PredictionChart", () => {
 		expect(screen.getByLabelText("Collapse chart to normal size")).toBeInTheDocument();
 	});
 
-	it("should render chart container for Recharts", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-			/>,
-		);
-
-		expect(screen.getByTestId("recharts-ResponsiveContainer")).toBeInTheDocument();
-	});
-
 	it("should call onExport callback when CSV export clicked", () => {
 		const onExport = jest.fn();
 		// Mock Blob and URL APIs for JSDOM
-		const mockUrl = "blob:test";
 		const originalCreateObjectURL = URL.createObjectURL;
 		const originalRevokeObjectURL = URL.revokeObjectURL;
-		URL.createObjectURL = jest.fn(() => mockUrl);
+		URL.createObjectURL = jest.fn(() => "blob:test");
 		URL.revokeObjectURL = jest.fn();
 
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-				onExport={onExport}
-			/>,
-		);
-
+		renderChart({ onExport });
 		fireEvent.click(screen.getByLabelText("Export chart data as CSV spreadsheet"));
 		expect(onExport).toHaveBeenCalledWith("csv");
 
@@ -151,44 +114,20 @@ describe("PredictionChart", () => {
 	});
 
 	it("should render with prediction-only data (no historical)", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.sensor"
-				historicalData={[]}
-				predictionData={defaultPredictionData}
-				algorithm="lstm"
-			/>,
-		);
-
+		renderChart({ timeseries: "root.test.sensor", historicalData: [], algorithm: "lstm" });
 		expect(screen.getByText(/Prediction Chart: root\.test\.sensor/)).toBeInTheDocument();
 		expect(screen.getByText(/LSTM/)).toBeInTheDocument();
 		expect(screen.getByTestId("recharts-ResponsiveContainer")).toBeInTheDocument();
 	});
 
 	it("should render with historical-only data (no predictions)", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={{ timestamps: [], values: [] }}
-				algorithm="prophet"
-			/>,
-		);
-
+		renderChart({ predictionData: { timestamps: [], values: [] }, algorithm: "prophet" });
 		expect(screen.getByText(/PROPHET/)).toBeInTheDocument();
 		expect(screen.getByTestId("recharts-ResponsiveContainer")).toBeInTheDocument();
 	});
 
 	it("should render chart with aria-label for accessibility", () => {
-		render(
-			<PredictionChart
-				timeseries="root.test.temp"
-				historicalData={defaultHistoricalData}
-				predictionData={defaultPredictionData}
-				algorithm="arima"
-			/>,
-		);
-
+		renderChart();
 		// Antd icons also have role="img", so use getAllByRole and find the chart one
 		const imgs = screen.getAllByRole("img");
 		const chart = imgs.find((el) => el.getAttribute("aria-label")?.includes("root.test.temp"));

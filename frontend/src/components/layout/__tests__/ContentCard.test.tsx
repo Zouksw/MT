@@ -78,31 +78,25 @@ describe("ContentCard", () => {
 				<p>Content</p>
 			</ContentCard>,
 		);
-
-		const card = container.querySelector(".bg-card");
-		expect(card).toBeInTheDocument();
+		expect(container.querySelector(".bg-card")).toBeInTheDocument();
 	});
 
-	it("should apply accent border when accent is true", () => {
+	// Accent border toggles on/off with the `accent` prop (default false).
+	it.each([
+		["accent=true", true, true],
+		["accent=false (default)", false, false],
+	])("applies border-t-2 iff %s", (_label, accent, shouldHaveBorder) => {
 		const { container } = render(
-			<ContentCard accent={true}>
+			<ContentCard accent={accent}>
 				<p>Content</p>
 			</ContentCard>,
 		);
-
 		const card = container.querySelector(".border-t-2");
-		expect(card).toBeInTheDocument();
-	});
-
-	it("should not apply accent border when accent is false (default)", () => {
-		const { container } = render(
-			<ContentCard>
-				<p>Content</p>
-			</ContentCard>,
-		);
-
-		const card = container.querySelector(".border-t-2");
-		expect(card).not.toBeInTheDocument();
+		if (shouldHaveBorder) {
+			expect(card).toBeInTheDocument();
+		} else {
+			expect(card).not.toBeInTheDocument();
+		}
 	});
 
 	// NOTE: a `loading` prop is declared in ContentCardProps but ContentCard

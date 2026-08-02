@@ -13,6 +13,7 @@ import "@testing-library/jest-dom";
 jest.mock("recharts");
 jest.mock("html2canvas");
 
+import type { ComponentProps } from "react";
 import { AnomalyChart } from "../AnomalyChart";
 
 const sampleAnomalies = [
@@ -28,6 +29,22 @@ const sampleHistoricalData = [
 	{ timestamp: 1699999800000, value: 24.8 },
 ];
 
+type AnomalyChartProps = ComponentProps<typeof AnomalyChart>;
+
+// Shared render helper — every behaviour test renders the chart with the same
+// sample data; only a few override a single prop (method / onExport /
+// anomalies / historicalData). Absorbs ~10 repeated JSX blocks.
+function renderChart(overrides: Partial<AnomalyChartProps> = {}) {
+	return render(
+		<AnomalyChart
+			timeseries="root.test.temp"
+			anomalies={sampleAnomalies}
+			historicalData={sampleHistoricalData}
+			{...overrides}
+		/>,
+	);
+}
+
 describe("AnomalyChart", () => {
 	it("should render loading spinner when no data", () => {
 		render(<AnomalyChart timeseries="root.test.temp" anomalies={[]} historicalData={[]} />);
@@ -37,111 +54,47 @@ describe("AnomalyChart", () => {
 	});
 
 	it("should render chart header with timeseries name", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByText(/Anomaly Detection: root\.test\.temp/)).toBeInTheDocument();
 	});
 
 	it("should display the detection method", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-				method="isolation_forest"
-			/>,
-		);
-
+		renderChart({ method: "isolation_forest" });
 		expect(screen.getByText(/ISOLATION_FOREST/)).toBeInTheDocument();
 	});
 
 	it("should show anomaly count in header", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByText(/3 anomalies/)).toBeInTheDocument();
 	});
 
 	it("should display anomaly summary alert", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByText("3 Anomalies Detected")).toBeInTheDocument();
 	});
 
 	it("should display severity tags in summary", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByText("High: 1")).toBeInTheDocument();
 		expect(screen.getByText("Medium: 1")).toBeInTheDocument();
 		expect(screen.getByText("Low: 1")).toBeInTheDocument();
 	});
 
 	it("should render export buttons", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart();
 		expect(screen.getByLabelText("Export anomaly chart as PNG image")).toBeInTheDocument();
 		expect(screen.getByLabelText("Export anomaly data as CSV spreadsheet")).toBeInTheDocument();
-	});
-
-	it("should render chart container for Recharts", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
-		expect(screen.getByTestId("recharts-ResponsiveContainer")).toBeInTheDocument();
 	});
 
 	it("should call onExport when CSV export clicked", () => {
 		const onExport = jest.fn();
 		// Mock Blob and URL APIs for JSDOM
-		const mockUrl = "blob:test";
 		const originalCreateObjectURL = URL.createObjectURL;
 		const originalRevokeObjectURL = URL.revokeObjectURL;
-		URL.createObjectURL = jest.fn(() => mockUrl);
+		URL.createObjectURL = jest.fn(() => "blob:test");
 		URL.revokeObjectURL = jest.fn();
 
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-				onExport={onExport}
-			/>,
-		);
-
+		renderChart({ onExport });
 		fireEvent.click(screen.getByLabelText("Export anomaly data as CSV spreadsheet"));
 		expect(onExport).toHaveBeenCalledWith("csv");
 
@@ -150,28 +103,13 @@ describe("AnomalyChart", () => {
 	});
 
 	it("should render with anomalies only (no historical data)", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.sensor"
-				anomalies={sampleAnomalies}
-				historicalData={[]}
-			/>,
-		);
-
+		renderChart({ timeseries: "root.test.sensor", historicalData: [] });
 		expect(screen.getByText(/Anomaly Detection: root\.test\.sensor/)).toBeInTheDocument();
 		expect(screen.getByTestId("recharts-ResponsiveContainer")).toBeInTheDocument();
 	});
 
 	it("should render chart with aria-label for accessibility", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-				method="statistical"
-			/>,
-		);
-
+		renderChart({ method: "statistical" });
 		// Antd icons also have role="img", find the chart one
 		const imgs = screen.getAllByRole("img");
 		const chart = imgs.find((el) => el.getAttribute("aria-label")?.includes("root.test.temp"));
@@ -180,14 +118,7 @@ describe("AnomalyChart", () => {
 	});
 
 	it("should toggle expand/collapse", () => {
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={sampleAnomalies}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart();
 		const expandBtn = screen.getByLabelText("Expand anomaly chart to full size");
 		fireEvent.click(expandBtn);
 		expect(screen.getByLabelText("Collapse anomaly chart to normal size")).toBeInTheDocument();
@@ -198,15 +129,7 @@ describe("AnomalyChart", () => {
 			...sampleAnomalies,
 			{ timestamp: 1699999900000, value: 99.9, score: 0.99, severity: "CRITICAL" as const },
 		];
-
-		render(
-			<AnomalyChart
-				timeseries="root.test.temp"
-				anomalies={anomaliesWithCritical}
-				historicalData={sampleHistoricalData}
-			/>,
-		);
-
+		renderChart({ anomalies: anomaliesWithCritical });
 		expect(screen.getByText("Critical: 1")).toBeInTheDocument();
 		expect(screen.getByText("4 Anomalies Detected")).toBeInTheDocument();
 	});

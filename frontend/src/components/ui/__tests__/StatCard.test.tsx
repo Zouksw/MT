@@ -22,19 +22,15 @@ describe("StatCard", () => {
 		expect(container.querySelector('[data-testid="icon"]')).toBeInTheDocument();
 	});
 
-	it("should render trend indicator with positive value", () => {
-		render(<StatCard title="Revenue" value={50000} trend={{ value: 12.5, isPositive: true }} />);
-		expect(screen.getByText("+12.5%")).toBeInTheDocument();
-	});
-
-	it("should render trend indicator with negative value", () => {
-		render(<StatCard title="Expenses" value={3000} trend={{ value: 5.2, isPositive: false }} />);
-		expect(screen.getByText("5.2%")).toBeInTheDocument();
-	});
-
-	it("should render trend indicator with zero value", () => {
-		render(<StatCard title="Steady" value={100} trend={{ value: 0, isPositive: true }} />);
-		expect(screen.getByText("+0%")).toBeInTheDocument();
+	// Trend indicator: three sign variants collapsed to one it.each (positive
+	// shows +N%, negative shows N% with a down indicator, zero shows +0%).
+	it.each([
+		["positive", 12.5, true, "+12.5%"],
+		["negative", 5.2, false, "5.2%"],
+		["zero", 0, true, "+0%"],
+	])("renders trend indicator with %s value", (_label, value, isPositive, expected) => {
+		render(<StatCard title="Trend" value={100} trend={{ value, isPositive }} />);
+		expect(screen.getByText(expected)).toBeInTheDocument();
 	});
 
 	it("should show loading state", () => {

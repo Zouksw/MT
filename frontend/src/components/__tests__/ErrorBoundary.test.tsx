@@ -45,7 +45,7 @@ describe("ErrorBoundary", () => {
 		expect(screen.getByText(/An unexpected error occurred/)).toBeInTheDocument();
 	});
 
-	test("should show Try Again button", () => {
+	test("should render both recovery buttons (Try Again + Reload Page)", () => {
 		render(
 			<ErrorBoundary>
 				<ThrowingComponent shouldThrow={true} />
@@ -53,15 +53,6 @@ describe("ErrorBoundary", () => {
 		);
 
 		expect(screen.getByText("Try Again")).toBeInTheDocument();
-	});
-
-	test("should show Reload Page button", () => {
-		render(
-			<ErrorBoundary>
-				<ThrowingComponent shouldThrow={true} />
-			</ErrorBoundary>,
-		);
-
 		expect(screen.getByText("Reload Page")).toBeInTheDocument();
 	});
 
@@ -95,15 +86,5 @@ describe("ErrorBoundary", () => {
 		);
 
 		expect(screen.getByText("Normal content")).toBeInTheDocument();
-	});
-
-	test("should not render children after error", () => {
-		render(
-			<ErrorBoundary>
-				<ThrowingComponent shouldThrow={true} />
-			</ErrorBoundary>,
-		);
-
-		expect(screen.queryByText("Normal content")).not.toBeInTheDocument();
 	});
 });

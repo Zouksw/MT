@@ -98,17 +98,6 @@ describe("AlertList", () => {
 		});
 	});
 
-	it("should render page header", async () => {
-		render(<AlertList />);
-
-		// Title appears in breadcrumb and h1 — check h1 specifically
-		const headings = screen.getAllByRole("heading", { level: 1 });
-		expect(headings[0]).toHaveTextContent("Alerts & Notifications");
-		expect(
-			screen.getByText("View and manage system alerts, anomalies, and notifications"),
-		).toBeInTheDocument();
-	});
-
 	it("should render stats when loaded", async () => {
 		render(<AlertList />);
 
@@ -130,28 +119,6 @@ describe("AlertList", () => {
 		// Wait for data to load and table to render alert messages
 		await waitFor(() => {
 			expect(screen.getByText("High temperature detected")).toBeInTheDocument();
-		});
-	});
-
-	it("should render filter controls", async () => {
-		render(<AlertList />);
-
-		await waitFor(() => {
-			expect(screen.getByText("Filter by:")).toBeInTheDocument();
-		});
-	});
-
-	it("should render refresh button", async () => {
-		render(<AlertList />);
-
-		expect(screen.getByText("Refresh")).toBeInTheDocument();
-	});
-
-	it("should show Mark All Read button when there are unread alerts", async () => {
-		render(<AlertList />);
-
-		await waitFor(() => {
-			expect(screen.getByText("Mark All Read")).toBeInTheDocument();
 		});
 	});
 

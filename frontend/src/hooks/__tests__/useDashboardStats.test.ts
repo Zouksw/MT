@@ -31,6 +31,39 @@ const mockUseBeefCutForecasts = useBeefCutForecasts as jest.MockedFunction<
 	typeof useBeefCutForecasts
 >;
 
+// ─── Mock factories (round-65) ────────────────────────────────────────
+// Every test returned the same 9-field useRetryableFetch result object
+// inline (~9 lines × 13 tests). These factories absorb that boilerplate.
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+type FetchResult = any;
+
+// Build the standard resolved-result object with optional overrides.
+function makeFetchResult(overrides: Partial<FetchResult> = {}): FetchResult {
+	return {
+		data: undefined,
+		error: undefined,
+		isLoading: false,
+		isValidating: false,
+		isRetrying: false,
+		retryCount: 0,
+		manualRetry: jest.fn(),
+		mutate: jest.fn(),
+		...overrides,
+	};
+}
+
+// Key-indexed mockImplementation: returns the byKey entry whose key is a
+// substring of the called URL, falling back to {total:0,data:[]}. Robust to
+// hook reordering (no call-order dependence).
+// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+function mockByKey(byKey: Record<string, any>) {
+	mockUseRetryableFetch.mockImplementation((key: any) => {
+		const url = String(key ?? "");
+		const matched = Object.entries(byKey).find(([k]) => url.includes(k));
+		return makeFetchResult({ data: matched ? matched[1] : { total: 0, data: [] } });
+	});
+}
+
 describe("useDashboardStats", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -42,16 +75,7 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should start with loading state and null stats", () => {
-		mockUseRetryableFetch.mockReturnValue({
-			data: undefined,
-			error: undefined,
-			isLoading: true,
-			isValidating: false,
-			isRetrying: false,
-			retryCount: 0,
-			manualRetry: jest.fn(),
-			mutate: jest.fn(),
-		});
+		mockUseRetryableFetch.mockReturnValue(makeFetchResult({ isLoading: true }));
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -61,11 +85,8 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should fetch and parse stats successfully", async () => {
-		// Index the mock by URL key (not call order) so the test is robust to
-		// hook reordering — the 3 public beef calls and the authed calls can
-		// appear in any sequence without breaking this test.
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		const byKey: Record<string, any> = {
+		// Key-indexed mock (robust to hook reordering) — see mockByKey factory.
+		mockByKey({
 			"/beef/cuts": { data: { cuts: [{ cutCode: "X" }] } },
 			"/beef/factories": { data: { factories: [{ id: "f1" }] } },
 			"/beef/prices/latest": { data: { prices: [{ price: 5, cutCode: "X", date: "2026-07-19" }] } },
@@ -81,21 +102,6 @@ describe("useDashboardStats", () => {
 					{ severity: "low" },
 				],
 			},
-		};
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
-			const url = String(key ?? "");
-			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
-			return {
-				data: matched ? matched[1] : { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
 		});
 
 		const { result } = renderHook(() => useDashboardStats());
@@ -113,16 +119,9 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should handle API errors gracefully", async () => {
-		mockUseRetryableFetch.mockImplementation(() => ({
-			data: undefined,
-			error: new Error("Network error"),
-			isLoading: false,
-			isValidating: false,
-			isRetrying: false,
-			retryCount: 0,
-			manualRetry: jest.fn(),
-			mutate: jest.fn(),
-		}));
+		mockUseRetryableFetch.mockImplementation(() =>
+			makeFetchResult({ error: new Error("Network error") }),
+		);
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -140,16 +139,7 @@ describe("useDashboardStats", () => {
 		getAuthToken.mockReturnValueOnce(null);
 
 		// When auth token is null, useRetryableFetch gets null key and returns default
-		mockUseRetryableFetch.mockImplementation(() => ({
-			data: undefined,
-			error: undefined,
-			isLoading: false,
-			isValidating: false,
-			isRetrying: false,
-			retryCount: 0,
-			manualRetry: jest.fn(),
-			mutate: jest.fn(),
-		}));
+		mockUseRetryableFetch.mockImplementation(() => makeFetchResult());
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -169,7 +159,7 @@ describe("useDashboardStats", () => {
 		mockUseRetryableFetch.mockImplementation((key: any) => {
 			const url = String(key ?? "");
 			if (url.includes("/alerts?page=1&limit=100")) {
-				return {
+				return makeFetchResult({
 					data: {
 						total: 8,
 						data: [
@@ -183,25 +173,9 @@ describe("useDashboardStats", () => {
 							{ severity: "LOW" },
 						],
 					},
-					error: undefined,
-					isLoading: false,
-					isValidating: false,
-					isRetrying: false,
-					retryCount: 0,
-					manualRetry: jest.fn(),
-					mutate: jest.fn(),
-				};
+				});
 			}
-			return {
-				data: { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
+			return makeFetchResult({ data: { total: 0, data: [] } });
 		});
 
 		const { result } = renderHook(() => useDashboardStats());
@@ -224,40 +198,13 @@ describe("useDashboardStats", () => {
 			const url = String(key ?? "");
 			if (url.includes("/alerts?limit=5")) {
 				// recentAlerts — uses items[] shape
-				return {
-					data: { items: [{ id: 1, name: "Alert 1" }] },
-					error: undefined,
-					isLoading: false,
-					isValidating: false,
-					isRetrying: false,
-					retryCount: 0,
-					manualRetry: jest.fn(),
-					mutate: jest.fn(),
-				};
+				return makeFetchResult({ data: { items: [{ id: 1, name: "Alert 1" }] } });
 			}
 			if (url.includes("/models?limit=5")) {
 				// recentForecasts — uses items[] shape
-				return {
-					data: { items: [{ id: 1, name: "Forecast 1" }] },
-					error: undefined,
-					isLoading: false,
-					isValidating: false,
-					isRetrying: false,
-					retryCount: 0,
-					manualRetry: jest.fn(),
-					mutate: jest.fn(),
-				};
+				return makeFetchResult({ data: { items: [{ id: 1, name: "Forecast 1" }] } });
 			}
-			return {
-				data: { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
+			return makeFetchResult({ data: { total: 0, data: [] } });
 		});
 
 		const { result } = renderHook(() => useDashboardStats());
@@ -271,16 +218,7 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should use default values when totals are missing", async () => {
-		mockUseRetryableFetch.mockImplementation(() => ({
-			data: { data: [] },
-			error: undefined,
-			isLoading: false,
-			isValidating: false,
-			isRetrying: false,
-			retryCount: 0,
-			manualRetry: jest.fn(),
-			mutate: jest.fn(),
-		}));
+		mockUseRetryableFetch.mockImplementation(() => makeFetchResult({ data: { data: [] } }));
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -293,16 +231,9 @@ describe("useDashboardStats", () => {
 	});
 
 	it("should report AI models count from the registry (no longer hardcoded)", async () => {
-		mockUseRetryableFetch.mockImplementation(() => ({
-			data: { total: 0, data: [] },
-			error: undefined,
-			isLoading: false,
-			isValidating: false,
-			isRetrying: false,
-			retryCount: 0,
-			manualRetry: jest.fn(),
-			mutate: jest.fn(),
-		}));
+		mockUseRetryableFetch.mockImplementation(() =>
+			makeFetchResult({ data: { total: 0, data: [] } }),
+		);
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -326,39 +257,12 @@ describe("useDashboardStats", () => {
 		mockUseRetryableFetch.mockImplementation((key: any) => {
 			const url = String(key ?? "");
 			if (url.includes("isActive=true")) {
-				return {
-					data: { total: 1, pagination: { total: 1 } },
-					error: undefined,
-					isLoading: false,
-					isValidating: false,
-					isRetrying: false,
-					retryCount: 0,
-					manualRetry: jest.fn(),
-					mutate: jest.fn(),
-				};
+				return makeFetchResult({ data: { total: 1, pagination: { total: 1 } } });
 			}
 			if (url.includes("/models?page=1&limit=1")) {
-				return {
-					data: { total: 4, data: [] },
-					error: undefined,
-					isLoading: false,
-					isValidating: false,
-					isRetrying: false,
-					retryCount: 0,
-					manualRetry: jest.fn(),
-					mutate: jest.fn(),
-				};
+				return makeFetchResult({ data: { total: 4, data: [] } });
 			}
-			return {
-				data: { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
+			return makeFetchResult({ data: { total: 0, data: [] } });
 		});
 
 		const { result } = renderHook(() => useDashboardStats());
@@ -374,16 +278,9 @@ describe("useDashboardStats", () => {
 	});
 
 	it("surfaces trend as null when no trend source is wired (no fake 0 badge — TRUST-1)", async () => {
-		mockUseRetryableFetch.mockImplementation(() => ({
-			data: { total: 0, data: [] },
-			error: undefined,
-			isLoading: false,
-			isValidating: false,
-			isRetrying: false,
-			retryCount: 0,
-			manualRetry: jest.fn(),
-			mutate: jest.fn(),
-		}));
+		mockUseRetryableFetch.mockImplementation(() =>
+			makeFetchResult({ data: { total: 0, data: [] } }),
+		);
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -405,8 +302,7 @@ describe("useDashboardStats", () => {
 		// dashboard's 行情总览 shows the AI prediction alongside the price
 		// (PRODUCT-SPEC §5.1). A cut with a forecast gets it merged in;
 		// a cut without keeps forecast:null (honest "—").
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		const byKey: Record<string, any> = {
+		mockByKey({
 			"/beef/cuts": { data: { cuts: [{ cutCode: "STRIPLOIN" }, { cutCode: "BRISKET" }] } },
 			"/beef/factories": { data: { factories: [] } },
 			"/beef/prices/latest": {
@@ -417,21 +313,6 @@ describe("useDashboardStats", () => {
 					],
 				},
 			},
-		};
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
-			const url = String(key ?? "");
-			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
-			return {
-				data: matched ? matched[1] : { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
 		});
 
 		// STRIPLOIN has a forecast; BRISKET does not.
@@ -474,8 +355,7 @@ describe("useDashboardStats", () => {
 		// /beef/prices/latest now returns a `trend` object with origin-split %
 		// change vs the previous day. The hook must pass it through so the hero
 		// 进口/国产 cards can render ↓1.2%/↑0.5% badges instead of hiding them.
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		const byKey: Record<string, any> = {
+		mockByKey({
 			"/beef/cuts": { data: { cuts: [] } },
 			"/beef/factories": { data: { factories: [] } },
 			"/beef/prices/latest": {
@@ -489,21 +369,6 @@ describe("useDashboardStats", () => {
 					},
 				},
 			},
-		};
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
-			const url = String(key ?? "");
-			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
-			return {
-				data: matched ? matched[1] : { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
 		});
 		mockUseBeefCutForecasts.mockReturnValue({ forecasts: {}, isLoading: false });
 
@@ -520,28 +385,12 @@ describe("useDashboardStats", () => {
 		// Older backend / transient error → no trend field. The hook must not
 		// crash and must surface null (StatCard hides the badge) rather than a
 		// fabricated 0%.
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		const byKey: Record<string, any> = {
+		mockByKey({
 			"/beef/cuts": { data: { cuts: [] } },
 			"/beef/factories": { data: { factories: [] } },
 			"/beef/prices/latest": {
 				data: { prices: [{ price: 50, cutCode: "X", date: "2026-07-31" }] },
 			},
-		};
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
-			const url = String(key ?? "");
-			const matched = Object.entries(byKey).find(([k]) => url.includes(k));
-			return {
-				data: matched ? matched[1] : { total: 0, data: [] },
-				error: undefined,
-				isLoading: false,
-				isValidating: false,
-				isRetrying: false,
-				retryCount: 0,
-				manualRetry: jest.fn(),
-				mutate: jest.fn(),
-			};
 		});
 		mockUseBeefCutForecasts.mockReturnValue({ forecasts: {}, isLoading: false });
 
