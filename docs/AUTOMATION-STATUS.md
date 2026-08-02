@@ -77,14 +77,14 @@
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-01 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-02 实测） |
 |---|---|---|---|---|
 | backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 55 | **625 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 24 | **288 pass** |
+| frontend | jest 29 + Testing Library | jest.config.js | 24 | **286 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **960 全绿**（625 + 288 + 47，截至 2026-08-01 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **958 全绿**（625 + 286 + 47，截至 2026-08-02 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -92,6 +92,11 @@
 - **同义反复根治**：`alertRules.test.ts` 17 case 改测**真** `isConditionMet`（export 出来；mutation 验证能捕生产漂移，原测本地副本 = 永绿）；`injection-auth.test.ts` 删 SQLi/XSS 同义反复块（测测试内手写对象/Prisma 保证，非本仓代码；backend 无 sanitizer 可 redirect），保留 7 真 authz 测试。
 - **silent-skip → fail-loud**：16 文件（8 routes + 6 createTestContext + 2 integration）全显式失败。新增 `testApp.ts:requireDb(label)` helper（包装 isDbAvailable，false 时 throw actionable error）。
 - **结构冗余合并**：`ai.test.ts` 并入 `signals.test.ts`（独有 3 case 迁移，重叠 4 删）；`user.test.ts` 删 billing 块（被 billing.test.ts 完全覆盖）；前端 `__mocks__/recharts.tsx` + `html2canvas.tsx` 抽公共 manual mock（去 ~70 行重复 factory，case 不变）。
+
+**测试系统重构续（round-61，2026-08-02）**——审计后剩余 3 个低价值文件按 round-60 三准则收尾：
+- **LoginForm（5 render-only → 4 behavior）**：原 5 case 全断言静态标签/placeholder 存在（"Email"/"Password"/"Sign In"），即使 `validate()` 被掏空也永绿。改为 4 case 测真 `validate()` 契约——空表单提交显示可见错误（`Input.tsx` 的 `<p class=text-error>`）且**阻断 fetch**；retype 后错误清空；初次渲染无错误。mutation 验证：把 `validate()` 改成恒通过，4 case 中 2 个红（证非同义反复）。
+- **ContentCard（12 → 11）**：删 "loading prop 渲染子节点" case——`loading` 在 interface 声明但组件从不解构（9 props 用 6），零 caller 传（grep 全 src），测一个被忽略的 prop = 无意义假信心测试。条件 class 测试保留（accent 切 border-t-2、title 渲染 dot）。
+- **concurrent-operations（22 → 22，契约精确化）**：宽接受断言换成真函数契约（源码核实自 `tokenBlacklist.ts`/`authLockout.ts`）：`isTokenBlacklisted("")`/`"not-a-jwt"`/random → pin false（原 `typeof === "boolean"`，即使全部误返 true = fail-closed 锁所有用户也绿）；`removeFromBlacklist`/`blacklistToken` → pin true；`checkAccountLockout(新 id)` → `{isLocked:false, remainingAttempts:5}`；mixed concurrent API 改 per-endpoint allowed-set + label（原 `200≤status≤500` 接受任何 HTTP 状态，含 `/auth/me` 无 token 返 200 = auth bypass）；concurrent login（未注册邮箱）限 `{401,429}`（原含 200 = 登录成功不存在用户的 auth bypass）。
 
 **MAPE E2E 守护**：`services/__tests__/mapeTracking.test.ts` 覆盖 cut-series 预测的完整验证链路（PredictionLog → BeefCutPrice actuals → verifyDuePredictions → verified + MAPE）。守护 round-22 的正确性修复。
 
