@@ -40,6 +40,11 @@
 **性质**：非代码 bug，属数据覆盖主线。待 D1 数据流打通后自然缓解。
 **已做决策（避免 quality theater）**：当时不建议放宽 `mapeTracking.ts` 的 7 天冷却 / `min(horizon,3)` 阈值——调参只能把可验证数从 42 提到 63（+21），691 条（92.5%）无论怎么调都不可验证。等数据流入后再复核阈值。
 
+**round-62 部分根治（2026-08-02 live 实测）**：本条原指"数据层后果"，round-62 修了**两个放大该后果的代码缺陷**（非数据源本身）：
+1. **止血（P1，commit c0c4944）**：`schedulePredictionsFromPostgreSQL`（`predictionCache.ts`）无 recency gate，15 个 frozen 商品（最新价 2026-04-29 / 2026-06-01，2-3 个月无新数据）每 30 分钟仍生成新 chronos 预测——这些预测永不可验证，是"持续出血"。加 `STALE_WINDOW_DAYS=7` recency gate（对齐 `scheduleBeefCutPredictions`），frozen 商品不再被订阅。live 实测：订阅数从 15+ 降至 4（aud_usd/brl_usd/usd_cny/beef_carcass_us）。
+2. **排空（P2，commit 013fa1b）**：新增 `markUnverifiablePredictions()`（`mapeTracking.ts`）—— 检测"due completed 预测 + commodity 无 post-prediction 价格"= 永不可验证，标 `unverifiable` 状态（第 4 个状态值，free TEXT 无需 migration；区别于 `stale`=污染源）。`verifyDuePredictions` 只读 `completed` → 标过的行自动退出循环。server.ts 启动一次性钩子（25s）。live 实测：backlog 107,393 → 14,888；unverifiable 0 → 76,954；`verificationRatio` **0.006 → 0.522**（87×，分母排除 unverifiable）；`hasVerificationDebt` **true → false**。verify loop 日志从 `Verified 0 of 5000 (5000 no actuals)` 变 `Verified 5000 of 5000 (0 no actuals)`。
+- **D1 数据源失效本身未修**（仍需 MLA/USDA key 等）——本轮只让 frozen 数据的后果不再放大/掩盖真实验证进度。frozen 商品数据流入后，新预测按正常路径验证（旧 unverifiable 行保持 unverifiable，是诚实历史记录）。
+
 ---
 
 ### D3 — 数据层静默失效已被暴露（2026-07-31 live 实测，round-48~50）
@@ -53,6 +58,8 @@
 **性质**：与 D1 同源（数据源失效），但本条聚焦**可观测性缺口**——数据停滞之前被 infra-green 掩盖。
 **已解决（round-48~50，可观测性层）**：dataHealth service → `/health/ready.checks.dataLayer` + `/sources/freshness.summary.dataHealth` + cron-healthcheck 数据探针，三层暴露。**数据层本身未修**（仍需用户提供 MLA/USDA key 等，见 D1）——本条只让停滞可见、可追踪。
 **后续（数据层修复，需用户输入）**：见 D1 解决路径。数据流入后 verificationRatio 自然回升，`hasVerificationDebt` 会自动转 false。
+
+**round-62 补充（2026-08-02 live 实测）**：`dataHealth` 新增第 4 桶 `predictionUnverifiable`（frozen-source 预测，区别于 `predictionStale`=污染源）。`verificationRatio` 分母**排除 unverifiable**（它们永不可验证，不算"债"）。live 实测：`predictionBacklog` 107,393 → 14,888；`predictionUnverifiable` 0 → 76,954；`verificationRatio` 0.006 → 0.522；`hasVerificationDebt` true → false。operator 现可在 `/health/ready.checks.dataLayer.predictionUnverifiable` + DataHealthCard 看到 frozen-source 死积压规模。
 
 ---
 
