@@ -186,6 +186,120 @@ export async function restorePostFixConflictPredictions(fixedAt: Date): Promise<
 }
 
 /**
+ * Mark completed predictions whose forecast horizon has elapsed AND whose
+ * commodity has received NO new daily prices after the prediction was made
+ * — i.e. permanently unverifiable (the data source is frozen/dead).
+ *
+ * Why this exists: verifyDuePredictions reads `status:"completed"` OLDEST-
+ * first take 5000 every 6h. Frozen-commodity predictions (e.g. wheat_cn,
+ * latest price 2026-04-29) always fail the no-actuals skip — and the skip
+ * is a bare `continue` with no DB write, so the row stays `completed`
+ * forever and is re-read every run. ~92k such rows accumulated, each
+ * batch wasting its 5000-row window re-skip- ping dead rows instead of
+ * processing real due candidates (chronos, post-08-06).
+ *
+ * Marking these rows `unverifiable` (a 4th status value; the status column
+ * is free TEXT, no migration needed) excludes them from verifyDuePredic-
+ * tions' `status:"completed"` filter automatically — zero loop change.
+ *
+ * Distinct from `stale`: stale = polluted/conflicting-source pre-fix data,
+ * coupled to restorePostFixConflictPredictions' state machine. `unverifiable`
+ * = data-source-frozen; never re-attempted unless the source resumes (in
+ * which case NEW predictions on the now-fresh commodity verify normally;
+ * these old rows stay unverifiable as honest historical record).
+ *
+ * Detection (batch, NOT per-row — 92k rows × query would be 184k round-
+ * trips): find commodity-IDs (non-cut) that have at least one due
+ * completed prediction, then for each check if its latest daily price is
+ * older than the OLDEST due prediction for that commodity. If so, every
+ * due completed prediction for that commodity has no actuals and never
+ * will → mark all of them unverifiable in one updateMany.
+ *
+ * Idempotent: only touches status:"completed" rows. A second run finds
+ * none (they're now "unverifiable") and returns 0.
+ *
+ * @returns number of predictions marked unverifiable this run
+ */
+export async function markUnverifiablePredictions(): Promise<number> {
+	const MAX_HORIZON_DAYS = 10;
+	const cutoff = new Date(Date.now() - MAX_HORIZON_DAYS * 86400000);
+	const now = Date.now();
+
+	// Step 1: find commodity-IDs with due completed predictions (non-cut).
+	// Due = predictedAt <= cutoff AND predictedAt + horizon <= now. The SQL
+	// cutoff is the max-horizon superset; the per-row horizon check below
+	// refines it. We only need distinct commodityIds here.
+	const dueCommodities = await prisma.predictionLog.findMany({
+		where: {
+			status: "completed",
+			predictedAt: { lte: cutoff },
+			// Exclude cut-series keys — their actuals live in BeefCutPrice, not
+			// CommodityPrice; a separate verification path handles them and
+			// they should not be swept into the commodity-frozen bucket.
+			NOT: { commodityId: { startsWith: "cut:" } },
+		},
+		select: { commodityId: true, predictedAt: true, horizon: true },
+	});
+
+	if (dueCommodities.length === 0) return 0;
+
+	// Group by commodityId, tracking the earliest due predictedAt per
+	// commodity (the bar any post-prediction actual must clear) and whether
+	// at least one row is truly due (predictedAt + horizon <= now).
+	const byCommodity = new Map<string, { earliestPredictedAt: Date; hasDueRow: boolean }>();
+	for (const row of dueCommodities) {
+		const horizonMs = row.horizon * 86400000;
+		const isDue = row.predictedAt.getTime() + horizonMs <= now;
+		const existing = byCommodity.get(row.commodityId);
+		if (!existing) {
+			byCommodity.set(row.commodityId, {
+				earliestPredictedAt: row.predictedAt,
+				hasDueRow: isDue,
+			});
+		} else {
+			if (row.predictedAt < existing.earliestPredictedAt) {
+				existing.earliestPredictedAt = row.predictedAt;
+			}
+			if (isDue) existing.hasDueRow = true;
+		}
+	}
+
+	// Step 2: for each candidate commodity, check if its latest daily price
+	// is older than the earliest due prediction. If so, no actuals exist
+	// for ANY due prediction on that commodity → frozen → mark unverifiable.
+	const frozenCommodityIds: string[] = [];
+	for (const [commodityId, info] of byCommodity) {
+		if (!info.hasDueRow) continue; // no row has actually matured yet
+		const latestPrice = await prisma.commodityPrice.findFirst({
+			where: { commodityId, interval: "daily" },
+			orderBy: { date: "desc" },
+			select: { date: true },
+		});
+		// No price at all, or latest price is before the earliest due
+		// prediction → no actuals can ever exist for the due window.
+		if (!latestPrice || latestPrice.date <= info.earliestPredictedAt) {
+			frozenCommodityIds.push(commodityId);
+		}
+	}
+
+	if (frozenCommodityIds.length === 0) return 0;
+
+	// Step 3: mark all due completed predictions for frozen commodities as
+	// unverifiable in one batched updateMany.
+	const result = await prisma.predictionLog.updateMany({
+		where: {
+			status: "completed",
+			commodityId: { in: frozenCommodityIds },
+			predictedAt: { lte: cutoff },
+			NOT: { commodityId: { startsWith: "cut:" } },
+		},
+		data: { status: "unverifiable" },
+	});
+
+	return result.count;
+}
+
+/**
  * Auto-verify completed predictions whose forecast horizon has elapsed.
  *
  * For each completed prediction_log older than its horizon, fetch the actual

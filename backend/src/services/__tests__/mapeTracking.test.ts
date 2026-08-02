@@ -14,6 +14,7 @@ import {
 	getModelAccuracy,
 	invalidatePollutedPredictions,
 	logPrediction,
+	markUnverifiablePredictions,
 	restorePostFixConflictPredictions,
 	verifyDuePredictions,
 	verifyPrediction,
@@ -593,6 +594,189 @@ describe("MAPE Tracking (real DB)", () => {
 				await restorePostFixConflictPredictions(fixedAt);
 				const second = await restorePostFixConflictPredictions(fixedAt);
 				expect(second).toBe(0);
+			});
+		});
+
+		describe("markUnverifiablePredictions — drain frozen-commodity backlog", () => {
+			// round-62: ~92k completed predictions for commodities whose data
+			// source died months ago were re-read every 6h verify cycle and
+			// always failed no-actuals. markUnverifiablePredictions detects them
+			// (due + commodity has no post-prediction daily price) and marks
+			// `unverifiable` so they exit the verifyDuePredictions queue.
+			//
+			// These tests create throwaway commodities with controlled price
+			// history to simulate frozen vs fresh. Cleanup is per-test in finally.
+			// NOTE: ctx.prisma is referenced inside each it/helper, not at
+			// describe-body top level — ctx is only populated in beforeAll, which
+			// runs after describe-body evaluation.
+
+			// Helper: create a throwaway commodity + a prediction at a given date.
+			async function makeCommodityWithPrediction(opts: {
+				slug: string;
+				predictedAt: Date;
+				horizon?: number;
+				// If provided, insert ONE daily price row at this date (simulates
+				// the commodity's latest price). Omit → commodity has no prices.
+				latestPriceDate?: Date;
+			}) {
+				const prisma = ctx.prisma;
+				const commodity = await prisma.commodity.create({
+					data: {
+						id: `${ctx.prefix}-${opts.slug}`,
+						slug: `${ctx.prefix}-${opts.slug}`,
+						name: opts.slug,
+						category: "test",
+						unit: "USD",
+						currency: "USD",
+					},
+				});
+				if (opts.latestPriceDate) {
+					await prisma.commodityPrice.create({
+						data: {
+							commodityId: commodity.id,
+							date: opts.latestPriceDate,
+							interval: "daily",
+							close: 1,
+							source: "test",
+						},
+					});
+				}
+				const prediction = await prisma.predictionLog.create({
+					data: {
+						modelId: "test-unverifiable",
+						commodityId: commodity.id,
+						horizon: opts.horizon ?? 10,
+						predictedValues: [1, 2, 3],
+						status: "completed",
+						predictedAt: opts.predictedAt,
+					},
+				});
+				return { commodity, prediction };
+			}
+
+			async function cleanup(ids: { commodityId?: string; predictionId?: string }[]) {
+				const prisma = ctx.prisma;
+				const predictionIds = ids.map((i) => i.predictionId).filter(Boolean) as string[];
+				const commodityIds = ids.map((i) => i.commodityId).filter(Boolean) as string[];
+				if (predictionIds.length)
+					await prisma.predictionLog.deleteMany({ where: { id: { in: predictionIds } } });
+				if (commodityIds.length) {
+					// delete prices first (FK), then commodities
+					await prisma.commodityPrice.deleteMany({ where: { commodityId: { in: commodityIds } } });
+					await prisma.commodity.deleteMany({ where: { id: { in: commodityIds } } });
+				}
+			}
+
+			it("marks a due completed prediction as unverifiable when its commodity has no post-prediction prices (frozen source)", async () => {
+				const prisma = ctx.prisma;
+				// Prediction made 30 days ago, horizon 10 → due (30 > 10).
+				// Commodity's only price is BEFORE the prediction → no actuals.
+				const oldDate = new Date(Date.now() - 30 * 86400000);
+				const beforePrediction = new Date(oldDate.getTime() - 86400000);
+				const { commodity, prediction } = await makeCommodityWithPrediction({
+					slug: "frozen",
+					predictedAt: oldDate,
+					latestPriceDate: beforePrediction,
+				});
+
+				try {
+					const n = await markUnverifiablePredictions();
+					expect(n).toBeGreaterThanOrEqual(1);
+
+					const after = await prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					expect(after?.status).toBe("unverifiable");
+				} finally {
+					await cleanup([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+
+			it("leaves a verifiable prediction (commodity has post-prediction prices) as completed", async () => {
+				const prisma = ctx.prisma;
+				// Prediction made 30 days ago, horizon 10 → due. But commodity
+				// has a price AFTER the prediction → actuals exist → NOT frozen.
+				const oldDate = new Date(Date.now() - 30 * 86400000);
+				const afterPrediction = new Date(oldDate.getTime() + 5 * 86400000);
+				const { commodity, prediction } = await makeCommodityWithPrediction({
+					slug: "fresh",
+					predictedAt: oldDate,
+					latestPriceDate: afterPrediction,
+				});
+
+				try {
+					await markUnverifiablePredictions();
+
+					const after = await prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					expect(after?.status).toBe("completed");
+				} finally {
+					await cleanup([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+
+			it("is idempotent — a second run marks nothing new", async () => {
+				const prisma = ctx.prisma;
+				const oldDate = new Date(Date.now() - 30 * 86400000);
+				const beforePrediction = new Date(oldDate.getTime() - 86400000);
+				const { commodity, prediction } = await makeCommodityWithPrediction({
+					slug: "idempotent",
+					predictedAt: oldDate,
+					latestPriceDate: beforePrediction,
+				});
+
+				try {
+					const first = await markUnverifiablePredictions();
+					expect(first).toBeGreaterThanOrEqual(1);
+					// Second run: the row is now unverifiable, not completed → not matched.
+					const second = await markUnverifiablePredictions();
+					expect(second).toBeLessThan(first);
+
+					const after = await prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					expect(after?.status).toBe("unverifiable");
+				} finally {
+					await cleanup([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+
+			it("does not touch cut-series predictions (their actuals live in BeefCutPrice)", async () => {
+				const prisma = ctx.prisma;
+				// A cut-series key prediction that is due — must NOT be swept into
+				// the commodity-frozen bucket even if it has no CommodityPrice.
+				// The key MUST start with "cut:" (the real virtual-key format) so
+				// the NOT startsWith("cut:") filter excludes it.
+				const oldDate = new Date(Date.now() - 30 * 86400000);
+				const cutKey = `cut:${ctx.prefix}-FACTEST:CUTEST`;
+				const prediction = await prisma.predictionLog.create({
+					data: {
+						modelId: "test-unverifiable-cut",
+						commodityId: cutKey,
+						horizon: 10,
+						predictedValues: [1, 2, 3],
+						status: "completed",
+						predictedAt: oldDate,
+					},
+				});
+
+				try {
+					await markUnverifiablePredictions();
+
+					const after = await prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					// Must remain completed — cut-series are excluded by the
+					// NOT startsWith("cut:") filter and verified via BeefCutPrice.
+					expect(after?.status).toBe("completed");
+				} finally {
+					await prisma.predictionLog.deleteMany({ where: { id: prediction.id } });
+				}
 			});
 		});
 	});

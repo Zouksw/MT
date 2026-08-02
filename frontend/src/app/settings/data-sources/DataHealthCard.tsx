@@ -18,6 +18,10 @@ export interface DataHealth {
 	predictionBacklog: number;
 	predictionVerified: number;
 	predictionStale?: number;
+	/** Predictions whose commodity data source died before the horizon
+	 * elapsed — permanently unverifiable. Excluded from verificationRatio
+	 * denominator. Tracked so operators can see the frozen-source backlog. */
+	predictionUnverifiable?: number;
 	verificationRatio: number;
 	hasVerificationDebt: boolean;
 }
@@ -115,6 +119,12 @@ export function DataHealthCard({
 						<span>
 							<span className="font-medium text-foreground">{dh.predictionStale}</span> marked stale
 							(polluted / unrecoverable)
+						</span>
+					)}
+					{dh.predictionUnverifiable !== undefined && dh.predictionUnverifiable > 0 && (
+						<span>
+							<span className="font-medium text-foreground">{dh.predictionUnverifiable}</span>{" "}
+							unverifiable (frozen source)
 						</span>
 					)}
 				</div>

@@ -135,6 +135,7 @@ router.get(
 				registeredSourceCount: number;
 				predictionBacklog: number;
 				predictionVerified: number;
+				predictionUnverifiable: number;
 				verificationRatio: number;
 				hasVerificationDebt: boolean;
 			},
@@ -197,6 +198,7 @@ router.get(
 				registeredSourceCount: dh.registeredSourceCount,
 				predictionBacklog: dh.predictionBacklog,
 				predictionVerified: dh.predictionVerified,
+				predictionUnverifiable: dh.predictionUnverifiable,
 				verificationRatio: dh.verificationRatio,
 				hasVerificationDebt: dh.hasVerificationDebt,
 			};

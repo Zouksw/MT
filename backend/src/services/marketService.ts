@@ -320,6 +320,7 @@ export async function getSourceFreshness() {
 			predictionBacklog: dh.predictionBacklog,
 			predictionVerified: dh.predictionVerified,
 			predictionStale: dh.predictionStale,
+			predictionUnverifiable: dh.predictionUnverifiable,
 			verificationRatio: dh.verificationRatio,
 			hasVerificationDebt: dh.hasVerificationDebt,
 		};

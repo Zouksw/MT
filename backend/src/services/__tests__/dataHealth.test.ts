@@ -41,6 +41,7 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 		expect(typeof snap.registeredSourceCount).toBe("number");
 		expect(typeof snap.predictionBacklog).toBe("number");
 		expect(typeof snap.predictionVerified).toBe("number");
+		expect(typeof snap.predictionUnverifiable).toBe("number");
 		expect(typeof snap.verificationRatio).toBe("number");
 	});
 
@@ -88,6 +89,26 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 		expect(snap.verificationRatio).toBeLessThanOrEqual(1);
 		// hasVerificationDebt must match the < 0.05 threshold definition.
 		expect(snap.hasVerificationDebt).toBe(snap.verificationRatio < 0.05);
+	});
+
+	it("exposes predictionUnverifiable as a 4th bucket and excludes it from the verificationRatio denominator", async () => {
+		// round-62: unverifiable rows (frozen-source predictions) must be
+		// counted in their own bucket AND excluded from verificationRatio's
+		// denominator. Otherwise ~92k frozen rows pin the ratio at ~0.006 and
+		// mask real verification debt.
+		const snap = await getDataHealth(3);
+
+		// Field exists and is a non-negative integer.
+		expect(Number.isInteger(snap.predictionUnverifiable)).toBe(true);
+		expect(snap.predictionUnverifiable).toBeGreaterThanOrEqual(0);
+
+		// verificationRatio = verified / (verified + backlog).
+		// Unverifiable must NOT appear in either term. If the formula were
+		// wrong (e.g. verified / (verified + backlog + unverifiable)), the
+		// assertion below would fail.
+		const denom = snap.predictionVerified + snap.predictionBacklog;
+		const expected = denom > 0 ? snap.predictionVerified / denom : 0;
+		expect(snap.verificationRatio).toBeCloseTo(expected, 6);
 	});
 
 	it("includes non-scraper source columns that wrote rows (e.g. manual import)", async () => {

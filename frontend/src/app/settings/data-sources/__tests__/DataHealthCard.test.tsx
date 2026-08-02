@@ -77,6 +77,19 @@ describe("DataHealthCard", () => {
 		expect(screen.getByText(/marked stale/)).toBeInTheDocument();
 	});
 
+	it("renders the unverifiable (frozen source) count when present", () => {
+		render(
+			<DataHealthCard
+				dataHealth={{ ...base, predictionUnverifiable: 92000 }}
+				scraperHealthy={18}
+			/>,
+		);
+		// The unverifiable count + label must appear so operators see the
+		// frozen-source backlog scale.
+		expect(screen.getByText(/92000/)).toBeInTheDocument();
+		expect(screen.getByText(/unverifiable/)).toBeInTheDocument();
+	});
+
 	it("omits the prediction detail line when no predictions exist", () => {
 		render(
 			<DataHealthCard

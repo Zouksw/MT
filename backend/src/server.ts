@@ -17,6 +17,7 @@ import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import {
 	invalidatePollutedPredictions,
+	markUnverifiablePredictions,
 	restorePostFixConflictPredictions,
 	verifyDuePredictions,
 } from "@/services/mapeTracking";
@@ -234,6 +235,24 @@ function start(): void {
 		}
 	};
 	setTimeout(runPollutionInvalidation, 20000);
+
+	// One-shot (startup): mark frozen-commodity completed predictions as
+	// `unverifiable` so they exit the verifyDuePredictions queue. Without this,
+	// ~92k predictions for commodities whose data source died months ago
+	// (wheat_cn/gold_lbma/etc., latest price 2026-04-29) are re-read every 6h
+	// verify cycle and always fail no-actuals — wasting the 5000-row batch on
+	// rows that can never verify, starving real chronos candidates. Runs AFTER
+	// pollution invalidation (20s) so the stale-marking settles first. See
+	// markUnverifiablePredictions docs for the batch detection logic. Idempotent.
+	const runMarkUnverifiable = async () => {
+		try {
+			const n = await markUnverifiablePredictions();
+			if (n > 0) logger.info(`📊 Marked ${n} frozen-commodity predictions as unverifiable`);
+		} catch (err) {
+			logger.warn(`📊 markUnverifiable failed: ${err}`);
+		}
+	};
+	setTimeout(runMarkUnverifiable, 25000);
 
 	// Every 10 minutes: evaluate user-defined alert rules against latest prices.
 	// This closes the loop that previously made alert rules a dead-end feature

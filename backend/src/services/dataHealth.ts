@@ -54,7 +54,15 @@ export interface DataHealthSnapshot {
 	predictionVerified: number;
 	/** Predictions marked stale (polluted / un-recoverable, excluded). */
 	predictionStale: number;
-	/** Verified / (verified + backlog) ratio, 0–1. Lower = more debt. */
+	/** Predictions marked unverifiable (frozen-commodity data source; the
+	 * prediction's horizon elapsed but its commodity received no new prices,
+	 * so it can never be verified). Excluded from verificationRatio's
+	 * denominator — they're not "debt" (which implies future verifiability),
+	 * they're a dead-end. Tracked separately so operators can see how large
+	 * the frozen-commodity backlog is. */
+	predictionUnverifiable: number;
+	/** Verified / (verified + backlog) ratio, 0–1. Lower = more debt.
+	 * Denominator excludes unverifiable (frozen-source) rows. */
 	verificationRatio: number;
 	/** True iff verificationRatio is below 0.05 (severe debt signal). */
 	hasVerificationDebt: boolean;
@@ -147,12 +155,19 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 		(s) => s.commodityPriceRows + s.beefCutPriceRows > 0,
 	).length;
 
-	// Prediction verification debt.
-	const [predictionBacklog, predictionVerified, predictionStale] = await Promise.all([
-		prisma.predictionLog.count({ where: { status: "completed" } }),
-		prisma.predictionLog.count({ where: { status: "verified" } }),
-		prisma.predictionLog.count({ where: { status: "stale" } }),
-	]);
+	// Prediction verification debt. Four buckets now: completed (backlog),
+	// verified, stale (polluted-source), unverifiable (frozen-source). The
+	// unverifiable bucket (round-62) holds predictions whose commodity data
+	// source died before the horizon elapsed — they can NEVER verify, so they
+	// are excluded from the verificationRatio denominator (otherwise ~92k
+	// frozen rows kept the ratio pinned at 0.006, masking real debt).
+	const [predictionBacklog, predictionVerified, predictionStale, predictionUnverifiable] =
+		await Promise.all([
+			prisma.predictionLog.count({ where: { status: "completed" } }),
+			prisma.predictionLog.count({ where: { status: "verified" } }),
+			prisma.predictionLog.count({ where: { status: "stale" } }),
+			prisma.predictionLog.count({ where: { status: "unverifiable" } }),
+		]);
 
 	const verificationRatio =
 		predictionVerified + predictionBacklog > 0
@@ -169,6 +184,7 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 		predictionBacklog,
 		predictionVerified,
 		predictionStale,
+		predictionUnverifiable,
 		verificationRatio,
 		hasVerificationDebt: verificationRatio < 0.05,
 	};
