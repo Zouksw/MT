@@ -79,12 +79,12 @@
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-02 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 56 | **640 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **642 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **287 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **974 全绿**（640 + 287 + 47，截至 2026-08-02 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **976 全绿**（642 + 287 + 47，截至 2026-08-02 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -109,6 +109,9 @@
 - **faoPrices stall（commit 4bae943）**：`fetchWithRetry` 重试所有失败（含 5xx/网络超时）致 fao scraper 单次跑 **272s**，stall 整个 scraper batch ~4.5min。改为 8s 超时 + 仅 transient(429/5xx≠521) 重试 + 网络错误不重试。live：**272s → 40s**（6.8×）。+7 测试（mutation-verified）。
 - **balticDry dead URL（commit 0a7598e）**：primary `api.balticexchange.com` 恒 404（付费 API）。删 dead path，改单源 FRED（需 `FRED_API_KEY`）。
 - **结论**：fao/baltic 修复**不直接产新数据**（FAO origin down + baltic 需 FRED key），但消除 batch stall + 死代码。19 源中 2 个产数（fred/exchange_rate_api）、1 个预期月度（world_bank）、2 个仅 key 门控（MLA/USDA-AMS，最高 ROI）、其余需网络/反爬/headless。
+
+**Health 字段回归修复（round-64，2026-08-02）**——round-62 加第 4 桶 `predictionUnverifiable` 时，`/health/ready` route 的 dataLayer 转发块意外漏掉 `predictionStale`（service 仍算但 route 丢弃），~11,659 条污染源 stale 行对 operator 不可见。根因：route 层无 dataLayer 字段集测试，漏字段静默 ship green。
+- **commit 33ecbbd**：`health.ts` 重新加 `predictionStale`（type + forward 块）；`dataHealth.test.ts` 补 stale 字段断言（service 守护）；新增 `health.test.ts`（route 守护，断言 4 桶全转发，mutation-verified）。live：`/health/ready` dataLayer 现 8 字段全可见（backlog 14894 / verified 16290 / **stale 11659** / unverifiable 76954 / ratio 0.5224）。backend 640|1 → 642|1。
 
 ## 五½、数据层可观测性（round-48~50）
 
