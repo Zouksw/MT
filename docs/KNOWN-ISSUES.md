@@ -73,6 +73,8 @@
 
 **round-66 补充（2026-08-03 live 实测）**：round-62 P2 的 `markUnverifiablePredictions` 残留盲区——只扫 `predictedAt <= now-10d`（due 截断），P1 gate 上线后仍在生成的"近期（10 天内）但源已死"预测全部漏网（~12k 条 pre-gate straggler 永久占用 completed 队列，每 6h 被 verifyDuePredictons 空转扫描）。commit 8f9153b 加 Pass B（`markLaggingFrozenPredictions`）：扫 `predictedAt > cutoff`，`latest price <= predictedAt` 且 `< now-7d`（recency 守卫防误伤活源 lag）→ 标 unverifiable。live：backlog 14,888 → 3,162（-79%），unverifiable 76,954 → 89,173，ratio 0.522 → 0.837（分母排除 unverifiable）。verify loop 日志从扫 ~15k 行变 `Verified 0 of 40 due`。
 
+**round-71 补充（2026-08-03 live 实测）**：round-66 的 `markUnverifiablePredictions` 是**点时检查 + 不可逆**——标记时若源已死则永久 unverifiable，verifyDuePredictions 只读 `completed` 不回收。但当源**后来复活**（如 beef_carcass_us 经历 FRED 数据滞后，标记时 latest price >7d 旧，FRED 随后补发 08-01/08-02 daily 行），那些预测**现在窗口内有 actuals** 却仍困在 unverifiable。live 实测：beef_carcass_us（唯一有 fresh actuals 的商品）07-27→08-02 的 738 条 chronos 预测全被误标 unverifiable，accuracy 页 chronos 永远 0 verified。commit ad2cd4b 加 `restoreVerifiablePredictions()`（markLaggingFrozen 的对称逆操作）：扫 unverifiable 行，若商品 latest price 现已 > 最早被困预测的 predictedAt（源复活、有 post-prediction actuals）→ 标回 `completed`。幂等。接 server.ts 启动钩子（markUnverifiable 之后跑）。+3 测试（mutation-verified）。live：beef_carcass_us unverifiable 738→0，completed 48→262/variant（786 条恢复，跨 3 chronos）。这些行重入 verify 队列，下个 verify 周期产首批 beef chronos verified MAPE。
+
 ---
 
 ### D3 — 数据层静默失效已被暴露（2026-07-31 live 实测，round-48~50）
