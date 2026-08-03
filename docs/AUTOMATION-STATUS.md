@@ -79,12 +79,12 @@
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-03 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **639 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **642 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **278 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **964 全绿**（639 + 278 + 47，截至 2026-08-03 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **967 全绿**（642 + 278 + 47，截至 2026-08-03 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -129,6 +129,12 @@
 - **B3（9cf4e6c）**：`watchlistService.ts` 两处 raw SQL 加 `partitionBySource` 拆 conflict vs 普通查询；`authoritativeSources.ts` 导出 `getConflictSlugs`。+2 测试（mutation-verified）。
 - **B4**：`analytics.ts:39` 季节性聚合 raw SQL 加 `AND source = ${authoritativeSource}`（`Prisma.sql`/`Prisma.empty` 条件片段）。无测试文件（端点此前 0 覆盖），live 验证 12 月 avg 全 5.1–5.5。
 - **live 实测**：signals brl_usd currentPrice **0.197→5.0592**；market commodities latestPrice **0.197→5.0592**；seasonality 12 月 avg 全 **5.1–5.5**。backend 634|1 → **639|1**（+5 回归测试）。tsc clean。
+
+**死代码清理 + axios 移除（round-68，2026-08-03）**——TECH-DEBT 死代码全量重审（Explore agent + 逐项独立 grep 复核）。
+- **commit 824e10f（-631 行）**：删 ~40 个 leaf-level 0-caller 导出（backend `types/index.ts` 5 死 interface、`response.ts` 2 死类型 + 3 个死 default export + TokenPayload 改本地；frontend `types/api.ts` 重写仅留 6 LIVE 类型、`responsive-utils.ts` 删 5 死 hook、`motion.ts` 删 7 死、`chart-config.ts` 删 9 死+default 等）。signature-live 类型 + 已记录 API surface（blacklist-admin/unsubscribeCommodity）保留。backend 639|1 / frontend 278 不变。
+- **commit 12aca10（TD-8 RESOLVED）**：`market-data.ts` fetcher 从 axios 迁原生 fetch（对齐 `authFetch` 范式），删 axios 依赖 + lockfile（-axios + 2 transitive，node_modules 0 引用）。frontend tsc clean + 278 不变 + live 渲染 200。
+
+**API key 验证接入（round-69，2026-08-03，TD-3 RESOLVED）**——`validateApiKey`（已完整实现含用量追踪，但 0 caller）接入 `authenticate` 中间件：头约定 `x-api-key: iotd_xxx`（专用头，与 JWT `Authorization: Bearer` 物理分离）。`auth.ts` 加短路分支：有 `x-api-key` → 调 `validateApiKey` → 命中填 `req.user` + `next()`；未命中 401。JWT 路径不动。live：JWT 仍 200；x-api-key 认证 200 + usageCount=2 + lastUsedAt 写入；吊销/失效 → 401。backend 639|1 → **642|1**（+3 测试，mutation-verified）。docs/API.md 加 API Key 段，前端页加头使用提示。
 
 ## 五½、数据层可观测性（round-48~50）
 
