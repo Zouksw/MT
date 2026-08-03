@@ -171,4 +171,45 @@ describe("watchlistService — ownership enforcement", () => {
 		expect(quotes[0]).toHaveProperty("price");
 		expect(quotes[0]).toHaveProperty("changePercent");
 	});
+
+	it("getWatchlistQuotes reads the authoritative source for brl_usd (fred ~5.0, not exchange_rate_api ~0.197) (round-67)", async () => {
+		// Round-67 regression: batchRecentPricePairs previously had no source
+		// filter in its raw SQL, so conflict commodities (brl_usd) surfaced the
+		// wrong source's price. brl_usd must now read fred (~5.0).
+		const brl = await prisma.commodity.findFirst({ where: { slug: "brl_usd" } });
+		expect(brl).toBeTruthy();
+		const wl = await makeList(ownerId, "brl-source");
+		await prisma.watchlistItem.create({
+			data: { watchlistId: wl.id, commodityId: brl!.id },
+		});
+		const quotes = await getWatchlistQuotes(wl.id, ownerId);
+		expect(quotes).toHaveLength(1);
+		const price = quotes[0].price;
+		expect(price).not.toBeNull();
+		// fred scale (~5.0), NOT exchange_rate_api scale (~0.197).
+		expect(Number(price)).toBeGreaterThan(4);
+		expect(Number(price)).toBeLessThan(6);
+	});
+
+	it("listWatchlists reads the authoritative source for brl_usd latestPrice (round-67)", async () => {
+		// Round-67 regression: batchLatestPrices previously had no source
+		// filter. The watchlist summary's latestPrice for brl_usd must read
+		// fred (~5.0).
+		const brl = await prisma.commodity.findFirst({ where: { slug: "brl_usd" } });
+		expect(brl).toBeTruthy();
+		const wl = await makeList(ownerId, "brl-list-source");
+		await prisma.watchlistItem.create({
+			data: { watchlistId: wl.id, commodityId: brl!.id },
+		});
+		const lists = await listWatchlists(ownerId);
+		const target = lists.find((l) => l.id === wl.id);
+		expect(target).toBeDefined();
+		const item = target!.items.find((it) => it.commodityId === brl!.id);
+		expect(item).toBeDefined();
+		const price = item!.latestPrice;
+		expect(price).not.toBeNull();
+		// fred scale (~5.0), NOT exchange_rate_api scale (~0.197).
+		expect(Number(price)).toBeGreaterThan(4);
+		expect(Number(price)).toBeLessThan(6);
+	});
 });

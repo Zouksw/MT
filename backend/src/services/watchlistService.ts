@@ -11,6 +11,10 @@
 
 import { prisma } from "@/lib";
 import { BadRequestError, NotFoundError } from "@/middleware/errorHandler";
+import {
+	getAuthoritativeSource,
+	getConflictSlugs,
+} from "@/services/inference/authoritativeSources";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -83,43 +87,121 @@ async function getOwnedWatchlist(
 }
 
 /**
- * Batch-fetch the latest daily close per commodity (one query regardless of
- * how many items the watchlist has). Used by listWatchlists.
+ * Partition a set of commodityIds into plain (no conflict, read all sources)
+ * and conflict groups keyed by authoritative source. Round-67: the raw-SQL
+ * batch helpers can't spread a Prisma where-clause, so they run one unfiltered
+ * query for plain ids and one `AND source = $1` query per conflict group, then
+ * merge. Resolves conflict slugs → ids via a single Prisma lookup.
+ */
+async function partitionBySource(
+	commodityIds: ReadonlyArray<string>,
+): Promise<{ plainIds: string[]; conflictBySource: Map<string, string[]> }> {
+	if (commodityIds.length === 0) {
+		return { plainIds: [], conflictBySource: new Map() };
+	}
+	const conflictSlugs = getConflictSlugs();
+	if (conflictSlugs.length === 0) {
+		return { plainIds: [...commodityIds], conflictBySource: new Map() };
+	}
+	const conflictCommodities = await prisma.commodity.findMany({
+		where: { slug: { in: conflictSlugs }, id: { in: [...commodityIds] } },
+		select: { id: true, slug: true },
+	});
+	// source → commodityIds, resolved via the shared authoritative-source map.
+	const conflictIdSet = new Set(conflictCommodities.map((c) => c.id));
+	const plainIds = commodityIds.filter((id) => !conflictIdSet.has(id));
+	const conflictBySource = new Map<string, string[]>();
+	for (const c of conflictCommodities) {
+		const source = getAuthoritativeSource(c.slug);
+		if (!source) continue;
+		const bucket = conflictBySource.get(source);
+		if (bucket) bucket.push(c.id);
+		else conflictBySource.set(source, [c.id]);
+	}
+	return { plainIds, conflictBySource };
+}
+
+/**
+ * Batch-fetch the latest daily close per commodity, applying authoritative-
+ * source resolution per commodity. Used by listWatchlists.
+ *
+ * Round-67: previously a single raw query with `commodity_id = ANY(...)` and
+ * no source filter, which for conflict commodities picked whichever source
+ * wrote most recently (e.g. brl_usd got exchange_rate_api's inverted ~0.2).
+ * Now splits plain vs conflict ids and runs a filtered query per conflict
+ * source.
  */
 async function batchLatestPrices(
 	commodityIds: string[],
 ): Promise<Map<string, { close: number; date: Date }>> {
-	if (commodityIds.length === 0) return new Map();
-	const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
-    SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
-    FROM commodity_prices
-    WHERE commodity_id = ANY(${commodityIds}::text[]) AND interval = 'daily'
-    ORDER BY commodity_id, date DESC
-  `;
-	return new Map(rows.map((p) => [p.commodityId, { close: p.close, date: p.date }]));
+	const out = new Map<string, { close: number; date: Date }>();
+	if (commodityIds.length === 0) return out;
+	const { plainIds, conflictBySource } = await partitionBySource(commodityIds);
+
+	if (plainIds.length > 0) {
+		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
+      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
+      FROM commodity_prices
+      WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
+      ORDER BY commodity_id, date DESC
+    `;
+		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
+	}
+	// One filtered query per conflict source (at most 2 sources today: fred,
+	// usda_ams). Each restricts to that source's commodity ids + source name.
+	for (const [source, ids] of conflictBySource) {
+		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
+      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
+      FROM commodity_prices
+      WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
+      ORDER BY commodity_id, date DESC
+    `;
+		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
+	}
+	return out;
 }
 
 /**
- * Batch-fetch the latest 2 daily closes per commodity (one query). Used by
- * getWatchlistQuotes to compute day-over-day change.
+ * Batch-fetch the latest 2 daily closes per commodity, applying authoritative-
+ * source resolution per commodity. Used by getWatchlistQuotes to compute
+ * day-over-day change. Same plain/conflict split as batchLatestPrices.
  */
 async function batchRecentPricePairs(
 	commodityIds: string[],
 ): Promise<Map<string, Array<{ close: number; date: Date }>>> {
 	const pairs = new Map<string, Array<{ close: number; date: Date }>>();
 	if (commodityIds.length === 0) return pairs;
-	const rows = await prisma.$queryRaw<
-		Array<{ commodity_id: string; close: number; date: Date; rn: number }>
-	>`
-    SELECT commodity_id, close, date,
-           ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
-    FROM commodity_prices
-    WHERE commodity_id = ANY(${commodityIds}::text[]) AND interval = 'daily'
-  `;
-	for (const p of rows) {
-		if (p.rn > 2) continue;
-		if (!pairs.has(p.commodity_id)) pairs.set(p.commodity_id, []);
-		pairs.get(p.commodity_id)?.push({ close: p.close, date: p.date });
+	const { plainIds, conflictBySource } = await partitionBySource(commodityIds);
+
+	const ingest = (rows: Array<{ commodity_id: string; close: number; date: Date; rn: number }>) => {
+		for (const p of rows) {
+			if (p.rn > 2) continue;
+			if (!pairs.has(p.commodity_id)) pairs.set(p.commodity_id, []);
+			pairs.get(p.commodity_id)?.push({ close: p.close, date: p.date });
+		}
+	};
+
+	if (plainIds.length > 0) {
+		const rows = await prisma.$queryRaw<
+			Array<{ commodity_id: string; close: number; date: Date; rn: number }>
+		>`
+      SELECT commodity_id, close, date,
+             ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
+      FROM commodity_prices
+      WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
+    `;
+		ingest(rows);
+	}
+	for (const [source, ids] of conflictBySource) {
+		const rows = await prisma.$queryRaw<
+			Array<{ commodity_id: string; close: number; date: Date; rn: number }>
+		>`
+      SELECT commodity_id, close, date,
+             ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
+      FROM commodity_prices
+      WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
+    `;
+		ingest(rows);
 	}
 	return pairs;
 }
