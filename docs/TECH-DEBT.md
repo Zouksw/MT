@@ -156,6 +156,13 @@
 - **TD-3 `validateApiKey`** / **paywall `trackUsage`/`checkLimit`** → 保留加注释，删须产品决策（PRODUCT-SPEC §九 约束相关）。
 - 守护"测试数不得回退"硬约束：删死代码自测时，对应生产代码也已删，覆盖率分母同步缩小，不构成回退。
 
+**round-68 补充（2026-08-03，dead-export 清理）**——对 lib/types 做 dead-export 全量重审（Explore agent + 逐项独立 grep 复核，§十.2）。删 ~40 个 0-外部-caller 的导出（leaf-level，非 API surface），共 **-631 行**：
+- **backend**（5 文件 -94）：`types/index.ts` 删 5 死 interface（TimeRangeQuery/ParsedImportData/ModelTrainingResult/SecurityAuditLog/FilterParams，0 refs；SecurityAuditLog 仅是 routes/security.ts:30 的散文注释）；`response.ts` 删 SuccessResponse/ErrorResponse（0 refs）+ PaginationMeta 改本地（仅 paginated() 参数用）；config.ts/database.ts/jwt.ts 删 3 个 `export default`（代码全用 `@/lib` barrel 的具名 import，0 default importer）；jwt.ts TokenPayload 改本地（仅文件内用）。
+- **frontend**（9 文件 -537）：`types/api.ts` 重写，仅留 6 个 LIVE 类型（Dataset/TimeSeries/Alert/Forecast/AlertSeverity/AIModel），删 ~24 死导出（app 代码自声明本地 interface 而非 import 共享版）；`types/accuracy.ts` 删 AccuracyResponse（BacktestWindow 保留——BacktestResponse 引用它）；`responsive-utils.ts` 删 5 死 hook（useBreakpoint/useIsTablet/useIsDesktop/useResponsiveValue/useWindowSize，0 caller）+ 孤儿 helper；`motion.ts` 删 7 死（保留 SPRING_DEFAULTS/STAGGER_CHILD/FADE_UP）；`chart-config.ts` 删 9 死导出 + default（保留 7 LIVE style）；`site-stats.ts` 删 AI_MODEL_LABELS（与 LIVE 的 MODEL_NAME_MAP 重复）；`errorHandler.ts` 删 withErrorHandling 函数 + ApiError 改本地；`sanitizer.ts`/`tokenManager.ts` 删 `export type {…}`（singleton 实例 LIVE）。
+- **保留（signature-live 或 API surface，§十.5）**：MS_PER_SECOND（自测 pin 推导基线）；validateApiKey/trackUsage/checkLimit/blacklist-admin/unsubscribeCommodity（已记录的 future-infra/管理面）；ForecastRequest/CorrelationResult/CorrelationMatrix（live 函数的签名类型）。
+- **验证**：backend tsc clean + 639|1（不变）；frontend tsc clean + 278（不变）。无测试引用被删符号。
+- **遗留**：TD-8 axios 单点依赖仍存（需 market-data.ts 迁移到 fetch）；cacheKeys/TD-1/4/7/9/10/11 早已 STALE（前几轮已清，文档待标 RESOLVED）。
+
 ---
 
 ## 四、基础设施 vs 实际功能比例失调（审计当时）
