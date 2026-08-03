@@ -144,29 +144,36 @@ export async function runAndCachePrediction(
 			await client.setEx(key, PREDICTION_TTL_SECONDS, JSON.stringify(cached));
 		}
 
-		// Log prediction for MAPE accuracy tracking (non-blocking).
-		// Failures here must not break the cached prediction (the caller still
-		// gets a result), but they MUST be observable — a silent swallow leaves
-		// prediction_logs with gaps and hides a broken DB write path. Log the
-		// error with enough context to diagnose, then move on.
-		import("./mapeTracking")
-			.then(({ logPrediction }) => {
-				logPrediction({
-					modelId,
-					commodityId,
-					horizon,
-					predictedValues: result.values,
-					lowerBounds: result.lower_bound ?? undefined,
-					upperBounds: result.upper_bound ?? undefined,
-				}).catch((error) => {
-					logger.error(
-						`Failed to log prediction for ${modelId}/${commodityId} (MAPE tracking): ${error}`,
-					);
-				});
-			})
-			.catch((error) => {
-				logger.error(`Failed to load mapeTracking module: ${error}`);
+		// Log prediction for MAPE accuracy tracking.
+		//
+		// This MUST be awaited (not fire-and-forget). The previous fire-and-forget
+		// `import(...).then(() => logPrediction(...).catch(...))` form silently
+		// dropped writes: the outer .then returned undefined (it didn't return the
+		// logPrediction promise), so the outer .catch only caught import errors,
+		// and a logPrediction that never settled left no trace. Symptom observed
+		// live (round-71): scheduler fired inference (200 OK), Redis cache wrote,
+		// but prediction_logs got 0 new rows for 8+ hours with zero error logs.
+		// Awaiting makes the write deterministic and any failure observable.
+		//
+		// The DB write is wrapped so a failure never breaks the cached prediction
+		// (the caller still gets a result) — but it IS awaited so the gap is
+		// visible in logs and the row either lands or logs an error, never
+		// silently vanishes.
+		try {
+			const { logPrediction } = await import("./mapeTracking");
+			await logPrediction({
+				modelId,
+				commodityId,
+				horizon,
+				predictedValues: result.values,
+				lowerBounds: result.lower_bound ?? undefined,
+				upperBounds: result.upper_bound ?? undefined,
 			});
+		} catch (error) {
+			logger.error(
+				`Failed to log prediction for ${modelId}/${commodityId} (MAPE tracking): ${error}`,
+			);
+		}
 
 		return cached;
 	} catch (error) {
