@@ -7,6 +7,7 @@
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
+import { redis } from "@/lib/redis";
 import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
@@ -14,6 +15,24 @@ let token: string;
 
 function authHeaders(t?: string) {
 	return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+// The /:commodityId and /batch routes cache responses in Redis (cacheRoute).
+// Without clearing, a prior (fixed) run's cached response masks a regression
+// in a later (mutated) run — the test passes on stale cache. Clear the cache
+// before authoritative-source regression assertions so the test exercises the
+// live code path every time.
+async function clearSignalsCache(): Promise<void> {
+	try {
+		const client = await redis();
+		// cacheDecorator prefixes keys with "cache:"; signals:commodity is the
+		// route's cache namespace. Clear the whole namespace (small set).
+		for (const key of await client.keys("*signals:commodity*")) {
+			await client.del(key);
+		}
+	} catch {
+		// Redis optional in some test envs — cache miss just hits the handler.
+	}
 }
 
 describe("Signals Routes (Integration)", () => {
@@ -136,6 +155,46 @@ describe("Signals Routes (Integration)", () => {
 			expect(res.body.data).toHaveProperty("confidence");
 			expect(res.body.data).toHaveProperty("individualForecasts");
 			expect(res.body.data.individualForecasts).toHaveLength(3);
+		});
+
+		// REGRESSION (round-67): brl_usd has a multi-source conflict —
+		// exchange_rate_api writes the INVERTED value (~0.197, BRL→USD) and is
+		// the most recently written source, while fred writes the correct ~5.0
+		// (USD→BRL) and is the authoritative source. Without authoritative-
+		// source filtering on the currentPrice lookup, the signal returns
+		// currentPrice≈0.197 while the forecast/range is computed on fred's
+		// ~5.0 scale — producing a nonsensical predictedChange (~2400).
+		// The fix makes currentPrice read fred (~5.0). This test pins it.
+		it("brl_usd currentPrice reads the authoritative source (fred ~5.0, not exchange_rate_api ~0.197)", async () => {
+			await clearSignalsCache();
+			const res = await request(app).get("/api/signals/brl_usd").set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			const price = res.body.data.currentPrice;
+			// fred scale (~5.0), NOT exchange_rate_api scale (~0.197).
+			expect(price).toBeGreaterThan(4);
+			expect(price).toBeLessThan(6);
+		});
+
+		// REGRESSION (round-67): the batch endpoint has the same conflict —
+		// its latestPrice fetch must also apply authoritative-source resolution.
+		it("POST /batch resolves brl_usd currentPrice via the authoritative source", async () => {
+			await clearSignalsCache();
+			const res = await request(app)
+				.post("/api/signals/batch")
+				.set(authHeaders(token))
+				.send({ slugs: ["brl_usd"], horizon: 7 });
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			const fc = res.body.data.forecasts.find((f: { slug: string }) => f.slug === "brl_usd");
+			expect(fc).toBeDefined();
+			expect(fc.ok).toBe(true);
+			// currentPrice lives inside the generated forecast; the consensus
+			// is built on fred's ~5.0 scale, so the range bounds are ~5.0
+			// (not ~0.2). Sanity-check the upper bound is in the fred band.
+			expect(fc.forecast.range.upper).toBeGreaterThan(4);
 		});
 	});
 

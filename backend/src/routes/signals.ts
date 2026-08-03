@@ -21,6 +21,11 @@ import {
 	computeCorrelationMatrix,
 	getAvailableCommodities,
 } from "@/services/correlationAnalysis";
+import {
+	authoritativeSourceWhere,
+	batchLatestPriceWhere,
+	dedupeLatestByCommodity,
+} from "@/services/inference/authoritativeSources";
 import { getAllModelAccuracy, getModelAccuracy } from "@/services/mapeTracking";
 import { getAllCachedPredictions } from "@/services/predictionCache";
 import { generateForecast, getAllModels } from "@/services/tradingSignals";
@@ -274,15 +279,25 @@ router.post(
 			select: { id: true, slug: true },
 		});
 		const bySlug = new Map(commodities.map((c) => [c.slug, c]));
+		const priceByCommodityId = new Map<string, number>();
 
-		// Fetch the latest close per commodity in one query.
-		const latestPrices = await prisma.commodityPrice.findMany({
-			where: { commodityId: { in: commodities.map((c) => c.id) } },
-			orderBy: [{ commodityId: "asc" }, { date: "desc" }],
-			distinct: ["commodityId"],
-			select: { commodityId: true, close: true },
-		});
-		const priceByCommodityId = new Map(latestPrices.map((p) => [p.commodityId, Number(p.close)]));
+		// Fetch the latest close per commodity in one query, applying
+		// authoritative-source resolution per commodity so conflict slugs
+		// (brl_usd/corn_cme/natural_gas_cme) read the correct source instead
+		// of whichever source wrote most recently. Round-67: the previous
+		// `distinct:["commodityId"]` + date-desc ordering picked an arbitrary
+		// source for conflict commodities (e.g. brl_usd got the inverted
+		// exchange_rate_api ~0.2 instead of fred's ~5.0).
+		const batchWhere = batchLatestPriceWhere(commodities);
+		if (batchWhere) {
+			const rows = await prisma.commodityPrice.findMany({
+				where: batchWhere,
+				orderBy: { date: "desc" },
+				select: { commodityId: true, close: true, date: true },
+			});
+			const latest = dedupeLatestByCommodity(rows);
+			for (const [id, row] of latest) priceByCommodityId.set(id, Number(row.close));
+		}
 
 		// Run forecasts in parallel — each settled independently so one bad
 		// commodity doesn't sink the batch.
@@ -343,7 +358,7 @@ router.get(
 		let currentPrice = params.currentPrice;
 		if (!currentPrice || !Number.isFinite(currentPrice)) {
 			const latest = await prisma.commodityPrice.findFirst({
-				where: priceWhere,
+				where: { ...priceWhere, ...authoritativeSourceWhere(commodity.slug) },
 				orderBy: { date: "desc" },
 				select: { close: true, commodityId: true },
 			});

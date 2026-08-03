@@ -9,6 +9,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 import type { AlertCondition, AlertRule, NotificationChannel } from "./alert-types";
 
 type AlertType = "ANOMALY" | "FORECAST_READY" | "SYSTEM";
@@ -132,6 +133,19 @@ export async function evaluateAlertRules(): Promise<number> {
 	let skippedCooldown = 0;
 	let skippedNoData = 0;
 
+	// Pre-fetch commodity slugs for all rule timeseriesIds so we can apply
+	// authoritative-source resolution per commodity (round-67). Without this,
+	// conflict commodities (brl_usd/corn_cme/natural_gas_cme) evaluate alert
+	// thresholds against whichever source wrote most recently — e.g. a brl_usd
+	// threshold set for the ~5.0 fred scale would wrongly fire (or never fire)
+	// against exchange_rate_api's inverted ~0.2.
+	const ruleCommodityIds = [...new Set(rules.map((r) => r.timeseriesId))];
+	const commoditySlugs = await prisma.commodity.findMany({
+		where: { id: { in: ruleCommodityIds } },
+		select: { id: true, slug: true },
+	});
+	const slugByCommodityId = new Map(commoditySlugs.map((c) => [c.id, c.slug]));
+
 	for (const rule of rules) {
 		try {
 			// Cooldown: skip if last triggered within cooldownMinutes
@@ -143,9 +157,15 @@ export async function evaluateAlertRules(): Promise<number> {
 				}
 			}
 
-			// Fetch the latest price for this rule's timeseries
+			// Fetch the latest price for this rule's timeseries, filtered to the
+			// commodity's authoritative source when one is declared.
+			const slug = slugByCommodityId.get(rule.timeseriesId);
 			const latestPrice = await prisma.commodityPrice.findFirst({
-				where: { commodityId: rule.timeseriesId, interval: "daily" },
+				where: {
+					commodityId: rule.timeseriesId,
+					interval: "daily",
+					...authoritativeSourceWhere(slug),
+				},
 				orderBy: { date: "desc" },
 				select: { close: true, date: true },
 			});
