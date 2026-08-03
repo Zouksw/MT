@@ -104,6 +104,18 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ### Restart
 Always use the project restart script. It kills all zombie processes (by command pattern + port) before starting fresh.
 
+> ⚠️ **Dev vs prod supervisor — pick one, don't mix.**
+> `scripts/restart.sh` (below) launches processes in **dev** mode (`pnpm dev` for
+> the frontend). `ecosystem.config.cjs` manages the same names (`mt-backend` /
+> `mt-frontend` / `mt-inference`) in **prod** mode via PM2 (`pnpm start`).
+> The script now refuses to start a process PM2 already manages — running both
+> corrupts the frontend build: `pnpm dev` overwrites `.next/routes-manifest.json`
+> (drops the `dataRoutes` key), and when PM2 then restarts `pnpm start`, Next.js
+> crashes in a loop with `routesManifest.dataRoutes is not iterable`. To take a
+> process over with the dev script, `pm2 delete <name>` first.
+> - Dev (HMR, this script): `pnpm restart` / `pnpm restart:frontend`
+> - Prod (PM2): `cd frontend && pnpm build && pm2 restart mt-frontend`
+
 ```bash
 # Full restart (backend + frontend)
 pnpm restart

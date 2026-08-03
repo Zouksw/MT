@@ -171,6 +171,18 @@
 **事实**：原 `routes/watchlist.ts` 的 quotes 路由用 `::uuid[]` 类型转换，但 `commodity_prices.commodity_id` 是 **text 列**（`information_schema` 实查确认）。list 路由用 `::text[]`（正确），quotes 用 `::uuid[]`（错误）→ `/api/watchlists/:id/quotes` 报 500 `operator does not exist: text = uuid`。
 **状态**：已修——`batchRecentPricePairs` 改 `::text[]`，并有回归测试（把 `::text[]` 改回 `::uuid[]` → 测试 FAIL）。**保留记录以防类似 raw-SQL 类型转换复发。**
 
+### B2 — 前端 dev/prod supervisor 冲突致 crash loop（round-70，2026-08-03）
+
+**来源**：2026-08-03 live 实测（mt-frontend PM2 crash-loop 527 次，`/` 返 000）
+**事实**：`scripts/restart.sh` 启动 frontend 于 **dev** 模式（`pnpm dev` = `next dev --turbopack`），但 `ecosystem.config.cjs` 用 PM2 管理同名 `mt-frontend` 于 **prod** 模式（`pnpm start` = `next start`）。两者共用同一 `.next/` 目录。`next dev` 会**覆盖** `.next/routes-manifest.json`——dev 版仅 6 key（无 `dataRoutes`/`dynamicRoutes`/`staticRoutes`/`rsc`/`pages404`），prod `next build` 版 11 key。当 dev run 后 PM2 重启 prod `next start`，后者迭代 `routesManifest.dataRoutes` 得 `undefined` → 崩溃循环：
+```
+[TypeError: routesManifest.dataRoutes is not iterable]
+```
+- **`distDir` 不能修此问题**：实测 `distDir: '.next-dev'` 只隔离编译 chunk 输出，dev 仍会写 `.next/routes-manifest.json`（两文件 byte-identical，`diff` 确认）。误信 distDir 隔离会撞坏 prod（已实测）。
+- **真修**：`scripts/restart.sh` 加 PM2 guard——`pm2_managed()` 检查目标进程名是否在 `pm2 jlist`，若 PM2 已管则拒绝启动 dev（exit 1 + 提示用 `pm2 restart` 或先 `pm2 delete`）。强制"二选一"管理模式，防 dev/prod 共用 `.next/`。
+- **CLAUDE.md §Dev Server Management** 加 ⚠️ 段同步说明。
+**状态**：已修（round-70）。frontend crash-loop 已停（527 restarts → 稳定），`.next/` 重 build（11-key manifest），PM2 guard 上线。**保留记录以防重蹈 distDir 误判。**
+
 ---
 
 ## 四、产品范围（PRODUCT-SPEC 约束，非 bug）

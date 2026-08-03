@@ -37,6 +37,55 @@ case "$MODE" in
   *) err "Unknown option: $MODE"; echo "Usage: $0 [--backend|--frontend|--inference|--all|--quick]"; exit 1 ;;
 esac
 
+# ── PM2 guard ───────────────────────────────────────────
+# This script launches processes in dev mode (e.g. `pnpm dev` for the frontend,
+# which writes dev-mode Next.js manifests). ecosystem.config.cjs manages the
+# same names in PROD mode (`pnpm start`). If PM2 is managing a requested
+# process, bail out — mixing the two corrupts the prod build: a `pnpm dev` run
+# overwrites .next/routes-manifest.json (drops the dataRoutes key), and when PM2
+# then restarts `pnpm start`, next start crashes in a loop reading it:
+#   "routesManifest.dataRoutes is not iterable"
+# Pick ONE supervisor: `pnpm restart:frontend` (this script, dev) OR
+# `pm2 restart mt-frontend` (prod). Don't run both.
+pm2_managed() {
+  command -v pm2 >/dev/null 2>&1 || return 1
+  pm2 jlist 2>/dev/null | grep -q "\"name\":\"$1\"" || return 1
+  # name exists in PM2 list (online/errored/stopped all count as "managed")
+  return 0
+}
+
+case "$MODE" in
+  --backend|--all)
+    if pm2_managed "mt-backend"; then
+      err "mt-backend is managed by PM2. Use 'pm2 restart mt-backend' (prod),"
+      err "or 'pm2 delete mt-backend' first to take it over with this dev script."
+      exit 1
+    fi
+    ;;
+esac
+
+case "$MODE" in
+  --frontend|--all)
+    if pm2_managed "mt-frontend"; then
+      err "mt-frontend is managed by PM2. Use 'pm2 restart mt-frontend' (prod)"
+      err "after 'cd frontend && pnpm build', or 'pm2 delete mt-frontend' first"
+      err "to take it over with this dev script."
+      err "Mixing the two corrupts .next/ and crashes prod next start."
+      exit 1
+    fi
+    ;;
+esac
+
+case "$MODE" in
+  --inference|--all)
+    if pm2_managed "mt-inference"; then
+      err "mt-inference is managed by PM2. Use 'pm2 restart mt-inference' (prod),"
+      err "or 'pm2 delete mt-inference' first to take it over with this dev script."
+      exit 1
+    fi
+    ;;
+esac
+
 # ── Kill and verify ─────────────────────────────────────
 # Kill by command pattern, then wait for ALL related processes to vanish,
 # then verify ports are free. Retry up to 3 rounds.
