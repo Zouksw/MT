@@ -71,6 +71,8 @@
 2. **排空（P2，commit 013fa1b）**：新增 `markUnverifiablePredictions()`（`mapeTracking.ts`）—— 检测"due completed 预测 + commodity 无 post-prediction 价格"= 永不可验证，标 `unverifiable` 状态（第 4 个状态值，free TEXT 无需 migration；区别于 `stale`=污染源）。`verifyDuePredictions` 只读 `completed` → 标过的行自动退出循环。server.ts 启动一次性钩子（25s）。live 实测：backlog 107,393 → 14,888；unverifiable 0 → 76,954；`verificationRatio` **0.006 → 0.522**（87×，分母排除 unverifiable）；`hasVerificationDebt` **true → false**。verify loop 日志从 `Verified 0 of 5000 (5000 no actuals)` 变 `Verified 5000 of 5000 (0 no actuals)`。
 - **D1 数据源失效本身未修**（仍需 MLA/USDA key 等）——本轮只让 frozen 数据的后果不再放大/掩盖真实验证进度。frozen 商品数据流入后，新预测按正常路径验证（旧 unverifiable 行保持 unverifiable，是诚实历史记录）。
 
+**round-66 补充（2026-08-03 live 实测）**：round-62 P2 的 `markUnverifiablePredictions` 残留盲区——只扫 `predictedAt <= now-10d`（due 截断），P1 gate 上线后仍在生成的"近期（10 天内）但源已死"预测全部漏网（~12k 条 pre-gate straggler 永久占用 completed 队列，每 6h 被 verifyDuePredictons 空转扫描）。commit 8f9153b 加 Pass B（`markLaggingFrozenPredictions`）：扫 `predictedAt > cutoff`，`latest price <= predictedAt` 且 `< now-7d`（recency 守卫防误伤活源 lag）→ 标 unverifiable。live：backlog 14,888 → 3,162（-79%），unverifiable 76,954 → 89,173，ratio 0.522 → 0.837（分母排除 unverifiable）。verify loop 日志从扫 ~15k 行变 `Verified 0 of 40 due`。
+
 ---
 
 ### D3 — 数据层静默失效已被暴露（2026-07-31 live 实测，round-48~50）

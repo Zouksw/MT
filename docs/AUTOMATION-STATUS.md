@@ -77,14 +77,14 @@
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-02 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-03 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **632 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **634 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **278 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **957 全绿**（632 + 278 + 47，截至 2026-08-02 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **959 全绿**（634 + 278 + 47，截至 2026-08-03 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -117,6 +117,11 @@
 - **commit b73b2c6（backend，-187 行 / -10 用例）**：mapeTracking 提取 `seedConflictRow`/`cleanupConflictRows` helper（5 个冲突预测测试手写重复 scaffolding，mutation-verified）；errorHandler 7 个 Error-Class describe→1 个 `it.each`（断言全保留）；api-workflows 删 4 段非核心 workflow（Watchlist/Billing/APIKeys/Portfolio，均有更深 route 测试覆盖，唯一有价值的 `/api/analytics/correlation` 断言移入 Signals 段保留）；concurrent-ops 5 个 Empty/Null 边缘用例→2 个 `it.each`。backend 642|1 → 632|1。
 - **commit 3e4383d（frontend，-364 行 / -9 用例）**：useDashboardStats 提取 `makeFetchResult`/`mockByKey` 工厂（13 个测试内联 9 字段返回对象）；AnomalyChart/PredictionChart 提取 `renderChart(overrides)` helper（重复 JSX 8-10×）+ 各删 1 纯 testid smoke；StatCard 3 趋势变体→`it.each`；ErrorBoundary 合并 Try-Again+Reload 两按钮测试 + 删隐含覆盖的 "not render children"；ContentCard accent true/false→`it.each`；alerts page 删 4 纯静态文本 smoke（header/filter/refresh/mark-all-read，保留 4 行为测试）；market-news 删 1 纯按钮 smoke。frontend 287 → 278。
 - **§十.4 豁免说明**：本轮用户明确授权删**纯 smoke/渲染存在性用例**（只断言静态文本/className/testid 存在、不测行为）致测试数下降 19（backend -10、frontend -9）。属计划内、非回归——所有删除的用例要么是浅层重复（已有更深 route/service 测试覆盖的 happy-path envelope），要么是表驱动合并（断言全保留），要么是纯静态存在性断言（数据加载行为测试已隐式覆盖）。核心价值链行为/回归用例**零删除**。行为覆盖无净损失。
+
+**markUnverifiable 残留盲区修复（round-66，2026-08-03）**——round-62 P2 的 `markUnverifiablePredictions` 只扫 `predictedAt <= now-10d`（due 截断），但 round-62 P1 gate 上线后仍在生成的"近期（10 天内）但源已死"的预测**全部漏网**——它们永远到不了 due 截断，却永远等不到 actual，永久占用 completed 队列。
+- **commit 8f9153b**：`mapeTracking.ts` 加 Pass B（`markLaggingFrozenPredictions` 辅助函数）——扫 `predictedAt > cutoff`，当 `latest daily price <= predictedAt` 且 `latest price < now-STALE_WINDOW_DAYS(7)` 时标记 `unverifiable`。7d recency 守卫区分"确已死的源"和"周末/1-2 天 lag"（避免误伤活源）。Pass A（Steps 1-3，due 扫描）逻辑不变、与 Pass B 互斥（`<= cutoff` vs `> cutoff`）。
+- **+2 测试**（mutation-verified：把 `&&` 改 `||` 让 recency 守卫失效，负向测试红）：正向（lagging-frozen → unverifiable）+ 负向（6d lag 活源 → 保持 completed）。backend 632|1 → 634|1。tsc clean。幂等。
+- **live 实测**：`predictionBacklog` **15,377 → 3,162**（-79%），`predictionUnverifiable` **76,954 → 89,173**（+12,219），`verificationRatio` **0.837**（未稀释——分母正确排除 unverifiable），`hasVerificationDebt` false。verifyDuePredictons 日志从扫 ~15k 行变 `Verified 0 of 40 due`（仅剩 beyond-cutoff 边缘 40 行）。
 
 ## 五½、数据层可观测性（round-48~50）
 
