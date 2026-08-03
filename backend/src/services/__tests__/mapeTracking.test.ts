@@ -16,6 +16,7 @@ import {
 	logPrediction,
 	markUnverifiablePredictions,
 	restorePostFixConflictPredictions,
+	restoreVerifiablePredictions,
 	verifyDuePredictions,
 	verifyPrediction,
 } from "@/services/mapeTracking";
@@ -835,6 +836,146 @@ describe("MAPE Tracking (real DB)", () => {
 					expect(after?.status).toBe("completed");
 				} finally {
 					await cleanup([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+		});
+
+		describe("restoreVerifiablePredictions — reclaim falsely-unverifiable rows when source revives", () => {
+			// Regression (round-71, 2026-08-03): markUnverifiablePredictions is
+			// point-in-time + irreversible. beef_carcass_us had ~738 chronos
+			// predictions marked unverifiable during a transient FRED data lag;
+			// when FRED published the lagged rows, those predictions now HAD
+			// post-prediction actuals but stayed stranded (verifyDuePredictions
+			// only reads `completed`). This function reclaims them.
+
+			async function makeUnverifiableWithPrice(opts: {
+				slug: string;
+				predictedAt: Date;
+				latestPriceDate: Date;
+			}) {
+				const prisma = ctx.prisma;
+				const commodity = await prisma.commodity.create({
+					data: {
+						id: `${ctx.prefix}-${opts.slug}`,
+						slug: `${ctx.prefix}-${opts.slug}`,
+						name: opts.slug,
+						category: "test",
+						unit: "USD",
+						currency: "USD",
+					},
+				});
+				await prisma.commodityPrice.create({
+					data: {
+						commodityId: commodity.id,
+						date: opts.latestPriceDate,
+						interval: "daily",
+						close: 1,
+						source: "test",
+					},
+				});
+				// Create the prediction already in `unverifiable` state —
+				// simulates a row that markUnverifiable marked during a lag.
+				const prediction = await prisma.predictionLog.create({
+					data: {
+						modelId: "test-restore",
+						commodityId: commodity.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3],
+						status: "unverifiable",
+						predictedAt: opts.predictedAt,
+					},
+				});
+				return { commodity, prediction };
+			}
+
+			async function cleanupRestore(
+				ids: {
+					commodityId?: string;
+					predictionId?: string;
+				}[],
+			) {
+				const prisma = ctx.prisma;
+				const predictionIds = ids.map((i) => i.predictionId).filter(Boolean) as string[];
+				const commodityIds = ids.map((i) => i.commodityId).filter(Boolean) as string[];
+				if (predictionIds.length)
+					await prisma.predictionLog.deleteMany({ where: { id: { in: predictionIds } } });
+				if (commodityIds.length) {
+					await prisma.commodityPrice.deleteMany({
+						where: { commodityId: { in: commodityIds } },
+					});
+					await prisma.commodity.deleteMany({ where: { id: { in: commodityIds } } });
+				}
+			}
+
+			it("restores an unverifiable row to completed when its commodity now has a post-prediction actual (source revived)", async () => {
+				// Prediction at now-30d (frozen when marked). Latest price is now
+				// at now-5d — NEWER than the prediction → source revived → restore.
+				const predictedAt = new Date(Date.now() - 30 * 86400000);
+				const revivedPriceDate = new Date(Date.now() - 5 * 86400000);
+				const { commodity, prediction } = await makeUnverifiableWithPrice({
+					slug: "revived",
+					predictedAt,
+					latestPriceDate: revivedPriceDate,
+				});
+
+				try {
+					const n = await restoreVerifiablePredictions();
+					expect(n).toBeGreaterThanOrEqual(1);
+
+					const after = await ctx.prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					// Revived source → row reclaims to completed (re-enters verify queue).
+					expect(after?.status).toBe("completed");
+				} finally {
+					await cleanupRestore([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+
+			it("does NOT restore an unverifiable row whose commodity is still genuinely frozen (latest price still ≤ prediction)", async () => {
+				// Prediction at now-30d. Latest price at now-35d — OLDER than the
+				// prediction → source still dead → row must stay unverifiable.
+				const predictedAt = new Date(Date.now() - 30 * 86400000);
+				const stillFrozenPrice = new Date(Date.now() - 35 * 86400000);
+				const { commodity, prediction } = await makeUnverifiableWithPrice({
+					slug: "still-frozen",
+					predictedAt,
+					latestPriceDate: stillFrozenPrice,
+				});
+
+				try {
+					await restoreVerifiablePredictions();
+
+					const after = await ctx.prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					// Source still dead → row stays unverifiable (honest).
+					expect(after?.status).toBe("unverifiable");
+				} finally {
+					await cleanupRestore([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+
+			it("is idempotent — a second run restores nothing (rows already completed)", async () => {
+				const predictedAt = new Date(Date.now() - 30 * 86400000);
+				const revivedPriceDate = new Date(Date.now() - 5 * 86400000);
+				const { commodity, prediction } = await makeUnverifiableWithPrice({
+					slug: "idempotent-restore",
+					predictedAt,
+					latestPriceDate: revivedPriceDate,
+				});
+
+				try {
+					const first = await restoreVerifiablePredictions();
+					expect(first).toBeGreaterThanOrEqual(1);
+					// Second run: the row is now `completed`, not `unverifiable`
+					// → not in the candidate set → returns less than first.
+					const second = await restoreVerifiablePredictions();
+					expect(second).toBeLessThan(first);
+				} finally {
+					await cleanupRestore([{ commodityId: commodity.id, predictionId: prediction.id }]);
 				}
 			});
 		});

@@ -19,6 +19,7 @@ import {
 	invalidatePollutedPredictions,
 	markUnverifiablePredictions,
 	restorePostFixConflictPredictions,
+	restoreVerifiablePredictions,
 	verifyDuePredictions,
 } from "@/services/mapeTracking";
 import {
@@ -250,6 +251,22 @@ function start(): void {
 			if (n > 0) logger.info(`📊 Marked ${n} frozen-commodity predictions as unverifiable`);
 		} catch (err) {
 			logger.warn(`📊 markUnverifiable failed: ${err}`);
+		}
+
+		// Reclaim falsely-unverifiable rows: markUnverifiable is point-in-time
+		// and irreversible, so a commodity whose source later revives (e.g.
+		// beef_carcass_us during a transient FRED lag) leaves legitimately-
+		// verifiable predictions stranded. Runs right after marking so the
+		// mark pass settles genuinely-frozen rows first; this pass then restores
+		// rows whose commodity now has post-prediction actuals. Idempotent.
+		try {
+			const restored = await restoreVerifiablePredictions();
+			if (restored > 0)
+				logger.info(
+					`📊 Restored ${restored} revived-source predictions from unverifiable → completed`,
+				);
+		} catch (err) {
+			logger.warn(`📊 restoreVerifiable failed: ${err}`);
 		}
 	};
 	setTimeout(runMarkUnverifiable, 25000);

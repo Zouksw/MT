@@ -395,6 +395,95 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 }
 
 /**
+ * Restore `unverifiable` predictions whose commodity has since received fresh
+ * actuals — the symmetric inverse of markLaggingFrozenPredictions.
+ *
+ * Context: markUnverifiablePredictions marks a prediction `unverifiable` when,
+ * at marking time, the commodity's latest daily price was ≤ the prediction's
+ * timestamp AND older than the 7d source-dead window. This is a point-in-time
+ * check: it captures "source dead → no future actuals can ever arrive". But
+ * the marking is **irreversible** — once `unverifiable`, `verifyDuePredictions`
+ * (which only reads `completed`) never reclaims the row.
+ *
+ * The failure mode (observed live, 2026-08-03): beef_carcass_us (FRED daily,
+ * CBBTCUSD) had a transient data lag during which ~738 chronos predictions
+ * (07-27 → 08-02) were marked unverifiable. FRED then published the lagged
+ * daily rows (08-01, 08-02) — those predictions now HAVE post-prediction
+ * actuals in their horizon window (5 of 10 days covered) and are genuinely
+ * verifiable, but remain stranded at `unverifiable`. Result: beef_carcass_us
+ * chronos accuracy shows 0 verified indefinitely despite being the one
+ * commodity with fresh actuals.
+ *
+ * This function reclaims them: for each distinct commodity with
+ * `unverifiable` rows, check if its latest daily price is now NEWER than the
+ * row's predictedAt (source revived, post-prediction actuals exist). If so,
+ * restore those rows to `completed` so the verify loop can process them.
+ *
+ * Idempotent — a second run finds nothing (the rows are `completed`, and the
+ * verify loop will consume them into `verified`). Does NOT touch rows whose
+ * commodity is still genuinely frozen (latest price still ≤ predictedAt) —
+ * those stay `unverifiable` honestly.
+ *
+ * @returns number of predictions restored to `completed`
+ */
+export async function restoreVerifiablePredictions(): Promise<number> {
+	// Candidate commodities: those with at least one unverifiable row.
+	const candidates = await prisma.predictionLog.findMany({
+		where: {
+			status: "unverifiable",
+			NOT: { commodityId: { startsWith: "cut:" } },
+		},
+		select: { commodityId: true, predictedAt: true },
+		distinct: ["commodityId"],
+	});
+
+	if (candidates.length === 0) return 0;
+
+	// A commodity is "revived" if its latest daily price is strictly newer than
+	// the earliest unverifiable prediction for it (post-prediction actuals now
+	// exist in the window). We use the earliest predictedAt per commodity as
+	// the bar — if even the oldest stranded row has post-prediction actuals,
+	// all newer rows on that commodity do too.
+	const earliestByCommodity = new Map<string, Date>();
+	for (const row of candidates) {
+		const existing = earliestByCommodity.get(row.commodityId);
+		if (!existing || row.predictedAt < existing) {
+			earliestByCommodity.set(row.commodityId, row.predictedAt);
+		}
+	}
+
+	const revivedCommodityIds: string[] = [];
+	for (const [commodityId, earliestPred] of earliestByCommodity) {
+		const latestPrice = await prisma.commodityPrice.findFirst({
+			where: { commodityId, interval: "daily" },
+			orderBy: { date: "desc" },
+			select: { date: true },
+		});
+		// Restore only if the source has produced actuals NEWER than the
+		// prediction — i.e. the "no future actuals" assumption that justified
+		// the unverifiable marking no longer holds. Use date-only comparison
+		// (price dates are midnight-anchored) so a same-day actual counts as
+		// post-prediction for an earlier-in-day prediction.
+		if (latestPrice && latestPrice.date > earliestPred) {
+			revivedCommodityIds.push(commodityId);
+		}
+	}
+
+	if (revivedCommodityIds.length === 0) return 0;
+
+	const result = await prisma.predictionLog.updateMany({
+		where: {
+			status: "unverifiable",
+			commodityId: { in: revivedCommodityIds },
+			NOT: { commodityId: { startsWith: "cut:" } },
+		},
+		data: { status: "completed" },
+	});
+
+	return result.count;
+}
+
+/**
  * Auto-verify completed predictions whose forecast horizon has elapsed.
  *
  * For each completed prediction_log older than its horizon, fetch the actual
