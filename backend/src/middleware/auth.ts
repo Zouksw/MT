@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { jwtUtils, logger, prisma } from "@/lib";
+import { validateApiKey } from "@/services/apiKeys";
 import { isTokenBlacklisted } from "@/services/tokenBlacklist";
 
 export interface AuthRequest extends Request {
@@ -25,6 +26,28 @@ export interface AuthenticatedRequest extends Request {
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
+		// API-key auth (round-69): the `x-api-key` header carries a long-lived
+		// `iotd_` key for programmatic access. Distinct from the JWT Bearer
+		// path below — keys are hashed (bcrypt), inherit the owning user's
+		// role, and are revoked via `isActive:false` (handled inside
+		// validateApiKey's `isActive:true` filter). validateApiKey also records
+		// usageCount/lastUsedAt. On any x-api-key value we short-circuit the
+		// JWT path entirely; absent/invalid falls through to the 401 below or
+		// the JWT Bearer path if no key header is present.
+		const apiKeyHeader = req.headers["x-api-key"];
+		if (typeof apiKeyHeader === "string" && apiKeyHeader.length > 0) {
+			const result = await validateApiKey(apiKeyHeader);
+			if (!result) {
+				return res.status(401).json({
+					success: false,
+					error: { message: "Invalid or revoked API key", code: "UNAUTHORIZED" },
+				});
+			}
+			req.userId = result.user.id;
+			req.user = result.user;
+			return next();
+		}
+
 		const authHeader = req.headers.authorization;
 
 		if (!authHeader?.startsWith("Bearer ")) {

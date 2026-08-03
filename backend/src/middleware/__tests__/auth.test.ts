@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type AuthRequest, authenticate, authorize } from "@/middleware/auth";
 
 // vi.hoisted() ensures these are available inside hoisted vi.mock() factories
-const { mockVerifyToken, mockUserFindUnique, mockIsTokenBlacklisted } = vi.hoisted(() => ({
-	mockVerifyToken: vi.fn(),
-	mockUserFindUnique: vi.fn(),
-	mockIsTokenBlacklisted: vi.fn(),
-}));
+const { mockVerifyToken, mockUserFindUnique, mockIsTokenBlacklisted, mockValidateApiKey } =
+	vi.hoisted(() => ({
+		mockVerifyToken: vi.fn(),
+		mockUserFindUnique: vi.fn(),
+		mockIsTokenBlacklisted: vi.fn(),
+		mockValidateApiKey: vi.fn(),
+	}));
 
 vi.mock("@/lib", () => ({
 	prisma: {
@@ -27,6 +29,10 @@ vi.mock("@/lib", () => ({
 
 vi.mock("@/services/tokenBlacklist", () => ({
 	isTokenBlacklisted: (...args: unknown[]) => mockIsTokenBlacklisted(...args),
+}));
+
+vi.mock("@/services/apiKeys", () => ({
+	validateApiKey: (...args: unknown[]) => mockValidateApiKey(...args),
 }));
 
 describe("authenticate middleware", () => {
@@ -147,6 +153,72 @@ describe("authenticate middleware", () => {
 			success: false,
 			error: { message: "Authentication failed", code: "INTERNAL_ERROR" },
 		});
+	});
+
+	// ─── API-key auth (round-69): x-api-key header ───────────────────────────
+
+	it("should authenticate via x-api-key header and set req.user", async () => {
+		const mockKeyUser = {
+			id: "user-key",
+			email: "programmatic@test.local",
+			name: "API Client",
+			role: "admin",
+		};
+		mockReq.headers = { "x-api-key": "iotd_valid_key_string" };
+		mockValidateApiKey.mockResolvedValue({
+			user: mockKeyUser,
+			apiKey: { id: "key-1", lastCharacters: 123456 },
+		});
+
+		await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+		expect(mockValidateApiKey).toHaveBeenCalledWith("iotd_valid_key_string");
+		expect(mockReq.userId).toBe("user-key");
+		expect(mockReq.user).toEqual(mockKeyUser);
+		expect(mockNext).toHaveBeenCalledWith();
+		// JWT path must NOT have run.
+		expect(mockVerifyToken).not.toHaveBeenCalled();
+	});
+
+	it("should return 401 for an invalid/revoked x-api-key", async () => {
+		mockReq.headers = { "x-api-key": "iotd_invalid_or_revoked" };
+		mockValidateApiKey.mockResolvedValue(null);
+
+		await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+		expect(mockValidateApiKey).toHaveBeenCalledWith("iotd_invalid_or_revoked");
+		expect(mockRes.status).toHaveBeenCalledWith(401);
+		expect(mockRes.json).toHaveBeenCalledWith({
+			success: false,
+			error: { message: "Invalid or revoked API key", code: "UNAUTHORIZED" },
+		});
+		expect(mockNext).not.toHaveBeenCalled();
+		expect(mockVerifyToken).not.toHaveBeenCalled();
+	});
+
+	it("should NOT consult the JWT path when x-api-key is present (even without Authorization)", async () => {
+		// x-api-key present, NO Authorization header. Must take the API-key
+		// branch — never the "No token provided" JWT path. This guards the
+		// two auth paths stay physically separated.
+		const mockKeyUser = {
+			id: "user-key-2",
+			email: "p2@test.local",
+			name: "API Client 2",
+			role: "user",
+		};
+		mockReq.headers = { "x-api-key": "iotd_another_key" };
+		mockValidateApiKey.mockResolvedValue({
+			user: mockKeyUser,
+			apiKey: { id: "key-2", lastCharacters: 789 },
+		});
+
+		await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+		// Authenticated via the key despite no Authorization header at all.
+		expect(mockReq.userId).toBe("user-key-2");
+		expect(mockNext).toHaveBeenCalledWith();
+		expect(mockVerifyToken).not.toHaveBeenCalled();
+		expect(mockIsTokenBlacklisted).not.toHaveBeenCalled();
 	});
 });
 
