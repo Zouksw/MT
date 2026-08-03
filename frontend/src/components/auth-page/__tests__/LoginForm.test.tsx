@@ -17,18 +17,6 @@ jest.mock("@/components/ui/Toast", () => ({
 	}),
 }));
 
-// Mock axios (not used by LoginForm after the fetch migration, but the module
-// graph pulls it in via other imports; keep the global mock so it loads clean)
-jest.mock("axios", () => {
-	const mockAxios: Record<string, unknown> = {
-		post: jest.fn(),
-		defaults: { headers: { common: {} } },
-		interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
-	};
-	mockAxios.create = jest.fn(() => mockAxios);
-	return mockAxios;
-});
-
 // Mock js-cookie
 jest.mock("js-cookie", () => ({
 	set: jest.fn(),
