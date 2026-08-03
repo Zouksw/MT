@@ -84,6 +84,8 @@
 - **仍存**：**46 处裸 `fetch()`**（跨 26 文件，如 `useTradingData.ts` 7 处、`settings/data-sources/page.tsx` 6 处）vs 10 SWR / 8 `useRetryableFetch`。标准已立（`useRetryableFetch`）但迁移未完。
 - **`useRetryableFetch`** 是推荐的统一抽象（8 consumer：beef 页/hook + dashboard + MarketForecastBoard），是收敛方向。
 
+**round-68 补充（2026-08-03，axios 单点根治）**：`lib/market-data.ts` 的 fetcher 从 axios 迁到原生 fetch（对齐 `utils/auth.ts:authFetch` 范式：`credentials:"include"` + bearer header + non-2xx throw 保持 SWR 错词语义）。`package.json` 删 axios 依赖 + `pnpm-lock.yaml` 同步（-axios + 2 transitive）。commit 12aca10。LoginForm.test.tsx 的 vestigial `jest.mock("axios")` 一并删（axios 不再在 module graph）。**axios 子条 RESOLVED**——node_modules + lockfile 0 引用，frontend tsc clean + 278 tests 不变，live 渲染 HTTP 200。裸 `fetch()` 收敛到 `useRetryableFetch` 仍开（46 处，跨文件大改动，单列）。
+
 ### TD-9 — 死 ui 组件 + shadcn 重复对
 **审计**：2026-07-06，§5
 **当时证据**：死 ui 组件（0 importer）：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx`、小写 `select.tsx`。shadcn 重复：`button.tsx`(1) vs `Button/`(41)、`card.tsx`(3) vs `Card/`(28)、`select.tsx`(0) vs `Select/`(15)。PascalCase 胜出，小写 shadcn 版是死重。
