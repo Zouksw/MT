@@ -79,12 +79,12 @@
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-03 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **634 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **639 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **278 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **959 全绿**（634 + 278 + 47，截至 2026-08-03 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **964 全绿**（639 + 278 + 47，截至 2026-08-03 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -122,6 +122,13 @@
 - **commit 8f9153b**：`mapeTracking.ts` 加 Pass B（`markLaggingFrozenPredictions` 辅助函数）——扫 `predictedAt > cutoff`，当 `latest daily price <= predictedAt` 且 `latest price < now-STALE_WINDOW_DAYS(7)` 时标记 `unverifiable`。7d recency 守卫区分"确已死的源"和"周末/1-2 天 lag"（避免误伤活源）。Pass A（Steps 1-3，due 扫描）逻辑不变、与 Pass B 互斥（`<= cutoff` vs `> cutoff`）。
 - **+2 测试**（mutation-verified：把 `&&` 改 `||` 让 recency 守卫失效，负向测试红）：正向（lagging-frozen → unverifiable）+ 负向（6d lag 活源 → 保持 completed）。backend 632|1 → 634|1。tsc clean。幂等。
 - **live 实测**：`predictionBacklog` **15,377 → 3,162**（-79%），`predictionUnverifiable` **76,954 → 89,173**（+12,219），`verificationRatio` **0.837**（未稀释——分母正确排除 unverifiable），`hasVerificationDebt` false。verifyDuePredictons 日志从扫 ~15k 行变 `Verified 0 of 40 due`（仅剩 beyond-cutoff 边缘 40 行）。
+
+**R2 读侧权威源过滤补全（round-67，2026-08-03）**——审计发现 round-41 只修了 4 个读侧（training/actuals/correlation/inference-history），遗漏 6 个用户可见的"latest price / 聚合"读取点。`GET /api/signals/brl_usd` live 实测 currentPrice 返回 exchange_rate_api 反向值 0.197（应 fred 5.0），predictedChange 2460 无意义。逐项根治（每批独立 commit + mutation-verified）：
+- **B1（c24dff2）**：`signals.ts:345`（单预测）+ `:279`（批量，新 `batchLatestPriceWhere`/`dedupeLatestByCommodity` 共享 helper）+ `alert-rules.ts:147`（告警）。+2 测试（cache-aware：清 `signals:commodity` Redis key 避免假绿，mutation 把过滤去掉+清缓存→红）。
+- **B2（b77d540）**：`marketService.ts:listCommodities` relation include 改批量查询（relation include 无法加 source 过滤）。+1 测试（mutation-verified）。
+- **B3（9cf4e6c）**：`watchlistService.ts` 两处 raw SQL 加 `partitionBySource` 拆 conflict vs 普通查询；`authoritativeSources.ts` 导出 `getConflictSlugs`。+2 测试（mutation-verified）。
+- **B4**：`analytics.ts:39` 季节性聚合 raw SQL 加 `AND source = ${authoritativeSource}`（`Prisma.sql`/`Prisma.empty` 条件片段）。无测试文件（端点此前 0 覆盖），live 验证 12 月 avg 全 5.1–5.5。
+- **live 实测**：signals brl_usd currentPrice **0.197→5.0592**；market commodities latestPrice **0.197→5.0592**；seasonality 12 月 avg 全 **5.1–5.5**。backend 634|1 → **639|1**（+5 回归测试）。tsc clean。
 
 ## 五½、数据层可观测性（round-48~50）
 

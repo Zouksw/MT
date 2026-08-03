@@ -1,8 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
+import { getAuthoritativeSource } from "@/services/inference/authoritativeSources";
 
 const router = Router();
 
@@ -18,9 +20,13 @@ router.get(
 			throw new NotFoundError("Commodity");
 		}
 
-		// Use SQL aggregation instead of loading all rows into memory
+		// Use SQL aggregation instead of loading all rows into memory.
+		// Round-67: filter to the authoritative source when one is declared so
+		// conflict commodities (brl_usd etc.) don't average incompatible-source
+		// scales together (~0.2 mixed with ~5.0 would distort the monthly AVG).
 		const FIVE_YEARS_AGO = new Date();
 		FIVE_YEARS_AGO.setFullYear(FIVE_YEARS_AGO.getFullYear() - 5);
+		const authoritativeSource = getAuthoritativeSource(commodity.slug);
 
 		const monthlyAgg = await prisma.$queryRaw<
 			Array<{
@@ -40,6 +46,7 @@ router.get(
       WHERE commodity_id = ${commodity.id}
         AND interval = 'daily'
         AND date >= ${FIVE_YEARS_AGO}
+        ${authoritativeSource ? Prisma.sql`AND source = ${authoritativeSource}` : Prisma.empty}
       GROUP BY EXTRACT(MONTH FROM date)
       ORDER BY month
     `;

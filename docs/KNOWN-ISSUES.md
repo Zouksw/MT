@@ -153,6 +153,14 @@
 - **预期**：08-06 后 chronos 首批到期预测进 due 批次，但 conflict commodity（brl_usd/corn_cme/natural_gas_cme）即便到期也需权威源（fred/usda_ams）有窗口内 actuals：fred 最新 07-24/07-27（5-8d lag，FRED 日汇率延迟），usda_ams 最新 04-29（月度数据，3mo lag）。**corn_cme 大概率仍 0 verified**（usda_ams 3 个月无新数据）；brl_usd/natural_gas_cme 视 fred 是否补数。
 - **动作**：不代码改动。08-06 后复查 `[MAPE] Verified N` 日志 + `prediction_logs WHERE model_id LIKE 'chronos%' AND verified_at IS NOT NULL`。若届时仍 0，再查 actuals 源 lag（运营/数据源问题，非 verify 代码）。
 
+**round-67 补充（2026-08-03，读侧权威源过滤补全）**：审计发现 round-41 只修了 4 个读侧（training/actuals/correlation/inference-history），**遗漏了 6 个用户可见的"latest price / 聚合"读取点**，对 3 个 conflict commodity 返回错误源的值。`GET /api/signals/brl_usd` live 实测 currentPrice 返回 exchange_rate_api 反向值 0.197（应是 fred 5.0）→ predictedChange 2460（无意义）。逐项根治：
+- **commit c24dff2（B1）**：`signals.ts:345`（单预测 currentPrice）+ `signals.ts:279`（批量 currentPrice，新 `batchLatestPriceWhere`+`dedupeLatestByCommodity` 共享 helper）+ `alert-rules.ts:147`（告警价，预取 commodityId→slug）。+2 signals 测试（mutation-verified，cache-aware 清 Redis 避免假绿）。
+- **commit b77d540（B2）**：`marketService.ts:listCommodities` 的 relation include 改批量查询（relation include 无法加 source 过滤）。+1 测试（mutation-verified）。
+- **commit 9cf4e6c（B3）**：`watchlistService.ts` 两处 raw SQL（`batchLatestPrices`/`batchRecentPricePairs`）加 `partitionBySource` 拆 conflict vs 普通查询。+2 测试（mutation-verified）。
+- **analytics.ts:39**（季节性聚合）：raw SQL 加 `AND source = ${authoritativeSource}`（`Prisma.sql`/`Prisma.empty` 条件片段）。
+- **live 实测（2026-08-03）**：`/api/signals/brl_usd` currentPrice 0.197→**5.0592**、predictedChange 2460→0.24；`/api/market/commodities` brl_usd latestPrice 0.197→**5.0592**；`/api/analytics/seasonality/brl_usd` 12 月 avg 全在 **5.1–5.5**（fred 量级，不再混 ~0.2）。backend 634|1→**639|1**（+5 回归测试）。
+- **结论**：R2 读侧**全补全**——signals/market/watchlist/alerts/analytics 现对所有 conflict commodity 读权威源。数据层（两源仍写同 slug）未动（靠读侧过滤根治，避免 schema 迁移）。
+
 ---
 
 ## 三、潜伏 bug（重构副产物，已修，留作记录）
