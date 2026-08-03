@@ -138,6 +138,10 @@
 
 **前端 crash-loop 修复（round-70，2026-08-03）**——核心价值链终端（前端）一度 hard down：mt-frontend PM2 crash-loop 527 次，`:3000` 返 HTTP 000。根因：`scripts/restart.sh`（dev 模式 `pnpm dev`）与 `ecosystem.config.cjs`（PM2 prod 模式 `pnpm start`）共用 `.next/`——`next dev` 覆盖 `.next/routes-manifest.json`（dev 版无 `dataRoutes` key），PM2 重启 `next start` 时迭代 undefined → `TypeError: routesManifest.dataRoutes is not iterable`。**`distDir` 不能修**（实测：只隔离 chunk 输出，dev 仍写根 manifest，误信会撞坏 prod）。真修：`restart.sh` 加 PM2 guard——若目标进程名在 `pm2 jlist` 则拒绝启动 dev（exit 1 + 指引 `pm2 restart` 或先 `pm2 delete`），强制二选一。恢复：清 `.next/`+`.next-dev/` → `pnpm build`（11-key manifest）→ `pm2 restart mt-frontend` → HTTP 200，价值链页（beef/dashboard/ai/analysis/trading）全渲染，restarts 稳定。无源码/测试改动；frontend 278 不变。CLAUDE.md + docs/KNOWN-ISSUES.md B2 记录此坑与 distDir 死胡同。
 
+**MAPE 写路径防御性加固 + Tailwind 漂移核查（round-70 续，2026-08-03）**：
+- **commit 536dc96（predictionCache）**：`runAndCachePrediction` 的 `logPrediction` 从 fire-and-forget（`import(...).then(m => m.logPrediction(...).catch(...))`）改为 `await` + try/catch。原形式结构脆弱——外层 `.then` 返回 undefined（不返回 logPrediction promise），外层 `.catch` 只捕获 import 错误，logPrediction 若不 settle 则无迹可查。新形式保留"DB 写失败不破坏 cached prediction"契约（try/catch 吞并 + log），但写入确定性化、失败可观测。3 个 runAndCache 测试契约不变通过；backend 642|1 不变。诚实记录：live 核查时 prediction_logs 正在正常产（最新行 2 分钟前），故为预防性加固，非修 active bug。
+- **commit a65e37e + d45e893（Tailwind info 漂移）**：核查 TD-12 双配置时发现 `tailwind.config.ts info.DEFAULT=#B8860B`（3.2:1，AA fail）与 `tokens.css --color-info=#8B6914`（AA pass）漂移，修 config hex 对齐。**后续 live 修正**：built CSS 实测 `text-info` 解析为 `var(--info)=oklch(0.57 0.17 250)`（蓝色），`@theme inline` 覆盖 config 与 tokens.css 两者——fix 无视觉收益，仅消除 config 内部矛盾（注释 vs 值）。TD-12 记录三源并存架构（config 颜色段[死] + @theme inline oklch[活] + tokens.css[死]）需产品决策选 palette 后才能根治。
+
 ## 五½、数据层可观测性（round-48~50）
 
 **问题**：`/health/ready` 之前只报 infra（database/redis/inference）全 green，但数据层可能静默失效——18 注册 scraper 仅 2 个在写、103k 预测不可验证、beef_cut_prices 近 14 天 0 行。operator 看到 all-green 实则数据停滞。
