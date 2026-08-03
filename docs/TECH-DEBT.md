@@ -110,8 +110,11 @@
 **审计**：2026-07-06，§6
 **当时证据**：两份 palette 已漂移，维护双倍。
 **现状（2026-08-03 复核）**：架构是 **Tailwind v4 + `@config` 桥接 v3 `tailwind.config.ts`**——`src/styles/globals.css:8` `@config "../../tailwind.config.ts"` 让 v4 引擎加载 v3 风格的 JS config，同时 `@theme inline` 块定义 v4 原生 token，`tokens.css` 是注释里声称的 hex "single source of truth"。三处并存（tailwind.config.ts + @theme inline + tokens.css）。
-**已修一例漂移（round-70，2026-08-03）**：`tailwind.config.ts` 的 `info.DEFAULT=#B8860B`（3.2:1，**WCAG AA fail**）与 `tokens.css --color-info=#8B6914`（5.1:1，AA pass）漂移——文件头注释自称 "Kept in sync"，但 info 块漏更新。`text-info` 用于 alerts 图标、sessions 计数、profile 显示（3 处）。修正 `info.DEFAULT→#8B6914` + `info.dark→#6B4F04`（对齐 tokens.css）。live 验证：built CSS 含 `#8b6914`，旧 `#b8860b` 消失。frontend 278 不变。
-**遗留（架构，未动）**：三源并存本身是 TD-12 的核心——彻底解决需迁到 v4 原生（删 `@config` + tailwind.config.ts，全 token 走 `@theme`）。但 v3 config 含 fontSize/display/h1-h4/shadow/keyframes 等 v4 `@theme` 不直接对应的结构，迁移非外科手术级，单列轮次。
+**已修一例漂移（round-70，2026-08-03）**：`tailwind.config.ts` 的 `info.DEFAULT=#B8860B`（3.2:1，**WCAG AA fail**）与 `tokens.css --color-info=#8B6914`（5.1:1，AA pass）漂移——文件头注释自称 "Kept in sync"，但 info 块漏更新。修正 `info.DEFAULT→#8B6914` + `info.dark→#6B4F04`（对齐 tokens.css）。frontend 278 不变。
+
+**后续核查修正（同轮，live built-CSS 实测）**：上述 fix 把 config hex 对齐了 tokens.css，**但 live 验证发现这对渲染无影响**——`text-info` 实际解析为 `var(--info)`，而 `--info` 由 `globals.css:118 --info: oklch(0.57 0.17 250)`（**蓝色**，hue 250）定义，**不是** tokens.css 的金色 `#8B6914`。即 `@theme inline` 块的 `--color-info: var(--info)` 把 config 与 tokens.css **两者都覆盖了**。真实渲染：alerts 图标 / sessions 计数 / profile 显示 = **蓝色**（info=blue 是语义惯例，可能是有意）。结论：`tailwind.config.ts` 的 colors 段 + `tokens.css` 的颜色段对 `text-*` utility **基本是死配置**（被 `@theme inline` oklch 全覆盖），TD-12 fix a65e37e 仅消除 config 内部自相矛盾（注释 vs 值），不改变视觉。诚实记录：本 fix 无功能/视觉收益，是文档级一致性。
+
+**遗留（架构，未动）**：三源并存（tailwind.config.ts colors 段[死] + @theme inline oklch[活] + tokens.css[死]）+ tailwind.config.ts 非颜色段（fontSize/animation/keyframes/boxShadow[活，utility 类如 text-h1/animate-fade-in 仍用]）。彻底解决需：(1) 决定哪套 palette 是 source of truth（oklch 蓝色系 vs hex 金色系——**视觉/产品决策，非工程**）；(2) 迁活配置到 v4 `@theme`，删 `@config` + tailwind.config.ts + tokens.css 死颜色段。前置：产品决策选 palette。**不在 AI 自主范围**。
 
 ---
 
