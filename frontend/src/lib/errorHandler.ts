@@ -5,7 +5,7 @@ export interface SafeError {
 	statusCode?: number;
 }
 
-export interface ApiError {
+interface ApiError {
 	response?: {
 		status?: number;
 		data?: {
@@ -275,31 +275,3 @@ class SecurityErrorHandler {
 }
 
 export const errorHandler = new SecurityErrorHandler();
-
-export async function withErrorHandling<T>(
-	operation: () => Promise<T>,
-	options: {
-		showNotification?: boolean;
-		notificationApi?: { error: (message: string) => void };
-		fallbackMessage?: string;
-	} = {},
-): Promise<T | null> {
-	const { showNotification = true, notificationApi } = options;
-
-	try {
-		return await operation();
-	} catch (error) {
-		const safeError = errorHandler.createSafeError(error);
-
-		if (showNotification && notificationApi && safeError.shouldNotify) {
-			notificationApi.error(safeError.message);
-		}
-
-		if (process.env.NODE_ENV === "development") {
-			// eslint-disable-next-line no-console
-			console.error("Operation failed:", safeError);
-		}
-
-		return null;
-	}
-}

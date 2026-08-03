@@ -354,6 +354,3 @@ class InputSanitizer {
 
 // Export singleton instance
 export const sanitizer = new InputSanitizer();
-
-// Export type for use in components
-export type { InputSanitizer };

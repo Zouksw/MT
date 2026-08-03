@@ -16,29 +16,6 @@ interface ErrorDetail {
 }
 
 /**
- * Standard success response structure
- * Using proper generic type instead of `any`
- */
-export interface SuccessResponse<T = unknown> {
-	success: true;
-	data: T;
-	message?: string;
-}
-
-/**
- * Standard error response structure
- * Using proper type instead of `any` for details
- */
-export interface ErrorResponse {
-	success: false;
-	error: {
-		message: string;
-		code?: string;
-		details?: ErrorDetail;
-	};
-}
-
-/**
  * Send a success response
  */
 export function success<T>(res: Response, data: T, status: number = 200): void {
@@ -118,9 +95,9 @@ export function forbidden(res: Response, message: string = "Forbidden"): void {
 }
 
 /**
- * Pagination metadata
+ * Pagination metadata (local to `paginated`'s signature)
  */
-export interface PaginationMeta {
+interface PaginationMeta {
 	page: number;
 	limit: number;
 	total: number;

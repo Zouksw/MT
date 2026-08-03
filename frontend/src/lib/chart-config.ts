@@ -1,6 +1,12 @@
 /**
  * Unified Chart Configuration for MT
  * DESIGN.md: Gold = AI intelligence, green/red = market direction ONLY
+ *
+ * Note (round-68): chartDimensions/chartTypography/barChartStyles/
+ * referenceLineStyles/responsiveContainerProps/getCommonChartProps/
+ * seriesColors/getSeriesColor/getGradientFill and the default export were
+ * removed — each had 0 callers across chart components (all use the named
+ * style exports retained below).
  */
 
 // Chart color palette — gold-centric per DESIGN.md "Refined Industrial" spec.
@@ -47,54 +53,6 @@ export const chartColors = {
 	gray700: "#3f3f46",
 	gray800: "#27272a",
 	gray900: "#18181b",
-};
-
-// Chart dimensions
-export const chartDimensions = {
-	defaultHeight: 400,
-	compactHeight: 300,
-	largeHeight: 500,
-	margin: { top: 20, right: 20, left: 20, bottom: 60 },
-};
-
-// Typography
-export const chartTypography = {
-	axisLabel: {
-		fontSize: 12,
-		fill: chartColors.gray500,
-		fontWeight: 400,
-	},
-	axisLabelDark: {
-		fontSize: 12,
-		fill: chartColors.gray400,
-		fontWeight: 400,
-	},
-	title: {
-		fontSize: 14,
-		fill: chartColors.gray700,
-		fontWeight: 600,
-	},
-	titleDark: {
-		fontSize: 14,
-		fill: chartColors.gray300,
-		fontWeight: 600,
-	},
-	tooltip: {
-		fontSize: 12,
-		color: chartColors.gray600,
-	},
-	tooltipDark: {
-		fontSize: 12,
-		color: chartColors.gray400,
-	},
-	legend: {
-		fontSize: 12,
-		color: chartColors.gray600,
-	},
-	legendDark: {
-		fontSize: 12,
-		color: chartColors.gray400,
-	},
 };
 
 // Grid and axis styles
@@ -162,84 +120,8 @@ export const areaChartStyles = {
 	strokeWidth: 2,
 };
 
-// Bar chart styles
-export const barChartStyles = {
-	fill: chartColors.primary,
-	radius: [4, 4, 0, 0],
-	hoverFill: chartColors.primaryLight,
-};
-
-// Reference line styles
-export const referenceLineStyles = {
-	stroke: chartColors.error,
-	strokeWidth: 2,
-	strokeDasharray: "5 5",
-	label: {
-		fill: chartColors.error,
-		fontSize: 11,
-		fontWeight: 500,
-	},
-};
-
 // Animation configs
 export const chartAnimations = {
 	duration: 300,
 	easing: "ease-in-out" as const,
-};
-
-// Responsive container defaults
-export const responsiveContainerProps = {
-	width: "100%",
-	height: chartDimensions.defaultHeight,
-};
-
-// Common chart props generator
-export const getCommonChartProps = (_darkMode = false) => ({
-	margin: chartDimensions.margin,
-});
-
-// Series colors — gold variants for multi-model/AI overlays
-export const seriesColors = [
-	chartColors.gold,
-	chartColors.goldLight,
-	chartColors.goldDark,
-	chartColors.goldPale,
-	chartColors.goldDeep,
-	chartColors.goldWarm,
-	chartColors.goldMuted,
-	chartColors.goldBright,
-];
-
-// Utility function to generate chart colors
-export const getSeriesColor = (index: number) => {
-	return seriesColors[index % seriesColors.length];
-};
-
-// Utility function to get gradient fill
-export const getGradientFill = (color: string, _darkMode = false) => {
-	const opacity = _darkMode ? 0.3 : 0.1;
-	return {
-		fill: color,
-		fillOpacity: opacity,
-		stroke: color,
-		strokeWidth: 2,
-	};
-};
-
-export default {
-	chartColors,
-	chartDimensions,
-	chartTypography,
-	chartGridStyles,
-	chartAxisStyles,
-	chartTooltipStyles,
-	lineChartStyles,
-	areaChartStyles,
-	barChartStyles,
-	referenceLineStyles,
-	chartAnimations,
-	responsiveContainerProps,
-	getCommonChartProps,
-	getSeriesColor,
-	getGradientFill,
 };

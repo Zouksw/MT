@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "./config";
 
-export interface TokenPayload {
+interface TokenPayload {
 	userId: string;
 	type?: "access" | "refresh";
 	jti?: string;
@@ -90,5 +90,3 @@ export const jwtUtils = {
 	verifyRefreshToken,
 	decodeToken,
 };
-
-export default jwtUtils;

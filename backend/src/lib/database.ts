@@ -14,10 +14,7 @@ declare global {
 export const prisma =
 	global._prismaSingleton ??
 	new PrismaClient({
-		log:
-			process.env.NODE_ENV === "development"
-				? ["query", "error", "warn"]
-				: ["error"],
+		log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 	});
 
 // Add Prisma middleware for query logging
@@ -34,5 +31,3 @@ if (process.env.NODE_ENV !== "production") {
 process.on("beforeExit", async () => {
 	await prisma.$disconnect();
 });
-
-export default prisma;

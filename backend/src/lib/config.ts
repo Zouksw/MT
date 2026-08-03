@@ -103,5 +103,3 @@ logger.info("Configuration loaded", {
 	email: { configured: !!config.email.smtpHost },
 	dataIngestion: { scrapeInterval: config.dataIngestion.scrapeIntervalMinutes },
 });
-
-export default config;

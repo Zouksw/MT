@@ -50,11 +50,6 @@ export function isPrimaryModel(modelId: string): boolean {
 	return modelId.startsWith("chronos_");
 }
 
-export interface AccuracyResponse {
-	accuracy: ModelAccuracy[];
-	days: number;
-}
-
 export interface BacktestWindow {
 	days: number;
 	mape: number | null;

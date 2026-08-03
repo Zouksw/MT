@@ -8,56 +8,6 @@
  */
 
 // ============================================================================
-// Domain Types
-// ============================================================================
-
-/**
- * Query parameters with time range
- */
-export interface TimeRangeQuery {
-	startTime?: string;
-	endTime?: string;
-	limit?: number;
-	aggregation?: string;
-}
-
-/**
- * Parsed import data
- * Replaces `any` with proper generic type
- */
-export interface ParsedImportData<T = Record<string, unknown>> {
-	headers: string[];
-	data: Array<T>;
-	rowCount: number;
-}
-
-/**
- * AI Model training result
- */
-export interface ModelTrainingResult {
-	success: boolean;
-	modelId?: string;
-	message: string;
-	accuracy?: number;
-	trainingTime?: number;
-}
-
-/**
- * Security audit log entry
- * Replaces `any` with proper Record type
- */
-export interface SecurityAuditLog {
-	event: string;
-	timestamp: Date;
-	sessionId: string;
-	userId?: string;
-	severity: "low" | "medium" | "high" | "critical";
-	details: Record<string, unknown>;
-	userAgent?: string;
-	url?: string;
-}
-
-// ============================================================================
 // API Request/Response Types
 // ============================================================================
 
@@ -66,16 +16,6 @@ export interface SecurityAuditLog {
 // a divergent shape (no userId, different user fields) and zero importers, so
 // it was removed to stop carrying a misleading duplicate. Use the middleware
 // version: `import { type AuthenticatedRequest } from "@/middleware/auth"`.
-
-/**
- * Filter parameters
- */
-export interface FilterParams {
-	search?: string;
-	status?: string;
-	startDate?: string;
-	endDate?: string;
-}
 
 /**
  * Query builder conditions

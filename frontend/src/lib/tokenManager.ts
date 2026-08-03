@@ -91,4 +91,3 @@ class SecureTokenManager implements TokenStorage {
 }
 
 export const tokenManager = new SecureTokenManager();
-export type { TokenStorage };

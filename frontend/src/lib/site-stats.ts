@@ -32,19 +32,3 @@ export const SITE_STATS = {
 	/** Import source countries. */
 	sourceCountries: 5,
 } as const;
-
-/**
- * Labels for the AI models (for display where the raw IDs aren't user-friendly).
- */
-export const AI_MODEL_LABELS: Record<string, string> = {
-	// Chronos ensemble (primary)
-	chronos_tiny: "Chronos-T5-Tiny",
-	chronos_mini: "Chronos-T5-Mini",
-	chronos_base: "Chronos-T5-Base",
-	// Statistical baselines
-	arima: "ARIMA",
-	holtwinters: "Holt-Winters",
-	exponential_smoothing: "Exp. Smoothing",
-	stl_forecaster: "STL",
-	naive_forecaster: "Naive",
-} as const;
