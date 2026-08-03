@@ -773,6 +773,70 @@ describe("MAPE Tracking (real DB)", () => {
 					await prisma.predictionLog.deleteMany({ where: { id: prediction.id } });
 				}
 			});
+
+			it("also marks within-cutoff completed predictions when source is frozen (round-66: lagging-source gap)", async () => {
+				// round-66: Pass A only scans predictedAt <= now-10d (the due
+				// cutoff). Pre-P1-gate stragglers with predictedAt INSIDE that
+				// window were never reached, yet their source was already dead.
+				// Pass B catches them: predictedAt > cutoff, latest price <=
+				// predictedAt, AND latest price < now-STALE_WINDOW_DAYS(7).
+				//
+				// Setup: predictedAt = now-5d (WITHIN 10d cutoff → Pass A misses),
+				// latestPriceDate = now-8d (BEFORE the prediction → no actuals,
+				// AND older than the 7d stale window → source confirmed dead).
+				const recentDate = new Date(Date.now() - 5 * 86400000);
+				const stalePriceDate = new Date(Date.now() - 8 * 86400000);
+				const { commodity, prediction } = await makeCommodityWithPrediction({
+					slug: "lagging-frozen",
+					predictedAt: recentDate,
+					latestPriceDate: stalePriceDate,
+				});
+
+				try {
+					const n = await markUnverifiablePredictions();
+					expect(n).toBeGreaterThanOrEqual(1);
+
+					const after = await ctx.prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					// Pass B should have drained this lagging-frozen row.
+					expect(after?.status).toBe("unverifiable");
+				} finally {
+					await cleanup([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
+
+			it("does NOT mark a within-cutoff prediction whose source is only briefly stale (round-66 recency guard)", async () => {
+				// The source-dead recency guard (< now-7d) prevents false positives
+				// on commodities whose latest price is a few days old but the
+				// source is still effectively alive (weekend / 1-2d lag).
+				//
+				// Setup: predictedAt = now-5d (within cutoff), latestPriceDate =
+				// now-6d (before the prediction but only 6d old → NOT yet stale).
+				// → must stay completed; Pass B's source-dead guard rejects it.
+				const recentDate = new Date(Date.now() - 5 * 86400000);
+				const slightlyStalePrice = new Date(Date.now() - 6 * 86400000);
+				const { commodity, prediction } = await makeCommodityWithPrediction({
+					slug: "briefly-stale",
+					predictedAt: recentDate,
+					latestPriceDate: slightlyStalePrice,
+				});
+
+				try {
+					await markUnverifiablePredictions();
+
+					const after = await ctx.prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					// Source only 6d stale (< STALE_WINDOW_DAYS 7) → not confirmed
+					// dead → must remain completed to give actuals a chance.
+					expect(after?.status).toBe("completed");
+				} finally {
+					await cleanup([{ commodityId: commodity.id, predictionId: prediction.id }]);
+				}
+			});
 		});
 	});
 });

@@ -11,6 +11,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
 import { getAuthoritativeSource } from "@/services/inference/authoritativeSources";
 import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
+import { STALE_WINDOW_DAYS } from "./beefFreshness";
 
 export interface LogPredictionParams {
 	modelId: string;
@@ -208,12 +209,23 @@ export async function restorePostFixConflictPredictions(fixedAt: Date): Promise<
  * which case NEW predictions on the now-fresh commodity verify normally;
  * these old rows stay unverifiable as honest historical record).
  *
- * Detection (batch, NOT per-row — 92k rows × query would be 184k round-
- * trips): find commodity-IDs (non-cut) that have at least one due
- * completed prediction, then for each check if its latest daily price is
- * older than the OLDEST due prediction for that commodity. If so, every
- * due completed prediction for that commodity has no actuals and never
- * will → mark all of them unverifiable in one updateMany.
+ * Detection has two passes (round-66):
+ *
+ *   Pass A (Steps 1-3, "due"): find commodity-IDs (non-cut) with at least
+ *   one due completed prediction (predictedAt <= cutoff), then per
+ *   commodity check if its latest daily price is older than the OLDEST due
+ *   prediction. If so, every due completed prediction for that commodity
+ *   has no actuals and never will → mark all of them unverifiable.
+ *
+ *   Pass B (Step 4, "within-cutoff lagging"): the due-cutoff in Pass A
+ *   misses recent predictions (predictedAt > cutoff) whose source is
+ *   ALREADY frozen — they'll never reach the due cutoff yet will never get
+ *   actuals either. After the round-62 P1 prediction gate stopped NEW
+ *   frozen-source predictions from being generated, these are pre-gate
+ *   stragglers that keep accumulating in `completed` and get re-scanned
+ *   every 6h. Step 4 catches them: predictedAt > cutoff, latest price ≤
+ *   predictedAt, AND latest price < now-STALE_WINDOW_DAYS (source dead
+ *   ≥7d — the platform-wide recency standard, not a weekend/1d lag).
  *
  * Idempotent: only touches status:"completed" rows. A second run finds
  * none (they're now "unverifiable") and returns 0.
@@ -224,6 +236,7 @@ export async function markUnverifiablePredictions(): Promise<number> {
 	const MAX_HORIZON_DAYS = 10;
 	const cutoff = new Date(Date.now() - MAX_HORIZON_DAYS * 86400000);
 	const now = Date.now();
+	let markedTotal = 0;
 
 	// Step 1: find commodity-IDs with due completed predictions (non-cut).
 	// Due = predictedAt <= cutoff AND predictedAt + horizon <= now. The SQL
@@ -241,7 +254,11 @@ export async function markUnverifiablePredictions(): Promise<number> {
 		select: { commodityId: true, predictedAt: true, horizon: true },
 	});
 
-	if (dueCommodities.length === 0) return 0;
+	if (dueCommodities.length === 0) {
+		// No due (≤ cutoff) candidates — skip Pass A entirely and go
+		// straight to Pass B (within-cutoff lagging-source scan).
+		return markLaggingFrozenPredictions(cutoff, now);
+	}
 
 	// Group by commodityId, tracking the earliest due predictedAt per
 	// commodity (the bar any post-prediction actual must clear) and whether
@@ -282,15 +299,93 @@ export async function markUnverifiablePredictions(): Promise<number> {
 		}
 	}
 
+	if (frozenCommodityIds.length > 0) {
+		// Step 3: mark all due completed predictions for frozen commodities
+		// as unverifiable in one batched updateMany (predictedAt <= cutoff).
+		const result = await prisma.predictionLog.updateMany({
+			where: {
+				status: "completed",
+				commodityId: { in: frozenCommodityIds },
+				predictedAt: { lte: cutoff },
+				NOT: { commodityId: { startsWith: "cut:" } },
+			},
+			data: { status: "unverifiable" },
+		});
+		markedTotal += result.count;
+	}
+
+	// Pass B (round-66): within-cutoff lagging-source predictions that the
+	// due cutoff in Pass A structurally skips. Returns its own count; add it.
+	markedTotal += await markLaggingFrozenPredictions(cutoff, now);
+	return markedTotal;
+}
+
+/**
+ * Pass B helper for {@link markUnverifiablePredictions} (round-66).
+ *
+ * Catches `completed` predictions whose predictedAt is WITHIN the due
+ * cutoff (> cutoff — so Pass A never sees them) but whose commodity's data
+ * source is already frozen: the latest daily price is ≤ the prediction AND
+ * older than now-STALE_WINDOW_DAYS. These never reach the due cutoff yet
+ * never get actuals; without this pass they linger in `completed` and are
+ * re-scanned every 6h by verifyDuePredictions.
+ *
+ * Mirrors Pass A's batch shape (enumerate candidate commodityIds → per-
+ * commodity findFirst latest price → batched updateMany) but with the
+ * within-cutoff candidate set and the source-dead recency guard.
+ *
+ * @param cutoff - the due cutoff (predictedAt <= cutoff is Pass A's set)
+ * @param nowMs - Date.now() at the start of the run
+ * @returns number of within-cutoff predictions marked unverifiable this call
+ */
+async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promise<number> {
+	// Candidate commodities: those with a completed prediction NEWER than
+	// the due cutoff (Pass A's complement). The horizon check is irrelevant
+	// here — we care only that the source is already dead, so even a 1-day-
+	// old prediction on a 95-day-dead commodity should be drained.
+	const laggingCommodities = await prisma.predictionLog.findMany({
+		where: {
+			status: "completed",
+			predictedAt: { gt: cutoff },
+			NOT: { commodityId: { startsWith: "cut:" } },
+		},
+		select: { commodityId: true, predictedAt: true },
+		distinct: ["commodityId"],
+	});
+
+	if (laggingCommodities.length === 0) return 0;
+
+	const sourceDeadCutoff = new Date(nowMs - STALE_WINDOW_DAYS * 86400000);
+	const frozenCommodityIds: string[] = [];
+
+	// Per-commodity: frozen iff latest price is ≤ the prediction (no post-
+	// prediction actuals can exist) AND the latest price itself is older
+	// than the platform-wide stale window (source confirmed dead, not a
+	// 1-2 day lag).
+	for (const row of laggingCommodities) {
+		const latestPrice = await prisma.commodityPrice.findFirst({
+			where: { commodityId: row.commodityId, interval: "daily" },
+			orderBy: { date: "desc" },
+			select: { date: true },
+		});
+		if (!latestPrice) {
+			frozenCommodityIds.push(row.commodityId); // no price at all
+			continue;
+		}
+		if (latestPrice.date <= row.predictedAt && latestPrice.date < sourceDeadCutoff) {
+			frozenCommodityIds.push(row.commodityId);
+		}
+	}
+
 	if (frozenCommodityIds.length === 0) return 0;
 
-	// Step 3: mark all due completed predictions for frozen commodities as
-	// unverifiable in one batched updateMany.
+	// Mark all within-cutoff completed predictions for these frozen
+	// commodities unverifiable (predictedAt > cutoff — disjoint from Pass A).
 	const result = await prisma.predictionLog.updateMany({
 		where: {
 			status: "completed",
 			commodityId: { in: frozenCommodityIds },
-			predictedAt: { lte: cutoff },
+			predictedAt: { gt: cutoff },
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
 		data: { status: "unverifiable" },
