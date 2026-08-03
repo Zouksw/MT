@@ -136,6 +136,8 @@
 
 **API key 验证接入（round-69，2026-08-03，TD-3 RESOLVED）**——`validateApiKey`（已完整实现含用量追踪，但 0 caller）接入 `authenticate` 中间件：头约定 `x-api-key: iotd_xxx`（专用头，与 JWT `Authorization: Bearer` 物理分离）。`auth.ts` 加短路分支：有 `x-api-key` → 调 `validateApiKey` → 命中填 `req.user` + `next()`；未命中 401。JWT 路径不动。live：JWT 仍 200；x-api-key 认证 200 + usageCount=2 + lastUsedAt 写入；吊销/失效 → 401。backend 639|1 → **642|1**（+3 测试，mutation-verified）。docs/API.md 加 API Key 段，前端页加头使用提示。
 
+**前端 crash-loop 修复（round-70，2026-08-03）**——核心价值链终端（前端）一度 hard down：mt-frontend PM2 crash-loop 527 次，`:3000` 返 HTTP 000。根因：`scripts/restart.sh`（dev 模式 `pnpm dev`）与 `ecosystem.config.cjs`（PM2 prod 模式 `pnpm start`）共用 `.next/`——`next dev` 覆盖 `.next/routes-manifest.json`（dev 版无 `dataRoutes` key），PM2 重启 `next start` 时迭代 undefined → `TypeError: routesManifest.dataRoutes is not iterable`。**`distDir` 不能修**（实测：只隔离 chunk 输出，dev 仍写根 manifest，误信会撞坏 prod）。真修：`restart.sh` 加 PM2 guard——若目标进程名在 `pm2 jlist` 则拒绝启动 dev（exit 1 + 指引 `pm2 restart` 或先 `pm2 delete`），强制二选一。恢复：清 `.next/`+`.next-dev/` → `pnpm build`（11-key manifest）→ `pm2 restart mt-frontend` → HTTP 200，价值链页（beef/dashboard/ai/analysis/trading）全渲染，restarts 稳定。无源码/测试改动；frontend 278 不变。CLAUDE.md + docs/KNOWN-ISSUES.md B2 记录此坑与 distDir 死胡同。
+
 ## 五½、数据层可观测性（round-48~50）
 
 **问题**：`/health/ready` 之前只报 infra（database/redis/inference）全 green，但数据层可能静默失效——18 注册 scraper 仅 2 个在写、103k 预测不可验证、beef_cut_prices 近 14 天 0 行。operator 看到 all-green 实则数据停滞。
