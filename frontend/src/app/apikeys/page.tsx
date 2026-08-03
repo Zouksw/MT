@@ -405,6 +405,10 @@ export default function ApiKeyList() {
 								{showKey ? "Hide" : "Show"}
 							</button>
 						</div>
+						<p className="text-xs text-muted-foreground mt-2">
+							Use this key in the <code className="font-mono">x-api-key</code> header to
+							authenticate API requests.
+						</p>
 					</div>
 
 					<div className="text-sm text-muted-foreground space-y-1">

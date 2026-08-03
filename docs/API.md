@@ -66,6 +66,25 @@ Content-Type: application/json
 }
 ```
 
+### API Key Authentication
+
+For programmatic access (scripts, integrations, dashboards), create an API
+key at **Settings → API Keys** and send it in the `x-api-key` header:
+
+```bash
+curl -H "x-api-key: iotd_xxxxxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxx" \
+     https://api.example.com/api/market/commodities
+```
+
+- API keys inherit the creating user's role and permissions (same RBAC as JWT).
+- The raw key is shown **once** at creation — store it securely. It is stored
+  hashed (bcrypt) and never returned in full afterwards.
+- Revoke or set an expiry from the API Keys page. Each authenticated request
+  increments the key's `usageCount` and updates `lastUsedAt`.
+- Invalid, expired, or revoked keys return `401 Unauthorized`.
+
+Manage keys via `POST/GET/DELETE /api/api-keys` (JWT-authenticated).
+
 ---
 
 ## Core Endpoints

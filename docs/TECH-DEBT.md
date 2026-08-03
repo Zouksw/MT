@@ -45,6 +45,8 @@
 **当时证据**：`apiKeys.ts:16` 生成 `iotd_` 前缀 key，`apiKeys.ts:123` 导出 `validateApiKey()`，但 `validateApiKey` caller = 0；`middleware/auth.ts:30` 只认 `Bearer ` JWT，无任何中间件读 API key header。路由能 create/list/revoke，但发出的 key 不能认证任何端点。
 **注**：`archive/2026-07-06-round-17-19.md` P1-7 复核时认为 `validateApiKey` 是"未接入的 future infra"而非废弃——措辞较温和。性质判断视产品方向而定。
 
+**已解决（round-69，2026-08-03，commit 6f6cf5a）**：`validateApiKey` 接入 `authenticate` 中间件——头约定 `x-api-key: iotd_xxx`（专用头，与 JWT 的 `Authorization: Bearer` 物理分离）。`auth.ts` 在函数开头加短路分支：有 `x-api-key` 头 → 调 `validateApiKey` → 命中填 `req.userId`/`req.user`（同 shape）+ `next()`；未命中 401。JWT 路径完全不动。key 安全侧（bcrypt 哈希存储、isActive 吊销、过期）已就绪，本 Round 未动。`validateApiKey` 从 0 caller → 被 `authenticate` 调用，`usageCount`/`lastUsedAt` 开始真实写入。live 实测：JWT 仍 200；x-api-key 认证 200 + usageCount=2 + lastUsedAt 写入；吊销/失效 key → 401。+3 测试（mutation-verified）。docs/API.md 加 `### API Key Authentication` 段，前端 apikeys 页加 `x-api-key` 头使用提示。**TD-3 RESOLVED。**
+
 ### TD-4 — cache.ts 死函数
 **审计**：2026-07-06，§3.4
 **当时证据**：`services/cache.ts`（244 LOC）15 导出中 8 个 0 caller（`initCache`/`closeCache`/`delPattern`/`flushCache`/`getCacheStats`/`invalidatePattern`/`mget`/`mset` + 泛型 `cache<T>()` 装饰器）。实际用的就 `get/set/del/exists/incr/expire/cacheKeys`，几乎全被 `predictionCache.ts` 消费。
@@ -138,7 +140,7 @@
 
 | 符号 | 位置 | 性质 | 处置 |
 |---|---|---|---|
-| `validateApiKey` | `services/apiKeys.ts:129` | TD-3 已知，能发 key 但不验 | **保留**（round-43 决策：API key 认证是 future infra 候选）|
+| ~~`validateApiKey`~~ | `services/apiKeys.ts:129` | ~~TD-3 已知，能发 key 但不验~~ | **LIVE（round-69 接入 authenticate，TD-3 RESOLVED）**|
 | `trackUsage` / `checkLimit` | `services/usageService.ts:46,59` | paywall 脚手架，从未调用 | **保留**（PRODUCT-SPEC §九 不做付费墙，但留作 future quota 候选；删须产品决策）|
 | `unsubscribeCommodity` / `getSubscribedCommodities` | `services/predictionCache.ts:222,234` | `subscribeCommodity` 活，这俩 0 caller | **保留**（订阅生命周期配对——`subscribe`/`unsubscribe` 是完整 API surface，管理面可能用；非 orphan）|
 | `removeFromBlacklist` / `getBlacklistStats` / `clearBlacklist` / `checkTokenBlacklist` | `services/tokenBlacklist.ts:113,130,154,206` | 仅 `blacklistToken`+`isTokenBlacklisted` 活 | **保留**（黑名单管理面 = revoke/audit/clear 是合法安全 surface；`checkTokenBlacklist` 是 `isTokenBlacklisted` 的 throw 版封装，留作中间件备选）|
@@ -161,7 +163,7 @@
 **round-68 补充（2026-08-03，dead-export 清理）**——对 lib/types 做 dead-export 全量重审（Explore agent + 逐项独立 grep 复核，§十.2）。删 ~40 个 0-外部-caller 的导出（leaf-level，非 API surface），共 **-631 行**：
 - **backend**（5 文件 -94）：`types/index.ts` 删 5 死 interface（TimeRangeQuery/ParsedImportData/ModelTrainingResult/SecurityAuditLog/FilterParams，0 refs；SecurityAuditLog 仅是 routes/security.ts:30 的散文注释）；`response.ts` 删 SuccessResponse/ErrorResponse（0 refs）+ PaginationMeta 改本地（仅 paginated() 参数用）；config.ts/database.ts/jwt.ts 删 3 个 `export default`（代码全用 `@/lib` barrel 的具名 import，0 default importer）；jwt.ts TokenPayload 改本地（仅文件内用）。
 - **frontend**（9 文件 -537）：`types/api.ts` 重写，仅留 6 个 LIVE 类型（Dataset/TimeSeries/Alert/Forecast/AlertSeverity/AIModel），删 ~24 死导出（app 代码自声明本地 interface 而非 import 共享版）；`types/accuracy.ts` 删 AccuracyResponse（BacktestWindow 保留——BacktestResponse 引用它）；`responsive-utils.ts` 删 5 死 hook（useBreakpoint/useIsTablet/useIsDesktop/useResponsiveValue/useWindowSize，0 caller）+ 孤儿 helper；`motion.ts` 删 7 死（保留 SPRING_DEFAULTS/STAGGER_CHILD/FADE_UP）；`chart-config.ts` 删 9 死导出 + default（保留 7 LIVE style）；`site-stats.ts` 删 AI_MODEL_LABELS（与 LIVE 的 MODEL_NAME_MAP 重复）；`errorHandler.ts` 删 withErrorHandling 函数 + ApiError 改本地；`sanitizer.ts`/`tokenManager.ts` 删 `export type {…}`（singleton 实例 LIVE）。
-- **保留（signature-live 或 API surface，§十.5）**：MS_PER_SECOND（自测 pin 推导基线）；validateApiKey/trackUsage/checkLimit/blacklist-admin/unsubscribeCommodity（已记录的 future-infra/管理面）；ForecastRequest/CorrelationResult/CorrelationMatrix（live 函数的签名类型）。
+- **保留（signature-live 或 API surface，§十.5）**：MS_PER_SECOND（自测 pin 推导基线）；trackUsage/checkLimit/blacklist-admin/unsubscribeCommodity（已记录的 future-infra/管理面）；ForecastRequest/CorrelationResult/CorrelationMatrix（live 函数的签名类型）。（注：`validateApiKey` 原 future-infra，round-69 已接入 `authenticate`，现 LIVE，TD-3 RESOLVED。）
 - **验证**：backend tsc clean + 639|1（不变）；frontend tsc clean + 278（不变）。无测试引用被删符号。
 - **遗留**：TD-8 axios 单点依赖仍存（需 market-data.ts 迁移到 fetch）；cacheKeys/TD-1/4/7/9/10/11 早已 STALE（前几轮已清，文档待标 RESOLVED）。
 
