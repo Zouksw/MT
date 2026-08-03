@@ -39,9 +39,9 @@ const config: Config = {
 					dark: "#B91C1C",
 				},
 				info: {
-					DEFAULT: "#B8860B",
+					DEFAULT: "#8B6914",
 					light: "#FDF6E3",
-					dark: "#8B6914",
+					dark: "#6B4F04",
 				},
 
 				// Neutrals — standard Tailwind gray

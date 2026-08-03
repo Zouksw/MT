@@ -109,6 +109,9 @@
 ### TD-12 — 双 Tailwind 配置（v3+v4）
 **审计**：2026-07-06，§6
 **当时证据**：两份 palette 已漂移，维护双倍。
+**现状（2026-08-03 复核）**：架构是 **Tailwind v4 + `@config` 桥接 v3 `tailwind.config.ts`**——`src/styles/globals.css:8` `@config "../../tailwind.config.ts"` 让 v4 引擎加载 v3 风格的 JS config，同时 `@theme inline` 块定义 v4 原生 token，`tokens.css` 是注释里声称的 hex "single source of truth"。三处并存（tailwind.config.ts + @theme inline + tokens.css）。
+**已修一例漂移（round-70，2026-08-03）**：`tailwind.config.ts` 的 `info.DEFAULT=#B8860B`（3.2:1，**WCAG AA fail**）与 `tokens.css --color-info=#8B6914`（5.1:1，AA pass）漂移——文件头注释自称 "Kept in sync"，但 info 块漏更新。`text-info` 用于 alerts 图标、sessions 计数、profile 显示（3 处）。修正 `info.DEFAULT→#8B6914` + `info.dark→#6B4F04`（对齐 tokens.css）。live 验证：built CSS 含 `#8b6914`，旧 `#b8860b` 消失。frontend 278 不变。
+**遗留（架构，未动）**：三源并存本身是 TD-12 的核心——彻底解决需迁到 v4 原生（删 `@config` + tailwind.config.ts，全 token 走 `@theme`）。但 v3 config 含 fontSize/display/h1-h4/shadow/keyframes 等 v4 `@theme` 不直接对应的结构，迁移非外科手术级，单列轮次。
 
 ---
 
