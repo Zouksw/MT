@@ -9,7 +9,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getSourceFreshness } from "@/services/marketService";
+import { getSourceFreshness, listCommodities } from "@/services/marketService";
 import {
 	createTestContext,
 	destroyTestContext,
@@ -101,5 +101,23 @@ describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 			const row = result.freshness.find((f) => f.source === name);
 			expect(row?.empty).toBe(true);
 		}
+	});
+});
+
+describe("listCommodities — authoritative-source latest price (round-67)", () => {
+	// round-67 regression: listCommodities previously used a Prisma relation
+	// include that couldn't apply authoritative-source filtering, so conflict
+	// commodities listed the wrong source's price (brl_usd ~0.197 from
+	// exchange_rate_api instead of ~5.0 from fred). It now uses a batched
+	// query with per-commodity source resolution.
+	it("brl_usd latestPrice reads the authoritative source (fred ~5.0, not exchange_rate_api ~0.197)", async () => {
+		const commodities = await listCommodities();
+		const brl = commodities.find((c) => c.slug === "brl_usd");
+		expect(brl).toBeDefined();
+		// Prisma returns close as a Decimal object; coerce for comparison.
+		const price = Number(brl?.latestPrice);
+		// fred scale (~5.0), NOT exchange_rate_api scale (~0.197).
+		expect(price).toBeGreaterThan(4);
+		expect(price).toBeLessThan(6);
 	});
 });

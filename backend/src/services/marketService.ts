@@ -13,7 +13,11 @@ import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { NotFoundError } from "@/middleware/errorHandler";
 import { getDataHealth } from "@/services/dataHealth";
-import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
+import {
+	authoritativeSourceWhere,
+	batchLatestPriceWhere,
+	dedupeLatestByCommodity,
+} from "@/services/inference/authoritativeSources";
 
 export interface PriceHistoryParams {
 	interval: "daily" | "weekly" | "monthly";
@@ -22,34 +26,64 @@ export interface PriceHistoryParams {
 	limit: number;
 }
 
-/** List active commodities with their latest price, ordered by category. */
+/**
+ * List active commodities with their latest price, ordered by category.
+ *
+ * Round-67: the latest price is now fetched via a separate batched query
+ * (`batchLatestPriceWhere` + `dedupeLatestByCommodity`) rather than a Prisma
+ * relation include. The relation include (`include.prices`) couldn't apply
+ * authoritative-source filtering, so conflict commodities (brl_usd etc.)
+ * surfaced whichever source wrote most recently — e.g. brl_usd listed at
+ * ~0.197 (exchange_rate_api) instead of ~5.0 (fred). The batched query applies
+ * per-commodity source resolution correctly.
+ */
 export async function listCommodities() {
 	const commodities = await prisma.commodity.findMany({
 		where: { isActive: true },
 		orderBy: { category: "asc" },
-		include: {
-			prices: {
-				orderBy: { date: "desc" },
-				take: 1,
-				select: { close: true, date: true },
-			},
+		select: {
+			id: true,
+			slug: true,
+			name: true,
+			nameCn: true,
+			category: true,
+			subcategory: true,
+			grade: true,
+			originCountry: true,
+			unit: true,
+			currency: true,
 		},
 	});
 
-	return commodities.map((c) => ({
-		id: c.id,
-		slug: c.slug,
-		name: c.name,
-		nameCn: c.nameCn,
-		category: c.category,
-		subcategory: c.subcategory,
-		grade: c.grade,
-		originCountry: c.originCountry,
-		unit: c.unit,
-		currency: c.currency,
-		latestPrice: c.prices[0]?.close ?? null,
-		latestDate: c.prices[0]?.date ?? null,
-	}));
+	// Batched authoritative latest-price lookup across all listed commodities.
+	const batchWhere = batchLatestPriceWhere(commodities);
+	const latestByCommodity = batchWhere
+		? dedupeLatestByCommodity(
+				await prisma.commodityPrice.findMany({
+					where: { ...batchWhere, interval: "daily" },
+					orderBy: { date: "desc" },
+					select: { commodityId: true, close: true, date: true },
+				}),
+			)
+		: new Map<string, { commodityId: string; close: number; date: Date }>();
+
+	return commodities.map((c) => {
+		const latest = latestByCommodity.get(c.id);
+		return {
+			id: c.id,
+			slug: c.slug,
+			name: c.name,
+			nameCn: c.nameCn,
+			category: c.category,
+			subcategory: c.subcategory,
+			grade: c.grade,
+			originCountry: c.originCountry,
+			unit: c.unit,
+			currency: c.currency,
+			latestPrice: latest?.close ?? null,
+			latestDate: latest?.date ?? null,
+		};
+	});
 }
 
 /** Get a commodity by slug or throw NotFoundError. */
