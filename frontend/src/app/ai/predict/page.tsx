@@ -227,7 +227,7 @@ export default function AIPredictPage() {
 						<ChevronRight className="size-3" />
 						<span>AI Prediction</span>
 					</div>
-					<h2 className="text-2xl font-semibold text-foreground">AI Prediction</h2>
+					<h1 className="text-2xl font-semibold text-foreground">AI Prediction</h1>
 					<p className="text-sm text-muted-foreground mt-1">
 						Generate single-time predictions using AI models
 					</p>

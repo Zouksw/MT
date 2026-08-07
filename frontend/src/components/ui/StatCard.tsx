@@ -127,7 +127,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 const variantColors: Record<StatCardVariant, { text: string }> = {
 	default: { text: "#475569" },
 	primary: { text: "#8B6914" },
-	info: { text: "#2563EB" },
+	info: { text: "#8B6914" },
 	success: { text: "#16A34A" },
 	warning: { text: "#D97706" },
 	error: { text: "#DC2626" },

@@ -224,7 +224,7 @@ export default function BeefOverview() {
 						<CardTitle>Latest Cut Prices</CardTitle>
 					</CardHeader>
 					<CardBody>
-						{pricesErr && <p className="text-sm text-gray-400">Unable to load prices</p>}
+						{pricesErr && <p className="text-sm text-muted-foreground">Unable to load prices</p>}
 						{latestPrices.length === 0 && !pricesErr && (
 							<EmptyState
 								type="data"
@@ -257,6 +257,7 @@ export default function BeefOverview() {
 									<input
 										type="text"
 										placeholder="Search cut…"
+										aria-label="Search beef cuts"
 										value={search}
 										onChange={(e) => setSearch(e.target.value)}
 										className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent focus:outline-none focus:ring-1 focus:ring-primary"

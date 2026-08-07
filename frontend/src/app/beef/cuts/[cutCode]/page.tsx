@@ -263,7 +263,7 @@ export default function CutDetail() {
 			})}
 
 			{prices.length === 0 && !priceErr && (
-				<p className="text-sm text-gray-400">No price history available for this cut.</p>
+				<p className="text-sm text-muted-foreground">No price history available for this cut.</p>
 			)}
 		</PageContainer>
 	);

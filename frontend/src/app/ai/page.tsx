@@ -56,7 +56,7 @@ export default function AIPage() {
 						<ChevronRight className="size-3" />
 						<span>AI & Anomaly Detection</span>
 					</div>
-					<h2 className="text-2xl font-semibold text-foreground">AI & Anomaly Detection</h2>
+					<h1 className="text-2xl font-semibold text-foreground">AI & Anomaly Detection</h1>
 					<p className="text-sm text-muted-foreground mt-1">
 						AI-powered forecasting, anomaly detection, and prediction tools
 					</p>

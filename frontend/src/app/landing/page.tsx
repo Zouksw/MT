@@ -185,9 +185,9 @@ export default function LandingPage() {
 			<section className="bg-white dark:bg-background border-t border-black/5 dark:border-white/10">
 				<div className="px-6 py-24 md:py-36 lg:py-48">
 					<MotionReveal className="text-center max-w-[700px] mx-auto">
-						<h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
+						<h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
 							Start receiving signals today
-						</h2>
+						</h1>
 						<div className="mt-8">
 							<a
 								href="/register"

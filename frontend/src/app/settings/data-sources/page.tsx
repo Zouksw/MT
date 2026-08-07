@@ -131,16 +131,50 @@ function timeAgo(date: string | null): string {
 }
 
 function StatusDot({ status }: { status: string }) {
+	// WCAG 1.4.1: color must not be the only carrier of state. Every dot has a
+	// matching aria-label so screen readers convey healthy/error (which have no
+	// adjacent text badge, unlike empty/skipped_no_key).
 	if (status === "healthy")
-		return <span className="inline-block w-2 h-2 rounded-full bg-green-500" />;
+		return (
+			<span
+				className="inline-block w-2 h-2 rounded-full bg-green-500"
+				role="img"
+				aria-label="Healthy"
+			/>
+		);
 	if (status === "empty")
 		// Amber, not green: the source is reachable enough to return but wrote
 		// zero rows. Distinct from `error` (threw) and `skipped_no_key` (gated).
-		return <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />;
+		return (
+			<span
+				className="inline-block w-2 h-2 rounded-full bg-amber-500"
+				role="img"
+				aria-label="Empty"
+			/>
+		);
 	if (status === "skipped_no_key")
-		return <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />;
-	if (status === "error") return <span className="inline-block w-2 h-2 rounded-full bg-red-500" />;
-	return <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />;
+		return (
+			<span
+				className="inline-block w-2 h-2 rounded-full bg-gray-400"
+				role="img"
+				aria-label="Skipped (no API key)"
+			/>
+		);
+	if (status === "error")
+		return (
+			<span
+				className="inline-block w-2 h-2 rounded-full bg-red-500"
+				role="img"
+				aria-label="Error"
+			/>
+		);
+	return (
+		<span
+			className="inline-block w-2 h-2 rounded-full bg-gray-400"
+			role="img"
+			aria-label="Unknown status"
+		/>
+	);
 }
 
 function TierBadge({ tier }: { tier: string }) {

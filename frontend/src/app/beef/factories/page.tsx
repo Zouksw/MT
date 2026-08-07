@@ -107,7 +107,9 @@ export default function FactoryDirectory() {
 			))}
 
 			{factories.length === 0 && !error && (
-				<p className="text-sm text-gray-400">No factory data available. Run seed to populate.</p>
+				<p className="text-sm text-muted-foreground">
+					No factory data available. Run seed to populate.
+				</p>
 			)}
 		</PageContainer>
 	);
