@@ -6,11 +6,8 @@ import type React from "react";
 import AppProviders from "@/components/AppProviders";
 import { WebVitals } from "@/components/WebVitals";
 import "@/styles/globals.css";
-import { Geist } from "next/font/google";
 import { SITE_STATS } from "@/lib/site-stats";
 import { cn } from "@/lib/utils";
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 // Beef-only positioning (PRODUCT-SPEC §一, §六 阶段0). Generic "55+ commodities"
 // copy is a pre-beef-focus legacy — the platform is a beef-trade platform.
@@ -72,7 +69,7 @@ export default async function RootLayout({
 		<html
 			lang="en"
 			data-scroll-behavior="smooth"
-			className={cn(GeistSans.variable, GeistMono.variable, "font-sans", geist.variable)}
+			className={cn(GeistSans.variable, GeistMono.variable, "font-sans")}
 		>
 			<head>
 				<style>{`
