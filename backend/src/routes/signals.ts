@@ -28,7 +28,7 @@ import {
 } from "@/services/inference/authoritativeSources";
 import { getAllModelAccuracy, getModelAccuracy } from "@/services/mapeTracking";
 import { getAllCachedPredictions } from "@/services/predictionCache";
-import { generateForecast, getAllModels } from "@/services/tradingSignals";
+import { BASELINE_MODELS, generateForecast, getAllModels } from "@/services/tradingSignals";
 
 const router = Router();
 
@@ -86,6 +86,25 @@ router.get(
 		const { modelId } = req.params;
 		const commodityId = req.query.commodityId as string | undefined;
 		const days = parseInt(req.query.days as string, 10) || 30;
+
+		// R3 (round-75): unknown-model guard. Refuse to surface accuracy for a
+		// model_id the current inference engine doesn't serve (e.g. dead-era
+		// ghost models timer_xl/sundial). Without this, a wildcard query
+		// returns stale MAPE from orphan rows as if the model were live.
+		// Returns the same zeroed shape getModelAccuracy yields for no data, so
+		// the contract is unchanged for legitimate models.
+		const known = new Set<string>([...getAllModels(), ...BASELINE_MODELS]);
+		if (!known.has(modelId)) {
+			return success(res, {
+				modelId,
+				avgMape: null,
+				predictionCount: 0,
+				verifiedCount: 0,
+				last7dMape: null,
+				last30dMape: null,
+				lastVerifiedAt: null,
+			});
+		}
 
 		const accuracy = await getModelAccuracy(modelId, commodityId, days);
 

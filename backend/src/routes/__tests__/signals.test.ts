@@ -210,6 +210,53 @@ describe("Signals Routes (Integration)", () => {
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
 		});
+
+		// R3 (round-75): unknown-model guard. The wildcard route must not
+		// surface stale MAPE for a ghost/orphan model_id (e.g. timer_xl/
+		// sundial — dead-era rows from a removed training path). The guard
+		// returns the same zeroed shape as a no-data model, NOT an error, so
+		// the contract is unchanged for legitimate models.
+		it("returns a zeroed result for an unknown/ghost model_id (R3 guard)", async () => {
+			// Clear the model-accuracy cache (cacheRoute 600s TTL) so this
+			// test exercises the live handler, not a prior (possibly
+			// pre-guard) cached response. Without this a stale cache masks a
+			// guard regression (mutation-verified during dev).
+			try {
+				const client = await redis();
+				for (const key of await client.keys("*signals:model-accuracy*")) {
+					await client.del(key);
+				}
+			} catch {
+				// Redis optional — cache miss just hits the handler.
+			}
+
+			const res = await request(app)
+				.get("/api/signals/models/timer_xl/accuracy")
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(res.body.data.modelId).toBe("timer_xl");
+			expect(res.body.data.avgMape).toBeNull();
+			expect(res.body.data.verifiedCount).toBe(0);
+			expect(res.body.data.predictionCount).toBe(0);
+			expect(res.body.data.last7dMape).toBeNull();
+			expect(res.body.data.last30dMape).toBeNull();
+			expect(res.body.data.lastVerifiedAt).toBeNull();
+		});
+
+		it("still returns real accuracy for a known baseline model (guard does not over-block)", async () => {
+			// naive_forecaster is in BASELINE_MODELS — must pass the guard.
+			const res = await request(app)
+				.get("/api/signals/models/naive_forecaster/accuracy")
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.data.modelId).toBe("naive_forecaster");
+			// verifiedCount is a real number (could be 0 if no rows in window,
+			// but the guard let the real query run, not the early-return).
+			expect(typeof res.body.data.verifiedCount).toBe("number");
+		});
 	});
 
 	describe("GET /api/signals/models/:modelId/predictions", () => {
