@@ -77,14 +77,14 @@
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-03 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **642 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **645 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **278 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **967 全绿**（642 + 278 + 47，截至 2026-08-03 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **970 全绿**（645 + 278 + 47，截至 2026-08-07 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -141,6 +141,14 @@
 **MAPE 写路径防御性加固 + Tailwind 漂移核查（round-70 续，2026-08-03）**：
 - **commit 536dc96（predictionCache）**：`runAndCachePrediction` 的 `logPrediction` 从 fire-and-forget（`import(...).then(m => m.logPrediction(...).catch(...))`）改为 `await` + try/catch。原形式结构脆弱——外层 `.then` 返回 undefined（不返回 logPrediction promise），外层 `.catch` 只捕获 import 错误，logPrediction 若不 settle 则无迹可查。新形式保留"DB 写失败不破坏 cached prediction"契约（try/catch 吞并 + log），但写入确定性化、失败可观测。3 个 runAndCache 测试契约不变通过；backend 642|1 不变。诚实记录：live 核查时 prediction_logs 正在正常产（最新行 2 分钟前），故为预防性加固，非修 active bug。
 - **commit a65e37e + d45e893（Tailwind info 漂移）**：核查 TD-12 双配置时发现 `tailwind.config.ts info.DEFAULT=#B8860B`（3.2:1，AA fail）与 `tokens.css --color-info=#8B6914`（AA pass）漂移，修 config hex 对齐。**后续 live 修正**：built CSS 实测 `text-info` 解析为 `var(--info)=oklch(0.57 0.17 250)`（蓝色），`@theme inline` 覆盖 config 与 tokens.css 两者——fix 无视觉收益，仅消除 config 内部矛盾（注释 vs 值）。TD-12 记录三源并存架构（config 颜色段[死] + @theme inline oklch[活] + tokens.css[死]）需产品决策选 palette 后才能根治。
+
+**MAPE 验证环孤儿行回收（round-71，2026-08-05）**：发现 `markUnverifiablePredictions`（point-in-time + 不可逆）会把"瞬时数据滞后"的 commodity 永久标 `unverifiable`——beef_carcass_us 有 738 条 stranded unverifiable，但该 commodity 实际有窗口内 actuals（07-28 的 5 条 due 行有 5 条 actuals）。新增对称逆操作 `restoreVerifiablePredictions()`（`mapeTracking.ts`）：扫 `status='unverifiable'` 非 cut 行，按 commodity 取 `MIN(predictedAt)`，若该 commodity 最新 daily 价 > 最早预测时间则视为"源已恢复"，把这些行标回 `completed` re-enter 验证环。接入 `server.ts` 启动 hook（在 markUnverifiable 之后跑）。+3 测试（正例恢复 / 负例仍冻结保持 unverifiable / 幂等），mutation-verified。live 实测：beef_carcass_us 738→0 unverifiable，completed/variant 48→262。backend 642|1→**645|1**。KNOWN-ISSUES D2 记录。
+
+**价值链健康核查 + 死配置清理（round-72，2026-08-07）**——TD-3 计划（round-69）经核实已完整落地（commits 6f6cf5a+e6d82ce+a525939：`authenticate` 加 `x-api-key` 短路分支、+3 测试、docs/API.md、前端提示），未重复实施。本轮实测价值链全链端到端通：
+- **chronos MAPE 成熟（round-59 预测兑现）**：3 变体各 **267 verified**（08-05 首验 → 08-07 持续），avg_mape base 0.735 / mini 0.789 / tiny 0.756（%）；conflict commodity 各 50 verified（round-58 回收生效）。`AccuracyTransitionBanner` 自动隐藏（267 ≫ MIN_VERIFIED_SAMPLE=5）。价值链 MAPE 环进入实测期。
+- **commit d5e9ec4（inference config 死参数清理）**：`config.py` 删 5 个 `lstm_*`/`transformer_*` 参数（label "Timer-XL/Sundial model params"），grep 证实 0 reader（只 host/port/log_level 被读）。ruff clean / pytest 47 / pm2 restart / live `/models` 返 9 正确 id（无 timer_xl/sundial）。
+- **ghost 模型审计（KNOWN-ISSUES R3）**：`prediction_logs` 残留 `timer_xl`(167)/`sundial`(165) 孤儿行（2026-05/07 era，引擎已无此模型）。无实际污染（模型清单代码常量驱动 + 测试守护 + getAllModelAccuracy 只遍历 live 模型）；唯一暴露面是鉴权 wildcard `/models/:modelId/accuracy`，前端不可达。按 §十.5 仅文档记录，不删 DB 行 / 不加投机 guard。
+- backend **645|1** / frontend 278 / inference 47 全绿，无回归。
 
 ## 五½、数据层可观测性（round-48~50）
 
