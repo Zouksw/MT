@@ -12,8 +12,17 @@
 		"overrides": {
 			"minimatch@<3.1.4": ">=3.1.4",
 			"ws@<8.20.1": ">=8.20.1"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"prisma",
+			"@prisma/client",
+			"@prisma/engines",
+			"sharp",
+			"msw"
+		]
 	},
+	"packageManager": "pnpm@9.15.9",
 	"scripts": {
 		"prepare": "husky",
 		"restart": "./scripts/restart.sh",

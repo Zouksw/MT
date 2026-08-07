@@ -160,6 +160,17 @@
 - **回滚锚点**（已记录）：`apt-get install nodejs=18.20.8-1nodesource1`；或 sources 切回 `node_18.x` 重装。
 - **遗留（独立决策，非本次）**：local pnpm 8.15.0 / lockfile v6.0 vs CI pnpm 9（`ci.yml` `pnpm/action-setup@v4 version: 9`）/ lockfile v9 不一致，无 `packageManager` field 收敛。升 pnpm 会触发 §七.3 store 重写风险，单列轮次。已记入 KNOWN-ISSUES。
 
+**pnpm 8.15.0 → 9.15.9 升级 + lockfile v6→v9 迁移（round-74，2026-08-07，T1 RESOLVED）**——本地 pnpm 对齐 CI（CI 早是 `pnpm/action-setup@v4 version: 9`，本地落后在 8.15.0 / lockfile v6.0）。无源码改动（仅工具链 + 配置 + lockfile）：
+- **网络阻塞 + 镜像决策**：corepack 需 fetch pnpm 9 但 **`registry.npmjs.org` 被封**（HTTP 000 超时，与 D1 数据源同模式）。`corepack enable` 曾误把 `/usr/bin/pnpm` 换成 corepack shim（需 fetch，失败致 pnpm 不可用）—— **已干净回滚**（重建 `/usr/bin/pnpm → pnpm 8.15.0` symlink，全服务恢复）。经用户授权（选项"永久切镜像"），`.npmrc` `registry` 从 `registry.npmjs.org` → **`registry.npmmirror.com`**（阿里巴巴中国镜像，0.23s 可达）。corepack 不读 `.npmrc`，用 `COREPACK_NPM_REGISTRY=https://registry.npmmirror.com corepack prepare pnpm@9 --activate` fetch **pnpm 9.15.9** 成功（镜像 latest 9.x = 9.15.9）。
+- **packageManager pin + build-scripts gating**：root `package.json` 加 `"packageManager": "pnpm@9.15.9"`（corepack 收敛本地）+ `pnpm.onlyBuiltDependencies`（pnpm 9 默认**不**跑依赖 build 脚本，须显式批准）。Explore agent 全量扫描 `.pnpm`，批准 6 个必需包：`esbuild`/`prisma`/`@prisma/client`/`@prisma/engines`/`sharp`/`msw`。**故意不批准 `@scarf/scarf`**（swagger-ui-dist 传递依赖，postinstall 上报 Scarf.sh 遥测）—— 按隐私/外发默认阻断，Swagger UI 无它正常工作，可逆。`@scarf/scarf` 未列入 onlyBuiltDependencies = 其 build 脚本被 pnpm 9 跳过 = 遥测不触发。
+- **lockfile 迁移**：pnpm 9.15.9 读 v6 lockfile 时**自动升级格式**到 v9.0（无需重解析，package.json 未变）；3 处 `pnpm-lock.yaml`（root/backend/frontend）全 `v6.0 → v9.0`。`pnpm install --frozen-lockfile` 自洽校验通过（exit 0）。
+- **§七.3 安全**：**全程不跑 `pnpm store prune`**（历史 store 损坏根因）；pnpm 9 沿用 store v3（无 store 迁移）；store 3.6G 保留不动。bcrypt 风险不适用（后端用 `bcryptjs` 纯 JS，非 native `bcrypt`，Explore 确认）。
+- **build 脚本产物核实**：prisma 引擎在（`libquery_engine-debian-openssl-3.0.x.so.node` + schema-engine）、esbuild 二进制在（0.21.5 + 0.28.1 linux-x64）、sharp 的 libvips 原生二进制在（linux-x64 + linuxmusl-x64）、`npx prisma generate` 成功生成 client 到 `.pnpm/@prisma+client@...`。
+- **重编 + 验证（全绿无回归）**：`pnpm build`（backend tsc+tsc-alias）/ `pnpm build`（frontend next build）在 pnpm 9 下 0 错误重编；3 服务 `pm2 restart` 全 online。backend **645|1** / frontend **278** / inference **47**（Python 无关，确认未受影响）；价值链抽样 chronos 三变体 **382 verified**（avgMape 1.77–1.93%，lastVerified 当日）。
+- **CI 对齐**：`ci.yml` `pnpm/action-setup@v4 version: 9` 已与本地 9.15.9 一致；`packageManager` pin 让未来 corepack-enabled CI 自动收敛到 9.15.9（当前 CI 用 action-setup 独立装，未强制 corepack，最小改动不动 CI）。
+- **回滚**：`git checkout pnpm-lock.yaml backend/pnpm-lock.yaml frontend/pnpm-lock.yaml .npmrc package.json` + `corepack disable` + 重建 `/usr/bin/pnpm → /usr/lib/node_modules/pnpm/bin/pnpm.cjs`（8.15.0 全局保留未删）。
+- **副作用（接受）**：未来所有包 install 元数据经 npmmirror.com（用户已授权"永久切镜像"）。
+
 ## 五½、数据层可观测性（round-48~50）
 
 **问题**：`/health/ready` 之前只报 infra（database/redis/inference）全 green，但数据层可能静默失效——18 注册 scraper 仅 2 个在写、103k 预测不可验证、beef_cut_prices 近 14 天 0 行。operator 看到 all-green 实则数据停滞。

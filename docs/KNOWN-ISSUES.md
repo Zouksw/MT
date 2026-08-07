@@ -230,6 +230,14 @@
 **为何未在本轮处理**：升级 pnpm 8→9 会**重写 lockfile**（v6→v9）+ 触发 store 重新链接，**直接踩 §七.3**（pnpm 8.15.0 `store prune` 曾反复致 store 损坏 ENOENT index）。需独立轮次：评估 corepack pin（`packageManager` field）+ 干净环境验证 lockfile 迁移 + 确认不重新引入 store 损坏模式。当前不阻塞任何功能（pnpm 9 读 v6 lockfile 正常，CI 全绿）。
 **动作（待决策）**：① 加 `"packageManager": "pnpm@8.15.0"` 到 root package.json 收敛（CI 也降到 8，最小变更）；或 ② 升级本地到 pnpm 9 + lockfile 迁移（更大变更，需 §七.3 复核）。两者择一，单列轮次。
 
+**已解决（round-74，2026-08-07，选项 B）**：用户选"升级本地到 pnpm 9 + lockfile 迁移"。
+- **网络阻塞**：corepack 需 fetch pnpm 9 但 `registry.npmjs.org` 被封（HTTP 000，D1 同模式）。经用户授权"永久切镜像"，`.npmrc` `registry` → `registry.npmmirror.com`（阿里巴巴镜像，0.23s 可达）。`COREPACK_NPM_REGISTRY=https://registry.npmmirror.com corepack prepare pnpm@9 --activate` fetch **pnpm 9.15.9** 成功（corepack 不读 `.npmrc`，须 env var；首次 fetch 后缓存，后续 invoke 无需 env）。
+- **配置**：root `package.json` 加 `"packageManager": "pnpm@9.15.9"` + `pnpm.onlyBuiltDependencies`（pnpm 9 build-script gating）= `[esbuild, prisma, @prisma/client, @prisma/engines, sharp, msw]`。**故意排除 `@scarf/scarf`**（遥测，默认阻断）。
+- **lockfile 迁移**：pnpm 9.15.9 读 v6 lockfile 时自动升级格式到 **v9.0**（3 处全迁移，root/backend/frontend）；`--frozen-lockfile` 自洽通过。
+- **§七.3 安全**：**全程未跑 `store prune`**；pnpm 9 沿用 store v3（无 store 迁移）；store 3.6G 保留；bcrypt 风险不适用（后端用 bcryptjs 纯 JS）。
+- **验证（全绿）**：build 脚本产物核实（prisma 引擎/esbuild/sharp libvips 原生二进制全在）；`pnpm build`（backend+frontend）0 错误；3 服务全 online；backend **645|1** / frontend **278** / inference **47**（无回归）；价值链 chronos 382 verified（live）。
+- **副作用（接受）**：未来包 install 元数据经 npmmirror.com（用户授权）。**T1 RESOLVED**。详情见 AUTOMATION-STATUS round-74。
+
 ---
 
 ## 如何更新本文件
