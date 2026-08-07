@@ -217,6 +217,21 @@
 
 ---
 
+## 五、工具链一致性（pre-existing，待独立决策）
+
+### T1 — 本地 pnpm 8 vs CI pnpm 9 版本不一致（非阻塞，待收敛决策）
+
+**来源**：2026-08-07 round-73 Node 升级期间 Explore agent 发现（与 Node 版本无关的独立项）
+**现状（截至 2026-08-07 live 核实）**：
+- **本地/生产**：`pnpm 8.15.0`（global `npm i -g` 装在 `/usr/lib/node_modules/pnpm`），三个 `pnpm-lock.yaml`（root/backend/frontend）均为 **`lockfileVersion: '6.0'`**（pnpm 8 格式）。
+- **CI**（`.github/workflows/ci.yml:41-43` 等 5 处）：`pnpm/action-setup@v4` with **`version: 9`**（pnpm 9 用 lockfile v9.0）。即 CI 每次跑会用 pnpm 9 读 v6.0 lockfile——pnpm 9 能读 v6（向后兼容），但若 CI 触发 lockfile 更新会升到 v9.0，与本地 v6.0 漂移。
+- **无 `packageManager` field**：三个 `package.json` 均无 `"packageManager": "pnpm@x.y.z"` pin，corepack 不会自动统一版本。
+**风险**：lockfile 格式漂移（CI 偶尔改 v9 → 本地 pnpm 8 读 v9 需升级）；安装结果理论一致（同一 lockfile + 同一 registry），但工具版本不一致是"在我机器上能跑"隐患。
+**为何未在本轮处理**：升级 pnpm 8→9 会**重写 lockfile**（v6→v9）+ 触发 store 重新链接，**直接踩 §七.3**（pnpm 8.15.0 `store prune` 曾反复致 store 损坏 ENOENT index）。需独立轮次：评估 corepack pin（`packageManager` field）+ 干净环境验证 lockfile 迁移 + 确认不重新引入 store 损坏模式。当前不阻塞任何功能（pnpm 9 读 v6 lockfile 正常，CI 全绿）。
+**动作（待决策）**：① 加 `"packageManager": "pnpm@8.15.0"` 到 root package.json 收敛（CI 也降到 8，最小变更）；或 ② 升级本地到 pnpm 9 + lockfile 迁移（更大变更，需 §七.3 复核）。两者择一，单列轮次。
+
+---
+
 ## 如何更新本文件
 
 - 解决某条 issue 时：在条目末尾加 `**已解决（日期）**：…`，不要直接删除（保留历史可防重复审计）。

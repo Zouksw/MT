@@ -150,6 +150,16 @@
 - **ghost 模型审计（KNOWN-ISSUES R3）**：`prediction_logs` 残留 `timer_xl`(167)/`sundial`(165) 孤儿行（2026-05/07 era，引擎已无此模型）。无实际污染（模型清单代码常量驱动 + 测试守护 + getAllModelAccuracy 只遍历 live 模型）；唯一暴露面是鉴权 wildcard `/models/:modelId/accuracy`，前端不可达。按 §十.5 仅文档记录，不删 DB 行 / 不加投机 guard。
 - backend **645|1** / frontend 278 / inference 47 全绿，无回归。
 
+**Node 18 → 20 LTS 升级（round-73，2026-08-07）**——本地运行时与 CI 对齐（CI 早是 Node 20，`ci.yml:25 NODE_VERSION: '20'`，本地此前落后在 Node 18 已 EOL）。无源码改动（升级是系统/运维操作）：
+- **路径**：NodeSource apt，`/etc/apt/sources.list.d/nodesource.sources` 已指向 `node_20.x`，`apt-get install -y nodejs` 直接升 `18.20.8-1nodesource1` → `20.20.2-1nodesource1`（仓库早配好但未拉取）。
+- **兼容性预核**（Explore agent 全量）：唯一 engines 约束 `frontend "node": ">=18.20.8"`（floor-only，20 满足）；Next 15.5 官方支持 Node 20；无 `.nvmrc`/`.node-version` pin；grep `url.parse(`/`punycode`/`util._extend`/`Buffer(`/`crypto.createCipher` 全 **0** deprecated-API 命中；`@types/node ^20` 已在用。
+- **全局包保留**（dpkg 核实归属后验证）：npm 10.8.2 / **pnpm 8.15.0 不变**（§七.3 store 未动）/ **pm2 6.0.14 不变** / bun 1.3.11 / codex 0.121.0 / pm2-logrotate 3.0.0 全存活；仅 corepack 0.32.0→0.34.6（随 Node 20 deb 自带，shim 性质无影响）。所有 `npm i -g` 装的包（不在 nodejs deb 内）apt 升级均保留。
+- **PM2 重建**：`pm2 update` 在 Node 20 下重生 God Daemon（`ecosystem.config.cjs` 不硬编码 interpreter，`node`/`pnpm` 走 PATH，升系统 node 后必须 update 否则 daemon/版本不匹配）。3 服务全 `pm2 update` 后 online。
+- **dist 重编**：`backend pnpm build`（tsc+tsc-alias）在 Node 20 下 0 错误重编 dist/，`pm2 restart mt-backend` 加载新 dist。
+- **验证（全绿无回归）**：backend **645|1** / frontend **278** / inference 47（inference 是 Python，node 版本无关）；3 服务日志 grep deprecation/punycode/url.parse **0**（Node 20 才暴露 18 下隐藏的 deprecation，实测无）；价值链抽样 `/api/signals/models/accuracy` 200（chronos 三变体 verifiedCount=370、avgMape 1.77–1.92%、lastVerified 当日）；`prediction_logs` 最新 predicted_at 在升级后继续产（13:32）。
+- **回滚锚点**（已记录）：`apt-get install nodejs=18.20.8-1nodesource1`；或 sources 切回 `node_18.x` 重装。
+- **遗留（独立决策，非本次）**：local pnpm 8.15.0 / lockfile v6.0 vs CI pnpm 9（`ci.yml` `pnpm/action-setup@v4 version: 9`）/ lockfile v9 不一致，无 `packageManager` field 收敛。升 pnpm 会触发 §七.3 store 重写风险，单列轮次。已记入 KNOWN-ISSUES。
+
 ## 五½、数据层可观测性（round-48~50）
 
 **问题**：`/health/ready` 之前只报 infra（database/redis/inference）全 green，但数据层可能静默失效——18 注册 scraper 仅 2 个在写、103k 预测不可验证、beef_cut_prices 近 14 天 0 行。operator 看到 all-green 实则数据停滞。
