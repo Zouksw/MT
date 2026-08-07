@@ -155,6 +155,12 @@
 - **预期**：08-06 后 chronos 首批到期预测进 due 批次，但 conflict commodity（brl_usd/corn_cme/natural_gas_cme）即便到期也需权威源（fred/usda_ams）有窗口内 actuals：fred 最新 07-24/07-27（5-8d lag，FRED 日汇率延迟），usda_ams 最新 04-29（月度数据，3mo lag）。**corn_cme 大概率仍 0 verified**（usda_ams 3 个月无新数据）；brl_usd/natural_gas_cme 视 fred 是否补数。
 - **动作**：不代码改动。08-06 后复查 `[MAPE] Verified N` 日志 + `prediction_logs WHERE model_id LIKE 'chronos%' AND verified_at IS NOT NULL`。若届时仍 0，再查 actuals 源 lag（运营/数据源问题，非 verify 代码）。
 
+**round-72 复核（2026-08-07 live 实测，round-59 预测兑现）**：round-59 预测"08-06 后 chronos 首批到期"已**兑现**——价值链 MAPE 验证环进入实测期，非代码改动，仅记录：
+- chronos 三变体各 **267 条 verified**（`first_verified=2026-08-05`、`last_verified=2026-08-07`），`avg_mape` **chronos_base 0.735 / chronos_mini 0.789 / chronos_tiny 0.756**（%）—— 三个变体一致性高，均显著优于历史 stat 基线 naive(2.22%)/stl(20.56%) 量级。
+- conflict commodity（brl_usd/corn_cme/natural_gas_cme）chronos 各 **50 条 verified**（round-58 `restorePostFixConflictPredictions` 回收的 post-fix 行已 re-enter 验证环并产出真实 MAPE）—— corn_cme 在 round-59 预期"大概率仍 0 verified（usda_ams 3mo lag）"实际已**有 verified**，说明权威源在窗口内有 actuals。
+- `/ai/accuracy` 过渡期 banner（`AccuracyTransitionBanner`，`MIN_VERIFIED_SAMPLE=5`）已自动隐藏（3 变体 verifiedCount=267 ≫ 5，`needsBanner=false`）。
+- **结论**：R1 chronos 接入 + MAPE 验证环**端到端通**。后续关注点转为数据源新鲜度（D1 阻塞）而非验证环代码。
+
 **round-67 补充（2026-08-03，读侧权威源过滤补全）**：审计发现 round-41 只修了 4 个读侧（training/actuals/correlation/inference-history），**遗漏了 6 个用户可见的"latest price / 聚合"读取点**，对 3 个 conflict commodity 返回错误源的值。`GET /api/signals/brl_usd` live 实测 currentPrice 返回 exchange_rate_api 反向值 0.197（应是 fred 5.0）→ predictedChange 2460（无意义）。逐项根治：
 - **commit c24dff2（B1）**：`signals.ts:345`（单预测 currentPrice）+ `signals.ts:279`（批量 currentPrice，新 `batchLatestPriceWhere`+`dedupeLatestByCommodity` 共享 helper）+ `alert-rules.ts:147`（告警价，预取 commodityId→slug）。+2 signals 测试（mutation-verified，cache-aware 清 Redis 避免假绿）。
 - **commit b77d540（B2）**：`marketService.ts:listCommodities` 的 relation include 改批量查询（relation include 无法加 source 过滤）。+1 测试（mutation-verified）。
@@ -162,6 +168,23 @@
 - **analytics.ts:39**（季节性聚合）：raw SQL 加 `AND source = ${authoritativeSource}`（`Prisma.sql`/`Prisma.empty` 条件片段）。
 - **live 实测（2026-08-03）**：`/api/signals/brl_usd` currentPrice 0.197→**5.0592**、predictedChange 2460→0.24；`/api/market/commodities` brl_usd latestPrice 0.197→**5.0592**；`/api/analytics/seasonality/brl_usd` 12 月 avg 全在 **5.1–5.5**（fred 量级，不再混 ~0.2）。backend 634|1→**639|1**（+5 回归测试）。
 - **结论**：R2 读侧**全补全**——signals/market/watchlist/alerts/analytics 现对所有 conflict commodity 读权威源。数据层（两源仍写同 slug）未动（靠读侧过滤根治，避免 schema 迁移）。
+
+---
+
+### R3 — 历史幽灵模型 timer_xl / sundial 残留预测行（低优先级，数据完整性）
+
+**来源**：2026-08-07 round-72 live 审计（`prediction_logs` 全 model_id 扫描）
+**现状（截至 2026-08-07 live 核实）**：`prediction_logs` 里有 **2 个模型 id** 在**当前推理引擎完全不存在**：
+- `timer_xl`：167 行（verified 10 / unverifiable 146 / stale 11），`predicted_at` 区间 2026-05-19 ~ 2026-07-05
+- `sundial`：165 行（verified 10 / unverifiable 144 / stale 11），`predicted_at` 区间 2026-05-19 ~ 2026-07-05
+
+**根因**：上一代 Timer-XL / Sundial 在线训练路径已作为 anti-pattern 移除（见 `inference_engine.py` docstring："the previous Timer-XL/Sundial online-training path was removed as an anti-pattern"）。当前引擎 `_all_models` 只含 6 stat + 3 chronos = 9 个 id（`MODEL_IDS`），live `/models` 实测确认无 timer_xl/sundial。这两模型的 332 条行是移除前生成的**孤儿数据**，引擎永不再产生。
+**配置残留（同轮已清，commit d5e9ec4）**：`inference-service/config.py` 曾带 5 个 `lstm_*`/`transformer_*` 参数（label "Timer-XL / Sundial model params"），grep 证实 0 reader（只 `host/port/log_level` 被读），已删。
+**对核心价值链的影响**：**无实际污染**——
+- 活跃模型清单由代码常量驱动（`getAllModels()`=3 chronos + `BASELINE_MODELS`=5 stat），不读 DB 的 `distinct model_id`，故 UI/共识/`/ai/accuracy` 对比页**不会**列或聚合 timer_xl/sundial。`tradingSignals.test.ts:68-69` 有守护测试断言两者被排除。
+- `getAllModelAccuracy` 只遍历 `getAllModels()+BASELINE_MODELS`（live 9 个），ghost 模型不进对比。
+- **唯一暴露面**：`GET /api/signals/models/:modelId/accuracy`（wildcard）+ `/predictions` + `/backtest`——直填 `timer_xl` 会返回该模型的真实 MAPE（timer_xl avg 0.728 / sundial avg 6.81）"像"活模型。但需鉴权 + 手填 URL，前端从不传 ghost id（模型列表来自 server），**实际不可达**。
+**处置决策（round-72，遵循 §十.5 外科手术）**：不删 DB 行（非己所造的数据，先记录）；不加 wildcard guard（前端不可达，会"顺手改进相邻代码"违反 §十.5）。仅**文档记录**为本条。若日后 wildcard 可达性提升（如前端加自由文本 model 选择器）或需要干净的 MAPE 数据集，再评估：选项 A 路由层 404 unknown model id；选项 B `DELETE FROM prediction_logs WHERE model_id IN ('timer_xl','sundial')`（332 行，不可逆，需备份确认）。
 
 ---
 
