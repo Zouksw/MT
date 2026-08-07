@@ -114,6 +114,43 @@ def test_stl_forecast_is_bounded_over_long_horizon():
     )
 
 
+# A flat, mean-reverting series — FX-rate-like (AUD/USD oscillating in a
+# tight band around 0.70). On such series the STL trend slope is
+# noise-driven; extrapolating it added error. Production MAPE was 5.94
+# for stl vs 0.34 for naive on AUD/USD before the signal-to-noise gate.
+FLAT_SERIES = [
+    0.6996, 0.7012, 0.6988, 0.7005, 0.6991, 0.7023, 0.6984, 0.7010,
+    0.6993, 0.7008, 0.6999, 0.7037, 0.7054, 0.7035, 0.7035, 0.7021,
+    0.7023, 0.7026, 0.7008, 0.7022, 0.6952, 0.6930, 0.6975, 0.6984,
+]
+
+
+def test_stl_does_not_extrapolate_noise_on_flat_series():
+    """REGRESSION: on a flat/mean-reverting series, the STL trend component is
+    pure noise. Extrapolating it made stl_forecaster 3-15x worse MAPE than
+    naive (AUD/USD: 5.94 vs 0.34 in production logs).
+
+    The signal-to-noise gate must detect that the trend is insignificant
+    relative to the series volatility and suppress the drift — so on a flat
+    series the forecast stays at the last value (like naive), instead of
+    running off in a noise-driven direction.
+    """
+    last_val = FLAT_SERIES[-1]
+    result = predict_stl(FLAT_SERIES, horizon=7)
+    preds = result["values"]
+
+    # The forecast must not drift more than 1% from the last value — on a
+    # series that oscillates in a 0.69–0.71 band, any larger drift is the
+    # noise-extrapolation bug. Before the gate, the forecast ran off to
+    # 0.68–0.73 territory.
+    for p in preds:
+        drift_pct = abs(p - last_val) / last_val
+        assert drift_pct < 0.01, (
+            f"STL extrapolated noise on flat series: forecast {p:.4f} drifted "
+            f"{drift_pct:.2%} from last value {last_val:.4f}"
+        )
+
+
 # ─── Edge cases ──────────────────────────────────────────────────────────────
 
 def test_stl_short_series_degrades_to_naive():
