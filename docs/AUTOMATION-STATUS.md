@@ -79,12 +79,12 @@
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 57 | **645 pass / 1 skip** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 59 | **658 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 24 | **278 pass** |
 | inference | pytest 8 | conftest.py | 3 | **47 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **970 全绿**（645 + 278 + 47，截至 2026-08-07 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **983 全绿**（658 + 278 + 47，截至 2026-08-07 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -170,6 +170,16 @@
 - **CI 对齐**：`ci.yml` `pnpm/action-setup@v4 version: 9` 已与本地 9.15.9 一致；`packageManager` pin 让未来 corepack-enabled CI 自动收敛到 9.15.9（当前 CI 用 action-setup 独立装，未强制 corepack，最小改动不动 CI）。
 - **回滚**：`git checkout pnpm-lock.yaml backend/pnpm-lock.yaml frontend/pnpm-lock.yaml .npmrc package.json` + `corepack disable` + 重建 `/usr/bin/pnpm → /usr/lib/node_modules/pnpm/bin/pnpm.cjs`（8.15.0 全局保留未删）。
 - **副作用（接受）**：未来所有包 install 元数据经 npmmirror.com（用户已授权"永久切镜像"）。
+
+**beef.ts 重构 + ghost-model 守卫（round-75，2026-08-07）**——roadmap P1+P2（用户授权"你来排优先级"），补真实测试缺口 + 数据完整性防御：
+- **P1 beef.ts /by-country → service**：`routes/beef.ts` 的 `/by-country`（产地聚合 avg/min/max + topCuts，原 line 280-355）是 802 行里最高逻辑、0 测试的片段。抽到 `services/beefAggregation.ts`（`aggregateBeefByCountry()`，含 cutsLimit 上限 20 + 空数据短路），route handler 缩到 3 行。新增 `routes/__tests__/beef.test.ts`（11 集成测试，仿 signals.test.ts 的 supertest+auth 模式：factories / cuts / by-country 聚合契约 / prices / forecasts 鉴权门 + 404）。backend 645|1→**656|1**。
+- **P2 ghost-model 守卫（R3）**：`GET /api/signals/models/:modelId/accuracy` 加 unknown-model 守卫——`modelId` 不在 `getAllModels()+BASELINE_MODELS`（8 live models）→ 返回 zeroed shape（avgMape null / verifiedCount 0），挡 `timer_xl`/`sundial` 孤儿模型暴露陈旧 MAPE（timer_xl 30d 窗口有 10 verified、avgMape 0.728）。守卫在 **route 层**（signals.ts），非 service 层——service 层守卫会破 `mapeTracking.test.ts` 用合成 modelId 的 fx() fixture。+2 测试（unknown→null/0 + known baseline 通行），**mutation-verified**（反转 `!known.has`→`known.has`，先清 Redis `*signals:model-accuracy*` key 避免缓存假阳，再断言正确失败）。backend 656|1→**658|1**。live：`timer_xl`→null/0、`naive_forecaster`→3.45 正常。
+- 价值链未动（chronos 3 变体各 382 verified 不变）。
+
+**TD-12 调色板收敛（round-76，2026-08-07）**——基于 frontend-design + design-review 技能判定（用户授权"利用 skills 进行前端设计的色调判定"）：
+- **判定金为权威**：两技能方法论一致——frontend-design "the brief's own words always win"（`DESIGN.md §58` "DarkGoldenrod Gold"、`§88` `info=#B8860B (same as primary)`、`§215` "Gold = AI intelligence"）+ design-review "tailwind.config.ts is source of truth"（`info=#8B6914` 金是基准，oklch 蓝 info 是 drift）。WCAG 实测 `#8B6914` 作文本/按钮填充均 5.09:1 ✓ AA，accessibility 不构成留蓝理由。
+- **修 info 蓝/金分裂**：`globals.css` `--info` oklch hue **250→84**（与 `--primary` 同源），`:root` + `.dark` 各 1 行。此前 `tailwind.config.ts`/`tokens.css` 说金、`@theme inline` oklch 说蓝，同一 `text-info` 在不同入口渲染不同色。live built-CSS 实测：`--info` 现 `oklch(57% .17 84)` / dark `oklch(70% .16 84)`，无 hue 250 残留。
+- **外科手术（§十.5）**：仅改 2 行；success/warning/destructive 的轻微色相偏（ΔE 小、无功能影响）记为已知技术债不动；tokens.css 的 `--color-*`（0 引用）不删（非己所造）。frontend 278 不变。详见 TECH-DEBT TD-12 round-76 注。
 
 ## 五½、数据层可观测性（round-48~50）
 

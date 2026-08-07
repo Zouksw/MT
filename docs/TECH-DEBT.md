@@ -116,6 +116,12 @@
 
 **遗留（架构，未动）**：三源并存（tailwind.config.ts colors 段[死] + @theme inline oklch[活] + tokens.css[死]）+ tailwind.config.ts 非颜色段（fontSize/animation/keyframes/boxShadow[活，utility 类如 text-h1/animate-fade-in 仍用]）。彻底解决需：(1) 决定哪套 palette 是 source of truth（oklch 蓝色系 vs hex 金色系——**视觉/产品决策，非工程**）；(2) 迁活配置到 v4 `@theme`，删 `@config` + tailwind.config.ts + tokens.css 死颜色段。前置：产品决策选 palette。**不在 AI 自主范围**。
 
+**palette 决策已定（round-76，2026-08-07，基于 frontend-design + design-review 技能判定）**：用户授权"利用 skills 进行前端设计的色调判定"。两技能方法论一致指向**金为权威**：(a) frontend-design "the brief's own words always win"——`DESIGN.md §58` 明文 "Primary — DarkGoldenrod Gold"、`§88` `info = #B8860B (same as primary)`、`§215` "Gold = AI intelligence. Every gold element signals AI content"；oklch hue 250 蓝 info 是 D4 合并引入的、与 brief 相悖的偏离。(b) design-review "tailwind.config.ts is source of truth for consistency"——`tailwind.config.ts` 的 `info=#8B6914` 金是基准，oklch 蓝 info 是 drift。(c) WCAG 实测：`#8B6914` 金作文本 5.09:1、作按钮填充白字 5.09:1 均 ✓ AA；蓝色 `#3366FC` 虽也过 AA 但无产品语义，accessibility 不构成留蓝理由。
+
+**已修（round-76，2026-08-07）**：`globals.css` `--info` oklch hue 250→84（与 `--primary` 同源），`:root` + `.dark` 各 1 行。消除 `info` token 的蓝/金分裂——此前 `tailwind.config.ts`/`tokens.css` 说金、`@theme inline` oklch 说蓝，同一 `text-info` class 在不同入口渲染成不同色。live built-CSS 实测：`--info` 现为 `oklch(57% .17 84)` / dark `oklch(70% .16 84)`，无 hue 250 残留。frontend 278 不变。
+
+**遗留（已知技术债，低优先，未动 per §十.5）**：success/warning/destructive 三色在两源（oklch vs hex）间有轻微色相偏（oklch 偏柔、hex 更饱和，ΔE 小、无功能影响）：success `oklch(0.62 0.17 145)→#558BBC` vs hex `#16A34A`；warning `oklch(0.73 0.17 70)→#E89500` vs `#D97706`；destructive `oklch(0.577 0.245 27.325)→#E52000` vs `#DC2626`。架构层三源并存（`@config` 桥接 + `@theme inline` + tokens.css）仍未彻底收敛，留待后续产品级 v4 迁移。
+
 ---
 
 ## 三、Schema
