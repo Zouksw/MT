@@ -249,6 +249,15 @@ main,
     background: #E5E7EB;
   }
 
+  /* Tailwind animate-spin (used by 34 loading spinners) — spinners must
+     respect reduced-motion. We can't stop the animation entirely (a
+     spinner is the loading signal), but we slow it drastically so it
+     doesn't provoke vestibular discomfort while still indicating work
+     in progress. */
+  .animate-spin {
+    animation-duration: 3s;
+  }
+
   *:focus-visible {
     transition: none;
   }
