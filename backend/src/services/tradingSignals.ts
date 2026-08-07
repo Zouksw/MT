@@ -21,23 +21,13 @@ import { logger, prisma } from "../lib";
 import { cutSeriesKey, getBeefCutSeries } from "./beefCutSeries";
 import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
+import { ALL_MODELS, BASELINE_MODELS, getAllModels } from "./modelRegistry";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
 
-// PRIMARY consensus ensemble = 3 Chronos T5 sizes (capacity diversity).
-// The multi-size ensemble votes via the weighted consensus pipeline:
-// chronos_base (most accurate) weighs more when its MAPE is lower.
-const ALL_MODELS = ["chronos_tiny", "chronos_mini", "chronos_base"] as const;
-
-// BASELINE models — NOT part of the main consensus, but reported on the /ai
-// accuracy page so users can see chronos vs classical-method performance.
-// naive_forecaster is the standard "dumb baseline" any real model must beat.
-export const BASELINE_MODELS = [
-	"naive_forecaster",
-	"arima",
-	"holtwinters",
-	"exponential_smoothing",
-	"stl_forecaster",
-] as const;
+// Re-export for backward compatibility — signals.ts and mapeTracking.ts
+// import these from tradingSignals. The definitions live in modelRegistry
+// (leaf module) to avoid the predictionCache ↔ tradingSignals cycle.
+export { BASELINE_MODELS, getAllModels };
 
 /** Direction of the consensus forecast — replaces the old BUY/SELL/HOLD union. */
 export type Direction = "up" | "down" | "flat";
@@ -335,13 +325,6 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		bestModel,
 		timestamp: new Date().toISOString(),
 	};
-}
-
-/**
- * Get all model IDs
- */
-export function getAllModels(): string[] {
-	return [...ALL_MODELS];
 }
 
 /**

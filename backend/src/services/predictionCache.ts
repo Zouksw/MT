@@ -16,7 +16,7 @@ import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
-import { getAllModels } from "./tradingSignals";
+import { getAllModels } from "./modelRegistry";
 
 const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
