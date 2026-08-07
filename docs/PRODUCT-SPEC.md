@@ -23,10 +23,10 @@
 |------|--------|-----------|------|
 | **行情数据** | 进口牛肉/国产牛肉/牛副产品价格 | ✅ 有 (7 源: abares/cepea/inac/mla/secex/usda_ams/usda_psd) | 数据源已具备,需激活+补采 |
 | **价格展示** | 按部位/产地/进口国分类 | ✅ beef 页有 cuts/factories | 需优化为牧集式的行情看板 |
-| **资讯服务** | 行业资讯/市场动态推送 | ❌ 无资讯模块 | **新增需求** |
+| **资讯服务** | 行业资讯/市场动态推送 | ✅ 有 (MarketNews model + route + service + 5 页, 2026-07-19 建) | 已建,需内容运营 |
 | **数据可视化** | 价格走势图/对比图 | ✅ ProfessionalChart (K线) + recharts | 需牧集式的行情总览页 |
 | **交易撮合** | 连接上下游服务商 | ❌ 无 (且按 CLAUDE.md 不做交易) | **明确不做** (定位为信息平台) |
-| **AI 预测** | 无 | ✅ 5 统计模型 + chronos (AINode 架构) | **核心差异化优势** |
+| **AI 预测** | 无 | ✅ 6 统计模型 + chronos (AINode 架构) | **核心差异化优势** |
 
 ### 关键决策: 做牧集的"数据+分析+资讯",不做"交易"
 CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反而简化了产品 — 聚焦数据深度 + AI 预测。
@@ -39,8 +39,8 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 | 能力 | 现状 | 前端展示 |
 |------|------|---------|
-| **统计模型** (5) | arima / holtwinters / exponential_smoothing / naive_forecaster / stl_forecaster | `/ai/predict` `/ai/accuracy` |
-| **深度模型** (1) | chronos (Chronos-2.3.1 预训练,零样本预测) | 同上 |
+| **统计模型** (6) | arima / sarimax / holtwinters / exponential_smoothing / naive_forecaster / stl_forecaster | `/ai/predict` `/ai/accuracy` |
+| **深度模型** (3) | chronos (chronos-t5 tiny/mini/base 预训练,零样预测) | 同上 |
 | **预测缓存** | Redis (prediction:{commodityId}:{modelId}:{horizon}, 45min TTL) | 后台 30min 调度 |
 | **MAPE 验证** | prediction_logs verified 状态 | `/ai/accuracy` 页 |
 | **多模型共识** | generateForecast 多模型投票 | `/trading` PriceForecastPanel |
@@ -147,8 +147,9 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 - 点击展开 → 多模型预测详情 + 置信区间图
 - 这让 AI 预测从"藏在子页面"变成"每个价格都带预测"
 
-### 5.4 资讯模块 (新增,对标牧集资讯)
-- 市场动态 feed (可初期手动录入/外部 RSS,后续接入新闻 API)
+### 5.4 资讯模块 (已建,对标牧集资讯)
+- ✅ 已实现: MarketNews model + marketNews route + marketNewsService + 5 前端页 (2026-07-19)
+- 市场动态 feed (手动录入已支持 /market-news/create;外部 RSS/新闻 API 待接入)
 - 每条资讯关联相关商品/部位
 
 ---
@@ -187,8 +188,8 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | AI 价格预测 | 6 模型 + chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备 (Round 26 修通 slug/UUID) |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
-| 资讯数据 | ❌ 无 | 需新增后端模型 + 数据源 (RSS/手动/API) |
-| 实时更新 | ❌ 无 WebSocket,轮询也未开 | 阶段 1 加 30s SWR 轮询 |
+| 资讯数据 | ✅ MarketNews model + route + service + 5 页 (2026-07-19) | 已建;外部 RSS/新闻 API 待接入 |
+| 实时更新 | ✅ SWR 轮询已开 (30s/15s/60s, watchlist/market-data hooks) | WebSocket 未做 (轮询已满足阶段 1) |
 
 **结论**: 平台**地基已具备 70%** (数据源+AI预测+可视化全在),差的是**激活数据 + 聚焦牛肉 IA + 融入预测到主流程 + 资讯模块**。
 
