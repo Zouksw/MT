@@ -5,6 +5,7 @@ import type { AuthenticatedRequest } from "@/middleware/auth";
 import { authenticate, authorize } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { getPagination } from "@/schemas/common";
+import { aggregateBeefByCountry } from "@/services/beefAggregation";
 import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
 import { importBeefPrices, parseBeefCSV } from "@/services/beefImport";
 import { computeBeefTrend } from "@/services/beefTrends";
@@ -282,75 +283,10 @@ router.get(
 	asyncHandler(async (req, res) => {
 		const source = req.query.source as string | undefined;
 		const cutsLimit = Math.min(Number(req.query.cuts) || 5, 20);
-
-		// Find the most recent date with data, then aggregate by country on that
-		// date. Using a single date gives an apples-to-apples comparison (vs.
-		// mixing dates which would skew the country averages).
-		const latest = await prisma.beefCutPrice.findFirst({
-			where: source ? { source } : {},
-			orderBy: { date: "desc" },
-			select: { date: true },
-		});
-		if (!latest) {
-			return success(res, { countries: [], date: null });
-		}
-
-		const rows = await prisma.beefCutPrice.findMany({
-			where: {
-				date: latest.date,
-				...(source ? { source } : {}),
-			},
-			include: { factory: { select: { country: true, code: true, name: true } } },
-		});
-
-		// Group by country → aggregate + per-cut breakdown.
-		const byCountry = new Map<
-			string,
-			{
-				country: string;
-				prices: number[];
-				cuts: Map<string, number>;
-				factories: Set<string>;
-			}
-		>();
-		for (const r of rows) {
-			const country = r.factory?.country ?? "?";
-			const price = typeof r.price === "number" ? r.price : Number(r.price);
-			if (!Number.isFinite(price)) continue;
-			let bucket = byCountry.get(country);
-			if (!bucket) {
-				bucket = { country, prices: [], cuts: new Map(), factories: new Set() };
-				byCountry.set(country, bucket);
-			}
-			bucket.prices.push(price);
-			// Keep the latest (highest? first?) price per cutCode within a country.
-			if (!bucket.cuts.has(r.cutCode)) bucket.cuts.set(r.cutCode, price);
-			if (r.factory?.code) bucket.factories.add(r.factory.code);
-		}
-
-		const countries = Array.from(byCountry.values())
-			.map((b) => {
-				const sum = b.prices.reduce((s, p) => s + p, 0);
-				const avg = b.prices.length > 0 ? sum / b.prices.length : 0;
-				const min = b.prices.length > 0 ? Math.min(...b.prices) : 0;
-				const max = b.prices.length > 0 ? Math.max(...b.prices) : 0;
-				const topCuts = Array.from(b.cuts.entries())
-					.sort((a, z) => z[1] - a[1]) // highest price first
-					.slice(0, cutsLimit)
-					.map(([cutCode, price]) => ({ cutCode, price: Math.round(price * 100) / 100 }));
-				return {
-					country: b.country,
-					avgPrice: Math.round(avg * 100) / 100,
-					minPrice: Math.round(min * 100) / 100,
-					maxPrice: Math.round(max * 100) / 100,
-					cutCount: b.cuts.size,
-					factoryCount: b.factories.size,
-					topCuts,
-				};
-			})
-			.sort((a, b) => a.country.localeCompare(b.country));
-
-		success(res, { countries, date: latest.date, count: countries.length });
+		// Aggregation logic lives in services/beefAggregation.ts (extracted for
+		// testability — this route previously had no test coverage).
+		const result = await aggregateBeefByCountry(source, cutsLimit);
+		success(res, result);
 	}),
 );
 
