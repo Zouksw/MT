@@ -12,7 +12,8 @@
 
 import type { Express } from "express";
 import request from "supertest";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { prisma } from "@/lib";
 import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
@@ -163,6 +164,139 @@ describe("Beef Routes (Integration)", () => {
 				.get("/api/beef/forecasts/NO_SUCH_CUT_xyz")
 				.set(authHeaders(token));
 			expect(res.status).toBe(404);
+		});
+	});
+
+	// CSV import — the no-API-key real-data injection point (D1 workaround).
+	// This is the only path that can put live beef_cut_prices rows into the
+	// platform when all scraper API endpoints are network-blocked. It must be
+	// guarded: transactional, idempotent, validated, and ADMIN-gated.
+	describe("POST /api/beef/import (CSV upload, ADMIN-only)", () => {
+		// The backend stamps source='manual:<uploaderEmail>'. The admin token
+		// comes from the seeded admin (admin@trademind.com), so all test uploads
+		// land under this source. Cleanup targets it to avoid polluting prod.
+		const adminSource = "manual:admin@trademind.com";
+		const today = new Date().toISOString().slice(0, 10);
+
+		// Helper: build a CSV buffer from an array of row arrays.
+		function csvBuffer(rows: string[][]): Buffer {
+			const lines = rows.map((r) => r.join(","));
+			return Buffer.from(lines.join("\n"), "utf-8");
+		}
+
+		// Cleanup: remove any rows this test suite wrote. Runs after the whole
+		// import describe block so idempotency tests (which upload twice) don't
+		// fight each other's cleanup.
+		afterAll(async () => {
+			await prisma.beefCutPrice.deleteMany({ where: { source: adminSource } });
+		});
+
+		it("rejects unauthenticated requests (401)", async () => {
+			const csv = csvBuffer([
+				["factoryCode", "cutCode", "price", "date"],
+				["AU-847", "BRISKET_NAVEL", "8.45", today],
+			]);
+			const res = await request(app).post("/api/beef/import").attach("file", csv, "test.csv");
+
+			expect(res.status).toBe(401);
+		});
+
+		it("rejects non-ADMIN users (403)", async () => {
+			// Log in as the seeded regular user (role: USER, not ADMIN).
+			const loginRes = await request(app)
+				.post("/api/auth/login")
+				.send({ email: "user@trademind.com", password: "User123!" });
+			const userToken = loginRes.body.data.token;
+
+			const csv = csvBuffer([
+				["factoryCode", "cutCode", "price", "date"],
+				["AU-847", "BRISKET_NAVEL", "8.45", today],
+			]);
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(userToken))
+				.attach("file", csv, "test.csv");
+
+			expect(res.status).toBe(403);
+		});
+
+		it("imports valid rows (happy path)", async () => {
+			const csv = csvBuffer([
+				["factoryCode", "cutCode", "price", "date", "currency", "unit", "grade"],
+				["AU-847", "BRISKET_NAVEL", "8.45", today, "USD", "USD/kg", "Choice"],
+				["BR-SIF2057", "STRIPLOIN", "12.30", today, "USD", "USD/kg", "M7"],
+			]);
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.attach("file", csv, "prices.csv");
+
+			expect(res.status).toBe(201);
+			expect(res.body.success).toBe(true);
+			expect(res.body.data.imported).toBe(2);
+			expect(res.body.data.affectedCuts).toHaveLength(2);
+		});
+
+		it("is idempotent — re-uploading the same rows updates, not duplicates", async () => {
+			const csv = csvBuffer([
+				["factoryCode", "cutCode", "price", "date"],
+				["AU-847", "BRISKET_NAVEL", "9.99", today],
+				["BR-SIF2057", "STRIPLOIN", "13.99", today],
+			]);
+			// Second upload of the same (factory, cut, date, source) — should
+			// update the price, not insert new rows.
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.attach("file", csv, "prices-v2.csv");
+
+			expect(res.status).toBe(201);
+			expect(res.body.data.imported).toBe(0);
+			expect(res.body.data.updated).toBe(2);
+		});
+
+		it("skips invalid rows but imports valid ones (partial success)", async () => {
+			const csv = csvBuffer([
+				["factoryCode", "cutCode", "price", "date"],
+				["AU-847", "BLADE", "7.50", today], // valid
+				["NO-SUCH-FACTORY", "BLADE", "7.50", today], // unknown factory → skipped
+				["AU-847", "NO_SUCH_CUT", "7.50", today], // unknown cut → skipped
+				["AU-847", "BLADE", "not-a-number", today], // bad price → skipped
+			]);
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.attach("file", csv, "mixed.csv");
+
+			expect(res.status).toBe(201);
+			expect(res.body.data.imported).toBe(1);
+			expect(res.body.data.skipped).toBe(3);
+			expect(res.body.data.errors).toHaveLength(3);
+			// Each error names its row number so the operator can fix the CSV.
+			for (const err of res.body.data.errors) {
+				expect(err).toHaveProperty("row");
+				expect(err).toHaveProperty("message");
+			}
+		});
+
+		it("rejects empty CSV (400)", async () => {
+			const csv = Buffer.from("factoryCode,cutCode,price,date\n", "utf-8");
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.attach("file", csv, "empty.csv");
+
+			expect(res.status).toBe(400);
+		});
+
+		it("rejects non-multipart request (400)", async () => {
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.set("Content-Type", "application/json")
+				.send({ factoryCode: "AU-847" });
+
+			expect(res.status).toBe(400);
 		});
 	});
 });
