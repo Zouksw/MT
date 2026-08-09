@@ -206,7 +206,7 @@ export default function AIModelsPage() {
 		<PageContainer>
 			<PageHeader
 				title="AI Models"
-				description="Compare all 7 prediction models — accuracy, coverage, and trend analysis"
+				description="Chronos ensemble + statistical baselines — accuracy, coverage, and trend analysis"
 				breadcrumbs={[
 					{ label: "Home", href: "/dashboard" },
 					{ label: "AI", href: "/ai" },

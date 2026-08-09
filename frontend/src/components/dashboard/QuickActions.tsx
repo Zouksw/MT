@@ -3,6 +3,7 @@
 import { Beef, BrainCircuit, Eye, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
+import { SITE_STATS } from "@/lib/site-stats";
 
 interface QuickAction {
 	key: string;
@@ -25,14 +26,14 @@ const quickActions: QuickAction[] = [
 	{
 		key: "ai-signals",
 		title: "AI Price Signals",
-		description: "8 models forecasting beef",
+		description: `${SITE_STATS.aiModels} Chronos models forecasting beef`,
 		icon: <BrainCircuit className="size-5" />,
 		path: "/ai",
 	},
 	{
 		key: "market-charts",
 		title: "Market Charts",
-		description: "Live cattle futures",
+		description: "Beef price charts & analysis",
 		icon: <TrendingUp className="size-5" />,
 		path: "/trading",
 	},
