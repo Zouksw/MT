@@ -4,8 +4,8 @@ import { LayoutGrid } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import CorrelationMatrixChart from "@/components/trading/CorrelationMatrix";
-import { Alert } from "@/components/ui/Alert";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 
@@ -16,7 +16,6 @@ export default function AnalysisPage() {
 	} | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [windowDays, setWindowDays] = useState(30);
-	const [isDemoData, setIsDemoData] = useState(false);
 
 	useEffect(() => {
 		async function loadMatrix() {
@@ -37,28 +36,13 @@ export default function AnalysisPage() {
 						return;
 					}
 				}
-				const commodities = ["brisket-80-90", "8-piece-set", "sirloin-short-rib", "sirloin-eye"];
-				const n = commodities.length;
-				const matrix = Array.from({ length: n }, (_, i) =>
-					Array.from({ length: n }, (_, j) => {
-						if (i === j) return 1;
-						return Math.round((Math.random() * 2 - 1) * 100) / 100;
-					}),
-				);
-				for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) matrix[j][i] = matrix[i][j];
-				setMatrixData({ commodities, matrix });
-				setIsDemoData(true);
+				// API returned non-success or no data — show an honest empty state
+				// instead of fabricating a random correlation matrix (AGENTS.md
+				// §十.3: never write fabricated data). Previously this generated
+				// Math.random() values dressed up as Pearson correlations.
+				setMatrixData(null);
 			} catch {
-				const commodities = ["brisket-80-90", "8-piece-set", "sirloin-short-rib", "sirloin-eye"];
-				const n = commodities.length;
-				const matrix = Array.from({ length: n }, (_, i) =>
-					Array.from({ length: n }, (_, j) =>
-						i === j ? 1 : Math.round((Math.random() * 2 - 1) * 100) / 100,
-					),
-				);
-				for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) matrix[j][i] = matrix[i][j];
-				setMatrixData({ commodities, matrix });
-				setIsDemoData(true);
+				setMatrixData(null);
 			} finally {
 				setLoading(false);
 			}
@@ -72,12 +56,6 @@ export default function AnalysisPage() {
 				title="Correlation Analysis"
 				description="Pearson correlation between commodity prices. 30-day rolling window, UTC timezone alignment."
 			/>
-
-			{isDemoData && (
-				<Alert variant="info" className="mb-4">
-					Showing demo correlation data. Connect to live data for real commodity analysis.
-				</Alert>
-			)}
 
 			<div className="flex items-center justify-between mb-4">
 				<div className="flex items-center gap-3">
@@ -116,6 +94,13 @@ export default function AnalysisPage() {
 							commodities={matrixData.commodities}
 							matrix={matrixData.matrix}
 							loading={loading}
+						/>
+					)}
+					{!matrixData && !loading && (
+						<EmptyState
+							type="data"
+							title="No correlation data available"
+							description="Correlation data will appear here when enough price history exists for at least two commodities. Try a wider rolling window."
 						/>
 					)}
 				</CardBody>

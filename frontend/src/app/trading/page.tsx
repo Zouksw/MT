@@ -278,28 +278,31 @@ export default function TradingPage() {
 							<span className="ml-3 text-sm text-gray-500">Loading AI signals...</span>
 						</div>
 					)}
-					{
+					{!d.signalLoading && d.signal && (
 						<PriceForecastPanel
-							consensusDirection={d.signal?.direction || "flat"}
-							confidence={d.signal?.confidence || 0}
-							modelsAgree={d.signal?.modelsAgree || 0}
-							totalModels={d.signal?.totalModels || 0}
-							individualForecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
-							predictedChange={d.signal?.predictedChange || 0}
+							consensusDirection={d.signal.direction}
+							confidence={d.signal.confidence}
+							modelsAgree={d.signal.modelsAgree}
+							totalModels={d.signal.totalModels}
+							individualForecasts={(d.signal.individualForecasts ?? []).filter(Boolean)}
+							predictedChange={d.signal.predictedChange}
 							currentPrice={d.currentPrice}
-							predictedPrice={d.signal?.predictedPrice || d.currentPrice}
-							horizon={d.signal?.horizon || 10}
-							range={
-								d.signal?.range || { lower: d.currentPrice * 0.97, upper: d.currentPrice * 1.03 }
-							}
-							supportLevel={d.signal?.supportLevel || d.currentPrice * 0.97}
-							resistanceLevel={d.signal?.resistanceLevel || d.currentPrice * 1.04}
-							distribution={d.signal?.distribution || { up: 0, down: 0, flat: 0 }}
-							bestModelId={d.signal?.bestModel || d.bestModelId}
-							loading={d.signalLoading}
-							timestamp={d.signal?.timestamp}
+							predictedPrice={d.signal.predictedPrice ?? d.currentPrice}
+							horizon={d.signal.horizon ?? 10}
+							range={d.signal.range}
+							supportLevel={d.signal.supportLevel}
+							resistanceLevel={d.signal.resistanceLevel}
+							distribution={d.signal.distribution ?? { up: 0, down: 0, flat: 0 }}
+							bestModelId={d.signal.bestModel ?? d.bestModelId}
+							loading={false}
+							timestamp={d.signal.timestamp}
 						/>
-					}
+					)}
+					{!d.signalLoading && !d.signal && (
+						<div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+							AI signal unavailable for this commodity.
+						</div>
+					)}
 
 					{/* Beef mode: factory price comparison table */}
 					{d.beefMode && d.beefPrices.length > 0 && (

@@ -335,7 +335,12 @@ export default function PerformancePage() {
 	const lcpAvg = webVitals?.lcp.avg ?? 0;
 	const clsAvg = webVitals?.cls.avg ?? 0;
 	const apiP95 = apiLatency?.overall.p95 ?? 0;
-	const errorRate = 0;
+	// errorRate is not available from the /metrics endpoint (process metrics).
+	// The /metrics/summary endpoint computes it (slow-request ratio), but this
+	// page doesn't consume that endpoint. Showing a hardcoded 0% here would
+	// fabricate a "zero errors" signal (AGENTS.md §十.3). Display "--" until
+	// the summary endpoint is wired in, matching the other cards' pattern.
+	const errorRate: number | null = null;
 
 	const statCards = [
 		{
@@ -358,14 +363,16 @@ export default function PerformancePage() {
 		},
 		{
 			title: "Error Rate",
-			value: `${errorRate}%`,
+			value: errorRate !== null ? `${errorRate}%` : "--",
 			icon: <TriangleAlert className="size-4" />,
 			variant:
-				errorRate > 5
-					? ("error" as const)
-					: errorRate > 1
-						? ("warning" as const)
-						: ("success" as const),
+				errorRate !== null
+					? errorRate > 5
+						? ("error" as const)
+						: errorRate > 1
+							? ("warning" as const)
+							: ("success" as const)
+					: ("default" as const),
 		},
 	];
 
