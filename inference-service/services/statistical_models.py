@@ -11,6 +11,20 @@ from statsmodels.tsa.seasonal import STL
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
+def _z_for_level(level: float) -> float:
+    """Two-sided z-score for a confidence level.
+
+    Shared by _bootstrap_ci, predict_arima, and predict_sarimax so that the
+    confidence_level requested by the caller is consistently honored. Includes
+    the 0.80 floor (pydantic allows confidence_level as low as 0.80); levels
+    not in the table fall back to 0.95 (the API default) rather than silently
+    returning a different interval width.
+    """
+    table = {0.80: 1.282, 0.90: 1.645, 0.95: 1.96, 0.99: 2.576}
+    # Snap to the nearest supported level to absorb float drift (0.949999...).
+    return min(table.items(), key=lambda kv: abs(kv[0] - level))[1]
+
+
 def _bootstrap_ci(
     values: list[float], forecasts: np.ndarray, horizon: int, level: float = 0.95
 ) -> tuple[list[float], list[float]]:
@@ -21,7 +35,15 @@ def _bootstrap_ci(
         pad = [0.0] * horizon
         return pad, pad
     std = np.std(residuals)
-    z = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}.get(level, 1.96)
+    # Constant / near-constant series → residuals are all ~0 → std=0 → CI
+    # width 0 (claims 100% confidence, which is statistically wrong). Use a
+    # small floor based on the series scale so the interval is non-degenerate.
+    # The floor is 1% of the mean abs value (or 1e-6 for an all-zero series),
+    # matching the scale-aware pattern used by the STL signal-to-noise gate.
+    if std < 1e-9:
+        series_scale = float(np.mean(np.abs(np.array(values))))
+        std = max(series_scale * 0.01, 1e-6)
+    z = _z_for_level(level)
     margin = z * std * np.sqrt(np.arange(1, horizon + 1))
     lower = (forecasts - margin).tolist()
     upper = (forecasts + margin).tolist()
@@ -44,8 +66,12 @@ def predict_arima(
     fitted = model.fit()
     fc = fitted.get_forecast(steps=horizon)
     pred = fc.predicted_mean
-    lower = pred - 1.96 * fc.se_mean
-    upper = pred + 1.96 * fc.se_mean
+    # Respect the caller's confidence_level (previously hardcoded 1.96 = 95%,
+    # which silently ignored any other requested level). Mirrors SARIMAX.
+    z = _z_for_level(confidence_level)
+    se = fc.se_mean
+    lower = pred - z * se
+    upper = pred + z * se
     return {
         "values": pred.tolist(),
         "lower_bound": lower.tolist(),
@@ -118,7 +144,7 @@ def predict_sarimax(
         fc = fitted.get_forecast(steps=horizon, exog=future_exog_arr)
         pred = fc.predicted_mean
         # Native SARIMAX confidence interval — respects confidence_level.
-        z = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}.get(confidence_level, 1.96)
+        z = _z_for_level(confidence_level)
         se = fc.se_mean
         lower = pred - z * se
         upper = pred + z * se

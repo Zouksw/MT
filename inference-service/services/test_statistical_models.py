@@ -195,3 +195,40 @@ def test_naive_forecasts_last_value_exactly():
     result = predict_naive(series, horizon=10)
     for v in result["values"]:
         assert v == 9.0
+
+
+# ─── Confidence interval correctness (round-84 audit) ────────────────────────
+
+def test_arima_respects_confidence_level():
+    """REGRESSION: predict_arima hardcoded z=1.96 (95%), ignoring the caller's
+    confidence_level. A 90% request silently got a 95% interval, and a 99%
+    request got a too-narrow 95% interval. Verify the interval width actually
+    changes with the requested level."""
+    series = list(range(100, 120))  # clean upward trend, ARIMA fits well
+    result_90 = predict_arima(series, horizon=5, confidence_level=0.90)
+    result_99 = predict_arima(series, horizon=5, confidence_level=0.99)
+    width_90 = result_90["upper_bound"][0] - result_90["lower_bound"][0]
+    width_99 = result_99["upper_bound"][0] - result_99["lower_bound"][0]
+    # 99% interval must be wider than 90% (z=2.576 vs 1.645).
+    assert width_99 > width_90 * 1.2, (
+        f"ARIMA CI width barely changed with confidence_level: "
+        f"90%={width_90:.4f}, 99%={width_99:.4f}"
+    )
+
+
+def test_bootstrap_ci_non_degenerate_on_constant_series():
+    """REGRESSION: _bootstrap_ci computed residuals from a constant series as
+    all-zeros → std=0 → margin=0 → lower==upper (a 0-width interval claiming
+    100% confidence). The fix floors std to a small scale-aware minimum so the
+    interval is non-degenerate. Test via naive (which uses _bootstrap_ci)."""
+    from services.statistical_models import _bootstrap_ci
+
+    const_series = [5.0] * 20
+    forecasts = np.array([5.0, 5.0, 5.0, 5.0, 5.0])
+    lower, upper = _bootstrap_ci(const_series, forecasts, horizon=5, level=0.95)
+    # Every step must have a strictly positive interval width (upper > lower).
+    for lo, hi in zip(lower, upper):
+        assert hi > lo, (
+            f"Degenerate CI on constant series: lower={lo}, upper={hi} (width=0 "
+            f"implies false 100% confidence)"
+        )
