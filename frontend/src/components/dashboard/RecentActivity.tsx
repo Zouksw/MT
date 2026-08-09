@@ -92,7 +92,7 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 
 				{activeTab === "alerts" ? (
 					alertsItems.length === 0 ? (
-						<p className="text-sm text-gray-400 text-center py-6">No recent alerts</p>
+						<p className="text-sm text-muted-foreground text-center py-6">No recent alerts</p>
 					) : (
 						<div className="space-y-1">
 							{alertsItems.map((item, i) => (
@@ -115,14 +115,14 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 											<span className="text-sm truncate max-w-48">{item.title}</span>
 											<Tag color={getSeverityVariant(item.severity)}>{item.severity || "INFO"}</Tag>
 										</div>
-										<span className="text-xs text-gray-400">{item.time}</span>
+										<span className="text-xs text-muted-foreground">{item.time}</span>
 									</div>
 								</div>
 							))}
 						</div>
 					)
 				) : forecastsItems.length === 0 ? (
-					<p className="text-sm text-gray-400 text-center py-6">No recent forecasts</p>
+					<p className="text-sm text-muted-foreground text-center py-6">No recent forecasts</p>
 				) : (
 					<div className="space-y-1">
 						{forecastsItems.map((item, i) => (
@@ -145,7 +145,7 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 										<span className="text-sm truncate max-w-48">{item.title}</span>
 										<Tag color="primary">{item.status}</Tag>
 									</div>
-									<span className="text-xs text-gray-400">
+									<span className="text-xs text-muted-foreground">
 										{item.description} · {item.time}
 									</span>
 								</div>

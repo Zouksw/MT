@@ -528,7 +528,7 @@ export default function BeefOverview() {
 												<div key={source} className="flex items-center gap-3">
 													<div className="w-48 text-xs text-gray-600 dark:text-gray-400 truncate shrink-0">
 														{source}
-														<span className="ml-1 text-gray-400">({data.count})</span>
+														<span className="ml-1 text-muted-foreground">({data.count})</span>
 													</div>
 													<div className="flex-1 relative h-6">
 														<div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded" />
@@ -543,12 +543,12 @@ export default function BeefOverview() {
 													</div>
 													<div className="w-32 text-xs text-right shrink-0">
 														<span className="font-mono">{formatPrice(avg, false)}</span>
-														<span className="text-gray-400 ml-1">avg</span>
+														<span className="text-muted-foreground ml-1">avg</span>
 													</div>
 												</div>
 											);
 										})}
-									<div className="flex justify-between text-xs text-gray-400 mt-1">
+									<div className="flex justify-between text-xs text-muted-foreground mt-1">
 										<span>{formatPrice(globalMin, false)}</span>
 										<span>{formatPrice(globalMax, false)}</span>
 									</div>

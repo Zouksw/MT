@@ -217,7 +217,7 @@ export const Hero: React.FC = () => {
 								<div className="mb-3 flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<TrendingUp size={16} className="text-primary" />
-										<span className="text-sm font-medium text-gray-400">
+										<span className="text-sm font-medium text-muted-foreground">
 											Chuck Roll Choice — USDA
 										</span>
 									</div>
@@ -255,7 +255,7 @@ export const Hero: React.FC = () => {
 								{/* Signal bar */}
 								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
 									<Gauge size={14} className="text-primary" />
-									<span className="text-xs font-medium text-gray-400">AI Consensus</span>
+									<span className="text-xs font-medium text-muted-foreground">AI Consensus</span>
 									<span className="text-xs font-semibold text-success ml-auto">Price Up</span>
 									<span className="text-xs text-gray-500 font-mono tabular-nums">78%</span>
 								</div>

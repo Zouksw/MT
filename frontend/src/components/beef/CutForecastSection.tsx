@@ -187,9 +187,9 @@ export const CutForecastSection: React.FC<CutForecastSectionProps> = ({ cutCode,
 							<span className="text-muted-foreground">
 								{formatPrice(resp.currentPrice ?? 0, false)}
 							</span>
-							<span className="mx-2 text-gray-400">→</span>
+							<span className="mx-2 text-muted-foreground">→</span>
 							<span className="font-semibold">{formatPrice(f.predictedPrice, false)}</span>
-							<span className="ml-1 text-xs text-gray-400">USD/kg</span>
+							<span className="ml-1 text-xs text-muted-foreground">USD/kg</span>
 						</div>
 						<div
 							className={`text-sm ${f.predictedChange >= 0 ? "text-success" : "text-destructive"}`}
@@ -249,7 +249,7 @@ export const CutForecastSection: React.FC<CutForecastSectionProps> = ({ cutCode,
 							/>
 						)}
 					</div>
-					<div className="flex justify-between text-xs text-gray-400 mt-1">
+					<div className="flex justify-between text-xs text-muted-foreground mt-1">
 						<span className="text-success">▲ {f.distribution.up}</span>
 						<span className="text-warning">◆ {f.distribution.flat}</span>
 						<span className="text-destructive">▼ {f.distribution.down}</span>
@@ -279,14 +279,14 @@ export const CutForecastSection: React.FC<CutForecastSectionProps> = ({ cutCode,
 									</span>
 									<div className="flex items-center gap-3">
 										{m.status === "unavailable" ? (
-											<span className="text-gray-400">unavailable</span>
+											<span className="text-muted-foreground">unavailable</span>
 										) : (
 											<>
 												<span className={`flex items-center gap-1 ${mc.color}`}>
 													<MIcon className="size-3" />
 													{formatSignedPercent(m.predictedChange)}
 												</span>
-												<span className="text-gray-400 font-mono w-10 text-right">
+												<span className="text-muted-foreground font-mono w-10 text-right">
 													{Math.round(m.confidence * 100)}%
 												</span>
 											</>

@@ -583,7 +583,7 @@ export default function PerformancePage() {
 									</LineChart>
 								</ResponsiveContainer>
 							) : (
-								<div className="flex items-center justify-center h-full text-gray-400">
+								<div className="flex items-center justify-center h-full text-muted-foreground">
 									<div className="text-center">
 										<BarChart3 className="size-10 mx-auto mb-3 text-gray-300" />
 										<p className="text-sm">No Web Vitals data yet</p>

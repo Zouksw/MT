@@ -61,7 +61,7 @@ export default function AnomalyAlertBanner({ anomalies, onViewDetails }: Anomaly
 					</div>
 				))}
 				{sorted.length > 3 && (
-					<span className="text-xs text-gray-400">+{sorted.length - 3} more</span>
+					<span className="text-xs text-muted-foreground">+{sorted.length - 3} more</span>
 				)}
 			</div>
 			{onViewDetails && (

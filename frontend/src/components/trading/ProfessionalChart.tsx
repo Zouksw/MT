@@ -131,7 +131,7 @@ function ChartSkeleton({ height }: { height: number }) {
 					<div className="h-3 w-14 bg-gray-200 rounded" />
 				</div>
 				<div className="flex-1 bg-gray-100 rounded flex items-center justify-center">
-					<span className="text-gray-400 text-sm">Loading chart...</span>
+					<span className="text-muted-foreground text-sm">Loading chart...</span>
 				</div>
 				<div className="flex justify-between">
 					<div className="h-2 w-32 bg-gray-200 rounded" />
@@ -506,7 +506,7 @@ export default function ProfessionalChart({
 	if (data.length === 0) {
 		return (
 			<div
-				className="flex items-center justify-center text-gray-400 text-sm rounded-lg"
+				className="flex items-center justify-center text-muted-foreground text-sm rounded-lg"
 				style={{ height, background: isDark ? CHART_COLORS.bgDark : CHART_COLORS.bgLight }}
 			>
 				No chart data available

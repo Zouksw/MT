@@ -196,7 +196,7 @@ export default function LandingPage() {
 								Create free account
 							</a>
 						</div>
-						<p className="text-sm text-gray-400 mt-5">
+						<p className="text-sm text-muted-foreground mt-5">
 							Free tier includes beef cut pricing from 5 markets. Upgrade for AI forecasts.
 						</p>
 					</MotionReveal>
@@ -227,7 +227,7 @@ export default function LandingPage() {
 						<div className="flex gap-12 md:gap-16">
 							{FOOTER_SECTIONS.map((section) => (
 								<div key={section.title}>
-									<h4 className="font-mono uppercase text-xs font-medium text-gray-400 tracking-wide mb-3">
+									<h4 className="font-mono uppercase text-xs font-medium text-muted-foreground tracking-wide mb-3">
 										{section.title}
 									</h4>
 									<ul className="space-y-2">
@@ -248,11 +248,11 @@ export default function LandingPage() {
 					</div>
 
 					<div className="border-t border-black/5 dark:border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-						<p className="text-xs text-gray-400">&copy; 2026 MT. All rights reserved.</p>
+						<p className="text-xs text-muted-foreground">&copy; 2026 MT. All rights reserved.</p>
 						<button
 							type="button"
 							onClick={scrollToTop}
-							className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+							className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 						>
 							<ArrowUp size={14} />
 							Back to top

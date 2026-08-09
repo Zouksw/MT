@@ -85,7 +85,7 @@ export default function PriceForecastPanel({
 				<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">
 					价格预测
 				</div>
-				<div className="p-5 text-center text-gray-400">暂无预测数据</div>
+				<div className="p-5 text-center text-muted-foreground">暂无预测数据</div>
 			</div>
 		);
 	}
@@ -99,8 +99,10 @@ export default function PriceForecastPanel({
 					价格预测
 				</div>
 				<div className="p-5 text-center">
-					<p className="text-gray-400">所有模型暂不可用</p>
-					<p className="text-xs text-gray-400 mt-1">最后尝试: {new Date().toLocaleTimeString()}</p>
+					<p className="text-muted-foreground">所有模型暂不可用</p>
+					<p className="text-xs text-muted-foreground mt-1">
+						最后尝试: {new Date().toLocaleTimeString()}
+					</p>
 				</div>
 			</div>
 		);
@@ -221,7 +223,7 @@ export default function PriceForecastPanel({
 										)}
 										{isUnavailable && (
 											<span title={forecast.error || "模型不可用"}>
-												<Info className="size-2.5 text-gray-400 ml-1" />
+												<Info className="size-2.5 text-muted-foreground ml-1" />
 											</span>
 										)}
 									</span>
@@ -244,7 +246,7 @@ export default function PriceForecastPanel({
 											</span>
 										</div>
 									)}
-									{isUnavailable && <span className="text-[10px] text-gray-400">N/A</span>}
+									{isUnavailable && <span className="text-[10px] text-muted-foreground">N/A</span>}
 								</div>
 							);
 						})}
@@ -355,7 +357,7 @@ export default function PriceForecastPanel({
 			</div>
 
 			{timestamp && (
-				<p className="text-[10px] text-gray-400 text-right mt-2">
+				<p className="text-[10px] text-muted-foreground text-right mt-2">
 					更新于 {new Date(timestamp).toLocaleTimeString()}
 				</p>
 			)}

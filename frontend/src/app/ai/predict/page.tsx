@@ -436,7 +436,7 @@ export default function AIPredictPage() {
 							<div className="bg-card rounded-lg shadow-[rgba(0,0,0,0.08)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_2px] text-center py-16 px-5">
 								<div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-5">
 									{/* Rocket icon */}
-									<Zap className="size-8 text-gray-400" />
+									<Zap className="size-8 text-muted-foreground" />
 								</div>
 								<div className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-2">
 									Ready to Predict

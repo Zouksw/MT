@@ -120,7 +120,7 @@ export default function SettingsPage() {
 									// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
 									<img src={user.avatar} alt="" className="w-full h-full object-cover" />
 								) : (
-									<User className="size-8 text-gray-400" />
+									<User className="size-8 text-muted-foreground" />
 								)}
 							</div>
 							<h4 className="text-h4 font-display font-semibold text-foreground mt-3 mb-0.5">

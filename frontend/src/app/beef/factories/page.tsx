@@ -53,7 +53,7 @@ export default function FactoryDirectory() {
 					<h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
 						<span>{COUNTRY_FLAGS[country] || ""}</span>
 						<span>{COUNTRY_NAMES[country] || country}</span>
-						<span className="text-sm font-normal text-gray-400">
+						<span className="text-sm font-normal text-muted-foreground">
 							({countryFactories.length} plants)
 						</span>
 					</h2>

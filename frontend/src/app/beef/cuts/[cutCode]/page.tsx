@@ -112,7 +112,7 @@ export default function CutDetail() {
 							<p className="text-xs text-gray-500">Price Range (90d)</p>
 							<p className="font-medium mt-1">
 								{formatPriceRange(minPrice, maxPrice, false)}{" "}
-								<span className="text-xs text-gray-400">USD/kg</span>
+								<span className="text-xs text-muted-foreground">USD/kg</span>
 							</p>
 						</CardBody>
 					</Card>
@@ -121,7 +121,7 @@ export default function CutDetail() {
 							<p className="text-xs text-gray-500">Latest Price</p>
 							<p className="text-2xl font-semibold mt-1">
 								{formatPrice(latestPrice, false)}{" "}
-								<span className="text-sm font-normal text-gray-400">USD/kg</span>
+								<span className="text-sm font-normal text-muted-foreground">USD/kg</span>
 							</p>
 						</CardBody>
 					</Card>

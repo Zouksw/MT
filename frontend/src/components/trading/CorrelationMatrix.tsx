@@ -34,7 +34,7 @@ export default function CorrelationMatrixChart({
 
 	if (loading || !commodities.length || !matrix.length) {
 		return (
-			<div className="text-center p-10 text-gray-400">
+			<div className="text-center p-10 text-muted-foreground">
 				{loading ? "Loading correlation data..." : "No correlation data available"}
 			</div>
 		);

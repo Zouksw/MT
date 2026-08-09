@@ -58,7 +58,7 @@ export default function NotFound() {
 
 				{/* Helpful Links */}
 				<div className="mt-12">
-					<p className="text-sm text-gray-400 mb-4">Or try these:</p>
+					<p className="text-sm text-muted-foreground mb-4">Or try these:</p>
 					<div className="flex gap-6 justify-center flex-wrap">
 						{[
 							{ href: "/dashboard", label: "Dashboard" },

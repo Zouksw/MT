@@ -76,7 +76,7 @@ export default function TradingPage() {
 						renderLabel={(c) => (
 							<span>
 								{c.name}{" "}
-								<span className="text-gray-400" style={{ fontSize: 11 }}>
+								<span className="text-muted-foreground" style={{ fontSize: 11 }}>
 									({c.symbol})
 								</span>
 							</span>
@@ -194,7 +194,7 @@ export default function TradingPage() {
 									<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
 								</div>
 							) : d.beefMode && !d.selectedCut ? (
-								<div className="flex items-center justify-center h-48 text-gray-400">
+								<div className="flex items-center justify-center h-48 text-muted-foreground">
 									Select a beef cut above to view price history
 								</div>
 							) : d.beefMode && d.selectedCut ? (
@@ -336,7 +336,7 @@ export default function TradingPage() {
 															<td className="text-right font-mono">
 																{formatPrice(p.price, false)}
 															</td>
-															<td className="text-gray-400">
+															<td className="text-muted-foreground">
 																{new Date(p.date).toLocaleDateString()}
 															</td>
 														</tr>
@@ -485,7 +485,7 @@ export default function TradingPage() {
 			</div>
 
 			{/* Disclaimer */}
-			<p className="text-center text-gray-400 mt-6" style={{ fontSize: 11, opacity: 0.7 }}>
+			<p className="text-center text-muted-foreground mt-6" style={{ fontSize: 11, opacity: 0.7 }}>
 				AI-generated signals are for informational purposes only. Not financial advice. Past
 				performance does not guarantee future results.
 			</p>

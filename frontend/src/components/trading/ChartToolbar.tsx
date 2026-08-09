@@ -97,7 +97,7 @@ export default function ChartToolbar({
 					type="button"
 					onClick={onFullscreenToggle}
 					className="
-            p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50
+            p-1.5 rounded text-muted-foreground hover:text-gray-600 hover:bg-gray-50
             transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
           "
 					aria-label="Toggle fullscreen"

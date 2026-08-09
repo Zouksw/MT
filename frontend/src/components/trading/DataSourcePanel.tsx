@@ -24,7 +24,7 @@ const sourceColors: Record<string, string> = {
 function tierBadge(count: number) {
 	if (count >= 100) return { icon: CheckCircle, color: "text-green-500", label: "Rich" };
 	if (count >= 20) return { icon: TrendingUp, color: "text-amber-500", label: "Moderate" };
-	return { icon: BarChart3, color: "text-gray-400", label: "Limited" };
+	return { icon: BarChart3, color: "text-muted-foreground", label: "Limited" };
 }
 
 function fmtDate(d: string | null) {

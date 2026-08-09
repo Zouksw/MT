@@ -155,7 +155,7 @@ export default function AlertRules() {
 						{record.name}
 					</span>
 					<br />
-					<span className="text-gray-400" style={{ fontSize: 11 }}>
+					<span className="text-muted-foreground" style={{ fontSize: 11 }}>
 						{record.id.slice(0, 8)}...
 					</span>
 				</div>

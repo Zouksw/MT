@@ -40,7 +40,7 @@ export default function BeefCutSelector({ selected, onSelect }: BeefCutSelectorP
 			<div className="flex flex-wrap gap-1">
 				{Object.entries(groups).map(([primal, primalCuts]) => (
 					<div key={primal} className="flex items-center gap-1 mr-3 mb-1">
-						<span className="text-xs font-medium text-gray-400 mr-1">{primal}:</span>
+						<span className="text-xs font-medium text-muted-foreground mr-1">{primal}:</span>
 						{primalCuts.map((cut) => (
 							<button
 								type="button"

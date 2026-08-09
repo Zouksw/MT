@@ -95,7 +95,7 @@ const TONE_CLASS: Record<StatProps["tone"], string> = {
 	primary: "text-primary",
 	info: "text-blue-600 dark:text-blue-400",
 	warning: "text-yellow-600 dark:text-yellow-400",
-	muted: "text-gray-400",
+	muted: "text-muted-foreground",
 };
 
 function Stat({ label, value, tone }: StatProps) {

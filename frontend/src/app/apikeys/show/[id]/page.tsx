@@ -492,7 +492,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					<CardHeader>
 						<div className="flex items-center justify-between w-full">
 							<CardTitle>Security Settings</CardTitle>
-							<span className="text-gray-400">
+							<span className="text-muted-foreground">
 								<Shield className="size-3.5" />
 							</span>
 						</div>

@@ -139,7 +139,7 @@ export function CSVDropzone({
 					</>
 				) : (
 					<>
-						<UploadCloud className="size-8 text-gray-400" />
+						<UploadCloud className="size-8 text-muted-foreground" />
 						<div className="text-sm font-medium text-foreground">
 							Drop CSV here, or click to browse
 						</div>

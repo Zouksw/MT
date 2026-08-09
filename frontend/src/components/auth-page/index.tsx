@@ -165,7 +165,7 @@ export function AuthPage(props: AuthPageProps) {
 
 					{/* Terms */}
 					<div className="mt-8 border-t border-gray-100 dark:border-white/[0.06] pt-6 text-center">
-						<p className="text-xs text-gray-400">
+						<p className="text-xs text-muted-foreground">
 							By continuing, you agree to our{" "}
 							<a href="/terms" className="text-gray-500 hover:text-gray-700">
 								Terms of Service

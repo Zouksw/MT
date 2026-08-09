@@ -188,7 +188,7 @@ export default function GettingStarted() {
 						Start your free trial
 						<ArrowRight size={16} />
 					</a>
-					<p className="mt-4 text-sm text-gray-400">
+					<p className="mt-4 text-sm text-muted-foreground">
 						Free to get started. No credit card required.
 					</p>
 				</MotionReveal>

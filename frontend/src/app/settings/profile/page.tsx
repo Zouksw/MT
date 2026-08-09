@@ -150,14 +150,14 @@ export default function ProfileSettingsPage() {
 									// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
 									<img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
 								) : (
-									<User className="size-10 text-gray-400" />
+									<User className="size-10 text-muted-foreground" />
 								)}
 							</div>
 							<h4 className="text-lg font-semibold text-foreground mt-4 mb-0.5">
 								{user?.name || "User"}
 							</h4>
 							<p className="text-sm text-muted-foreground">{user?.email}</p>
-							<p className="text-xs text-gray-400 mt-1">Role: {user?.role}</p>
+							<p className="text-xs text-muted-foreground mt-1">Role: {user?.role}</p>
 						</div>
 
 						<hr className="my-4 border" />

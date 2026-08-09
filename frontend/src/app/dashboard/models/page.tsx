@@ -241,7 +241,7 @@ export default function ModelsComparisonPage() {
 							<span className="text-xs text-gray-500">MAPE &gt; 15%</span>
 						</div>
 					</div>
-					<p className="text-xs text-gray-400 mt-2">
+					<p className="text-xs text-muted-foreground mt-2">
 						MAPE = (1/n) × &Sigma;|actual &minus; predicted| / |actual| × 100. Lower is better.
 					</p>
 				</CardBody>

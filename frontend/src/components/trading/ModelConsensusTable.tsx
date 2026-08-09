@@ -108,7 +108,9 @@ export default function ModelConsensusTable({
 	}
 
 	if (tableData.length === 0) {
-		return <div className="text-center py-8 text-gray-400 text-sm">该商品暂无模型预测数据</div>;
+		return (
+			<div className="text-center py-8 text-muted-foreground text-sm">该商品暂无模型预测数据</div>
+		);
 	}
 
 	return <Table columns={columns} dataSource={tableData} />;

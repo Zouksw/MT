@@ -32,7 +32,7 @@ const illustrationMap: Record<
 	default: {
 		title: "Nothing Here Yet",
 		description: "When you add items, they'll appear here.",
-		icon: <Inbox className="size-16 text-gray-400" strokeWidth={1.5} />,
+		icon: <Inbox className="size-16 text-muted-foreground" strokeWidth={1.5} />,
 		color: "#6B7280",
 		bgColor: "bg-gray-50 dark:bg-gray-800/50",
 	},
@@ -88,7 +88,7 @@ const illustrationMap: Record<
 	search: {
 		title: "No Results Found",
 		description: "Try adjusting your search terms or filters to find what you're looking for.",
-		icon: <Search className="size-16 text-gray-400" strokeWidth={1.5} />,
+		icon: <Search className="size-16 text-muted-foreground" strokeWidth={1.5} />,
 		color: "#64748B",
 		bgColor: "bg-gray-50/50 dark:bg-gray-800/30",
 	},

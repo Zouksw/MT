@@ -34,7 +34,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 				<nav className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
 					{items.map((item, i) => (
 						<React.Fragment key={item.key || i}>
-							{i > 0 && <ChevronRight className="size-3 text-gray-400" />}
+							{i > 0 && <ChevronRight className="size-3 text-muted-foreground" />}
 							{item.href ? (
 								<a href={item.href} className="hover:text-gray-700 dark:hover:text-gray-200">
 									{item.label}
