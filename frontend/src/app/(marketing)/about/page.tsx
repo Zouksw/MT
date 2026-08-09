@@ -42,16 +42,17 @@ export default function AboutPage() {
 							className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold text-foreground tracking-tight"
 							style={{ letterSpacing: "-0.04em" }}
 						>
-							Commodity Intelligence,
+							Beef Trade Intelligence,
 							<br />
 							<span className="text-gray-900 dark:text-white">Backed by Data</span>
 						</h1>
 					</MotionReveal>
 					<MotionReveal delay={0.2}>
 						<p className="text-body-lg text-muted-foreground leading-relaxed max-w-2xl mt-6">
-							MT provides commodity market intelligence through real-time data, multi-factor
-							analysis, and AI-driven price signals. We help analysts and institutions make sense of
-							complex, interconnected commodity markets.
+							MT provides beef trade price intelligence through real-time cut-level data, origin
+							analysis, and AI-driven price forecasting. We help importers, distributors, and
+							analysts make sense of global beef markets — from factory-level pricing to export
+							flows.
 						</p>
 					</MotionReveal>
 				</div>
@@ -104,16 +105,17 @@ export default function AboutPage() {
 							</MotionReveal>
 							<MotionReveal delay={0.1}>
 								<p className="text-body text-muted-foreground mb-4 leading-relaxed">
-									MT makes commodity market analysis transparent and accessible. We believe that
-									understanding the factors behind price movements — from weather patterns to
-									shipping costs — should not require a team of quants.
+									MT makes beef trade price analysis transparent and accessible. We believe that
+									understanding the factors behind cut-level price movements — from export supply to
+									currency shifts — should not require a team of quants.
 								</p>
 							</MotionReveal>
 							<MotionReveal delay={0.15}>
 								<p className="text-body text-muted-foreground leading-relaxed">
-									By running 7 independent AI models on each commodity, we provide not just
-									predictions but a spectrum of signals with confidence scores. Our platform helps
-									you understand what drives markets, not just where prices are heading.
+									By running {SITE_STATS.aiModels} pretrained Chronos models alongside statistical
+									baselines on each cut, we provide not just predictions but a spectrum of signals
+									with confidence scores. Every forecast is logged and back-checked against actual
+									prices via MAPE accuracy tracking — so you know how reliable each model truly is.
 								</p>
 							</MotionReveal>
 						</div>
