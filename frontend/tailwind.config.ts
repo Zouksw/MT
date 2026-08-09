@@ -82,14 +82,6 @@ const config: Config = {
 					"Menlo",
 					"monospace",
 				],
-				code: [
-					"var(--font-geist-mono)",
-					"ui-monospace",
-					"SFMono-Regular",
-					"Roboto Mono",
-					"Menlo",
-					"monospace",
-				],
 			},
 			fontSize: {
 				display: ["48px", { lineHeight: "1.1", letterSpacing: "-2.4px" }],
@@ -100,10 +92,6 @@ const config: Config = {
 				"body-lg": ["16px", { lineHeight: "1.5", letterSpacing: "-0.32px" }],
 				body: ["14px", { lineHeight: "1.5" }],
 				"body-sm": ["12px", { lineHeight: "1.5" }],
-				"data-lg": ["18px", { lineHeight: "1.4" }],
-				data: ["14px", { lineHeight: "1.4" }],
-				"data-sm": ["12px", { lineHeight: "1.4" }],
-				code: ["13px", { lineHeight: "1.6" }],
 			},
 			borderRadius: {
 				sm: "4px",
@@ -132,38 +120,11 @@ const config: Config = {
 			},
 			animation: {
 				"skeleton-pulse": "skeleton-pulse 1.5s ease-in-out infinite",
-				"fade-in": "fade-in 0.2s ease-out",
-				"slide-up": "slide-up 0.3s ease-out",
-				"modal-in": "modal-in 0.3s ease-out",
 			},
 			keyframes: {
 				"skeleton-pulse": {
 					"0%, 100%": { opacity: "1" },
 					"50%": { opacity: "0.5" },
-				},
-				"fade-in": {
-					from: { opacity: "0" },
-					to: { opacity: "1" },
-				},
-				"slide-up": {
-					from: {
-						transform: "translateY(10px)",
-						opacity: "0",
-					},
-					to: {
-						transform: "translateY(0)",
-						opacity: "1",
-					},
-				},
-				"modal-in": {
-					from: {
-						opacity: "0",
-						transform: "scale(0.95) translateY(-10px)",
-					},
-					to: {
-						opacity: "1",
-						transform: "scale(1) translateY(0)",
-					},
 				},
 			},
 		},
