@@ -76,12 +76,14 @@ async function fetchMLAData(): Promise<ScraperResult> {
 		return { inserted: 0, updated: 0 };
 	}
 
-	for (const item of othPrices) {
-		const auFactories = await prisma.factory.findMany({
-			where: { country: "AU", active: true },
-			take: 3,
-		});
+	// Hoist the factory query out of the loop — it returns the same AU
+	// factories every iteration, so querying it per-item was a redundant N+1.
+	const auFactories = await prisma.factory.findMany({
+		where: { country: "AU", active: true },
+		take: 3,
+	});
 
+	for (const item of othPrices) {
 		const date = new Date(item.reportDate);
 		date.setHours(0, 0, 0, 0);
 		const audPerKg = item.gridPrice / 100;

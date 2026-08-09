@@ -545,7 +545,8 @@ router.get(
 							horizon,
 						},
 					] as const;
-				} catch {
+				} catch (err) {
+					logger.warn(`[beef/forecasts] forecast failed for cut ${cutCode}: ${err}`);
 					return null;
 				}
 			}),

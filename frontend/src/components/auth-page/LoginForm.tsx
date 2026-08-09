@@ -12,8 +12,6 @@ import { sanitizer } from "@/lib/sanitizer";
 import { tokenManager } from "@/lib/tokenManager";
 import { required, validationRules } from "@/lib/validation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 export function LoginForm() {
 	const [loading, setLoading] = useState(false);
 	const [email, setEmail] = useState("");
@@ -45,7 +43,7 @@ export function LoginForm() {
 				return;
 			}
 
-			const res = await fetch(`${API_URL}/api/auth/login`, {
+			const res = await fetch(`/api/auth/login`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

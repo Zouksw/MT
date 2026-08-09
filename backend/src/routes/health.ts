@@ -152,7 +152,8 @@ router.get(
 		try {
 			await prisma.$queryRaw`SELECT 1`;
 			checks.database = true;
-		} catch (_error) {
+		} catch (error) {
+			logger.warn("[HEALTH] Database check failed", error);
 			allHealthy = false;
 		}
 

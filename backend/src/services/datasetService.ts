@@ -19,11 +19,21 @@ type DatasetRow = {
 	[key: string]: unknown;
 };
 
+/** Result of {@link serializeDataset}: sizeBytes converted from BigInt to a
+ * JSON-safe string (JSON.stringify cannot serialize BigInt). */
+type SerializedDataset = Omit<DatasetRow, "sizeBytes"> & {
+	sizeBytes?: string | null;
+};
+
 /** Serialize BigInt fields for JSON responses. */
-export function serializeDataset(dataset: DatasetRow) {
-	const serialized: DatasetRow = { ...dataset };
-	if (serialized.sizeBytes)
-		serialized.sizeBytes = serialized.sizeBytes.toString() as unknown as bigint;
+export function serializeDataset(dataset: DatasetRow): SerializedDataset {
+	// Extract sizeBytes before spreading so the bigint→string conversion is
+	// type-safe (the spread copies it as bigint, then we override as string).
+	const { sizeBytes, ...rest } = dataset;
+	const serialized: SerializedDataset = {
+		...rest,
+		sizeBytes: sizeBytes !== undefined && sizeBytes !== null ? sizeBytes.toString() : sizeBytes,
+	};
 	if (serialized.owner) serialized.owner = { ...serialized.owner };
 	return serialized;
 }

@@ -12,8 +12,6 @@ import { sanitizer } from "@/lib/sanitizer";
 import { tokenManager } from "@/lib/tokenManager";
 import { required, validationRules } from "@/lib/validation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-
 export function RegisterForm() {
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState("");
@@ -72,7 +70,7 @@ export function RegisterForm() {
 				return;
 			}
 
-			const res = await fetch(`${API_URL}/auth/register`, {
+			const res = await fetch(`/api/auth/register`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

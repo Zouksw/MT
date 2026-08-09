@@ -191,6 +191,7 @@ router.post(
 			try {
 				uuid = await resolveCommodityId(commodityId);
 			} catch (err) {
+				logger.warn(`[inference/batch] resolveCommodityId failed for ${commodityId}: ${err}`);
 				results.push({
 					error: err instanceof Error ? err.message : String(err),
 					commodityId,
@@ -227,6 +228,7 @@ router.post(
 				results.push({ ...response, cached: false, commodityId });
 				computed++;
 			} catch (error) {
+				logger.warn(`[inference/batch] prediction failed for ${commodityId}: ${error}`);
 				results.push({
 					error: error instanceof Error ? error.message : String(error),
 					commodityId,
