@@ -149,6 +149,8 @@ cd backend && npx prisma db seed          # 种子数据
 | [`docs/SECURITY.md`](docs/SECURITY.md) | 安全策略 |
 | [`docs/API.md`](docs/API.md) | REST API 参考 |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | UI/UX 设计规范 |
+| [`docs/DESIGN-SYSTEM-AUDIT.md`](docs/DESIGN-SYSTEM-AUDIT.md) | 前端设计系统深度审计（token 漂移、a11y、组件深度，2026-08-07） |
+| [`docs/PROJECT-ASSESSMENT.md`](docs/PROJECT-ASSESSMENT.md) | 项目整体评估（运维/价值链/架构/规划对齐，2026-08-08） |
 | [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | 版本历史 |
 | [`docs/INDEX.md`](docs/INDEX.md) | 文档总索引 |
 | [`docs/deployment/DEPLOYMENT-CHECKLIST.md`](docs/deployment/DEPLOYMENT-CHECKLIST.md) | 生产部署清单 |
