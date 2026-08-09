@@ -507,6 +507,11 @@ export async function restoreVerifiablePredictions(): Promise<number> {
  * @returns number of predictions verified this run
  */
 export async function verifyDuePredictions(): Promise<number> {
+	// imported lazily to avoid circular import at module load (same pattern
+	// as the post-loop info log below). Hoisted to the top so the per-row
+	// catch blocks below can warn on individual failures (round-86 fix:
+	// silent degradation must be observable, matching inference.ts:230).
+	const { logger } = await import("@/lib");
 	// SQL pre-filter: older than the longest horizon we use (10 days). The
 	// per-row check below still applies the exact horizon. This is a superset
 	// filter — it may include rows whose horizon hasn't elapsed, but those are
@@ -600,9 +605,14 @@ export async function verifyDuePredictions(): Promise<number> {
 						select: { slug: true },
 					});
 					authoritativeSource = getAuthoritativeSource(commodity?.slug);
-				} catch {
+				} catch (error) {
 					// If the commodity lookup fails, fall back to unfiltered
-					// (legacy behaviour) rather than abort verification.
+					// (legacy behaviour) rather than abort verification — but
+					// surface it so a persistent lookup failure is observable.
+					logger.warn("[MAPE] commodity lookup failed, falling back to unfiltered actuals", {
+						commodityId: log.commodityId,
+						error: error instanceof Error ? error.message : String(error),
+					});
 				}
 				const actualPrices = await prisma.commodityPrice.findMany({
 					where: {
@@ -627,13 +637,19 @@ export async function verifyDuePredictions(): Promise<number> {
 			}
 			const result = await verifyPrediction(log.id, actualValues);
 			if (result) verified++;
-		} catch {
-			// Individual verification failures must not abort the batch
+		} catch (error) {
+			// Individual verification failures must not abort the batch, but
+			// must be logged so a persistent row-level bug is visible (the
+			// aggregate "Verified N of M" log can't distinguish "no actuals"
+			// from "verifyPrediction threw"). Matches inference.ts:230 pattern.
+			logger.warn("[MAPE] verifyPrediction failed for log", {
+				logId: log.id,
+				error: error instanceof Error ? error.message : String(error),
+			});
 		}
 	}
 
-	// imported lazily to avoid circular import at module load
-	const { logger } = await import("@/lib");
+	// logger hoisted to the top of this function (see comment above)
 	const stuckCommodities = [...noActualsByCommodity.entries()]
 		.sort((a, b) => b[1] - a[1])
 		.slice(0, 5)

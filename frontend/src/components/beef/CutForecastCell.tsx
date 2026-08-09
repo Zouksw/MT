@@ -29,7 +29,11 @@ export const CutForecastCell: React.FC<CutForecastCellProps> = ({ forecast }) =>
 		return <span className="text-xs text-gray-300">—</span>;
 	}
 
-	const { Icon, color } = iconConfig[forecast.direction];
+	// Guard against an unexpected direction (null/uppercase/empty) — the type
+	// claims up/down/flat, but a malformed backend payload would otherwise
+	// destructure undefined and crash the whole table. Mirrors the defensive
+	// lookup in PriceForecastPanel.tsx:197.
+	const { Icon, color } = iconConfig[forecast.direction] ?? iconConfig.flat;
 	const title = `${forecast.modelsAgree}/${forecast.availableModels} models agree · ${Math.round(forecast.confidence * 100)}% confidence · ${forecast.dataPoints} pts`;
 
 	return (
