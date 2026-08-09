@@ -181,6 +181,28 @@
 - **修 info 蓝/金分裂**：`globals.css` `--info` oklch hue **250→84**（与 `--primary` 同源），`:root` + `.dark` 各 1 行。此前 `tailwind.config.ts`/`tokens.css` 说金、`@theme inline` oklch 说蓝，同一 `text-info` 在不同入口渲染不同色。live built-CSS 实测：`--info` 现 `oklch(57% .17 84)` / dark `oklch(70% .16 84)`，无 hue 250 残留。
 - **外科手术（§十.5）**：仅改 2 行；success/warning/destructive 的轻微色相偏（ΔE 小、无功能影响）记为已知技术债不动；tokens.css 的 `--color-*`（0 引用）不删（非己所造）。frontend 278 不变。详见 TECH-DEBT TD-12 round-76 注。
 
+**前端设计系统深度审计 + a11y 修复（round-77，2026-08-07）**——基于 frontend-design + design-review + frontend-ui-engineering 三技能 + 3 Explore agent 全量扫描（158 TSX/TS），产出 `docs/DESIGN-SYSTEM-AUDIT.md`：
+- **判定**：设计方向健康（bg-gradient 0 处、AI-slop 几乎清零、语义 token 10:1 主导）；缺陷在一致性不在方向。
+- **P0 a11y 修复**（commit 65aa2cf）：`StatusDot` healthy/error 色-only 加 `role="img"`+`aria-label`（WCAG 1.4.1）；`beef/page.tsx` 搜索 input 加 `aria-label`（WCAG 3.3.2）；gray-400 错误文本（2.54:1 fail）→ muted-foreground（4.74:1 ✓）3 处。
+- **P1**：StatCard info `#2563EB` 蓝→金（补 round-76 遗漏）；4 页加 h1（ai/page、anomalies、predict、landing）。frontend 278 不变。
+
+**字体去重 + reduced-motion（round-78，2026-08-07）**：
+- **字体去重**（commit 032af29）：layout.tsx 同时用 geist/font 包 + next/font/google 加载 Geist（不同 family name "GeistSans" vs "Geist"，浏览器各下载一份）。实测 built CSS 有两套 font-family + **7 woff2**。修：`@theme inline` `--font-heading`/`--font-sans` 指向 `var(--font-geist-sans)`，删 next/font 导入。结果：**woff2 7→2**，font-heading 仍正常。
+- **animate-spin reduced-motion**（commit 87c9fc3）：34 处 spinner 的 `animate-spin` 在 reduced-motion 下仍全速转。加 `@media (prefers-reduced-motion: reduce){ .animate-spin{ animation-duration: 3s } }`（放慢不停，保留 loading 信号）。frontend 278 不变。
+
+**项目整体评估 + 价值链修复（round-79，2026-08-08）**——基于 ops-check + zoom-out + improve-codebase-architecture + grill-with-docs 四技能 + 3 Explore agent，产出 `docs/PROJECT-ASSESSMENT.md`：
+- **核心结论**：实现度极高，工程实现领先文档，主要瓶颈是 D1 数据源而非工程能力。
+- **stl MAPE 修复**（commit ab71cf0）：stl_forecaster 10.88 MAPE（3x 同类）根因——在均值回归序列（AUD/USD 等 FX 平噪）上把 STL 趋势噪声当趋势外推。加 signal-to-noise 门控：趋势漂移 < 序列量级 1% 时零化斜率（退化为 naive-like）。合成平坦序列漂移 0（原非零），真实趋势仍外推。inference 47→**48**。注：当前 10.88 均值是 3262 条 pre-fix 历史验证记录拖累（post-fix 新预测 3.44-3.47），自我稀释中。
+- **循环依赖修复**（commit bd780db）：`predictionCache` ↔ `tradingSignals` 互引。抽 `services/modelRegistry.ts` 叶模块（ALL_MODELS + BASELINE_MODELS + getAllModels），两服务都从它导入。循环确认断开。backend 658|1 不变。
+- **PRODUCT-SPEC 过期修正**（commit 4021f0b）：资讯 ❌→✅、模型 5→6、深度 1→3、轮询 ❌→✅，4 处对齐实现。
+- **skill 使用规划**（commit 0ece998）：创建 `docs/SKILLS.md`（88 skill 按 T1/T2/T3 分类），CLAUDE.md + AGENTS.md 同步引用。
+
+**工程债清理（round-80，2026-08-08）**——用户选"暂不动数据，做工程债"：
+- **文档对齐**（commit 582b276）：AUTOMATION-STATUS 头注从 round-25 修正到真实最新轮次。
+- **孤儿文档纳入索引**（commit 8b15b4a）：DESIGN-SYSTEM-AUDIT + PROJECT-ASSESSMENT 加入 INDEX.md + AGENTS.md §八。
+- **前端死配置清理**（commit fe784b2，-39 行）：tailwind.config.ts 7 个 0-用 token（animate-fade-in/slide-up/modal-in + 3 keyframes；text-data/data-lg/data-sm/code；font code 别名）。不删 display（~50 用）+ skeleton-pulse（1 用）。build + 278 通过。
+- **gray-400 WCAG 收尾**（commit 35037d7，30 文件 55 处）：剩余 light-mode text-gray-400（2.54:1 fail）→ muted-foreground（4.74:1 ✓ AA）。dark: 变体 + icon 用法保留。frontend 278 不变。
+
 ## 五½、数据层可观测性（round-48~50）
 
 **问题**：`/health/ready` 之前只报 infra（database/redis/inference）全 green，但数据层可能静默失效——18 注册 scraper 仅 2 个在写、103k 预测不可验证、beef_cut_prices 近 14 天 0 行。operator 看到 all-green 实则数据停滞。

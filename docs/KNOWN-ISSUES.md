@@ -57,6 +57,12 @@
 
 **结论**：19 源中 2 个产数（fred/exchange_rate_api），1 个预期月度（world_bank），2 个 round-63 已修代码缺陷（fao stall + baltic dead URL），2 个仅 key 门控（MLA/USDA-AMS，最高 ROI），其余 11 个需网络/反爬/headless（非代码可修）。**fao/baltic 修复不直接产新数据**（FAO origin down + baltic 需 FRED key），但消除了 scraper batch 的 4.5min stall + 死代码路径。
 
+**round-80 复核（2026-08-08，状态变化）**：3 个 key 现已设置（`MLA_API_KEY`/`USDA_MARS_API_KEY`/`OPENWEATHER_API_KEY`），FRED 仍缺。但 live 测试源站可达性发现 **key 不是瓶颈——源站本身被网络封锁**：
+- MLA API (`services.mla.com.au/api/oth/grid`)：**000 超时**（带 x-api-key）
+- USDA (`marsapi.usda.gov`)：**000 超时**
+- OpenWeather (`api.openweathermap.org`)：**000/301**
+- 结论：D1 根因从"缺 key"升级为"**网络出口限制**"（与 registry.npmjs.org 同模式）。需代理/VPN/镜像才能连通，超出代码范围。beef_cut_prices 仍冻结 2026-04-30，87k 预测 unverifiable 均因此。用户 round-80 决策："暂不动数据，做工程债"。
+
 ---
 
 ### D2 — MAPE 验证环断裂（数据层后果）
