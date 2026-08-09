@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { MarketingNav } from "@/components/landing/MarketingNav";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Button } from "@/components/ui";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 import { ShimmerCard } from "@/components/ui/ShimmerCard";
@@ -316,12 +317,8 @@ export default function AboutPage() {
 				</div>
 			</section>
 
-			{/* Footer */}
-			<footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-black/5 dark:border-white/10 bg-white dark:bg-gray-900">
-				<div className="max-w-7xl mx-auto text-center">
-					<p className="text-body-sm text-muted-foreground">&copy; 2026 MT. All rights reserved.</p>
-				</div>
-			</footer>
+			{/* Footer — shared marketing footer */}
+			<MarketingFooter />
 		</div>
 	);
 }

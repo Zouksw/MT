@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowUp, List, X } from "lucide-react";
+import { List, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { MotionReveal } from "@/components/ui/MotionReveal";
-import { SITE_STATS } from "@/lib/site-stats";
 
 const Hero = dynamic(() => import("@/components/landing/Hero"), {
 	loading: () => (
@@ -74,29 +74,8 @@ const NAV_LINKS = [
 	{ label: "FAQ", href: "#faq" },
 ];
 
-const FOOTER_SECTIONS = [
-	{
-		title: "Product",
-		links: [
-			{ label: "Features", href: "#features" },
-			{ label: "Pricing", href: "/pricing" },
-			{ label: "About", href: "/about" },
-		],
-	},
-	{
-		title: "Support",
-		links: [
-			{ label: "FAQ", href: "#faq" },
-			{ label: "Get Started", href: "/register" },
-		],
-	},
-];
-
 export default function LandingPage() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const scrollToTop = () => {
-		window.scrollTo({ top: 0, behavior: "smooth" });
-	};
 
 	return (
 		<div className="overflow-x-hidden w-full max-w-full">
@@ -203,63 +182,8 @@ export default function LandingPage() {
 				</div>
 			</section>
 
-			{/* Footer — clean, minimal */}
-			<footer className="bg-white dark:bg-background border-t border-black/5 dark:border-white/10 px-6 py-16 md:py-24">
-				<div className="max-w-[1200px] mx-auto">
-					<div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
-						{/* Brand */}
-						<div className="max-w-xs">
-							<div className="flex items-center gap-2.5 mb-3">
-								<div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
-									<span className="text-white dark:text-gray-900 font-semibold text-base">T</span>
-								</div>
-								<span className="text-base font-display font-semibold text-gray-900 dark:text-white tracking-tight">
-									MT
-								</span>
-							</div>
-							<p className="text-sm text-muted-foreground leading-relaxed">
-								{SITE_STATS.beefCuts} beef cuts. {SITE_STATS.aiModels} AI price models.{" "}
-								{SITE_STATS.sourceCountries} export markets.
-							</p>
-						</div>
-
-						{/* Link columns */}
-						<div className="flex gap-12 md:gap-16">
-							{FOOTER_SECTIONS.map((section) => (
-								<div key={section.title}>
-									<h4 className="font-mono uppercase text-xs font-medium text-muted-foreground tracking-wide mb-3">
-										{section.title}
-									</h4>
-									<ul className="space-y-2">
-										{section.links.map((link) => (
-											<li key={link.href + link.label}>
-												<a
-													href={link.href}
-													className="text-sm text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors"
-												>
-													{link.label}
-												</a>
-											</li>
-										))}
-									</ul>
-								</div>
-							))}
-						</div>
-					</div>
-
-					<div className="border-t border-black/5 dark:border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-						<p className="text-xs text-muted-foreground">&copy; 2026 MT. All rights reserved.</p>
-						<button
-							type="button"
-							onClick={scrollToTop}
-							className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-						>
-							<ArrowUp size={14} />
-							Back to top
-						</button>
-					</div>
-				</div>
-			</footer>
+			{/* Footer — shared marketing footer (brand + links + copyright) */}
+			<MarketingFooter />
 		</div>
 	);
 }
