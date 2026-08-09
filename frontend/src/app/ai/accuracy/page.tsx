@@ -10,6 +10,7 @@ import {
 	Trophy,
 } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { AccuracyTrendChart } from "@/components/charts/AccuracyTrendChart";
 import { ModelPerformanceBarChart } from "@/components/charts/ModelPerformanceBarChart";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -140,6 +141,95 @@ function AccuracyTransitionBanner({ models }: { models: ModelWithBacktest[] }) {
 	);
 }
 
+/**
+ * Headline comparison of the pretrained Chronos ensemble vs the statistical
+ * baselines. The Chronos models (IoTDB-AINode-style pretrained base — the
+ * project's core differentiator, AGENTS.md §二) consistently achieve lower
+ * MAPE than the on-demand statistical baselines. This card surfaces that gap
+ * as a single "Nx more accurate" figure so the advantage is not buried in the
+ * table.
+ *
+ * Honesty gate (PRODUCT-SPEC §诚实优先): both groups must have at least one
+ * model meeting MIN_VERIFIED_SAMPLE, otherwise the comparison would pit a
+ * real average against an under-sampled placeholder. When the gate fails the
+ * card renders nothing — the {@link AccuracyTransitionBanner} already covers
+ * the "sample accumulating" case, so duplicating that message here would be
+ * noise.
+ *
+ * Averages are computed client-side from the same `models` array the table
+ * renders (no new backend call). Each group's average is the mean of the
+ * member models' avgMape values (each already an average over that model's
+ * verified predictions), so a model with 845 verified rows and one with 180
+ * contribute equally — this mirrors how {@link useAccuracyData}.overallAccuracy
+ * already weights models equally rather than pooling raw predictions.
+ */
+function EnsembleComparisonCard({ models }: { models: ModelWithBacktest[] }) {
+	const { primaryAvg, baselineAvg, ratio } = useMemo(() => {
+		// Reuse the same sample-size gate as the table / overallAccuracy so a
+		// model never flips between "counts" and "insufficient data" depending
+		// on where it's displayed.
+		const valid = models.filter(
+			(m) =>
+				m.avgMape !== null && m.avgMape !== undefined && m.verifiedCount >= MIN_VERIFIED_SAMPLE,
+		);
+		const primaries = valid.filter((m) => m.isPrimary ?? isPrimaryModel(m.modelId));
+		const baselines = valid.filter((m) => !(m.isPrimary ?? isPrimaryModel(m.modelId)));
+		if (primaries.length === 0 || baselines.length === 0) {
+			return { primaryAvg: null, baselineAvg: null, ratio: null };
+		}
+		const pAvg = primaries.reduce((s, m) => s + (m.avgMape ?? 0), 0) / primaries.length;
+		const bAvg = baselines.reduce((s, m) => s + (m.avgMape ?? 0), 0) / baselines.length;
+		// ratio = how many times more accurate the pretrained ensemble is
+		// (baseline MAPE ÷ primary MAPE). >1 means pretrained wins. Guarded
+		// against a zero primary average (would only happen if every primary
+		// model had exactly 0% error, which is not a real scenario).
+		const r = pAvg > 0 ? bAvg / pAvg : null;
+		return { primaryAvg: pAvg, baselineAvg: bAvg, ratio: r };
+	}, [models]);
+
+	// Hide entirely when either group lacks a sufficient sample — the
+	// transition banner already explains why, and showing a partial number
+	// (e.g. baseline-only) would mislead.
+	if (primaryAvg === null || baselineAvg === null || ratio === null) return null;
+
+	return (
+		<Card className="mb-6 border-primary/20 bg-primary/5" data-testid="ensemble-comparison">
+			<CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex items-start gap-3">
+					<div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+						<Trophy className="size-5" />
+					</div>
+					<div>
+						<p className="text-sm font-medium text-foreground">Pretrained ensemble advantage</p>
+						<p className="text-xs text-muted-foreground mt-0.5">
+							Chronos (pretrained) vs statistical baselines — same verified predictions, lower
+							error.
+						</p>
+					</div>
+				</div>
+				<div className="flex items-center gap-6">
+					<div className="text-right">
+						<p className="text-[10px] uppercase tracking-wide text-muted-foreground">Chronos</p>
+						<p className="text-lg font-semibold text-success">
+							{formatPercentValue(primaryAvg, 1)}
+						</p>
+					</div>
+					<div className="text-right">
+						<p className="text-[10px] uppercase tracking-wide text-muted-foreground">Statistical</p>
+						<p className="text-lg font-semibold text-muted-foreground">
+							{formatPercentValue(baselineAvg, 1)}
+						</p>
+					</div>
+					<div className="text-right border-l border-border pl-6">
+						<p className="text-[10px] uppercase tracking-wide text-muted-foreground">Advantage</p>
+						<p className="text-lg font-bold text-success">{ratio.toFixed(1)}×</p>
+					</div>
+				</div>
+			</CardBody>
+		</Card>
+	);
+}
+
 const columns = [
 	{
 		key: "displayName",
@@ -159,7 +249,7 @@ const columns = [
 						{record.displayName}
 					</Link>
 					<Tag color={primary ? "primary" : "default"} className="w-fit text-[10px]">
-						{primary ? "Primary" : "Baseline"}
+						{primary ? "Pretrained" : "Statistical"}
 					</Tag>
 				</div>
 			);
@@ -290,6 +380,11 @@ export default function AccuracyPage() {
 			{/* Honesty callout — shown only while primary models lack enough
 			 * verified samples (auto-hides once the sample accumulates). */}
 			{!loading && <AccuracyTransitionBanner models={models} />}
+
+			{/* Headline pretrained-vs-statistical advantage card. Self-hides
+			 * (returns null) until both groups have enough verified samples,
+			 * so it never shows a partial/biased comparison. */}
+			{!loading && <EnsembleComparisonCard models={models} />}
 
 			<LoadingState loading={loading} skeletonType="table">
 				<Card className="mb-6">

@@ -113,30 +113,36 @@ describe("AccuracyPage — honesty rendering", () => {
 		});
 	});
 
-	describe("Primary / Baseline role tag", () => {
-		it("tags chronos models as Primary and statistical models as Baseline", () => {
+	describe("Pretrained / Statistical role tag", () => {
+		it("tags chronos models as Pretrained and statistical models as Statistical", () => {
+			// The baseline's verifiedCount (0) is under MIN_VERIFIED_SAMPLE, so
+			// the EnsembleComparisonCard self-hides — keeping the "Statistical"
+			// text unique to this table Tag (the card also has a "Statistical"
+			// label which would otherwise collide with this text-content scan).
 			mockReturnValue.models = [
 				makeModel({
 					modelId: "chronos_tiny",
 					displayName: "Chronos-T5-Tiny",
+					verifiedCount: 0,
 					isPrimary: true,
 				}),
 				makeModel({
 					modelId: "arima",
 					displayName: "ARIMA",
+					verifiedCount: 0,
 					isPrimary: false,
 				}),
 			];
 			const { container } = render(<AccuracyPage />);
-			// Both tags render; one Primary, one Baseline.
-			const primaryTags = Array.from(container.querySelectorAll("*")).filter(
-				(el) => el.textContent === "Primary",
+			// Both tags render; one Pretrained (chronos), one Statistical (baseline).
+			const pretrainedTags = Array.from(container.querySelectorAll("*")).filter(
+				(el) => el.textContent === "Pretrained",
 			);
-			const baselineTags = Array.from(container.querySelectorAll("*")).filter(
-				(el) => el.textContent === "Baseline",
+			const statisticalTags = Array.from(container.querySelectorAll("*")).filter(
+				(el) => el.textContent === "Statistical",
 			);
-			expect(primaryTags.length).toBe(1);
-			expect(baselineTags.length).toBe(1);
+			expect(pretrainedTags.length).toBe(1);
+			expect(statisticalTags.length).toBe(1);
 		});
 	});
 
@@ -177,6 +183,62 @@ describe("AccuracyPage — honesty rendering", () => {
 			];
 			render(<AccuracyPage />);
 			expect(screen.queryByText(/Accuracy sample accumulating/i)).not.toBeInTheDocument();
+		});
+	});
+
+	describe("EnsembleComparisonCard", () => {
+		it("shows the pretrained advantage when both groups have enough samples", () => {
+			// chronos 1.5% vs baseline 3.0% → ratio 2.0×. Both groups meet
+			// MIN_VERIFIED_SAMPLE so the comparison is honest.
+			mockReturnValue.models = [
+				makeModel({
+					modelId: "chronos_tiny",
+					displayName: "Chronos-T5-Tiny",
+					avgMape: 1.5,
+					verifiedCount: 845,
+					isPrimary: true,
+				}),
+				makeModel({
+					modelId: "arima",
+					displayName: "ARIMA",
+					avgMape: 3.0,
+					verifiedCount: 3287,
+					isPrimary: false,
+				}),
+			];
+			render(<AccuracyPage />);
+			// Scope assertions to the card via testid — the table also renders
+			// the model MAPE values and Tag labels, so unscoped getByText would
+			// match multiple elements.
+			const card = screen.getByTestId("ensemble-comparison");
+			expect(card).toHaveTextContent("Pretrained ensemble advantage");
+			expect(card).toHaveTextContent("1.5%");
+			expect(card).toHaveTextContent("3.0%");
+			expect(card).toHaveTextContent("2.0×");
+		});
+
+		it("hides when the primary group lacks enough verified samples", () => {
+			// chronos verifiedCount=1 (under MIN_VERIFIED_SAMPLE) — the comparison
+			// would pit an under-sampled placeholder against a real baseline, so
+			// the card must self-hide rather than show a misleading ratio.
+			mockReturnValue.models = [
+				makeModel({
+					modelId: "chronos_tiny",
+					displayName: "Chronos-T5-Tiny",
+					avgMape: 4.63,
+					verifiedCount: 1,
+					isPrimary: true,
+				}),
+				makeModel({
+					modelId: "arima",
+					displayName: "ARIMA",
+					avgMape: 3.0,
+					verifiedCount: 3287,
+					isPrimary: false,
+				}),
+			];
+			render(<AccuracyPage />);
+			expect(screen.queryByTestId("ensemble-comparison")).not.toBeInTheDocument();
 		});
 	});
 });
