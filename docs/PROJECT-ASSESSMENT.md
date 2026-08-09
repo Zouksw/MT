@@ -176,13 +176,15 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 4. **docs/metrics/models/security 路由**—— 运维面，spec 0 提及
 5. **dashboard/performance + dashboard/models 子页**—— spec 只映射 /dashboard 总览
 
-### 4.4 spec 规划但未实现（top 5）
+### 4.4 spec 规划但未实现（2026-08-09 复核：全部已完成，原清单过时）
 
-1. **AI 预测融入行情行**（§5.3 每商品行旁显 7 日预测）—— 仍藏在 /ai 子页
-2. **行情总览页重构**（进口均价/国产均价/AI 预测 tile）—— dashboard 仍是库存计数
-3. **WebSocket 实时**—— 仍轮询（spec M1 要求 30s SWR + WS）
-4. **IA 重组**（6 区域分组侧栏）—— 仍扁平路由
-5. **portfolio/trading 降级为关注列表**—— 仍保留原交易语义
+> 以下 5 条在初版评估时（2026-08-08）标记为"未实现"，但 round-82 深入核实发现**全部已实现**。spec §六任务表、§七数据层对照、§八路线图已同步更新。
+
+1. ~~**AI 预测融入行情行**~~ → ✅ 已实现（`beef/page.tsx` 7d Forecast 列 + `CutForecastCell` + `MarketForecastBoard`，预测从 /ai 子页融入行情主视图）
+2. ~~**行情总览页重构**~~ → ✅ 已实现（`dashboard/page.tsx:179-225` 三卡 hero：进口均价/国产均价/AI 预测，覆盖率已降级为后端字段非 hero）
+3. ~~**WebSocket 实时**~~ → ✅ 已实现（`app.ts` SocketIOServer + `anomalies.ts` emit + `alertNotifications.ts` WS 通道，非仅轮询）
+4. ~~**IA 重组**~~ → ✅ 已实现（`AppShell.tsx:38-83` 6 区 NAV_SECTIONS；仅资讯/分析顺序与 spec 略有出入，属产品微调）
+5. ~~**portfolio/trading 降级**~~ → ✅ 已降级（`/trading` = "Market Intelligence"，`/portfolio` 目录已移除，无交易撮合语义）
 
 ---
 
@@ -198,11 +200,11 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 | 44 页面 | 44 | ✅ |
 | 9 推理模型 | 9 | ✅ |
 
-### 5.2 其他文档漂移
+### 5.2 其他文档漂移（2026-08-09 复核）
 
-- **AUTOMATION-STATUS 头注**：写"最后更新 2026-08-01 round-25~29"，正文到 round-76（2026-08-07）—— 头注过期
-- **KNOWN-ISSUES 头注**：写"只保留开放事项"，但 9 条里 6 条标"已解决/已修"—— 保留为历史记录
-- **TECH-DEBT**：13 条，10 标 STALE 但仍列（TD-1 BullMQ / TD-4 cache.ts / TD-7 riskMetrics 等代码已删）
+- ~~**AUTOMATION-STATUS 头注**~~ → ✅ round-80 已修（头注现对齐正文最新轮次）
+- **KNOWN-ISSUES 头注**：写"只保留开放事项"，但 9 条里 6 条标"已解决/已修"—— 保留为历史记录（有意为之，记录潜伏 bug 防复发）
+- **TECH-DEBT**：13 条，10 标 STALE 但仍列（TD-1 BullMQ / TD-4 cache.ts / TD-7 riskMetrics 等代码已删）—— 保留为历史索引
 
 ---
 
@@ -214,21 +216,21 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 3. **运维全绿**：3 服务稳定，health endpoint 真
 4. **AGENTS.md 精准**：唯一可信的入口文档
 
-### 真实缺口（按 ROI × 可行性）
+### 真实缺口（按 ROI × 可行性，2026-08-09 复核）
 
 | # | 缺口 | 类型 | ROI | 依赖 | 建议动作 |
 |---|---|---|---|---|---|
-| 1 | **D1 数据源 key** | 数据 | 极高 | 需用户给 key | 激活→beef_cut_prices 解冻→真实牛肉价驱动 chronos |
-| 2 | **stl_forecaster 10.88 MAPE** | 质量 | 高 | 无 | 调查阻尼参数 / 数据窗口（3x 同类异常） |
-| 3 | **spec 过期**（资讯 ❌ / 5 模型） | 文档 | 中 | 无 | 更新 PRODUCT-SPEC 对齐实现 |
-| 4 | **predictionCache↔tradingSignals 循环** | 架构 | 中 | 无 | 抽 getAllModels 到独立常量模块 |
-| 5 | **portfolios/timeseries 无服务层** | 架构 | 中 | 无 | TD-6（已记录，§十.5 看价值） |
-| 6 | **beef_cut_prices 87k unverifiable** | 数据 | 中 | D1 先解 | 数据回流后 restoreVerifiable 自动恢复 |
+| 1 | **D1 数据源网络封锁** | 数据 | 极高 | 用户基础设施 | 3 key 已 set（MLA/USDA/OW），根因是源站网络封锁非缺 key。CSV 手动导入路径已验证可用（round-81）作为绕行 |
+| ~~2~~ | ~~stl_forecaster 10.88 MAPE~~ | ~~质量~~ | — | — | ✅ round-79 已修（signal-to-noise gate）；历史 3287 行 pre-fix 不可追溯，新预测自稀释 |
+| ~~3~~ | ~~spec 过期~~ | ~~文档~~ | — | — | ✅ round-82 已对齐（§六/§七/§八 + 本节 §4.4 同步更新） |
+| ~~4~~ | ~~predictionCache↔tradingSignals 循环~~ | ~~架构~~ | — | — | ✅ round-79 已修（抽 modelRegistry.ts 叶模块） |
+| 5 | **portfolios/timeseries 无服务层** | 架构 | 低 | 无 | TD-6（thin CRUD，删除测试判低 ROI，§十.5 不动） |
+| 6 | **beef_cut_prices 数据冻结** | 数据 | 高 | D1 先解 | verify loop 健康活跃（round-82 核实日志：每 6h verify 100-170 条）；数据回流后自动恢复 |
 
 ### 不建议做的（§十.5 / 低 ROI）
 - 不删 shallow 服务（marketService/watchlistService——§十.5 不删非己所造）
 - 不重构 ProfessionalChart 等大组件（图表长配置是框架特性）
-- 不强制全 IA 重组（spec 阶段 2，产品决策非工程）
+- 不删 R3 幽灵模型残留行（round-72 决策：非己所造数据先记录，实际不可达）
 
 ---
 

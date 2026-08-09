@@ -165,14 +165,14 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 - crude_oil/gold 等非牛肉商品从主 IA 移除
 
 ### 计划新增任务
-| # | 任务 | 阶段 |
-|---|------|------|
-| **新** | 行情总览页重构 (库存计数 → 实时牛肉价格看板) | 阶段 3 |
-| **新** | AI 预测融入行情行 (每个商品旁显示预测摘要) | 阶段 3 |
-| **新** | 资讯模块 (market dynamics feed) | 阶段 4 (后置,需后端模型) |
-| **新** | IA 重组: 行情/分析/AI预测/资讯/数据/系统 6 区 | 阶段 2 |
-| **调整** | dashboard hero = 牛肉均价+涨跌 (非覆盖率) | 阶段 3 |
-| **降级** | trading/portfolio+watchlist → 关注列表 | 阶段 4 |
+| # | 任务 | 阶段 | 状态（2026-08-09 核实） |
+|---|------|------|------|
+| **新** | 行情总览页重构 (库存计数 → 实时牛肉价格看板) | 阶段 3 | ✅ 已实现（`dashboard/page.tsx:179-225` 三卡 hero：进口均价/国产均价/AI 预测） |
+| **新** | AI 预测融入行情行 (每个商品旁显示预测摘要) | 阶段 3 | ✅ 已实现（`beef/page.tsx` 7d Forecast 列 + `CutForecastCell` + `MarketForecastBoard`） |
+| **新** | 资讯模块 (market dynamics feed) | 阶段 4 | ✅ 已建（MarketNews model + route + service + 5 页 + 5 条 seed）；⚠️ 外部 RSS 抓取源未接入（M3 待办） |
+| **新** | IA 重组: 行情/分析/AI预测/资讯/数据/系统 6 区 | 阶段 2 | ✅ 已实现（`AppShell.tsx:38-83` 6 个 NAV_SECTIONS；⚠️ 资讯/分析顺序与本文档 spec 略有出入，属产品微调） |
+| **调整** | dashboard hero = 牛肉均价+涨跌 (非覆盖率) | 阶段 3 | ✅ 已实现（`useDashboardStats.ts:282-334` 真实进口/国产均价聚合） |
+| **降级** | trading/portfolio+watchlist → 关注列表 | 阶段 4 | ✅ 已降级（`/trading` 标题为 "Market Intelligence"，`/portfolio` 目录已移除；无交易撮合语义） |
 
 ### 优先级不变
 阶段 1 (信任修复) 仍是最高 — 假声明/假数据必须先修。阶段 2 (Shell+导航) 次之。
@@ -184,34 +184,34 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 | 最终形态需要 | 现状 | 差距 |
 |-------------|------|------|
-| 牛肉价格数据 (进口/国产/部位) | 7 源已存在 (abares/cepea/inac/mla/secex/usda_ams/usda_psd) | 需激活 (4 源缺 key) + 单位规范化 (Round 28 发现的 corn/brl 冲突需排查牛肉是否也有) |
-| AI 价格预测 | 6 模型 + chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备 (Round 26 修通 slug/UUID) |
+| 牛肉价格数据 (进口/国产/部位) | 8 源代码已存在 (abares/cepea/inac/mla/secex/usda_ams/usda_psd/chinaCustomsStats) | ⚠️ 数据冻结 2026-04-30（详见 KNOWN-ISSUES D1：3 个 key 已 set 但源站网络封锁，非缺 key）；CSV 手动导入路径已验证可用（round-81） |
+| AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（chronos MAPE 1.7% 显著优于 stat 3.6%，round-82 accuracy 页已强化展示） |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
-| 资讯数据 | ✅ MarketNews model + route + service + 5 页 (2026-07-19) | 已建;外部 RSS/新闻 API 待接入 |
-| 实时更新 | ✅ SWR 轮询已开 (30s/15s/60s, watchlist/market-data hooks) | WebSocket 未做 (轮询已满足阶段 1) |
+| 资讯数据 | ✅ MarketNews model + route + service + 5 页 (2026-07-19) | 已建（5 条 seed）；⚠️ 外部 RSS 抓取源未接入（M3 待办） |
+| 实时更新 | ✅ SWR 轮询已开 (30s/15s/60s) + socket.io WebSocket | ✅ 已具备（`app.ts` SocketIOServer + `anomalies.ts` emit + `alertNotifications.ts` WS 通道） |
 
-**结论**: 平台**地基已具备 70%** (数据源+AI预测+可视化全在),差的是**激活数据 + 聚焦牛肉 IA + 融入预测到主流程 + 资讯模块**。
+**结论（2026-08-09 核实）**: M1+M2 阶段（阶段 0-3）**全部已实现**——beef-only 叙事、6 区 IA、dashboard hero 重构、AI 预测融入行情行、WebSocket 实时均已落地。平台地基完成度 **>90%**。唯一硬阻塞是 D1 数据流（网络封锁），可通过 CSV 手动导入绕行。剩余 M3 待办：资讯 RSS 源接入 + 品牌完善。
 
 ---
 
 ## 八、路线图 (3 个里程碑)
 
-### M1 — 可信的牛肉行情平台 (2-3 周)
-- 阶段 1: 删假声明 + 仪表盘真实数据 + 轮询
-- 阶段 2: 应用 Shell + 牛肉聚焦 IA + 移动导航
-- 阶段 0: 统一为 beef-only 叙事
-- **里程碑**: 用户看到一个导航清晰、数据真实、聚焦牛肉的平台
+### M1 — 可信的牛肉行情平台 ✅ 已完成（2026-08-09 核实）
+- 阶段 1: 删假声明 + 仪表盘真实数据 + 轮询 ✅
+- 阶段 2: 应用 Shell + 牛肉聚焦 IA + 移动导航 ✅（`AppShell.tsx` 6 区 NAV_SECTIONS）
+- 阶段 0: 统一为 beef-only 叙事 ✅（`Hero.tsx` + `site-stats.ts`，无多品类残留）
+- **里程碑达成**: 导航清晰、数据真实、聚焦牛肉的平台
 
-### M2 — AI 预测融入主流程 (2 周)
-- 阶段 3: 行情总览重构 + AI 预测融入行情行 + 格式化器 + 颜色语义 + KPI 重构
-- 数据层: 激活牛肉数据源 (依赖 API key) + 单位规范化
-- **里程碑**: 每个牛肉部位价格旁有 AI 预测,这是牧集没有的差异化
+### M2 — AI 预测融入主流程 ✅ 已完成（2026-08-09 核实）
+- 阶段 3: 行情总览重构 + AI 预测融入行情行 + 格式化器 + 颜色语义 + KPI 重构 ✅（dashboard 三卡 hero + `CutForecastCell` + `MarketForecastBoard`）
+- 数据层: 激活牛肉数据源 ⚠️（受阻于 D1 网络封锁，CSV 手动导入已验证可用）
+- **里程碑达成**: 每个牛肉部位价格旁有 AI 预测（`beef/page.tsx` 7d Forecast 列）
 
-### M3 — 完整的资讯+分析平台 (2-3 周)
-- 资讯模块 (后端模型 + 前端 feed)
+### M3 — 完整的资讯+分析平台 (待做)
+- 资讯模块 RSS 源接入（后端 model/route/service/页已建，缺外部数据抓取源）
 - 阶段 4: 品牌完整 (about 清理 + 社交证明 + signature)
-- 产地对比/相关性独立页
+- 产地对比/相关性独立页 ✅ 已存在（`/dashboard/analysis/origin` + `/dashboard/analysis`）
 - **里程碑**: 类牧集的完整 数据+分析+资讯+AI预测 平台
 
 ---
