@@ -63,6 +63,13 @@
 - OpenWeather (`api.openweathermap.org`)：**000/301**
 - 结论：D1 根因从"缺 key"升级为"**网络出口限制**"（与 registry.npmjs.org 同模式）。需代理/VPN/镜像才能连通，超出代码范围。beef_cut_prices 仍冻结 2026-04-30，87k 预测 unverifiable 均因此。用户 round-80 决策："暂不动数据，做工程债"。
 
+**round-81（2026-08-09，CSV 手动导入路径已 live 验证）**：用户选"CSV 手动导入路径"。**整条流水线已端到端建好**（前端 `/beef/import` 页 + `POST /api/beef/import` ADMIN 端点 + `beefImport.ts` 服务 + 模板端点），补了 7 集成测试（commit ccf31be，backend 658|1→**665|1**）。live 验证端到端通：
+- 导入 3 行（AU-847/BRISKET_NAVEL + BR-SIF2057/STRIPLOIN + AR-1920/KNUCKLE，今日日期）→ `imported: 3, errors: []` ✓
+- `GET /api/beef/prices` → 3 行 freshness=**"live"**（0 天，非 bridge/seed）✓
+- `GET /api/beef/forecasts/BRISKET_NAVEL` → `forecastable: true` + direction/confidence 返回 ✓（预测门通过，fresh 数据解锁 per-cut AI 预测）
+- 验证后清理 demo 行（`DELETE WHERE source LIKE 'manual:%'`），DB 无污染。
+- **结论**：CSV 导入是 D1 网络封锁下的可用数据注入路径。操作员可通过 `/beef/import` 页定期上传牛肉价格 CSV（模板：`GET /api/beef/import/template`），数据流→新鲜度→预测→MAPE 环全通。+7 测试守护此路径。
+
 ---
 
 ### D2 — MAPE 验证环断裂（数据层后果）
