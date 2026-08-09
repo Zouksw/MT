@@ -14,6 +14,7 @@ import {
 	Warehouse,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -21,9 +22,9 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, type TrendIndicator } from "@/components/ui/StatCard";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { formatCompact, formatPercent, formatPrice } from "@/lib/format";
+import { formatCompact, formatPrice } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
 import { getAuthToken, getCachedUser } from "@/utils/auth";
 
@@ -41,6 +42,19 @@ const AlertDistributionChart = dynamic(
 		})),
 	{ loading: () => <div className="bg-muted animate-pulse rounded-lg" style={{ height: 300 }} /> },
 );
+
+// Module-level icon instances — StatCard is React.memo, so passing inline
+// JSX (<Globe className="size-5" />) on every render creates a new React
+// element reference and defeats the shallow comparison, causing all 6 cards
+// to re-render (and re-run useAnimatedCounter) on every parent render. These
+// icons are static, so hoisting them to module scope keeps their reference
+// stable across renders.
+const IMPORTED_ICON = <Globe className="size-5" />;
+const DOMESTIC_ICON = <Beef className="size-5" />;
+const FACTORY_ICON = <Warehouse className="size-5" />;
+const RECORDS_ICON = <TrendingUp className="size-5" />;
+const DATASET_ICON = <Database className="size-5" />;
+const ALERT_ICON = <Bell className="size-5" />;
 
 /**
  * AI 7-day prediction hero card (PRODUCT-SPEC §5.1).
@@ -125,6 +139,31 @@ export default function DashboardPage() {
 
 	const beef = stats?.beef;
 
+	// Memoize the trend objects passed to StatCard — they depend only on the
+	// beef trend % values, but constructing them inline in JSX creates a new
+	// object each render and defeats StatCard's React.memo shallow compare.
+	const importedTrend = useMemo<TrendIndicator | undefined>(
+		() =>
+			beef?.importedTrendPct == null
+				? undefined
+				: { value: Math.abs(beef.importedTrendPct), isPositive: beef.importedTrendPct >= 0 },
+		[beef?.importedTrendPct],
+	);
+	const domesticTrend = useMemo<TrendIndicator | undefined>(
+		() =>
+			beef?.domesticTrendPct == null
+				? undefined
+				: { value: Math.abs(beef.domesticTrendPct), isPositive: beef.domesticTrendPct >= 0 },
+		[beef?.domesticTrendPct],
+	);
+	const alertsTrend = useMemo<TrendIndicator | undefined>(
+		() =>
+			stats?.alerts?.trend == null
+				? undefined
+				: { value: Math.abs(stats.alerts.trend), isPositive: stats.alerts.trend < 0 },
+		[stats?.alerts?.trend],
+	);
+
 	return (
 		<PageContainer>
 			{error && <ErrorDisplay error={error} retry={manualRetry} context="Dashboard" />}
@@ -190,36 +229,22 @@ export default function DashboardPage() {
 							title="进口均价 (Imported)"
 							value={formatPrice(beef?.importedAvg ?? null, false)}
 							suffix="/kg"
-							icon={<Globe className="size-5" />}
+							icon={IMPORTED_ICON}
 							variant="primary"
 							loading={loading}
 							// Day-over-day % change in the imported average (round-57).
 							// Mirrors the spec §5.1 mockup's ↓1.2%/↑0.5% trend badge. Null
 							// (no prior day) hides the badge — honest absence, not a fake 0.
-							trend={
-								beef?.importedTrendPct == null
-									? undefined
-									: {
-											value: Math.abs(beef.importedTrendPct),
-											isPositive: beef.importedTrendPct >= 0,
-										}
-							}
+							trend={importedTrend}
 						/>
 						<StatCard
 							title="国产均价 (Domestic)"
 							value={formatPrice(beef?.domesticAvg ?? null, false)}
 							suffix="/kg"
-							icon={<Beef className="size-5" />}
+							icon={DOMESTIC_ICON}
 							variant="info"
 							loading={loading}
-							trend={
-								beef?.domesticTrendPct == null
-									? undefined
-									: {
-											value: Math.abs(beef.domesticTrendPct),
-											isPositive: beef.domesticTrendPct >= 0,
-										}
-							}
+							trend={domesticTrend}
 						/>
 						<AIPredictionCard summary={stats?.aiSummary ?? null} loading={loading} />
 					</div>
@@ -333,33 +358,29 @@ export default function DashboardPage() {
 						<StatCard
 							title="Factories"
 							value={stats?.beef?.factories ?? 0}
-							icon={<Warehouse className="size-5" />}
+							icon={FACTORY_ICON}
 							variant="info"
 							loading={loading}
 						/>
 						<StatCard
 							title="Price Records"
 							value={formatCompact(stats?.beef?.prices ?? 0)}
-							icon={<TrendingUp className="size-5" />}
+							icon={RECORDS_ICON}
 							variant="primary"
 							loading={loading}
 						/>
 						<StatCard
 							title="Datasets"
 							value={stats?.datasets?.total ?? 0}
-							icon={<Database className="size-5" />}
+							icon={DATASET_ICON}
 							variant="info"
 							loading={loading}
 						/>
 						<StatCard
 							title="Alerts"
 							value={stats?.alerts?.total || 0}
-							icon={<Bell className="size-5" />}
-							trend={
-								stats?.alerts?.trend
-									? { value: Math.abs(stats.alerts.trend), isPositive: stats.alerts.trend < 0 }
-									: undefined
-							}
+							icon={ALERT_ICON}
+							trend={alertsTrend}
 							variant={
 								((stats?.alerts?.total || 0) > 0 ? "error" : "default") as "error" | "default"
 							}

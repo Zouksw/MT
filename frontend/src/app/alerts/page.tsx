@@ -184,10 +184,13 @@ export default function AlertList() {
 	const totalPages = Math.ceil(filteredAlerts.length / pageSize);
 	const paginatedAlerts = filteredAlerts.slice((page - 1) * pageSize, page * pageSize);
 
-	// Reset page when filters or tab change
+	// Reset page when filters or tab change — the dependency array must include
+	// activeTab + filters, otherwise switching tabs leaves the user on a page
+	// number that may not exist in the new (shorter) filtered set.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: filters drives filteredAlerts (L176) which determines valid page range; the effect body only calls setPage, but the reset must fire on filter change
 	useEffect(() => {
 		setPage(1);
-	}, []);
+	}, [activeTab, filters]);
 
 	const columns: Column<AlertItem>[] = [
 		{

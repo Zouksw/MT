@@ -55,15 +55,20 @@ function useAnimatedCounter(target: number, duration = 800) {
 		const diff = target - start;
 		if (diff === 0) return;
 		const startTime = performance.now();
+		let rafId: number;
 		function step(now: number) {
 			const elapsed = now - startTime;
 			const progress = Math.min(elapsed / duration, 1);
 			const eased = 1 - (1 - progress) ** 3;
 			setDisplay(Math.round(start + diff * eased));
-			if (progress < 1) requestAnimationFrame(step);
+			if (progress < 1) rafId = requestAnimationFrame(step);
 			else prevTarget.current = target;
 		}
-		requestAnimationFrame(step);
+		rafId = requestAnimationFrame(step);
+		// Cancel the in-flight rAF loop on unmount or target change so it
+		// doesn't keep calling setDisplay on an unmounted/re-rendered component
+		// (setState-on-unmounted memory leak + wasted work).
+		return () => cancelAnimationFrame(rafId);
 	}, [target, duration, rafNative]);
 
 	return display;
