@@ -354,6 +354,94 @@ describe("MAPE Tracking (real DB)", () => {
 			}
 		});
 
+		// REGRESSION (round-86): cut MAPE actuals must exclude bridge:commodity:*
+		// proxy rows. The training side (getBeefCutSeries) defaults to
+		// includeBridge=false; without the matching read-side filter, a cut
+		// forecast trained on real scraper rows got "verified" against bridge
+		// proxies (a carcass aggregate copied in by beefPriceBridge) — the cut
+		// analog of the brl_usd authoritative-source bug.
+		it("excludes bridge: source rows when reading cut actuals", async () => {
+			const prisma = ctx.prisma;
+			const suffix = `${ctx.prefix}-cutbridge`;
+
+			const factory = await prisma.factory.create({
+				data: { code: `FBG-${suffix}`, name: `Test ${suffix}`, country: "BR" },
+			});
+			const cutCode = `BRGECUT_${suffix.toUpperCase()}`;
+			try {
+				await prisma.beefCutTaxonomy.upsert({
+					where: { cutCode },
+					update: {},
+					create: { cutCode, nameEn: `Bridge Cut ${suffix}`, primal: "Test" },
+				});
+
+				const predictedAt = new Date(Date.now() - 365 * 86400000);
+				const cutKey = `cut:${factory.id}:${cutCode}`;
+				// Prediction of a flat 10.0 across horizon 3.
+				const log = await prisma.predictionLog.create({
+					data: {
+						modelId: "chronos_tiny",
+						commodityId: cutKey,
+						timeseriesPath: cutKey,
+						horizon: 3,
+						predictedValues: [10.0, 10.0, 10.0],
+						status: "completed",
+						predictedAt,
+					},
+				});
+
+				// Real scraper rows at 10.5 (5% off prediction → MAPE 5%).
+				for (let i = 0; i < 3; i++) {
+					await prisma.beefCutPrice.create({
+						data: {
+							factoryId: factory.id,
+							cutCode,
+							price: 10.5,
+							source: `test-real-${suffix}`,
+							date: new Date(predictedAt.getTime() + (i + 1) * 86400000),
+						},
+					});
+				}
+				// Bridge proxy rows at 50.0 (a carcass aggregate, 400% off). If
+				// these leak into actuals, MAPE would be ~400% instead of ~5%.
+				for (let i = 0; i < 3; i++) {
+					await prisma.beefCutPrice.create({
+						data: {
+							factoryId: factory.id,
+							cutCode,
+							price: 50.0,
+							source: `bridge:commodity:fake-${suffix}`,
+							date: new Date(predictedAt.getTime() + (i + 1) * 86400000),
+						},
+					});
+				}
+
+				await verifyDuePredictions();
+
+				const verified = await prisma.predictionLog.findUnique({
+					where: { id: log.id },
+					select: { status: true, mape: true, actualValues: true },
+				});
+				expect(verified?.status).toBe("verified");
+				// Actuals must be the 10.5 real rows, not the 50.0 bridge proxies.
+				expect(verified?.actualValues).toEqual([10.5, 10.5, 10.5]);
+				// MAPE ≈ 5% (|10.5-10.0|/10.5 * 100), NOT ~400% from bridge rows.
+				expect(verified?.mape?.toNumber()).toBeLessThan(10);
+			} finally {
+				await prisma.beefCutPrice.deleteMany({
+					where: { source: { startsWith: `test-real-${suffix}` } },
+				});
+				await prisma.beefCutPrice.deleteMany({
+					where: { source: `bridge:commodity:fake-${suffix}` },
+				});
+				await prisma.predictionLog.deleteMany({
+					where: { commodityId: { startsWith: `cut:${factory.id}:` } },
+				});
+				await prisma.beefCutTaxonomy.deleteMany({ where: { cutCode } });
+				await prisma.factory.deleteMany({ where: { code: `FBG-${suffix}` } });
+			}
+		});
+
 		// ─── Shared helpers for the conflict-prediction tests below ────────────
 		// Both invalidatePollutedPredictions and restorePostFixConflictPredictions
 		// seed rows against the seeded brl_usd commodity (a known conflict slug)

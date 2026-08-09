@@ -82,30 +82,25 @@ describe("Models Routes (Integration)", () => {
 		});
 	});
 
-	describe("POST /api/models/train (auth + AI access required)", () => {
+	describe("POST /api/models/train (deprecated → 410 Gone)", () => {
 		it("rejects unauthenticated requests", async () => {
 			const res = await request(app).post("/api/models/train").send({});
 			expect(res.status).toBe(401);
 		});
 
-		it("returns 400 for missing required fields", async () => {
-			// trainModelSchema requires timeseriesId + algorithm; an empty
-			// body must be rejected with 400, not 500.
-			const res = await request(app).post("/api/models/train").set(authHeaders(token)).send({});
-
-			expect(res.status).toBe(400);
-		});
-
-		it("returns 404 for a non-existent timeseries", async () => {
-			// Valid UUID format (passes zod .uuid() validation) but doesn't
-			// exist in the DB → the route's findUnique check returns 404,
-			// not 500. Using a well-known non-existent UUID.
+		it("returns 410 Gone for authenticated AI-access callers", async () => {
+			// The train endpoint was a shell feature: it persisted a
+			// "trained+deployed" model record without invoking any training.
+			// Retired to 410 (matching the sibling /api/inference/models/train
+			// retired in round-20). Auth + AI access gates still run first.
 			const res = await request(app).post("/api/models/train").set(authHeaders(token)).send({
 				timeseriesId: "00000000-0000-0000-0000-000000000000",
 				algorithm: "ARIMA",
 			});
 
-			expect(res.status).toBe(404);
+			expect(res.status).toBe(410);
+			expect(res.body.success).toBe(false);
+			expect(res.body.error.code).toBe("GONE");
 		});
 	});
 });

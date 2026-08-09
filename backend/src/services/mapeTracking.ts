@@ -562,11 +562,17 @@ export async function verifyDuePredictions(): Promise<number> {
 					skippedNoActuals++;
 					continue;
 				}
+				// Source filter mirrors the training side (getBeefCutSeries defaults
+				// to includeBridge=false). Without this, a cut forecast trained on
+				// real scraper rows gets "verified" against bridge:commodity:* proxy
+				// rows (a carcass aggregate copied in by beefPriceBridge) — the cut
+				// analog of the brl_usd authoritative-source bug (docs/KNOWN-ISSUES R2).
 				const cutActuals = await prisma.beefCutPrice.findMany({
 					where: {
 						factoryId: parsed.factoryId,
 						cutCode: parsed.cutCode,
 						date: { gt: log.predictedAt },
+						source: { not: { startsWith: "bridge:" } },
 					},
 					orderBy: { date: "asc" },
 					take: log.horizon,

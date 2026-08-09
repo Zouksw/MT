@@ -6,10 +6,9 @@ import { checkAIAccess } from "@/middleware/aiAccess";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { getPagination, limitSchema } from "@/schemas/common";
-import { modelsQuerySchema, predictSchema, trainModelSchema } from "@/schemas/models";
+import { modelsQuerySchema, predictSchema } from "@/schemas/models";
 import {
 	createForecasts,
-	createModelRecord,
 	deleteForecasts,
 	deleteModel,
 	getModel,
@@ -109,98 +108,43 @@ router.get(
  * /api/models/train:
  *   post:
  *     tags: [Models]
- *     summary: Train a new forecasting model
- *     description: Trains a new forecasting model using inference service. Deactivates existing active models for the same time series.
+ *     summary: Train a new forecasting model (deprecated)
+ *     description: >
+ *       Deprecated. Returns 410 Gone. The inference architecture serves
+ *       pretrained foundation models (Chronos) and ready statistical models —
+ *       none require per-request training. Previously this endpoint persisted a
+ *       "trained+deployed" model record without invoking any training, which
+ *       fabricated the appearance of a trained model (AGENTS §十.3). Use
+ *       POST /api/inference/predict to run a forecast instead.
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [timeseriesId, algorithm]
- *             properties:
- *               timeseriesId:
- *                 type: string
- *                 description: Time series ID to train on
- *               algorithm:
- *                 type: string
- *                 enum: [ARIMA, LSTM, PROPHET, EXPONENTIAL_SMOOTHING, LINEAR_REGRESSION]
- *                 example: ARIMA
- *               hyperparameters:
- *                 type: object
- *                 description: Algorithm-specific hyperparameters
- *               trainingStart:
- *                 type: string
- *                 format: date-time
- *               trainingEnd:
- *                 type: string
- *                 format: date-time
  *     responses:
- *       201:
- *         description: Model trained successfully
- *       400:
- *         description: inference service training failed
  *       401:
  *         description: Not authenticated
- *       404:
- *         description: Time series not found
+ *       403:
+ *         description: No AI access (VIEWER tier)
+ *       410:
+ *         description: Endpoint gone — training is not supported
  */
-// POST /api/models/train - Train a new forecasting model using inference service
+// POST /api/models/train — 410 Gone.
+// The previous handler inserted a ForecastingModel row marked isActive:true /
+// deployedAt:now / trainingMetrics without ever calling the inference service
+// to train anything (the client has no train function). That fabricated a
+// "trained+deployed" record — the same dishonesty that saw the sibling route
+// /api/inference/models/train retired to 410 in round-20. Use predict instead.
 router.post(
 	"/train",
 	authenticate,
 	checkAIAccess,
-	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const userId = req.userId;
-		const validatedData = trainModelSchema.parse(req.body);
-
-		// Check if timeseries exists
-		const timeseries = await prisma.timeseries.findUnique({
-			where: { id: validatedData.timeseriesId },
-			include: { dataset: true },
-		});
-		if (!timeseries) throw new NotFoundError("Timeseries");
-
-		// Get training data count for metrics
-		const dataPointsCount = await prisma.datapoint.count({
-			where: {
-				timeseriesId: validatedData.timeseriesId,
-				...(validatedData.trainingStart && {
-					timestamp: { gte: new Date(validatedData.trainingStart) },
-				}),
-				...(validatedData.trainingEnd && {
-					timestamp: { lte: new Date(validatedData.trainingEnd) },
-				}),
+	asyncHandler(async (_req: AuthenticatedRequest, res) => {
+		res.status(410).json({
+			success: false,
+			error: {
+				code: "GONE",
+				message:
+					"Model training is not supported. The inference architecture serves pretrained foundation models (Chronos) and ready statistical models — none require training. Use POST /api/inference/predict to run a forecast.",
 			},
 		});
-
-		// Create model record (deactivates prior active models internally)
-		const model = await createModelRecord({
-			timeseriesId: validatedData.timeseriesId,
-			trainedById: userId,
-			algorithm: validatedData.algorithm,
-			hyperparameters: (validatedData.hyperparameters || {}) as Record<
-				string,
-				string | number | boolean
-			>,
-			trainingSamples: dataPointsCount,
-		});
-
-		// Emit WebSocket event
-		const io = req.app.get("io");
-		if (io) {
-			try {
-				io.to(`timeseries:${validatedData.timeseriesId}`).emit("model:trained", model);
-			} catch (wsError) {
-				logger.warn("WebSocket emit failed for model:trained event", {
-					timeseriesId: validatedData.timeseriesId,
-					error: wsError instanceof Error ? wsError.message : "Unknown error",
-				});
-			}
-		}
-		return success(res, { model }, 201);
 	}),
 );
 
