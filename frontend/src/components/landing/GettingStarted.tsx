@@ -47,13 +47,13 @@ const steps = [
 		number: 3,
 		title: "Set Up AI Signals",
 		description:
-			"Enable ARIMA, Holt-Winters, STL — see consensus signals with confidence intervals and MAPE scores.",
+			"View Chronos consensus signals with confidence intervals and MAPE accuracy scores.",
 		preview: (
 			<div className="mt-3 space-y-2">
 				{[
-					{ model: "ARIMA", signal: "Buy", conf: 84 },
-					{ model: "HoltWinters", signal: "Buy", conf: 79 },
-					{ model: "STL", signal: "Hold", conf: 62 },
+					{ model: "Chronos-Tiny", signal: "Buy", conf: 84 },
+					{ model: "Chronos-Mini", signal: "Buy", conf: 79 },
+					{ model: "Chronos-Base", signal: "Buy", conf: 88 },
 				].map((s) => (
 					<div
 						key={s.model}

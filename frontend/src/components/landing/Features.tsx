@@ -14,8 +14,8 @@ const features = [
 	},
 	{
 		title: "AI Price Forecasting",
-		description: `${SITE_STATS.aiModels} independent models — ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive — each producing price forecasts with confidence intervals and MAPE verification.`,
-		details: [`${SITE_STATS.aiModels} AI models`, "Confidence intervals", "MAPE tracking"],
+		description: `${SITE_STATS.aiModels} pretrained Chronos models form the consensus ensemble, with statistical baselines (ARIMA, STL, Holt-Winters) reported alongside for comparison. Every forecast carries confidence intervals and is auto-verified via MAPE accuracy tracking.`,
+		details: [`${SITE_STATS.aiModels} Chronos models`, "Statistical baselines", "MAPE tracking"],
 		span: "",
 		visual: null,
 		goldAccent: true,

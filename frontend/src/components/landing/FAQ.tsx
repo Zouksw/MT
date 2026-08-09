@@ -18,7 +18,7 @@ const faqs: FAQItem[] = [
 	},
 	{
 		question: "How does the AI price forecasting work?",
-		answer: `${SITE_STATS.aiModels} statistical models run independently on each beef commodity: ARIMA, Holt-Winters, Exponential Smoothing, Naive, and STL decomposition. Each produces a price forecast, a directional signal (up/down/stable), and a confidence score. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.`,
+		answer: `${SITE_STATS.aiModels} pretrained Chronos models form the consensus ensemble — they vote on the directional signal (up/down/stable) with a confidence score. Statistical baselines (ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive) run alongside for comparison so you can see the pretrained advantage. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.`,
 	},
 	{
 		question: "What beef cuts are covered?",

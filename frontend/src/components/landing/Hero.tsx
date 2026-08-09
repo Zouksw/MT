@@ -108,7 +108,7 @@ const features = [
 	{
 		title: `${SITE_STATS.aiModels} AI Price Models`,
 		description:
-			"ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive — each producing independent price forecasts with confidence intervals",
+			"Pretrained Chronos ensemble with statistical baselines (ARIMA, STL, Holt-Winters) for comparison — each forecast carries confidence intervals and MAPE accuracy tracking",
 		span: "",
 	},
 	{
