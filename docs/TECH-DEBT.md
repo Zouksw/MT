@@ -86,6 +86,12 @@
 - **仍存**：**46 处裸 `fetch()`**（跨 26 文件，如 `useTradingData.ts` 7 处、`settings/data-sources/page.tsx` 6 处）vs 10 SWR / 8 `useRetryableFetch`。标准已立（`useRetryableFetch`）但迁移未完。
 - **`useRetryableFetch`** 是推荐的统一抽象（8 consumer：beef 页/hook + dashboard + MarketForecastBoard），是收敛方向。
 
+**复核（2026-08-10，round-94 实测修正）**：
+- **axios 子条 RESOLVED** ✅（见 round-68 补充），`package.json` 0 axios 引用。
+- **裸 `fetch()` 实测 39 处**（非先前文档的 46；`grep -rn "await fetch(" frontend/src/ | grep -v __tests__`）。主要在：`useTradingData.ts`(6)、`dashboard/performance`(4)、`settings/data-sources`(3)。其中多数是对自研 API 的一次性 callback fetch（非 SWR 缓存读），迁移到 `swrFetcher`/`useRetryableFetch` 是重构而非机械替换——**列为低优先，不阻塞价值链**。
+- **swrFetcher 已立**（round-91，`lib/swrFetcher.ts`）：统一 `lib/api.ts` + `lib/market-data.ts` 两个并行 SWR fetcher。后续收敛前端 39 处的方向是 swrFetcher，但需逐页评估（部分是 POST/mutation，不适合 SWR）。
+- **注意区分**：backend 28 处 `await fetch()` 中 25 处是 19 个 scraper 的**合法外部 HTTP 出站**（worldBank/mla/fao/cme 等），不是 API client 一致性问题，不应迁移。
+
 **round-68 补充（2026-08-03，axios 单点根治）**：`lib/market-data.ts` 的 fetcher 从 axios 迁到原生 fetch（对齐 `utils/auth.ts:authFetch` 范式：`credentials:"include"` + bearer header + non-2xx throw 保持 SWR 错词语义）。`package.json` 删 axios 依赖 + `pnpm-lock.yaml` 同步（-axios + 2 transitive）。commit 12aca10。LoginForm.test.tsx 的 vestigial `jest.mock("axios")` 一并删（axios 不再在 module graph）。**axios 子条 RESOLVED**——node_modules + lockfile 0 引用，frontend tsc clean + 278 tests 不变，live 渲染 HTTP 200。裸 `fetch()` 收敛到 `useRetryableFetch` 仍开（46 处，跨文件大改动，单列）。
 
 ### TD-9 — 死 ui 组件 + shadcn 重复对
