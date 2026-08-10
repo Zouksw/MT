@@ -115,6 +115,54 @@ describe("MAPE Tracking (real DB)", () => {
 			expect(result).not.toBeNull();
 			expect(result?.mape).toBeGreaterThan(0);
 		});
+
+		// REGRESSION (round-93): verifyPrediction must NOT resurrect a row that a
+		// concurrent mark/invalidate pass already excluded (stale/unverifiable).
+		// Before the transition guard, verifyPrediction did an unconditional
+		// status→verified write — a staggered markUnverifiable cycle could flip a
+		// frozen commodity's row completed→unverifiable WHILE verifyDuePredictions
+		// was still iterating its previously-read batch, and verifyPrediction would
+		// then resurrect it to verified, defeating the exclusion. The guard skips
+		// verification for any row not in {completed, verified}.
+		it("does not resurrect a stale row to verified (transition guard)", async () => {
+			const id = await logPrediction({
+				modelId: "test-model-guard",
+				commodityId: "test-commodity-guard",
+				timeseriesPath: "root.test.guard.price",
+				horizon: 3,
+				predictedValues: [100, 110, 120],
+			});
+			// Simulate a concurrent invalidate pass marking it stale.
+			await ctx.prisma.predictionLog.update({
+				where: { id },
+				data: { status: "stale" },
+			});
+			// verifyPrediction must refuse (returns null) and leave it stale.
+			const result = await verifyPrediction(id, [105, 112, 122]);
+			expect(result).toBeNull();
+			const row = await ctx.prisma.predictionLog.findUnique({ where: { id } });
+			expect(row?.status).toBe("stale");
+			await ctx.prisma.predictionLog.delete({ where: { id } }).catch(() => {});
+		});
+
+		it("does not resurrect an unverifiable row to verified (transition guard)", async () => {
+			const id = await logPrediction({
+				modelId: "test-model-guard2",
+				commodityId: "test-commodity-guard2",
+				timeseriesPath: "root.test.guard2.price",
+				horizon: 3,
+				predictedValues: [100, 110, 120],
+			});
+			await ctx.prisma.predictionLog.update({
+				where: { id },
+				data: { status: "unverifiable" },
+			});
+			const result = await verifyPrediction(id, [105, 112, 122]);
+			expect(result).toBeNull();
+			const row = await ctx.prisma.predictionLog.findUnique({ where: { id } });
+			expect(row?.status).toBe("unverifiable");
+			await ctx.prisma.predictionLog.delete({ where: { id } }).catch(() => {});
+		});
 	});
 
 	describe("getModelAccuracy", () => {

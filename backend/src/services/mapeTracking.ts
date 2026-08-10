@@ -12,7 +12,8 @@ import { prisma } from "@/lib";
 import { getAuthoritativeSource } from "@/services/inference/authoritativeSources";
 import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
 import { STALE_WINDOW_DAYS } from "./beefFreshness";
-import { PredictionStatus as PS } from "./predictionLifecycle";
+import type { PredictionStatusValue } from "./predictionLifecycle";
+import { canVerify, PredictionStatus as PS } from "./predictionLifecycle";
 
 export interface LogPredictionParams {
 	modelId: string;
@@ -60,6 +61,14 @@ export async function verifyPrediction(
 	const log = await prisma.predictionLog.findUnique({ where: { id: logId } });
 	if (!log) return null;
 
+	// Transition guard (round-93): only completed/verified rows may receive a
+	// verification write. Without this, an overlapping markUnverifiable/
+	// invalidatePolluted cycle (which runs on a staggered timer) could flip a
+	// row completed→unverifiable AFTER this batch was read but BEFORE we reach
+	// it — and this function would resurrect it to verified, defeating the
+	// exclusion. See predictionLifecycle.ts canVerify.
+	if (!canVerify(log.status as PredictionStatusValue | null)) return null;
+
 	const predicted = log.predictedValues as number[];
 	if (!Array.isArray(predicted) || predicted.length === 0) return null;
 
@@ -83,8 +92,13 @@ export async function verifyPrediction(
 
 	const mape = (sumAbsPctError / validCount) * 100;
 
-	await prisma.predictionLog.update({
-		where: { id: logId },
+	// Atomic transition: updateMany with a status predicate in the WHERE so the
+	// check-then-write is race-free. If a concurrent mark pass flipped this row
+	// to stale/unverifiable between the findUnique above and now, this update
+	// matches 0 rows — the row stays excluded as intended. (update, not
+	// updateMany, can't express a compound where on a unique key + status.)
+	const result = await prisma.predictionLog.updateMany({
+		where: { id: logId, status: { in: [PS.COMPLETED, PS.VERIFIED] } },
 		data: {
 			actualValues: actualValues,
 			mape: Math.round(mape * 10000) / 10000,
@@ -92,6 +106,8 @@ export async function verifyPrediction(
 			verifiedAt: new Date(),
 		},
 	});
+
+	if (result.count === 0) return null;
 
 	return { mape: Math.round(mape * 100) / 100 };
 }
@@ -344,6 +360,12 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 	// the due cutoff (Pass A's complement). The horizon check is irrelevant
 	// here — we care only that the source is already dead, so even a 1-day-
 	// old prediction on a 95-day-dead commodity should be drained.
+	// Pick the NEWEST completed prediction per commodity. distinct collapses
+	// to one row per commodityId; orderBy predictedAt desc makes that row the
+	// latest. Without the orderBy, Postgres returned an arbitrary row per
+	// commodity, making the freeze test (latestPrice.date <= row.predictedAt)
+	// nondeterministic at the boundary — a borderline-dead source could be
+	// marked unverifiable or left completed depending on row ordering.
 	const laggingCommodities = await prisma.predictionLog.findMany({
 		where: {
 			status: PS.COMPLETED,
@@ -352,6 +374,7 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 		},
 		select: { commodityId: true, predictedAt: true },
 		distinct: ["commodityId"],
+		orderBy: [{ commodityId: "asc" }, { predictedAt: "desc" }],
 	});
 
 	if (laggingCommodities.length === 0) return 0;

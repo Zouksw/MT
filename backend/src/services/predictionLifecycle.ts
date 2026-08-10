@@ -56,3 +56,31 @@ export const TERMINAL_STATUSES: readonly PredictionStatusValue[] = [
 export const ACCURACY_ELIGIBLE_STATUSES: readonly PredictionStatusValue[] = [
 	PredictionStatus.VERIFIED,
 ] as const;
+
+/**
+ * Transition rules — which statuses may move TO which. This is the guard the
+ * state-machine mutators consult BEFORE writing, so an overlapping timer cycle
+ * can't resurrect a row a sibling pass just excluded.
+ *
+ *   completed → verified          (verifyPrediction — the happy path)
+ *   completed → stale             (invalidatePollutedPredictions)
+ *   completed → unverifiable      (markUnverifiable / markLaggingFrozen)
+ *   stale → completed             (restorePostFixConflictPredictions)
+ *   unverifiable → completed      (restoreVerifiablePredictions)
+ *
+ * A row already in a terminal exclusion status (stale/unverifiable) must NOT
+ * be flipped to verified by a concurrent verifyDuePredictions cycle that read
+ * the batch before the mark pass ran. `canVerify` encodes that: only
+ * completed/verified rows are eligible to receive a verification write.
+ */
+
+/** Statuses from which a →verified transition is allowed. */
+const VERIFYABLE_FROM: ReadonlySet<PredictionStatusValue> = new Set([
+	PredictionStatus.COMPLETED,
+	PredictionStatus.VERIFIED, // idempotent re-verify
+]);
+
+/** May this row receive a verification (status→verified) write? */
+export function canVerify(status: PredictionStatusValue | null | undefined): boolean {
+	return !!status && VERIFYABLE_FROM.has(status);
+}
