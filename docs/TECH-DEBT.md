@@ -212,6 +212,13 @@
 **round-53/54 已做**：vitest 2→3（消除 critical + 2 high）、tsx 4.21→4.23、vite override ^5.4.21（修复 vitest 3 拉到 ESM-only vite 7 的 ERR_REQUIRE_ESM）、marketNews orphan 测试隔离修复、**移除全局 minimatch/brace-expansion override**（round-54，让 glob@10/11 拿到正确的 minimatch@9/10）。
 **后续（需环境前置）**：Node 20 升级 → vitest 4 → 清除 vite high（唯一真实剩余 high）。
 
+**已解决（round-90，2026-08-10）**：zoom-out 审计发现 Node 已是 **v20.20.2**（非 18.20.8），vitest 4 前置条件满足。
+- vitest 3.2.7 → **4.1.10**，@vitest/coverage-v8 3.2.7 → **4.1.10**，vite 5.4.21 → **6.4.3**（加为直接 devDep）。
+- GHSA-fx2h（vite server.fs.deny bypass，high）：affected <6.4.3，现 patched ✓。lockfile 0 处 vite@5（7 处 vite@6）。
+- esbuild / vite path-traversal moderate 随 vite 6 升级一并清除。
+- backend 706|1 全绿（63 test files），production build 不受影响（vite 是 dev-only）。
+- 剩余 launch-editor（moderate，Windows UNC path，Linux 生产不可达）不阻塞。
+
 ---
 
 ## 如何使用本文件
