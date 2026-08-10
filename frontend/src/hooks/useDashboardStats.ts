@@ -273,69 +273,74 @@ export const useDashboardStats = () => {
 	// aggregate to avg/min/max, compute coverage = priced cuts / total cuts,
 	// and split by origin (进口 vs 国产) per PRODUCT-SPEC §5.1. All null when no
 	// data so the UI shows an honest empty state instead of fabricated numbers.
-	const pricedCuts = new Set<string>();
-	let priceSum = 0;
-	let priceCount = 0;
-	let minPrice = Number.POSITIVE_INFINITY;
-	let maxPrice = 0;
-	let latestDate: string | null = null;
-	// Origin split: domestic = factory.country === "CN", imported = everything
-	// else (BR/AU/AR/UY/US). The split powers the 进口均价 / 国产均价 hero cards.
-	let importedSum = 0;
-	let importedCount = 0;
-	let domesticSum = 0;
-	let domesticCount = 0;
-	const hotCutAccum = new Map<string, { price: number; country: string; source: string }>();
-	for (const p of beefPrices as Array<{
-		price?: number;
-		date?: string;
-		cutCode?: string;
-		source?: string;
-		factory?: { country?: string };
-	}>) {
-		const price = typeof p?.price === "number" ? p.price : Number(p?.price);
-		if (!Number.isFinite(price) || price <= 0) continue;
-		priceSum += price;
-		priceCount += 1;
-		if (price < minPrice) minPrice = price;
-		if (price > maxPrice) maxPrice = price;
-		if (p?.cutCode) pricedCuts.add(p.cutCode);
-		const d = p?.date;
-		if (d && (!latestDate || d > latestDate)) latestDate = d;
+	// Memoized (round-88): the aggregation loop + Map build ran on every render
+	// (SWR revalidation, local state changes in consumers). beefPrices is a
+	// stable reference from SWR, so the memo skips recompute until data changes.
+	const beefPriceStats = useMemo(() => {
+		const pricedCuts = new Set<string>();
+		let priceSum = 0;
+		let priceCount = 0;
+		let minPrice = Number.POSITIVE_INFINITY;
+		let maxPrice = 0;
+		let latestDate: string | null = null;
+		// Origin split: domestic = factory.country === "CN", imported = everything
+		// else (BR/AU/AR/UY/US). The split powers the 进口均价 / 国产均价 hero cards.
+		let importedSum = 0;
+		let importedCount = 0;
+		let domesticSum = 0;
+		let domesticCount = 0;
+		const hotCutAccum = new Map<string, { price: number; country: string; source: string }>();
+		for (const p of beefPrices as Array<{
+			price?: number;
+			date?: string;
+			cutCode?: string;
+			source?: string;
+			factory?: { country?: string };
+		}>) {
+			const price = typeof p?.price === "number" ? p.price : Number(p?.price);
+			if (!Number.isFinite(price) || price <= 0) continue;
+			priceSum += price;
+			priceCount += 1;
+			if (price < minPrice) minPrice = price;
+			if (price > maxPrice) maxPrice = price;
+			if (p?.cutCode) pricedCuts.add(p.cutCode);
+			const d = p?.date;
+			if (d && (!latestDate || d > latestDate)) latestDate = d;
 
-		const country = p?.factory?.country ?? "";
-		if (country === "CN") {
-			domesticSum += price;
-			domesticCount += 1;
-		} else if (country) {
-			importedSum += price;
-			importedCount += 1;
+			const country = p?.factory?.country ?? "";
+			if (country === "CN") {
+				domesticSum += price;
+				domesticCount += 1;
+			} else if (country) {
+				importedSum += price;
+				importedCount += 1;
+			}
+			// Hot-cuts: keep the latest price per cutCode (first occurrence wins,
+			// which is the latest because the endpoint returns newest-first).
+			if (p?.cutCode && !hotCutAccum.has(p.cutCode)) {
+				hotCutAccum.set(p.cutCode, {
+					price,
+					country: country || "—",
+					source: p?.source || "",
+				});
+			}
 		}
-		// Hot-cuts: keep the latest price per cutCode (first occurrence wins,
-		// which is the latest because the endpoint returns newest-first).
-		if (p?.cutCode && !hotCutAccum.has(p.cutCode)) {
-			hotCutAccum.set(p.cutCode, {
-				price,
-				country: country || "—",
-				source: p?.source || "",
-			});
-		}
-	}
-	const beefPriceStats = {
-		avgPrice: priceCount > 0 ? priceSum / priceCount : null,
-		minPrice: priceCount > 0 ? minPrice : null,
-		maxPrice: priceCount > 0 ? maxPrice : null,
-		coverage: beefCuts.length > 0 ? pricedCuts.size / beefCuts.length : null,
-		latestDate,
-		importedAvg: importedCount > 0 ? importedSum / importedCount : null,
-		domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
-		// From the backend trend (round-57); null when not computable.
-		importedTrendPct: beefTrend?.importedTrendPct ?? null,
-		domesticTrendPct: beefTrend?.domesticTrendPct ?? null,
-		hotCuts: Array.from(hotCutAccum.entries())
-			.slice(0, 6)
-			.map(([cutCode, v]) => ({ cutCode, ...v, forecast: null })),
-	};
+		return {
+			avgPrice: priceCount > 0 ? priceSum / priceCount : null,
+			minPrice: priceCount > 0 ? minPrice : null,
+			maxPrice: priceCount > 0 ? maxPrice : null,
+			coverage: beefCuts.length > 0 ? pricedCuts.size / beefCuts.length : null,
+			latestDate,
+			importedAvg: importedCount > 0 ? importedSum / importedCount : null,
+			domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
+			// From the backend trend (round-57); null when not computable.
+			importedTrendPct: beefTrend?.importedTrendPct ?? null,
+			domesticTrendPct: beefTrend?.domesticTrendPct ?? null,
+			hotCuts: Array.from(hotCutAccum.entries())
+				.slice(0, 6)
+				.map(([cutCode, v]) => ({ cutCode, ...v, forecast: null })),
+		};
+	}, [beefPrices, beefCuts, beefTrend]);
 
 	// AI models — real count from the models registry (was hardcoded 8/8, a fake).
 	// `total` is the registry total; `active` is the count of isActive=true
