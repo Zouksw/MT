@@ -349,6 +349,10 @@ model PredictionLog {
   // Backtest/MAPE count() filters commodityId + predictedAt range; the single-
   // column commodityId index alone forced post-filtering on predictedAt.
   @@index([commodityId, predictedAt])
+  // dataHealth runs 4 status-only count() calls per /health/ready check, and
+  // the verify/mark timers (mapeTracking.ts) filter status + predictedAt.
+  // Without a status-leading index these were full scans of 100k+ rows.
+  @@index([status, predictedAt])
   @@map("prediction_logs")
 }
 
