@@ -723,9 +723,14 @@ export async function getModelAccuracy(
 		orderBy: { verifiedAt: "desc" },
 	});
 
+	// Denominator matches the numerator's population (status: verified) so
+	// predictionCount/verifiedCount is a meaningful ratio. Without the status
+	// filter the denominator included completed/unverifiable/pending rows,
+	// structurally depressing the ratio for short windows. See backtesting.ts.
 	const totalCount = await prisma.predictionLog.count({
 		where: {
 			modelId,
+			status: "verified",
 			...EXCLUDE_TEST_ARTIFACTS,
 			...(commodityId ? { commodityId } : {}),
 			predictedAt: { gte: since },

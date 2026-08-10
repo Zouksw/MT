@@ -57,9 +57,16 @@ export async function runBacktest(
 			orderBy: { verifiedAt: "desc" },
 		});
 
+		// Denominator matches the numerator's population (status: verified)
+		// so predictionCount/verifiedCount is a meaningful ratio. Without the
+		// status filter, the denominator included completed/unverifiable/pending
+		// rows (predictions that can NEVER be verified in this window), which
+		// structurally depressed the ratio toward 0 for short windows — e.g. a
+		// 7d window includes many horizon=10 predictions that haven't matured.
 		const totalCount = await prisma.predictionLog.count({
 			where: {
 				modelId,
+				status: "verified",
 				...(commodityId ? { commodityId } : {}),
 				predictedAt: { gte: since },
 			},

@@ -16,13 +16,26 @@ def _z_for_level(level: float) -> float:
 
     Shared by _bootstrap_ci, predict_arima, and predict_sarimax so that the
     confidence_level requested by the caller is consistently honored. Includes
-    the 0.80 floor (pydantic allows confidence_level as low as 0.80); levels
-    not in the table fall back to 0.95 (the API default) rather than silently
-    returning a different interval width.
+    the 0.80 floor (pydantic allows confidence_level as low as 0.80).
+
+    For a level not exactly in the table, clamp UP to the next supported level
+    (e.g. 0.88 → 0.90 → 1.645, 0.97 → 0.99 → 2.576). This keeps the returned
+    interval at least as wide as the requested level promises — a narrower
+    interval (snap-to-nearest returning the 80% z for an 0.88 request) would
+    overstate precision. Exact table levels and float drift (0.949999...) hit
+    the equality branch directly.
     """
     table = {0.80: 1.282, 0.90: 1.645, 0.95: 1.96, 0.99: 2.576}
-    # Snap to the nearest supported level to absorb float drift (0.949999...).
-    return min(table.items(), key=lambda kv: abs(kv[0] - level))[1]
+    # Exact match (absorbs float drift like 0.949999... via the tolerance).
+    for tbl_level, z in table.items():
+        if abs(tbl_level - level) < 1e-6:
+            return z
+    # Clamp up: smallest supported level that is >= the request. If the request
+    # exceeds the max table level (can't happen — pydantic caps at 0.99), use
+    # the largest z available.
+    candidates = [lvl for lvl in table if lvl >= level]
+    target = min(candidates) if candidates else max(table)
+    return table[target]
 
 
 def _bootstrap_ci(

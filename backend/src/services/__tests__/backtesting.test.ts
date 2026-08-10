@@ -156,4 +156,19 @@ describe("runBacktest — result shape", () => {
 			expect(call[0].where.commodityId).toBe("comm-9");
 		}
 	});
+
+	it("includes status:'verified' in the count denominator (round-86)", async () => {
+		// REGRESSION: predictionCount (denominator) previously had no status
+		// filter, so it counted completed/unverifiable/pending rows — predictions
+		// that can NEVER be verified in the window. This structurally depressed
+		// predictionCount/verifiedCount toward 0 for short windows. The fix adds
+		// status:'verified' so numerator and denominator share the same population.
+		mocks.findMany.mockResolvedValue([]);
+		mocks.count.mockResolvedValue(0);
+		await runBacktest("model-1");
+		// Every count call (one per window) must filter by status:verified.
+		for (const call of mocks.count.mock.calls) {
+			expect(call[0].where.status).toBe("verified");
+		}
+	});
 });

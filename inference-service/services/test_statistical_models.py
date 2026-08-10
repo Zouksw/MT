@@ -232,3 +232,43 @@ def test_bootstrap_ci_non_degenerate_on_constant_series():
             f"Degenerate CI on constant series: lower={lo}, upper={hi} (width=0 "
             f"implies false 100% confidence)"
         )
+
+
+# ─── _z_for_level clamp-up (round-86 audit) ─────────────────────────────────
+
+
+def test_z_for_level_clamps_up_for_non_table_levels():
+    """REGRESSION: _z_for_level snapped to the NEAREST table level, so an 0.88
+    request got the 80% z (1.282) — a NARROWER interval than the caller asked
+    for, overstating precision. The docstring promised a fallback "rather than
+    silently returning a different interval width", but the code did the
+    opposite. The fix clamps UP: a non-table level gets the smallest table
+    level that is >= it, keeping the interval at least as wide as requested."""
+    from services.statistical_models import _z_for_level
+
+    # Exact table levels return their z directly (float-drift tolerant).
+    assert _z_for_level(0.80) == pytest.approx(1.282)
+    assert _z_for_level(0.90) == pytest.approx(1.645)
+    assert _z_for_level(0.95) == pytest.approx(1.96)
+    assert _z_for_level(0.99) == pytest.approx(2.576)
+
+    # Non-table levels clamp UP (never down — no narrower-than-requested z).
+    # 0.88 is between 0.80 and 0.90 → must get 0.90's z (1.645), NOT 0.80's.
+    assert _z_for_level(0.88) == pytest.approx(1.645), (
+        "0.88 request must clamp up to 0.90 (z=1.645), not snap down to 0.80"
+    )
+    # 0.97 is between 0.95 and 0.99 → must get 0.99's z (2.576).
+    assert _z_for_level(0.97) == pytest.approx(2.576), (
+        "0.97 request must clamp up to 0.99 (z=2.576), not snap down to 0.95"
+    )
+    # 0.85 (closer to 0.80 but still > 0.80) → clamps up to 0.90.
+    assert _z_for_level(0.85) == pytest.approx(1.645)
+
+    # Monotonic: a higher requested level never yields a narrower interval.
+    levels = [0.80, 0.85, 0.88, 0.90, 0.95, 0.97, 0.99]
+    zs = [_z_for_level(lvl) for lvl in levels]
+    for i in range(len(zs) - 1):
+        assert zs[i] <= zs[i + 1], (
+            f"_z_for_level not monotonic: level {levels[i]}→z {zs[i]} but "
+            f"level {levels[i+1]}→z {zs[i+1]}"
+        )
