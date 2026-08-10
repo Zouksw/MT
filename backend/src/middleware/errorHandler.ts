@@ -8,12 +8,25 @@ export interface AppError extends Error {
 }
 
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
-	logger.error("Error occurred:", {
-		message: err.message,
-		stack: err.stack,
-		path: req.path,
-		method: req.method,
-	});
+	// Log 5xx as error (real server failures), 4xx as warn (client mistakes —
+	// not actionable for operators and pollute the error log). The stack trace
+	// is only useful for 5xx (operational errors have trivial stacks).
+	const logStatusCode = (err as AppError).statusCode || 500;
+	if (logStatusCode >= 500) {
+		logger.error("Error occurred:", {
+			message: err.message,
+			stack: err.stack,
+			path: req.path,
+			method: req.method,
+		});
+	} else {
+		logger.warn("Client error:", {
+			message: err.message,
+			status: logStatusCode,
+			path: req.path,
+			method: req.method,
+		});
+	}
 
 	// Handle Zod validation errors
 	if (err instanceof ZodError) {
