@@ -364,16 +364,22 @@ export function useTradingData() {
 				if (modelIds.length === 0) return;
 
 				const first = modelPreds[modelIds[0]];
+				// Guard (round-97): the predictions map is typed as any (Redis
+				// cache contract, not schema-validated on the wire). If a model
+				// entry lacks timestamps/values, the unguarded .map would throw.
+				// The surrounding try/catch swallows it, but this guard prevents
+				// the overlay feature from silently breaking on a partial entry.
+				if (!first?.timestamps || !first?.values) return;
 				const overlays: PredictionOverlay[] = first.timestamps
 					.map((ts: number, i: number) => {
 						const values = modelIds
-							.map((id) => modelPreds[id].values[i])
+							.map((id) => modelPreds[id]?.values?.[i])
 							.filter((v: number | undefined) => v !== undefined);
 						const lowers = modelIds
-							.map((id) => modelPreds[id].lowerBound?.[i] ?? modelPreds[id].values[i] * 0.95)
+							.map((id) => modelPreds[id]?.lowerBound?.[i] ?? modelPreds[id]?.values?.[i] * 0.95)
 							.filter((v: number | undefined) => v !== undefined);
 						const uppers = modelIds
-							.map((id) => modelPreds[id].upperBound?.[i] ?? modelPreds[id].values[i] * 1.05)
+							.map((id) => modelPreds[id]?.upperBound?.[i] ?? modelPreds[id]?.values?.[i] * 1.05)
 							.filter((v: number | undefined) => v !== undefined);
 
 						if (values.length === 0) return null;

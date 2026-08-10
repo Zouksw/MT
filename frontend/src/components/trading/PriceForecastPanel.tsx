@@ -29,7 +29,7 @@ interface PriceForecastPanelProps {
 	currentPrice: number;
 	predictedPrice: number;
 	horizon: number;
-	range: { lower: number; upper: number };
+	range?: { lower: number; upper: number };
 	supportLevel: number;
 	resistanceLevel: number;
 	distribution: { up: number; down: number; flat: number };
@@ -128,8 +128,8 @@ export default function PriceForecastPanel({
 							{formatPrice(predictedPrice, false)}
 						</div>
 						<div className="text-xs text-gray-500 mt-1">
-							当前 {formatPrice(currentPrice, false)} → 区间 {formatPrice(range.lower, false)} –{" "}
-							{formatPrice(range.upper, false)}
+							当前 {formatPrice(currentPrice, false)} → 区间 {formatPrice(range?.lower, false)} –{" "}
+							{formatPrice(range?.upper, false)}
 						</div>
 					</div>
 				</div>
