@@ -110,10 +110,15 @@ export function useTradingData() {
 
 	const loading = beefMode ? false : commoditiesLoading || pricesLoading;
 
-	// Convert beef prices to chart data format
+	// Convert beef prices to chart data format. The backend returns prices
+	// ordered date DESC (newest first); charts need ascending time. Slice before
+	// sorting so we do NOT mutate the SWR-cached array (an in-place .sort() would
+	// reorder the shared cache object every revalidation, breaking referential-
+	// equality checks SWR relies on and corrupting other memos reading it).
 	const beefChartData = useMemo(
 		() =>
 			beefPrices
+				.slice()
 				.sort((a: { date: string }, b: { date: string }) => a.date.localeCompare(b.date))
 				.map((p: { date: string; price: number }) => ({
 					time: p.date,
@@ -126,7 +131,11 @@ export function useTradingData() {
 		[beefPrices],
 	);
 
-	// Beef cut info for display
+	// Beef cut info for display. The backend returns prices ordered date DESC
+	// (newest first). Derive latestPrice explicitly by date rather than relying
+	// on array position — previously latestPrice read allP[last], which only
+	// happened to be newest because beefChartData's in-place .sort() mutated the
+	// shared cache into ascending order first (an order-dependent footgun).
 	const beefCutInfo = useMemo(() => {
 		if (!selectedCut) return null;
 		const prices = beefPrices;
@@ -138,10 +147,15 @@ export function useTradingData() {
 				prices.map((p: { factory?: { code: string } }) => p.factory?.code).filter(Boolean),
 			),
 		];
+		// Pick the row with the max date — order-independent "latest".
+		let latest = prices[0];
+		for (const p of prices) {
+			if (p.date > latest.date) latest = p;
+		}
 		return {
 			cutCode: selectedCut,
 			displayName: selectedCut.replace(/_/g, " "),
-			latestPrice: allP[allP.length - 1],
+			latestPrice: latest.price,
 			minPrice: Math.min(...allP),
 			maxPrice: Math.max(...allP),
 			sources,

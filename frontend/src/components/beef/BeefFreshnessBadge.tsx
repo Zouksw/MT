@@ -61,7 +61,7 @@ const BeefFreshnessBadgeComponent: React.FC<BeefFreshnessBadgeProps> = ({
 		);
 	}
 
-	const cfg = TIER_CONFIG[freshness];
+	const cfg = TIER_CONFIG[freshness] ?? TIER_CONFIG.snapshot;
 	const dateStr = formatDate(dataDate);
 	const title = reason
 		? `${cfg.label}${dateStr ? ` · ${dateStr}` : ""} — ${reason}`
