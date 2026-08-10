@@ -15,8 +15,7 @@ import { NotFoundError } from "@/middleware/errorHandler";
 import { getDataHealth } from "@/services/dataHealth";
 import {
 	authoritativeSourceWhere,
-	batchLatestPriceWhere,
-	dedupeLatestByCommodity,
+	batchLatestPrices,
 } from "@/services/inference/authoritativeSources";
 
 export interface PriceHistoryParams {
@@ -29,13 +28,14 @@ export interface PriceHistoryParams {
 /**
  * List active commodities with their latest price, ordered by category.
  *
- * Round-67: the latest price is now fetched via a separate batched query
- * (`batchLatestPriceWhere` + `dedupeLatestByCommodity`) rather than a Prisma
- * relation include. The relation include (`include.prices`) couldn't apply
- * authoritative-source filtering, so conflict commodities (brl_usd etc.)
- * surfaced whichever source wrote most recently — e.g. brl_usd listed at
- * ~0.197 (exchange_rate_api) instead of ~5.0 (fred). The batched query applies
- * per-commodity source resolution correctly.
+ * Round-67: the latest price is fetched via a batched query with authoritative-
+ * source resolution, rather than a Prisma relation include. The relation
+ * include (`include.prices`) couldn't apply source filtering, so conflict
+ * commodities (brl_usd etc.) surfaced whichever source wrote most recently —
+ * e.g. brl_usd listed at ~0.197 (exchange_rate_api) instead of ~5.0 (fred).
+ * Round-87: migrated from `findMany` + JS-dedupe (which fetched the entire
+ * daily history, 65k+ rows) to `batchLatestPrices` using `DISTINCT ON` (one
+ * row per commodity resolved in Postgres).
  */
 export async function listCommodities() {
 	const commodities = await prisma.commodity.findMany({
@@ -55,17 +55,11 @@ export async function listCommodities() {
 		},
 	});
 
-	// Batched authoritative latest-price lookup across all listed commodities.
-	const batchWhere = batchLatestPriceWhere(commodities);
-	const latestByCommodity = batchWhere
-		? dedupeLatestByCommodity(
-				await prisma.commodityPrice.findMany({
-					where: { ...batchWhere, interval: "daily" },
-					orderBy: { date: "desc" },
-					select: { commodityId: true, close: true, date: true },
-				}),
-			)
-		: new Map<string, { commodityId: string; close: number; date: Date }>();
+	// Batched authoritative latest-price lookup via DISTINCT ON (round-87).
+	// Previously fetched the ENTIRE daily history for all commodities (65k+
+	// rows) into Node then deduped in JS. DISTINCT ON collapses to one row
+	// per commodity in Postgres before any rows cross the wire.
+	const latestByCommodity = await batchLatestPrices(commodities);
 
 	return commodities.map((c) => {
 		const latest = latestByCommodity.get(c.id);

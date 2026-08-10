@@ -29,6 +29,8 @@
  * of single-source commodities.
  */
 
+import { prisma } from "@/lib";
+
 /**
  * Map of commodity slug → authoritative source string.
  *
@@ -189,4 +191,67 @@ export function dedupeLatestByCommodity<T extends { commodityId: string; date: D
  */
 export function getConflictSlugs(): string[] {
 	return Object.keys(AUTHORITATIVE_SOURCES);
+}
+
+/**
+ * Batch-fetch the latest daily close per commodity via `DISTINCT ON`, applying
+ * authoritative-source resolution per commodity.
+ *
+ * This replaces the older `batchLatestPriceWhere` + `findMany` + JS-dedupe
+ * pattern, which fetched the ENTIRE daily history for every commodity (65k+
+ * rows) into Node just to keep one row per commodity. `DISTINCT ON` lets
+ * Postgres collapse to one row per commodity before any rows cross the wire.
+ *
+ * Source resolution: conflict commodities (brl_usd/corn_cme/natural_gas_cme)
+ * are split out and queried with their authoritative source filter, so
+ * brl_usd reads fred (~5.0) not exchange_rate_api (~0.2). Plain commodities
+ * get one unfiltered `DISTINCT ON` query.
+ *
+ * @param commodities - the commodity set (id + slug) to resolve latest prices for
+ * @returns Map<commodityId, { close, date }>
+ */
+export async function batchLatestPrices(
+	commodities: ReadonlyArray<{ id: string; slug: string }>,
+): Promise<Map<string, { close: number; date: Date }>> {
+	const out = new Map<string, { close: number; date: Date }>();
+	if (commodities.length === 0) return out;
+
+	// Partition into plain ids (no conflict) and conflict ids grouped by source.
+	const plainIds: string[] = [];
+	const bySource = new Map<string, string[]>();
+	for (const c of commodities) {
+		const source = getAuthoritativeSource(c.slug);
+		if (!source) {
+			plainIds.push(c.id);
+		} else {
+			const bucket = bySource.get(source);
+			if (bucket) bucket.push(c.id);
+			else bySource.set(source, [c.id]);
+		}
+	}
+
+	// Plain commodities: one DISTINCT ON query, no source filter.
+	if (plainIds.length > 0) {
+		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
+      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
+      FROM commodity_prices
+      WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
+      ORDER BY commodity_id, date DESC
+    `;
+		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
+	}
+
+	// Conflict commodities: one DISTINCT ON query per authoritative source,
+	// restricted to that source so the wrong source's rows never enter.
+	for (const [source, ids] of bySource) {
+		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
+      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
+      FROM commodity_prices
+      WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
+      ORDER BY commodity_id, date DESC
+    `;
+		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
+	}
+
+	return out;
 }

@@ -23,8 +23,7 @@ import {
 } from "@/services/correlationAnalysis";
 import {
 	authoritativeSourceWhere,
-	batchLatestPriceWhere,
-	dedupeLatestByCommodity,
+	batchLatestPrices,
 } from "@/services/inference/authoritativeSources";
 import { getAllModelAccuracy, getModelAccuracy } from "@/services/mapeTracking";
 import { getAllCachedPredictions } from "@/services/predictionCache";
@@ -300,23 +299,11 @@ router.post(
 		const bySlug = new Map(commodities.map((c) => [c.slug, c]));
 		const priceByCommodityId = new Map<string, number>();
 
-		// Fetch the latest close per commodity in one query, applying
-		// authoritative-source resolution per commodity so conflict slugs
-		// (brl_usd/corn_cme/natural_gas_cme) read the correct source instead
-		// of whichever source wrote most recently. Round-67: the previous
-		// `distinct:["commodityId"]` + date-desc ordering picked an arbitrary
-		// source for conflict commodities (e.g. brl_usd got the inverted
-		// exchange_rate_api ~0.2 instead of fred's ~5.0).
-		const batchWhere = batchLatestPriceWhere(commodities);
-		if (batchWhere) {
-			const rows = await prisma.commodityPrice.findMany({
-				where: batchWhere,
-				orderBy: { date: "desc" },
-				select: { commodityId: true, close: true, date: true },
-			});
-			const latest = dedupeLatestByCommodity(rows);
-			for (const [id, row] of latest) priceByCommodityId.set(id, Number(row.close));
-		}
+		// Fetch the latest close per commodity via DISTINCT ON (round-87),
+		// applying authoritative-source resolution. Previously fetched all
+		// daily rows then deduped in JS.
+		const latest = await batchLatestPrices(commodities);
+		for (const [id, row] of latest) priceByCommodityId.set(id, Number(row.close));
 
 		// Run forecasts in parallel — each settled independently so one bad
 		// commodity doesn't sink the batch.
