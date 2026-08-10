@@ -41,6 +41,12 @@ interface CommoditySubscription {
 // Active subscriptions for background refresh
 const subscriptions = new Map<string, CommoditySubscription>();
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
+// In-flight guard: if a refresh cycle runs longer than REFRESH_INTERVAL_MS,
+// the next interval tick must skip rather than overlap. Overlapping cycles
+// would concurrently call runAndCachePrediction for the same commodity/model,
+// and logPrediction is an unconditional create (not an upsert) → duplicate
+// prediction_log rows that inflate MAPE denominators.
+let refreshInProgress = false;
 
 /**
  * Get a cached prediction, or return null if not cached/expired
@@ -212,8 +218,20 @@ export function subscribeCommodity(commodityId: string, models: string[], horizo
 	// Start background refresh timer if not already running
 	if (!refreshTimer) {
 		refreshTimer = setInterval(async () => {
-			for (const sub of subscriptions.values()) {
-				await refreshCommodityPredictions(sub);
+			// Skip if the previous cycle is still running (see refreshInProgress
+			// comment above). Also wrap the whole body so an escaped error
+			// becomes a logged warning, not an unhandled rejection that the
+			// global handler (server.ts) turns into process exit.
+			if (refreshInProgress) return;
+			refreshInProgress = true;
+			try {
+				for (const sub of subscriptions.values()) {
+					await refreshCommodityPredictions(sub);
+				}
+			} catch (error) {
+				logger.error(`Prediction refresh cycle failed: ${error}`);
+			} finally {
+				refreshInProgress = false;
 			}
 		}, REFRESH_INTERVAL_MS);
 

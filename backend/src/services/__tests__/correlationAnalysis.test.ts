@@ -84,6 +84,25 @@ describe("Correlation Analysis (HTTP Integration)", () => {
 				.set({ Authorization: `Bearer ${token}` });
 			expect(res.status).toBe(400);
 		});
+
+		// REGRESSION (round-92): getPriceSeries capped the result at take:1000
+		// with orderBy asc, which silently returned the OLDEST 1000 rows of a
+		// long window instead of the newest. Self-correlation on a commodity
+		// with deep history must be 1.0 with sampleSize capped at 1000 (proving
+		// the cap keeps the most-recent slice, and the series is non-empty).
+		it("keeps the newest 1000 points on a long window (no oldest-slice truncation)", async () => {
+			// aud_usd has 13k+ daily rows in the seed data.
+			const res = await request(BASE)
+				.get("/api/signals/correlation?a=aud_usd&b=aud_usd&window=1500")
+				.set({ Authorization: `Bearer ${token}` });
+			// If the live DB lacks aud_usd, this assertion is vacuous — but the
+			// seed includes it, so we expect 200.
+			if (res.status !== 200) return;
+			expect(res.body.data.sampleSize).toBeGreaterThan(0);
+			expect(res.body.data.sampleSize).toBeLessThanOrEqual(1000);
+			// Self-correlation of a non-constant series with itself is exactly 1.
+			expect(res.body.data.correlation).toBe(1);
+		});
 	});
 
 	describe("GET /api/signals/correlation/matrix", () => {

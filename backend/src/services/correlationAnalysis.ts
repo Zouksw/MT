@@ -47,6 +47,12 @@ async function getPriceSeries(
 
 	if (!commodity) return [];
 
+	// Cap the series at 1000 points to bound query cost. The cap must keep the
+	// NEWEST data (correlation is about recent co-movement). orderBy asc + take
+	// would silently return the OLDEST 1000 rows of a long window (top
+	// commodities have 7k–14k daily rows), computing correlation on decades-old
+	// data. Query desc (newest first) + take, then reverse back to chronological
+	// order (correlation needs ascending-time input).
 	const prices = await prisma.commodityPrice.findMany({
 		where: {
 			commodityId: commodity.id,
@@ -54,12 +60,13 @@ async function getPriceSeries(
 			date: { gte: since },
 			...authoritativeSourceWhere(commodity.slug),
 		},
-		orderBy: { date: "asc" },
+		orderBy: { date: "desc" },
 		select: { date: true, close: true },
 		take: 1000,
 	});
 
 	return prices
+		.reverse()
 		.filter((p) => p.close !== null)
 		.map((p) => ({
 			date: p.date.toISOString().split("T")[0],
