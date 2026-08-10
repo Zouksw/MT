@@ -542,6 +542,23 @@ export async function verifyDuePredictions(): Promise<number> {
 	// Track which commodities are stuck on no-actuals (data gap signal).
 	const noActualsByCommodity = new Map<string, number>();
 
+	// Round-87: pre-fetch commodity slugs for all non-cut due rows in ONE
+	// query, instead of a findUnique per row inside the loop (up to 5000
+	// redundant lookups — predictions repeat per commodity every 30min, so a
+	// 5000-row batch typically spans only a handful of distinct commodityIds).
+	// The authoritative source is then resolved from the map in-loop.
+	const nonCutCommodityIds = [
+		...new Set(due.filter((d) => !isCutSeriesKey(d.commodityId)).map((d) => d.commodityId)),
+	];
+	const slugByCommodityId = new Map<string, string | null>();
+	if (nonCutCommodityIds.length > 0) {
+		const commodities = await prisma.commodity.findMany({
+			where: { id: { in: nonCutCommodityIds } },
+			select: { id: true, slug: true },
+		});
+		for (const c of commodities) slugByCommodityId.set(c.id, c.slug);
+	}
+
 	for (const log of due) {
 		try {
 			// Per-row horizon check: predictedAt + horizon days must have elapsed
@@ -598,22 +615,10 @@ export async function verifyDuePredictions(): Promise<number> {
 				// MAPE numerator compares like with like. Without this, a brl_usd
 				// prediction trained on fred (≈5.0) gets "verified" against
 				// exchange_rate_api rows (≈0.2) → bogus ~96% MAPE.
-				let authoritativeSource: string | null = null;
-				try {
-					const commodity = await prisma.commodity.findUnique({
-						where: { id: log.commodityId },
-						select: { slug: true },
-					});
-					authoritativeSource = getAuthoritativeSource(commodity?.slug);
-				} catch (error) {
-					// If the commodity lookup fails, fall back to unfiltered
-					// (legacy behaviour) rather than abort verification — but
-					// surface it so a persistent lookup failure is observable.
-					logger.warn("[MAPE] commodity lookup failed, falling back to unfiltered actuals", {
-						commodityId: log.commodityId,
-						error: error instanceof Error ? error.message : String(error),
-					});
-				}
+				// Round-87: slug is now read from the pre-fetched map (one query
+				// before the loop) instead of a findUnique per row.
+				const slug = slugByCommodityId.get(log.commodityId);
+				const authoritativeSource = getAuthoritativeSource(slug);
 				const actualPrices = await prisma.commodityPrice.findMany({
 					where: {
 						commodityId: log.commodityId,
