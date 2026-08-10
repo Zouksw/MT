@@ -36,9 +36,12 @@ describe("Auth Routes (Integration)", () => {
 		});
 
 		test("rejects non-existent user", async () => {
+			// Use a unique email per run to avoid Redis lockout state pollution
+			// from prior test runs (the lockout persists across test invocations).
+			const email = `nonexistent-${Date.now()}@test.com`;
 			const res = await request(app)
 				.post("/api/auth/login")
-				.send({ email: "nonexistent-user-xyz@test.com", password: "SomePass123!" });
+				.send({ email, password: "SomePass123!" });
 			expect(res.status).toBe(401);
 		});
 	});
