@@ -766,22 +766,23 @@ export async function getModelAccuracy(
 
 /**
  * Get accuracy for all models (for comparison view)
+ *
+ * Round-87: when called with commodityId=undefined (the "all models" case),
+ * the result is identical across commodities. resolveModelWeights calls this
+ * per-forecast inside /signals/batch (up to 50 commodities), so without
+ * memoization that's 50 × 9 models × 2 queries = ~900 redundant queries per
+ * batch. A short-lived (60s) in-memory cache collapses these to 1 fetch per
+ * TTL window — far shorter than the route-level 600s cache, but enough to
+ * dedupe within a single batch request.
  */
-export async function getAllModelAccuracy(
-	commodityId?: string,
-	days: number = 30,
-): Promise<
-	Array<{
-		modelId: string;
-		avgMape: number | null;
-		predictionCount: number;
-		verifiedCount: number;
-		last7dMape: number | null;
-		last30dMape: number | null;
-		lastVerifiedAt: string | null;
-		isPrimary: boolean;
-	}>
-> {
+const ALL_MODEL_ACCURACY_TTL_MS = 60_000;
+let allModelAccuracyCache: {
+	key: string;
+	value: Awaited<ReturnType<typeof computeAllModelAccuracy>>;
+	expiresAt: number;
+} | null = null;
+
+async function computeAllModelAccuracy(commodityId: string | undefined, days: number) {
 	// Primary chronos ensemble + baselines for the accuracy-comparison page.
 	// Importing here (not at module top) avoids a circular dependency:
 	// tradingSignals imports predictionCache which imports mapeTracking.
@@ -815,4 +816,46 @@ export async function getAllModelAccuracy(
 	);
 
 	return results;
+}
+
+export async function getAllModelAccuracy(
+	commodityId?: string,
+	days: number = 30,
+): Promise<
+	Array<{
+		modelId: string;
+		avgMape: number | null;
+		predictionCount: number;
+		verifiedCount: number;
+		last7dMape: number | null;
+		last30dMape: number | null;
+		lastVerifiedAt: string | null;
+		isPrimary: boolean;
+	}>
+> {
+	// Only cache the "all commodities" case (commodityId=undefined) — per-
+	// commodity results are cheap (one model, not 9) and would need per-key
+	// cache entries that grow unbounded.
+	const cacheKey = `${commodityId ?? "all"}:${days}`;
+	if (commodityId === undefined) {
+		if (
+			allModelAccuracyCache &&
+			allModelAccuracyCache.key === cacheKey &&
+			allModelAccuracyCache.expiresAt > Date.now()
+		) {
+			return allModelAccuracyCache.value;
+		}
+	}
+
+	const value = await computeAllModelAccuracy(commodityId, days);
+
+	if (commodityId === undefined) {
+		allModelAccuracyCache = {
+			key: cacheKey,
+			value,
+			expiresAt: Date.now() + ALL_MODEL_ACCURACY_TTL_MS,
+		};
+	}
+
+	return value;
 }
