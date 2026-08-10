@@ -309,4 +309,30 @@ function start(): void {
 	setInterval(runBeefBridge, BEEF_BRIDGE_INTERVAL);
 }
 
+// ─── Global error handlers ────────────────────────────────────────────────
+// Without these, a single floating promise rejection (e.g. a fire-and-forget
+// async call missing .catch()) crashes the entire process — taking down the
+// HTTP server, all WebSocket connections, and every background cron (scrapers,
+// MAPE verification, alert evaluation, beef bridge). Node's default since v15
+// is to terminate on unhandled rejections. These handlers log the cause with
+// a full stack trace so operators can diagnose the root cause, then exit
+// cleanly (PM2 restarts the process). We do NOT swallow — swallowing hides
+// bugs and can leave the process in an inconsistent state.
+process.on("unhandledRejection", (reason, promise) => {
+	logger.error("[FATAL] Unhandled Promise rejection — process will exit", {
+		reason: reason instanceof Error ? reason.message : String(reason),
+		stack: reason instanceof Error ? reason.stack : undefined,
+	});
+	// Give the logger time to flush, then exit (PM2 restarts).
+	setImmediate(() => process.exit(1));
+});
+
+process.on("uncaughtException", (error) => {
+	logger.error("[FATAL] Uncaught exception — process will exit", {
+		message: error.message,
+		stack: error.stack,
+	});
+	setImmediate(() => process.exit(1));
+});
+
 start();
