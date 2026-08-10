@@ -9,7 +9,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
-import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
+import { batchLatestPrices } from "@/services/inference/authoritativeSources";
 import type { AlertCondition, AlertRule, NotificationChannel } from "./alert-types";
 
 type AlertType = "ANOMALY" | "FORECAST_READY" | "SYSTEM";
@@ -144,7 +144,12 @@ export async function evaluateAlertRules(): Promise<number> {
 		where: { id: { in: ruleCommodityIds } },
 		select: { id: true, slug: true },
 	});
-	const slugByCommodityId = new Map(commoditySlugs.map((c) => [c.id, c.slug]));
+
+	// Round-87: batch-fetch the latest daily price per commodity via DISTINCT ON
+	// (one query total) instead of a findFirst per rule inside the loop (N
+	// queries). Uses the shared authoritative-source-aware helper so conflict
+	// commodities read the correct source.
+	const latestPrices = await batchLatestPrices(commoditySlugs);
 
 	for (const rule of rules) {
 		try {
@@ -157,18 +162,9 @@ export async function evaluateAlertRules(): Promise<number> {
 				}
 			}
 
-			// Fetch the latest price for this rule's timeseries, filtered to the
-			// commodity's authoritative source when one is declared.
-			const slug = slugByCommodityId.get(rule.timeseriesId);
-			const latestPrice = await prisma.commodityPrice.findFirst({
-				where: {
-					commodityId: rule.timeseriesId,
-					interval: "daily",
-					...authoritativeSourceWhere(slug),
-				},
-				orderBy: { date: "desc" },
-				select: { close: true, date: true },
-			});
+			// Read the pre-fetched latest price (round-87: was a per-rule
+			// findFirst inside the loop — now batched above via DISTINCT ON).
+			const latestPrice = latestPrices.get(rule.timeseriesId);
 
 			if (!latestPrice) {
 				skippedNoData++;
