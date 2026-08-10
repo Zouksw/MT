@@ -57,18 +57,19 @@ export async function runBacktest(
 			orderBy: { verifiedAt: "desc" },
 		});
 
-		// Denominator matches the numerator's population (status: verified)
-		// so predictionCount/verifiedCount is a meaningful ratio. Without the
-		// status filter, the denominator included completed/unverifiable/pending
-		// rows (predictions that can NEVER be verified in this window), which
-		// structurally depressed the ratio toward 0 for short windows — e.g. a
-		// 7d window includes many horizon=10 predictions that haven't matured.
+		// Denominator describes the SAME population as the numerator —
+		// predictions verified within window T — so predictionCount/
+		// verifiedCount is a coherent ratio. Both filter on `verifiedAt`.
+		// (Using `predictedAt` here made predictionCount structurally 0 for any
+		// window shorter than the horizon, since a prediction predicted within
+		// the window hasn't matured yet. See mapeTracking.ts for the live-data
+		// evidence.)
 		const totalCount = await prisma.predictionLog.count({
 			where: {
 				modelId,
 				status: "verified",
 				...(commodityId ? { commodityId } : {}),
-				predictedAt: { gte: since },
+				verifiedAt: { gte: since },
 			},
 		});
 

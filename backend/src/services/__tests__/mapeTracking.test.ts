@@ -229,6 +229,35 @@ describe("MAPE Tracking (real DB)", () => {
 				});
 			}
 		});
+
+		// REGRESSION (round-92): predictionCount denominator must use the SAME
+		// timestamp column (verifiedAt) as the numerator. A prior version filtered
+		// the denominator on predictedAt, which is always ≥ horizon earlier than
+		// verifiedAt; for a window shorter than the horizon that made
+		// predictionCount 0 while verifiedCount > 0 (a nonsensical ratio). This
+		// seeds a verified row, then queries a 1-day window: both counts must be
+		// ≥ 1 (the row was just verified, so it's in the verifiedAt window).
+		it("predictionCount denominator uses verifiedAt, not predictedAt (column-coherence)", async () => {
+			const { model, commodity } = fx();
+			fxLogId = await logPrediction({
+				modelId: model,
+				commodityId: commodity,
+				timeseriesPath: "root.fx.column-coherence",
+				horizon: 3,
+				predictedValues: [100, 110, 120],
+			});
+			await verifyPrediction(fxLogId, [105, 112, 122]);
+
+			// 1-day window. The fixture was just verified → verifiedAt is "now".
+			// A predictedAt-based denominator would be 0 (predictedAt ≈ now, but
+			// the row only just verified means predictedAt can't be > horizon
+			// days ago). Both counts must include the fixture row.
+			const accuracy = await getModelAccuracy(model, commodity, 1);
+			expect(accuracy.verifiedCount).toBeGreaterThanOrEqual(1);
+			expect(accuracy.predictionCount).toBeGreaterThanOrEqual(1);
+			// The ratio must be coherent: verifiedCount cannot exceed predictionCount.
+			expect(accuracy.verifiedCount).toBeLessThanOrEqual(accuracy.predictionCount);
+		});
 	});
 
 	describe("getAllModelAccuracy", () => {

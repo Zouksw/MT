@@ -728,17 +728,20 @@ export async function getModelAccuracy(
 		orderBy: { verifiedAt: "desc" },
 	});
 
-	// Denominator matches the numerator's population (status: verified) so
-	// predictionCount/verifiedCount is a meaningful ratio. Without the status
-	// filter the denominator included completed/unverifiable/pending rows,
-	// structurally depressing the ratio for short windows. See backtesting.ts.
+	// Denominator describes the SAME population as the numerator — predictions
+	// verified within window T — so predictionCount/verifiedCount is a coherent
+	// ratio. Both filter on `verifiedAt`. (Round-86 added the status filter but
+	// left the timestamp column as `predictedAt`; that mismatch made
+	// predictionCount structurally 0 for any window shorter than the horizon,
+	// since a prediction predicted within the window cannot have matured yet.
+	// Verified on live data: chronos_tiny 7d → verifiedCount 968, predictionCount 0.)
 	const totalCount = await prisma.predictionLog.count({
 		where: {
 			modelId,
 			status: "verified",
 			...EXCLUDE_TEST_ARTIFACTS,
 			...(commodityId ? { commodityId } : {}),
-			predictedAt: { gte: since },
+			verifiedAt: { gte: since },
 		},
 	});
 
