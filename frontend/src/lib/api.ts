@@ -2,28 +2,18 @@
 
 import useSWR, { mutate } from "swr";
 import { API_BASE } from "@/lib/config";
+import { swrFetcher } from "@/lib/swr-fetcher";
 import { tokenManager } from "@/lib/tokenManager";
 import { authFetch } from "@/utils/auth";
 
 // ── SWR fetcher with auth ──────────────────────────────────────────────────
+// Round-91: delegates to the shared swrFetcher (wraps authFetch) instead of
+// reimplementing the token + credentials + error-throw contract. The /api
+// prefix is prepended here because callers use paths like "/datasets" (without
+// the prefix); swrFetcher expects the full path from API_BASE root.
 
 async function apiFetcher(url: string) {
-	const token = tokenManager.getToken();
-	const res = await fetch(`${API_BASE}/api${url}`, {
-		headers: {
-			"Content-Type": "application/json",
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
-		},
-		credentials: "include",
-	});
-
-	if (!res.ok) {
-		const error = new Error(`${res.status} ${res.statusText}`);
-		(error as { status?: number }).status = res.status;
-		throw error;
-	}
-
-	return res.json();
+	return swrFetcher(`${API_BASE}/api${url}`);
 }
 
 // ── Query hooks (replace Refine useList / useOne) ──────────────────────────

@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { tokenManager } from "@/lib/tokenManager";
+import { swrFetcher } from "@/lib/swr-fetcher";
 
 // ── API base ───────────────────────────────────────────────────────────────
 
@@ -10,25 +10,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 // ── SWR fetcher with auth ──────────────────────────────────────────────────
 
 /**
- * SWR fetcher (round-68: migrated from axios to native fetch to drop the
- * single-point axios dependency). Mirrors the authFetch pattern in
- * utils/auth.ts: credentials:"include" for the session cookie, bearer token
- * header when present. Throws on non-2xx (matches axios semantics so SWR's
- * error handling is unchanged).
+ * Round-91: delegates to the shared swrFetcher (wraps authFetch) instead of
+ * reimplementing the token + credentials + error-throw contract. The API_URL
+ * already includes the /api suffix, so callers use paths like "/commodities".
  */
 export async function fetcher(url: string) {
-	const token = tokenManager.getToken();
-	const response = await fetch(`${API_URL}${url}`, {
-		headers: {
-			"Content-Type": "application/json",
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
-		},
-		credentials: "include",
-	});
-	if (!response.ok) {
-		throw new Error(`Request to ${url} failed: ${response.status}`);
-	}
-	return response.json();
+	return swrFetcher(`${API_URL}${url}`);
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
