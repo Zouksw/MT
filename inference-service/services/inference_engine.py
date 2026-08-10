@@ -151,18 +151,31 @@ def _predict_chronos(
     # (batched) and returns (quantiles[batch, horizon, n_q], mean[batch, horizon]).
     lower_q = round(1 - confidence_level, 4)
     quantile_levels = sorted({lower_q, 0.5, confidence_level})
-    ctx = torch.tensor(values, dtype=torch.float32)
-    quantiles, mean = pipeline.predict_quantiles(
-        inputs=[ctx],
-        prediction_length=horizon,
-        quantile_levels=quantile_levels,
-    )
-    # quantiles shape: [1, horizon, n_q]; index 0 = lowest q, -1 = highest q.
-    return {
-        "values": mean[0].tolist(),
-        "lower_bound": quantiles[0, :, 0].tolist(),
-        "upper_bound": quantiles[0, :, -1].tolist(),
-    }
+    # inference_mode disables gradient tracking — the prediction is read-only,
+    # no backprop is needed. Without this, PyTorch retains the autograd graph
+    # for every intermediate tensor across predict_quantiles calls, causing RSS
+    # to climb ~200MB/prediction until PM2's max_memory_restart (2G) recycles
+    # the process every ~30min (119 restarts observed). inference_mode is the
+    # standard remedy for inference-only workloads and is strictly cheaper than
+    # no_grad (it also disables version counting + dispatch).
+    with torch.inference_mode():
+        ctx = torch.tensor(values, dtype=torch.float32)
+        quantiles, mean = pipeline.predict_quantiles(
+            inputs=[ctx],
+            prediction_length=horizon,
+            quantile_levels=quantile_levels,
+        )
+        # quantiles shape: [1, horizon, n_q]; index 0 = lowest q, -1 = highest q.
+        result = {
+            "values": mean[0].tolist(),
+            "lower_bound": quantiles[0, :, 0].tolist(),
+            "upper_bound": quantiles[0, :, -1].tolist(),
+        }
+        # Explicitly release tensors before exiting the context — the .tolist()
+        # calls above have already copied values to plain Python lists, so the
+        # tensors can be freed immediately rather than waiting for GC.
+        del ctx, quantiles, mean
+    return result
 
 
 # ─── Pipeline cache (load each variant's weights ONCE, not per-request) ──────
