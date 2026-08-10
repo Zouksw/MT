@@ -17,12 +17,12 @@ import {
 	formatLockoutTime,
 } from "@/services/authLockout";
 import {
-	type RequestCtx,
 	changePassword,
 	createAuthSession,
-	getUserProfile,
 	getUserIdFromToken,
+	getUserProfile,
 	invalidateSession,
+	type RequestCtx,
 	registerUser,
 	rotateRefreshToken,
 	updateUserProfile,
@@ -216,26 +216,26 @@ router.post(
 	"/login",
 	authRateLimiter,
 	validate(loginSchema),
-		asyncHandler(async (req: Request, res: Response) => {
-			const validatedData = loginSchema.parse(req.body);
+	asyncHandler(async (req: Request, res: Response) => {
+		const validatedData = loginSchema.parse(req.body);
 
-			// Brute-force protection: check account lockout before verifying credentials.
-			// authLockout fails closed in prod (Redis down → locked) per its own design.
-			const lockout = await checkAccountLockout(validatedData.email);
-			if (lockout.isLocked) {
-				throw new TooManyRequestsError(
-					`Account temporarily locked. Try again in ${formatLockoutTime(lockout.lockoutUntil ?? new Date())}.`,
-				);
-			}
-
-			const user = await verifyCredentials(
-				validatedData.email,
-				validatedData.password,
-				req.ip ?? "unknown",
+		// Brute-force protection: check account lockout before verifying credentials.
+		// authLockout fails closed in prod (Redis down → locked) per its own design.
+		const lockout = await checkAccountLockout(validatedData.email);
+		if (lockout.isLocked) {
+			throw new TooManyRequestsError(
+				`Account temporarily locked. Try again in ${formatLockoutTime(lockout.lockoutUntil ?? new Date())}.`,
 			);
+		}
 
-			// Credentials valid — clear any prior failed-attempt counters.
-			await clearFailedLoginAttempts(validatedData.email);
+		const user = await verifyCredentials(
+			validatedData.email,
+			validatedData.password,
+			req.ip ?? "unknown",
+		);
+
+		// Credentials valid — clear any prior failed-attempt counters.
+		await clearFailedLoginAttempts(validatedData.email);
 
 		const { token, refreshToken, sessionId } = await createAuthSession(user.id, reqCtx(req));
 
@@ -462,8 +462,7 @@ router.put(
 		} = {};
 		if (validatedData.name !== undefined) updateData.name = validatedData.name;
 		if (validatedData.avatarUrl !== undefined) updateData.avatarUrl = validatedData.avatarUrl;
-		if (validatedData.preferences !== undefined)
-			updateData.preferences = validatedData.preferences;
+		if (validatedData.preferences !== undefined) updateData.preferences = validatedData.preferences;
 
 		const user = await updateUserProfile(userId, updateData);
 		return success(res, { user });
@@ -505,6 +504,7 @@ router.put(
 // POST /api/auth/change-password - Change password
 router.post(
 	"/change-password",
+	authRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const authHeader = req.headers.authorization;
 		const userId = await getUserIdFromToken(authHeader);
