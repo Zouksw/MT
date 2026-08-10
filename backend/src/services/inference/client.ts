@@ -146,14 +146,27 @@ export async function predict(request: InferencePredictRequest): Promise<Inferen
 
 			if (!res.ok) {
 				const body = await res.text().catch(() => "unknown error"); // intentionally ignored — fallback for error body
+				// 4xx errors are deterministic — the request itself is invalid
+				// (degenerate series, malformed input, unsupported model). Retrying
+				// the identical request cannot succeed, so fail fast instead of
+				// wasting a second inference slot + 1s backoff + doubling latency.
+				// Only 5xx (server error) and network/timeout failures are retried.
+				if (res.status >= 400 && res.status < 500) {
+					throw new Error(`Inference service ${res.status}: ${body}`);
+				}
 				throw new Error(`Inference service ${res.status}: ${body}`);
 			}
 
 			return (await res.json()) as InferencePredictResponse;
 		} catch (err) {
 			lastError = err instanceof Error ? err : new Error(String(err));
-			if (attempt === 0) {
+			// Don't retry deterministic 4xx client errors — they cannot succeed
+			// on a second identical attempt (the input hasn't changed).
+			const isClientError = /Inference service 4\d\d:/.test(lastError.message);
+			if (attempt === 0 && !isClientError) {
 				await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+			} else {
+				break; // 4xx or second attempt — stop retrying
 			}
 		}
 	}
