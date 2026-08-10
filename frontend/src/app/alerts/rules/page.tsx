@@ -246,6 +246,7 @@ export default function AlertRules() {
 					<Button
 						size="sm"
 						variant="ghost"
+						aria-label="Edit alert rule"
 						onClick={() => handleEdit(record)}
 						icon={<Pencil className="size-3.5" />}
 					>
@@ -294,7 +295,11 @@ export default function AlertRules() {
 				description="Configure automated alert rules for monitoring your time series data"
 				breadcrumbs={breadcrumbItems}
 				actions={
-					<Button onClick={handleCreate} icon={<Plus className="size-4" />}>
+					<Button
+						aria-label="Create alert rule"
+						onClick={handleCreate}
+						icon={<Plus className="size-4" />}
+					>
 						{!isMobile && "Create Rule"}
 					</Button>
 				}

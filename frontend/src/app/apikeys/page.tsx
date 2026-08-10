@@ -234,6 +234,7 @@ export default function ApiKeyList() {
 				<Button
 					variant="danger"
 					size="sm"
+					aria-label="Delete API key"
 					icon={<Trash2 className="size-3.5" />}
 					onClick={() => {
 						if (
@@ -260,6 +261,7 @@ export default function ApiKeyList() {
 				actions={
 					<Button
 						variant="primary"
+						aria-label="Create API key"
 						icon={<Plus className="size-3.5" />}
 						onClick={() => setCreateModalVisible(true)}
 					>

@@ -324,6 +324,7 @@ export default function AlertList() {
 					<div className="flex items-center gap-3">
 						<Button
 							variant="ghost"
+							aria-label="Refresh alerts"
 							onClick={() => {
 								fetchAlerts();
 								fetchStats();
@@ -333,7 +334,7 @@ export default function AlertList() {
 							{!isMobile && "Refresh"}
 						</Button>
 						{stats && stats.unread > 0 && (
-							<Button onClick={handleMarkAllAsRead}>
+							<Button aria-label="Mark all alerts as read" onClick={handleMarkAllAsRead}>
 								<Check className="size-4 mr-1.5" />
 								{!isMobile && "Mark All Read"}
 							</Button>

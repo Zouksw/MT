@@ -227,7 +227,12 @@ export default function MarketNewsList() {
 				description="Beef trade market dynamics, price moves, and policy updates"
 				breadcrumbs={[{ label: "Home", href: "/" }, { label: "资讯" }, { label: "Market News" }]}
 				actions={
-					<Button variant="primary" size="md" onClick={() => router.push("/market-news/create")}>
+					<Button
+						variant="primary"
+						size="md"
+						aria-label="New article"
+						onClick={() => router.push("/market-news/create")}
+					>
 						<Plus className="size-4 mr-1.5" />
 						{!isMobile && "New Article"}
 					</Button>

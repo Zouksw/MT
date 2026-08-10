@@ -331,6 +331,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					<Button
 						variant="ghost"
 						size="sm"
+						aria-label="Copy API key"
 						icon={<Copy className="size-3.5" />}
 						onClick={handleCopyKey}
 					>
@@ -339,19 +340,26 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					<Button
 						variant="ghost"
 						size="sm"
+						aria-label="Regenerate API key"
 						icon={<RefreshCw className="size-3.5" />}
 						onClick={handleRegenerate}
 					>
 						{!isMobile && "Regenerate"}
 					</Button>
 					<a href={`/apikeys/edit/${apiKey.id}`}>
-						<Button variant="ghost" size="sm" icon={<Pencil className="size-3.5" />}>
+						<Button
+							variant="ghost"
+							size="sm"
+							aria-label="Edit API key"
+							icon={<Pencil className="size-3.5" />}
+						>
 							{!isMobile && "Edit"}
 						</Button>
 					</a>
 					<Button
 						variant="danger"
 						size="sm"
+						aria-label="Revoke API key"
 						icon={<Trash2 className="size-3.5" />}
 						onClick={handleRevoke}
 					>
