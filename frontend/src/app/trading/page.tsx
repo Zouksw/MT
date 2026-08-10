@@ -141,6 +141,7 @@ export default function TradingPage() {
 				)}
 				{d.beefMode && d.beefFactories.length > 0 && (
 					<select
+						aria-label="Filter by factory"
 						value={d.beefFactoryFilter}
 						onChange={(e) => d.setBeefFactoryFilter(e.target.value)}
 						className="px-2 py-1.5 rounded-md text-xs border bg-muted text-muted-foreground"

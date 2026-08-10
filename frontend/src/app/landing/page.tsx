@@ -115,6 +115,9 @@ export default function LandingPage() {
 					<button
 						type="button"
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+						aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+						aria-expanded={mobileMenuOpen}
+						aria-controls="mobile-nav-menu"
 						className="flex md:hidden items-center justify-center min-w-[44px] min-h-[44px] text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
 					>
 						{mobileMenuOpen ? <X size={24} /> : <List size={24} />}
@@ -123,7 +126,10 @@ export default function LandingPage() {
 
 				{/* Mobile slide-down menu */}
 				{mobileMenuOpen && (
-					<div className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-background px-4 py-4 space-y-1">
+					<div
+						id="mobile-nav-menu"
+						className="md:hidden border-t border-black/5 dark:border-white/10 bg-white dark:bg-background px-4 py-4 space-y-1"
+					>
 						{NAV_LINKS.map((link) => (
 							<a
 								key={link.href}
