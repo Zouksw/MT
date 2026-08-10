@@ -16,6 +16,11 @@ import { logger } from "./logger";
 let redisClient: RedisClientType | null = null;
 let initPromise: Promise<RedisClientType> | null = null;
 let initialized = false;
+// Negative caching: when Redis is down, remember the failure for a short
+// cooldown so callers don't re-attempt the 10s connection timeout on every
+// call (which would make every cached route block for 10s under outage).
+let redisDownUntil = 0;
+const REDIS_RETRY_COOLDOWN_MS = 30_000; // 30s — re-check Redis health periodically
 
 /**
  * Initialize Redis client - should be called during application startup
@@ -73,6 +78,10 @@ export async function initRedis(): Promise<void> {
 		logger.warn(`[REDIS] Connection failed: ${err}. Running without cache.`);
 		redisClient = null;
 		initialized = false;
+		// Set a cooldown so callers don't re-attempt the 10s connection timeout
+		// on every call while Redis is down (F13: without this, every cached
+		// route blocked for 10s per request under Redis outage).
+		redisDownUntil = Date.now() + REDIS_RETRY_COOLDOWN_MS;
 	}
 	initPromise = null;
 }
@@ -86,6 +95,14 @@ export async function initRedis(): Promise<void> {
 export async function getRedisClient(): Promise<RedisClientType> {
 	if (redisClient) {
 		return redisClient;
+	}
+
+	// Negative caching: if Redis was recently unreachable, fail fast instead
+	// of blocking for 10s on a connection timeout that will almost certainly
+	// fail again. Callers catch this and degrade gracefully (cache miss).
+	// After the cooldown, the next call re-attempts the connection.
+	if (Date.now() < redisDownUntil) {
+		throw new Error("Redis is temporarily unreachable (connection cooldown)");
 	}
 
 	if (initialized) {
