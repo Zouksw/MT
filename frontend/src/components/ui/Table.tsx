@@ -115,12 +115,28 @@ export function Table<T>({
 				<tbody>
 					{dataSource.map((record, rowIndex) => {
 						const rowProps = onRow?.(record, rowIndex);
+						const hasClick = rowProps?.onClick || rowProps?.onDoubleClick;
 						return (
 							<tr
 								key={getRowKey(record, rowIndex)}
-								className={`border-b border-border last:border-0 hover:bg-accent/50 transition-colors ${rowProps?.className || ""}`.trim()}
+								className={`border-b border-border last:border-0 transition-colors ${
+									hasClick
+										? "hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary cursor-pointer"
+										: ""
+								} ${rowProps?.className || ""}`.trim()}
 								onClick={rowProps?.onClick}
 								onDoubleClick={rowProps?.onDoubleClick}
+								onKeyDown={
+									hasClick
+										? (e) => {
+												if (e.key === "Enter") {
+													e.currentTarget.click();
+												}
+											}
+										: undefined
+								}
+								tabIndex={hasClick ? 0 : undefined}
+								role={hasClick ? "button" : undefined}
 							>
 								{columns.map((col) => {
 									const value = col.dataIndex !== undefined ? record[col.dataIndex] : undefined;
