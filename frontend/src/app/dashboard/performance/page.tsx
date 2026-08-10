@@ -475,7 +475,9 @@ export default function PerformancePage() {
 		{ value: "INP", label: "INP" },
 	];
 
-	const gap = isMobile ? 8 : 16;
+	// Tailwind v4 purges dynamically-constructed class names (gap-${n} → not in
+	// the compiled CSS). Use literal strings so the scanner sees them.
+	const gapClass = isMobile ? "gap-2" : "gap-4";
 	const breadcrumbs = [
 		{ label: "Home", href: "/" },
 		{ label: "Dashboard", href: "/dashboard" },
@@ -513,14 +515,14 @@ export default function PerformancePage() {
 
 			{error && <ErrorDisplay error={error} retry={loadData} context="Performance Metrics" />}
 
-			<div className={`grid grid-cols-2 md:grid-cols-4 gap-${gap} mb-3`}>
+			<div className={`grid grid-cols-2 md:grid-cols-4 ${gapClass} mb-3`}>
 				{statCards.map((stat, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 					<StatCard key={`wv-${i}`} {...stat} loading={loading} />
 				))}
 			</div>
 
-			<div className={`grid grid-cols-2 md:grid-cols-4 gap-${gap} mb-6`}>
+			<div className={`grid grid-cols-2 md:grid-cols-4 ${gapClass} mb-6`}>
 				{serverStatCards.map((stat, i) => (
 					<StatCard
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
@@ -532,7 +534,7 @@ export default function PerformancePage() {
 				))}
 			</div>
 
-			<div className={`grid grid-cols-1 lg:grid-cols-12 gap-${gap} mb-6`}>
+			<div className={`grid grid-cols-1 lg:grid-cols-12 ${gapClass} mb-6`}>
 				<div className="lg:col-span-7">
 					<ContentCard
 						title="Web Vitals History"
@@ -723,7 +725,7 @@ export default function PerformancePage() {
 				</ContentCard>
 			</div>
 
-			<div className={`grid grid-cols-1 lg:grid-cols-2 gap-${gap}`}>
+			<div className={`grid grid-cols-1 lg:grid-cols-2 ${gapClass}`}>
 				<ContentCard title="Process Details" subtitle="CPU and resource utilization">
 					<div className="grid grid-cols-2 gap-4">
 						<DetailItem label="CPU User Time" value={`${metrics?.cpu.userMs ?? "--"} ms`} />

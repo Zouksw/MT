@@ -301,7 +301,7 @@ export default function AlertRules() {
 			/>
 
 			{/* Statistics Cards */}
-			<div className={`grid grid-cols-2 gap-${isMobile ? 2 : 4} mb-${isMobile ? 4 : 6}`}>
+			<div className={`grid grid-cols-2 ${isMobile ? "gap-2 mb-4" : "gap-4 mb-6"}`}>
 				<StatCard
 					title="Total Rules"
 					value={totalRules}
@@ -323,7 +323,7 @@ export default function AlertRules() {
 			</div>
 
 			{/* Info Alert */}
-			<Alert variant="info" title="About Alert Rules" className={`mb-${isMobile ? 4 : 6}`}>
+			<Alert variant="info" title="About Alert Rules" className={isMobile ? "mb-4" : "mb-6"}>
 				Alert rules automatically monitor your timeseries data and send notifications when specific
 				conditions are met. You can set up rules based on thresholds, anomalies, or forecast
 				availability.
