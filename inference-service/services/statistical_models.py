@@ -144,6 +144,16 @@ def predict_sarimax(
             raise ValueError(
                 f"future_exog length ({future_exog_arr.shape[0]}) must equal horizon ({horizon})"
             )
+        # Column count must match the historical exog. A mismatch would raise
+        # inside the SARIMAX fit below, be caught by the broad except, and
+        # silently degrade to univariate ARIMA — the caller asked for a
+        # multivariate forecast and got a different one with no error. Validate
+        # here (outside the try) so it surfaces as a 422 instead.
+        if future_exog_arr.shape[1] != n_factors:
+            raise ValueError(
+                f"future_exog has {future_exog_arr.shape[1]} factors but exog has "
+                f"{n_factors}; they must match"
+            )
 
     try:
         model = SARIMAX(

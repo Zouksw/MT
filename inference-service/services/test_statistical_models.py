@@ -272,3 +272,23 @@ def test_z_for_level_clamps_up_for_non_table_levels():
             f"_z_for_level not monotonic: level {levels[i]}→z {zs[i]} but "
             f"level {levels[i+1]}→z {zs[i+1]}"
         )
+
+
+def test_sarimax_rejects_future_exog_factor_count_mismatch():
+    """REGRESSION (round-92): predict_sarimax did not validate that future_exog
+    and exog have the same number of factors (columns). A mismatch raised inside
+    the SARIMAX fit, was caught by the broad `except (LinAlgError, ValueError)`,
+    and silently degraded to univariate ARIMA — the caller asked for a
+    multivariate forecast and got a different model with no error. The fix adds
+    an explicit column-count check BEFORE the try block so it surfaces as a
+    ValueError (422 at the API edge) instead of a silent model swap."""
+    import pytest
+
+    from services.statistical_models import predict_sarimax
+
+    values = [100.0 + i for i in range(20)]
+    exog = [[float(i), float(i) * 0.5] for i in range(20)]  # 2 factors
+    # future_exog with 1 factor (mismatch) — must raise, not silently degrade.
+    future_exog = [[float(i)] for i in range(5)]
+    with pytest.raises(ValueError, match="factors"):
+        predict_sarimax(values, horizon=5, exog=exog, future_exog=future_exog)
