@@ -20,6 +20,7 @@
 
 import { prisma } from "@/lib";
 import { scraperManager } from "@/services/dataIngestion";
+import { PredictionStatus as PS } from "@/services/predictionLifecycle";
 
 export interface SourceFreshness {
 	/** Scraper registration key (e.g. "fred", "cme_futures"). */
@@ -163,10 +164,10 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 	// frozen rows kept the ratio pinned at 0.006, masking real debt).
 	const [predictionBacklog, predictionVerified, predictionStale, predictionUnverifiable] =
 		await Promise.all([
-			prisma.predictionLog.count({ where: { status: "completed" } }),
-			prisma.predictionLog.count({ where: { status: "verified" } }),
-			prisma.predictionLog.count({ where: { status: "stale" } }),
-			prisma.predictionLog.count({ where: { status: "unverifiable" } }),
+			prisma.predictionLog.count({ where: { status: PS.COMPLETED } }),
+			prisma.predictionLog.count({ where: { status: PS.VERIFIED } }),
+			prisma.predictionLog.count({ where: { status: PS.STALE } }),
+			prisma.predictionLog.count({ where: { status: PS.UNVERIFIABLE } }),
 		]);
 
 	const verificationRatio =

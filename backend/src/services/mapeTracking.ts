@@ -12,6 +12,7 @@ import { prisma } from "@/lib";
 import { getAuthoritativeSource } from "@/services/inference/authoritativeSources";
 import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
 import { STALE_WINDOW_DAYS } from "./beefFreshness";
+import { PredictionStatus as PS } from "./predictionLifecycle";
 
 export interface LogPredictionParams {
 	modelId: string;
@@ -42,7 +43,7 @@ export async function logPrediction(params: LogPredictionParams): Promise<string
 			lowerBounds: params.lowerBounds ?? undefined,
 			upperBounds: params.upperBounds ?? undefined,
 			confidence: params.confidence ?? undefined,
-			status: "completed",
+			status: PS.COMPLETED,
 		},
 	});
 
@@ -87,7 +88,7 @@ export async function verifyPrediction(
 		data: {
 			actualValues: actualValues,
 			mape: Math.round(mape * 10000) / 10000,
-			status: "verified",
+			status: PS.VERIFIED,
 			verifiedAt: new Date(),
 		},
 	});
@@ -136,10 +137,10 @@ export async function invalidatePollutedPredictions(fixedAt: Date): Promise<numb
 	const result = await prisma.predictionLog.updateMany({
 		where: {
 			commodityId: { in: commodities.map((c) => c.id) },
-			status: { in: ["completed", "verified"] },
+			status: { in: [PS.COMPLETED, PS.VERIFIED] },
 			predictedAt: { lt: fixedAt },
 		},
-		data: { status: "stale" },
+		data: { status: PS.STALE },
 	});
 	return result.count;
 }
@@ -175,13 +176,13 @@ export async function restorePostFixConflictPredictions(fixedAt: Date): Promise<
 	const result = await prisma.predictionLog.updateMany({
 		where: {
 			commodityId: { in: commodities.map((c) => c.id) },
-			status: "stale",
+			status: PS.STALE,
 			// Inverse boundary: only post-fix rows. The pre-fix ones stay stale
 			// (they really were trained on conflicting-source data and are
 			// unrecoverable — see invalidatePollutedPredictions docs).
 			predictedAt: { gte: fixedAt },
 		},
-		data: { status: "completed" },
+		data: { status: PS.COMPLETED },
 	});
 	return result.count;
 }
@@ -244,7 +245,7 @@ export async function markUnverifiablePredictions(): Promise<number> {
 	// refines it. We only need distinct commodityIds here.
 	const dueCommodities = await prisma.predictionLog.findMany({
 		where: {
-			status: "completed",
+			status: PS.COMPLETED,
 			predictedAt: { lte: cutoff },
 			// Exclude cut-series keys — their actuals live in BeefCutPrice, not
 			// CommodityPrice; a separate verification path handles them and
@@ -304,12 +305,12 @@ export async function markUnverifiablePredictions(): Promise<number> {
 		// as unverifiable in one batched updateMany (predictedAt <= cutoff).
 		const result = await prisma.predictionLog.updateMany({
 			where: {
-				status: "completed",
+				status: PS.COMPLETED,
 				commodityId: { in: frozenCommodityIds },
 				predictedAt: { lte: cutoff },
 				NOT: { commodityId: { startsWith: "cut:" } },
 			},
-			data: { status: "unverifiable" },
+			data: { status: PS.UNVERIFIABLE },
 		});
 		markedTotal += result.count;
 	}
@@ -345,7 +346,7 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 	// old prediction on a 95-day-dead commodity should be drained.
 	const laggingCommodities = await prisma.predictionLog.findMany({
 		where: {
-			status: "completed",
+			status: PS.COMPLETED,
 			predictedAt: { gt: cutoff },
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
@@ -383,12 +384,12 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 	// commodities unverifiable (predictedAt > cutoff — disjoint from Pass A).
 	const result = await prisma.predictionLog.updateMany({
 		where: {
-			status: "completed",
+			status: PS.COMPLETED,
 			commodityId: { in: frozenCommodityIds },
 			predictedAt: { gt: cutoff },
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
-		data: { status: "unverifiable" },
+		data: { status: PS.UNVERIFIABLE },
 	});
 
 	return result.count;
@@ -430,7 +431,7 @@ export async function restoreVerifiablePredictions(): Promise<number> {
 	// Candidate commodities: those with at least one unverifiable row.
 	const candidates = await prisma.predictionLog.findMany({
 		where: {
-			status: "unverifiable",
+			status: PS.UNVERIFIABLE,
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
 		select: { commodityId: true, predictedAt: true },
@@ -473,11 +474,11 @@ export async function restoreVerifiablePredictions(): Promise<number> {
 
 	const result = await prisma.predictionLog.updateMany({
 		where: {
-			status: "unverifiable",
+			status: PS.UNVERIFIABLE,
 			commodityId: { in: revivedCommodityIds },
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
-		data: { status: "completed" },
+		data: { status: PS.COMPLETED },
 	});
 
 	return result.count;
@@ -522,7 +523,7 @@ export async function verifyDuePredictions(): Promise<number> {
 	const now = Date.now();
 	const due = await prisma.predictionLog.findMany({
 		where: {
-			status: "completed",
+			status: PS.COMPLETED,
 			predictedAt: { lte: cutoff },
 		},
 		select: { id: true, commodityId: true, horizon: true, predictedAt: true },
@@ -716,7 +717,7 @@ export async function getModelAccuracy(
 
 	const where: Prisma.PredictionLogWhereInput = {
 		modelId,
-		status: "verified",
+		status: PS.VERIFIED,
 		verifiedAt: { gte: since },
 		...EXCLUDE_TEST_ARTIFACTS,
 	};
@@ -738,7 +739,7 @@ export async function getModelAccuracy(
 	const totalCount = await prisma.predictionLog.count({
 		where: {
 			modelId,
-			status: "verified",
+			status: PS.VERIFIED,
 			...EXCLUDE_TEST_ARTIFACTS,
 			...(commodityId ? { commodityId } : {}),
 			verifiedAt: { gte: since },

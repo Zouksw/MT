@@ -27,6 +27,7 @@ import {
 } from "@/services/inference/authoritativeSources";
 import { getAllModelAccuracy, getModelAccuracy } from "@/services/mapeTracking";
 import { getAllCachedPredictions } from "@/services/predictionCache";
+import { PredictionStatus as PS } from "@/services/predictionLifecycle";
 import { BASELINE_MODELS, generateForecast, getAllModels } from "@/services/tradingSignals";
 
 const router = Router();
@@ -153,7 +154,7 @@ router.get(
 
 		const where: Record<string, unknown> = {
 			modelId,
-			status: "verified",
+			status: PS.VERIFIED,
 		};
 		if (commodityId) where.commodityId = commodityId;
 

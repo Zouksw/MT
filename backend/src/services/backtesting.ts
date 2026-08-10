@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "@/lib";
+import { PredictionStatus as PS } from "./predictionLifecycle";
 
 export interface BacktestWindow {
 	days: number;
@@ -46,7 +47,7 @@ export async function runBacktest(
 			commodityId?: string;
 		} = {
 			modelId,
-			status: "verified",
+			status: PS.VERIFIED,
 			verifiedAt: { gte: since },
 		};
 		if (commodityId) where.commodityId = commodityId;
@@ -67,7 +68,7 @@ export async function runBacktest(
 		const totalCount = await prisma.predictionLog.count({
 			where: {
 				modelId,
-				status: "verified",
+				status: PS.VERIFIED,
 				...(commodityId ? { commodityId } : {}),
 				verifiedAt: { gte: since },
 			},
