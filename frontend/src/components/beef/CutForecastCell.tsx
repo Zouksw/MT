@@ -2,6 +2,7 @@
 
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
+import { memo } from "react";
 import type { CutForecastSummary } from "@/hooks/useBeefCutForecasts";
 import { formatSignedPercent } from "@/lib/format";
 
@@ -23,7 +24,12 @@ const iconConfig = {
 	flat: { Icon: Minus, color: "text-warning" },
 };
 
-export const CutForecastCell: React.FC<CutForecastCellProps> = ({ forecast }) => {
+// Memoized (round-88): the beef price table renders up to 50 rows, each with a
+// CutForecastCell. Without memo, every keystroke in the search box or filter
+// toggle re-rendered all 50 cells even though their `forecast` props hadn't
+// changed. The forecast object is a stable reference from the SWR cache, so a
+// shallow compare skips unchanged rows.
+const CutForecastCellComponent: React.FC<CutForecastCellProps> = ({ forecast }) => {
 	if (!forecast) {
 		// Honest absence — no forecast available for this cut.
 		return <span className="text-xs text-gray-300">—</span>;
@@ -43,5 +49,7 @@ export const CutForecastCell: React.FC<CutForecastCellProps> = ({ forecast }) =>
 		</span>
 	);
 };
+
+export const CutForecastCell = memo(CutForecastCellComponent);
 
 export default CutForecastCell;

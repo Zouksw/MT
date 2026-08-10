@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { memo } from "react";
 
 /**
  * BeefFreshnessBadge — consumes the backend's 3-tier freshness classification
@@ -42,7 +43,10 @@ function formatDate(iso: string | null | undefined): string | null {
 	return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-export const BeefFreshnessBadge: React.FC<BeefFreshnessBadgeProps> = ({
+// Memoized (round-88): rendered in up to 50 rows of the beef price table
+// alongside CutForecastCell. Props are all primitives/stable references from
+// the SWR cache, so a shallow compare skips unchanged rows during search/filter.
+const BeefFreshnessBadgeComponent: React.FC<BeefFreshnessBadgeProps> = ({
 	freshness,
 	dataDate,
 	compact = true,
@@ -70,5 +74,7 @@ export const BeefFreshnessBadge: React.FC<BeefFreshnessBadgeProps> = ({
 		</span>
 	);
 };
+
+export const BeefFreshnessBadge = memo(BeefFreshnessBadgeComponent);
 
 export default BeefFreshnessBadge;
