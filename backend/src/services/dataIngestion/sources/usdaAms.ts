@@ -102,9 +102,11 @@ async function updateAMSPrices(): Promise<ScraperResult> {
 			commodityId: commodity.id,
 			date,
 			source: "usda_ams",
+			// USDA AMS reports a single daily reported price, not intraday OHLC.
+			// Write open=high=low=close so the chart shows the honest flat candle.
 			open: price,
-			high: price * 1.005,
-			low: price * 0.995,
+			high: price,
+			low: price,
 			close: price,
 			volume: null,
 			metadata: { reportId: config.reportId, reportDate: dateStr },

@@ -69,9 +69,14 @@ async function fetchExchangeRates(): Promise<ScraperResult> {
 					date: today,
 					interval: "daily",
 					source: "exchange_rate_api",
+					// The exchange-rate API provides a single daily rate, not
+					// intraday OHLC. Write open=high=low=close=rate so the
+					// candlestick chart renders a flat doji (honest "no intraday
+					// range") rather than a fabricated ±0.1% spread that
+					// misrepresented volatility.
 					open: pair.rate,
-					high: pair.rate * 1.001,
-					low: pair.rate * 0.999,
+					high: pair.rate,
+					low: pair.rate,
 					close: pair.rate,
 				});
 				inserted += priceResult.inserted;

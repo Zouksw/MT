@@ -211,9 +211,12 @@ async function fetchChinaWholesale(): Promise<ScraperResult> {
 			commodityId: commodity.id,
 			date,
 			source: "china_mara",
-			open: item.price * 0.998,
-			high: item.price * 1.005,
-			low: item.price * 0.995,
+			// Single daily reported price — no intraday OHLC. Write
+			// open=high=low=close so the chart shows the honest flat candle,
+			// not a fabricated ±0.5% spread.
+			open: item.price,
+			high: item.price,
+			low: item.price,
 			close: item.price,
 			metadata: { prodName: cfg.searchName, rawDate: item.date },
 		});
