@@ -135,3 +135,56 @@ def test_predict_chronos_quantile_slicing(monkeypatch):
     assert result["lower_bound"] == [100.0, 110.0, 120.0]
     assert result["upper_bound"] == [102.0, 112.0, 122.0]
     assert result["values"] == [200.0, 201.0, 202.0]
+
+
+def test_get_chronos_pipeline_clears_stale_preload_failure(monkeypatch):
+    """REGRESSION (round-99): _preload_failures was never cleared when an
+    on-demand _get_chronos_pipeline load succeeded. A variant that failed
+    boot-time preload (transient OOM, HF cache lock) stayed in the failure
+    dict forever, so readiness_state() excluded it via `repo not in failures`
+    even though it was now loaded and serving — /ready returned 503 for a
+    healthy variant indefinitely (until process restart).
+
+    The fix clears the stale failure entry inside _get_chronos_pipeline when
+    the pipeline successfully loads.
+    """
+    from services import inference_engine
+
+    class FakePipeline:
+        pass
+
+    # Simulate a boot-time preload failure for chronos-tiny.
+    monkeypatch.setattr(
+        inference_engine, "_preload_failures", {"amazon/chronos-t5-tiny": "OOM at startup"}
+    )
+    # Empty pipeline cache so _get_chronos_pipeline will "load".
+    monkeypatch.setattr(inference_engine, "_chronos_pipelines", {})
+
+    # Stub ChronosPipeline.from_pretrained to succeed (simulating a successful
+    # on-demand load after the boot failure). torch is already installed in the
+    # venv so the `import torch` inside _get_chronos_pipeline works natively.
+    from chronos import ChronosPipeline
+
+    monkeypatch.setattr(
+        ChronosPipeline, "from_pretrained", staticmethod(lambda *a, **kw: FakePipeline())
+    )
+
+    # Before: _preload_failures has the stale entry.
+    assert "amazon/chronos-t5-tiny" in inference_engine._preload_failures
+
+    # Trigger the on-demand load.
+    pipeline = inference_engine._get_chronos_pipeline("amazon/chronos-t5-tiny")
+    assert pipeline is not None
+
+    # After: the stale failure must be cleared — the variant IS ready now.
+    assert "amazon/chronos-t5-tiny" not in inference_engine._preload_failures, (
+        "successful on-demand load must clear the stale boot-time preload failure"
+    )
+
+    # And readiness_state() must now include it in ready_variants.
+    monkeypatch.setattr(inference_engine, "CHRONOS_USABLE_VARIANTS", {"chronos_tiny": True})
+    monkeypatch.setattr(inference_engine, "CHRONOS_VARIANTS", {"chronos_tiny": "amazon/chronos-t5-tiny"})
+    state = inference_engine.readiness_state()
+    assert "chronos_tiny" in state["ready_variants"], (
+        "readiness_state must report the variant as ready after successful load"
+    )

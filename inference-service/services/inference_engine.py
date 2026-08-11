@@ -236,6 +236,11 @@ def _get_chronos_pipeline(repo_id: str):
             repo_id, device_map="cpu", dtype=torch.float32
         )
         logger.info("Loaded %s in %.1fs", repo_id, time.time() - t0)
+        # Clear any stale boot-time preload failure for this repo. A transient
+        # startup failure (OOM, HF cache lock) is permanently recorded in
+        # _preload_failures, but if the on-demand load here succeeds the repo
+        # IS ready — readiness_state() must not exclude it forever.
+        _preload_failures.pop(repo_id, None)
     return _chronos_pipelines[repo_id]
 
 
