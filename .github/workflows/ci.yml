@@ -91,6 +91,13 @@ jobs:
           cd backend && pnpm install
           cd ../frontend && pnpm install
 
+      # pnpm skips @prisma/client's postinstall when every package resolves
+      # from a warm store cache (observed: "reused 382 … Done in 1.4s", zero
+      # postinstall lines, tsc dies on 'no exported member PrismaClient').
+      # Generate explicitly — never depend on postinstall having run.
+      - name: Generate Prisma client
+        run: cd backend && npx prisma generate
+
       - name: Type check backend
         run: cd backend && pnpm run type-check
         continue-on-error: false
@@ -174,7 +181,9 @@ jobs:
         # replay dies with 42P01 "relation group_members does not exist" on a
         # fresh DB. Build the schema straight from schema.prisma instead.
         # (Production keeps migrate deploy — its history is applied there.)
-        run: cd backend && npx prisma db push --skip-generate
+        # No --skip-generate: the client must exist for seed + vitest, and
+        # postinstall is unreliable on warm store caches (see lint job).
+        run: cd backend && npx prisma db push
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
 
@@ -294,6 +303,7 @@ jobs:
         run: |
           cd backend
           pnpm install
+          npx prisma generate
           pnpm run build
 
       - name: Install and build frontend
@@ -358,8 +368,9 @@ jobs:
             cd backend && pnpm install --frozen-lockfile
             cd ../frontend && pnpm install --frozen-lockfile
 
-            # Build backend
-            cd ../backend && pnpm run build
+            # Build backend (generate first: warm pnpm store skips the
+            # @prisma/client postinstall, see test jobs)
+            cd ../backend && npx prisma generate && pnpm run build
 
             # Build frontend
             cd ../frontend && pnpm run build
