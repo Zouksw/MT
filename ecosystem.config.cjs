@@ -29,6 +29,11 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 8000,
+        // cme_futures scrapes Yahoo Finance, whose edge is IP-blocked direct
+        // from this host (bare fetch → ETIMEDOUT; verified 2026-08-14). The
+        // local mihomo proxy (systemd, 127.0.0.1:7890) provides egress. Only
+        // the Yahoo fetcher reads this — native fetch elsewhere stays direct.
+        SCRAPER_PROXY_URL: 'http://127.0.0.1:7890',
       },
       // Logging
       error_file: path.join(ROOT, '.logs/backend-error.log'),
@@ -81,9 +86,20 @@ module.exports = {
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
-      max_memory_restart: '2G',
+      // 3 Chronos pipelines idle at ~560MB RSS, but each 30-min prediction
+      // refresh burst (now 17 commodities × 3 models ≈ 51 POST /predict
+      // after the cme revival) pushes CPU-inference buffers past 3.5G at the
+      // peak (2026-08-15 05:25: WORKER kill at 3769MB vs 3584M cap, once in
+      // 15h — previously the 2G cap killed it every cycle). 4096M covers the
+      // larger burst; MALLOC_ARENA_MAX=2 + per-request gc.collect()
+      // (routers/predict.py) address the glibc-arena/cycle-retention growth.
+      // PM2's size regex rejects decimals — use integer M values.
+      max_memory_restart: '4096M',
       env_production: {
         INFERENCE_HOST: '0.0.0.0',
+        // Cap glibc malloc arenas — multithreaded torch fragments across the
+        // default 8×cores arenas, inflating RSS without real usage.
+        MALLOC_ARENA_MAX: '2',
         INFERENCE_PORT: '10810',
         INFERENCE_LOG_LEVEL: 'info',
         // Chronos foundation-model weights. huggingface.co is network-blocked
