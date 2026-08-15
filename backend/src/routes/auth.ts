@@ -407,7 +407,15 @@ router.post(
 router.get(
 	"/me",
 	asyncHandler(async (req: Request, res: Response) => {
-		const userId = await getUserIdFromToken(req.headers.authorization);
+		// Bearer header first, then the HttpOnly auth_token cookie — same
+		// resolution as /verify. Cookie support matters after a page refresh:
+		// the SPA's in-memory token is gone but the cookie session is alive,
+		// and the frontend AuthContext rebuilds its state from this endpoint
+		// (round-104). getUserIdFromToken only reads the header.
+		const authHeader =
+			req.headers.authorization ??
+			(req.cookies?.auth_token ? `Bearer ${req.cookies.auth_token}` : undefined);
+		const userId = await getUserIdFromToken(authHeader);
 		if (!userId) throw new UnauthorizedError("Invalid token");
 
 		const user = await getUserProfile(userId);

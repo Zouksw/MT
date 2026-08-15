@@ -3,6 +3,7 @@
 import type React from "react";
 import ErrorBoundaryWrapper from "@/components/ErrorBoundaryWrapper";
 import { ToastProvider } from "@/components/ui/Toast";
+import { AuthProvider } from "@/contexts/auth";
 import { ColorModeContextProvider } from "@/contexts/color-mode";
 
 export default function AppProviders({
@@ -14,10 +15,12 @@ export default function AppProviders({
 }) {
 	return (
 		<ColorModeContextProvider defaultMode={defaultMode}>
-			<main id="main-content">
-				<ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
-			</main>
-			<ToastProvider />
+			<AuthProvider>
+				<main id="main-content">
+					<ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
+				</main>
+				<ToastProvider />
+			</AuthProvider>
 		</ColorModeContextProvider>
 	);
 }

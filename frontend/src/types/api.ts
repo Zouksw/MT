@@ -51,9 +51,11 @@ export interface TimeSeries {
 }
 
 /**
- * Alert severity levels
+ * Alert severity levels — mirrors the backend Prisma enum AlertSeverity
+ * { INFO WARNING ERROR }. Previously drifted to low/medium/high/critical,
+ * which made every severity-keyed lookup miss (audit round-104).
  */
-export type AlertSeverity = "low" | "medium" | "high" | "critical";
+export type AlertSeverity = "INFO" | "WARNING" | "ERROR";
 
 /**
  * Alert entity

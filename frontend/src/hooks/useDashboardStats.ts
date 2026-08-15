@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { useAuth } from "@/contexts/auth";
 import { type CutForecastSummary, useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { API_BASE as API_ORIGIN } from "@/lib/config";
 import type { Alert, Forecast } from "@/types/api";
-import { getAuthToken } from "@/utils/auth";
 
 const API_BASE = `${API_ORIGIN}/api`;
 
@@ -27,10 +27,9 @@ export interface DashboardStats {
 	alerts: {
 		total: number;
 		bySeverity: {
-			critical: number;
-			high: number;
-			medium: number;
-			low: number;
+			info: number;
+			warning: number;
+			error: number;
 		};
 		trend: number | null;
 	};
@@ -111,22 +110,22 @@ const publicFetcher = async (url: string) => {
 	return response.json();
 };
 
-// Authenticated fetcher
+// Authenticated fetcher — cookie-capable. The Bearer header rides along when
+// the in-memory token exists (same-tab SPA), but the HttpOnly cookie session
+// must be enough on its own: after a page refresh the memory token is gone
+// and this hook used to hard-throw "Not authenticated" despite a valid
+// session (audit C8).
 const authFetcher = async (url: string) => {
-	const token = getAuthToken();
-	if (!token) throw new Error("Not authenticated");
-
-	const response = await fetch(url, {
-		credentials: "include",
-		headers: { Authorization: `Bearer ${token}` },
-	});
-
+	const response = await fetch(url, { credentials: "include" });
 	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 	return response.json();
 };
 
 export const useDashboardStats = () => {
-	const isAuth = !!getAuthToken();
+	// Session truth comes from AuthContext (cookie-verified), not from the
+	// refresh-volatile memory token.
+	const { status } = useAuth();
+	const isAuth = status === "authenticated";
 	const retryOpts = { maxRetries: 3, retryDelay: 1000, backoffMultiplier: 2 };
 
 	// Beef stats — public endpoints, always fetched. Uses the same
@@ -238,11 +237,13 @@ export const useDashboardStats = () => {
 		[],
 	);
 
+	// Backend AlertSeverity enum is INFO | WARNING | ERROR (schema.prisma).
+	// The old critical/high/medium/low keys never matched, so the
+	// distribution chart rendered permanently empty (audit C8).
 	const alertsBySeverity = {
-		critical: 0,
-		high: 0,
-		medium: 0,
-		low: 0,
+		error: 0,
+		warning: 0,
+		info: 0,
 	};
 
 	const alertsList: Alert[] = Array.isArray(alertsData?.data)
@@ -455,7 +456,7 @@ export const useDashboardStats = () => {
 				datasets: { total: 0, trend: null },
 				timeseries: { total: 0, trend: null },
 				forecasts: { total: 0, trend: null },
-				alerts: { total: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0 }, trend: null },
+				alerts: { total: 0, bySeverity: { error: 0, warning: 0, info: 0 }, trend: null },
 				aiModels: { active: aiActive, total: aiTotal },
 				beef: {
 					cuts: beefCuts.length,

@@ -42,19 +42,20 @@ const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell
 
 interface AlertDistributionChartProps {
 	data?: {
-		critical: number;
-		high: number;
-		medium: number;
-		low: number;
+		error: number;
+		warning: number;
+		info: number;
 	};
 	loading?: boolean;
 }
 
+// Backend AlertSeverity enum: INFO | WARNING | ERROR (schema.prisma). The
+// old critical/high/medium/low keys never matched any real severity, so the
+// chart always fell back to its demo data or rendered empty (audit C8).
 const SEVERITY_CONFIG = [
-	{ name: "Critical", key: "critical", color: "#DC2626", mutedColor: "#FCA5A5" },
-	{ name: "High", key: "high", color: "#F59E0B", mutedColor: "#FCD34D" },
-	{ name: "Medium", key: "medium", color: "#8B6914", mutedColor: "#A8821C" },
-	{ name: "Low", key: "low", color: "#10B981", mutedColor: "#6EE7B7" },
+	{ name: "Error", key: "error", color: "#DC2626", mutedColor: "#FCA5A5" },
+	{ name: "Warning", key: "warning", color: "#F59E0B", mutedColor: "#FCD34D" },
+	{ name: "Info", key: "info", color: "#10B981", mutedColor: "#6EE7B7" },
 ];
 
 export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
@@ -65,7 +66,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 		if (!data) {
 			return SEVERITY_CONFIG.map((s) => ({
 				name: s.name,
-				value: s.key === "critical" ? 2 : s.key === "high" ? 5 : s.key === "medium" ? 8 : 12,
+				value: s.key === "error" ? 2 : s.key === "warning" ? 5 : 12,
 				color: s.color,
 				mutedColor: s.mutedColor,
 			}));

@@ -11,6 +11,7 @@ import { errorHandler } from "@/lib/errorHandler";
 import { sanitizer } from "@/lib/sanitizer";
 import { tokenManager } from "@/lib/tokenManager";
 import { required, validationRules } from "@/lib/validation";
+import { setCachedUser } from "@/utils/auth";
 
 export function LoginForm() {
 	const [loading, setLoading] = useState(false);
@@ -61,6 +62,14 @@ export function LoginForm() {
 			const { user, token: authToken } = data.data || data;
 
 			tokenManager.setToken(authToken, remember);
+			// Mirror the profile into localStorage so the dashboard header shows
+			// the name on first paint (AuthContext refreshes it from /auth/me).
+			setCachedUser({
+				id: user.id,
+				email: user.email,
+				name: sanitizer.sanitizeString(user.name || "", 100),
+				avatar: user.avatar,
+			});
 			Cookies.set(
 				"auth",
 				JSON.stringify({

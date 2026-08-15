@@ -14,7 +14,7 @@ import {
 	Warehouse,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -23,10 +23,11 @@ import { Button } from "@/components/ui/Button";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { StatCard, type TrendIndicator } from "@/components/ui/StatCard";
+import { useAuth } from "@/contexts/auth";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
-import { getAuthToken, getCachedUser } from "@/utils/auth";
+import { getCachedUser } from "@/utils/auth";
 
 const ForecastTrendChart = dynamic(
 	() =>
@@ -133,9 +134,17 @@ function AIPredictionCard({
 
 export default function DashboardPage() {
 	const { stats, loading, error, manualRetry } = useDashboardStats();
-	const user = getCachedUser();
+	const { status, user: authUser, logout } = useAuth();
 	const isMobile = useIsMobile();
-	const isAuthenticated = !!getAuthToken();
+	// Session truth from AuthContext (cookie-verified on mount). The old
+	// `!!getAuthToken()` read only the in-memory token, so a page refresh
+	// rendered the signed-out prompt forever despite a valid cookie session.
+	const isAuthenticated = status === "authenticated";
+	// Profile from the context (fresh from /auth/me); cached user is only a
+	// pre-hydration fallback for the first paint.
+	const cached = getCachedUser();
+	const user = authUser ?? (cached ? { ...cached, name: cached.name ?? null } : null);
+	const handleLogout = useCallback(() => void logout(), [logout]);
 
 	const beef = stats?.beef;
 
@@ -198,20 +207,33 @@ export default function DashboardPage() {
 								Beef trade analytics at a glance — live prices, AI signals, and market movements.
 							</p>
 						</div>
-						<div
-							className="flex items-center justify-center border-2 border-primary rounded-2xl bg-primary/10 text-primary overflow-hidden"
-							style={{
-								width: isMobile ? 40 : 48,
-								height: isMobile ? 40 : 48,
-								minWidth: isMobile ? 40 : 48,
-							}}
-						>
-							{user?.avatar ? (
-								// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
-								<img src={user.avatar} alt="" className="w-full h-full object-cover rounded-2xl" />
-							) : (
-								<User className={isMobile ? "size-[18px]" : "size-[22px]"} />
-							)}
+						<div className="flex items-center gap-3">
+							<button
+								type="button"
+								onClick={handleLogout}
+								className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border hover:border-primary/40"
+							>
+								Sign out
+							</button>
+							<div
+								className="flex items-center justify-center border-2 border-primary rounded-2xl bg-primary/10 text-primary overflow-hidden"
+								style={{
+									width: isMobile ? 40 : 48,
+									height: isMobile ? 40 : 48,
+									minWidth: isMobile ? 40 : 48,
+								}}
+							>
+								{user?.avatar ? (
+									// biome-ignore lint/performance/noImgElement: dynamic user avatar from unknown domain
+									<img
+										src={user.avatar}
+										alt=""
+										className="w-full h-full object-cover rounded-2xl"
+									/>
+								) : (
+									<User className={isMobile ? "size-[18px]" : "size-[22px]"} />
+								)}
+							</div>
 						</div>
 					</div>
 

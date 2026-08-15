@@ -6,6 +6,22 @@ jest.mock("@/utils/auth", () => ({
 	getAuthToken: jest.fn(() => "mock-token"),
 }));
 
+// Mock the AuthContext the hook reads session truth from (round-104: the
+// hook moved from the refresh-volatile memory token to useAuth()).
+// authStatus is a mutable knob so individual tests can flip the session.
+const authStatus = { current: "authenticated" as "authenticated" | "unauthenticated" };
+jest.mock("@/contexts/auth", () => ({
+	useAuth: jest.fn(() => ({
+		status: authStatus.current,
+		user:
+			authStatus.current === "authenticated"
+				? { id: "u1", email: "u@x.dev", name: "Test User" }
+				: null,
+		refresh: jest.fn(),
+		logout: jest.fn(),
+	})),
+}));
+
 // Mock useSWR for beef public endpoints
 jest.mock("swr", () => ({
 	__esModule: true,
@@ -134,11 +150,14 @@ describe("useDashboardStats", () => {
 		expect(result.current.error?.message).toBe("Network error");
 	});
 
-	it("should handle missing auth token", async () => {
-		const { getAuthToken } = require("@/utils/auth");
-		getAuthToken.mockReturnValueOnce(null);
+	it("falls back to public-only stats when the session is unauthenticated", async () => {
+		// round-104: session truth is AuthContext status, not the memory
+		// token — a cookie session survives refresh; "no session" is what
+		// gates the authed fetches now.
+		authStatus.current = "unauthenticated";
 
-		// When auth token is null, useRetryableFetch gets null key and returns default
+		// Unauthenticated → authed useRetryableFetch calls get a null key and
+		// return the default empty result.
 		mockUseRetryableFetch.mockImplementation(() => makeFetchResult());
 
 		const { result } = renderHook(() => useDashboardStats());
@@ -150,6 +169,8 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats).not.toBeNull();
 		expect(result.current.stats?.beef).toBeDefined();
 		expect(result.current.stats?.beef.cuts).toBe(0);
+
+		authStatus.current = "authenticated";
 	});
 
 	it("should count alerts by severity correctly", async () => {
@@ -163,14 +184,16 @@ describe("useDashboardStats", () => {
 					data: {
 						total: 8,
 						data: [
-							{ severity: "critical" },
-							{ severity: "critical" },
-							{ severity: "high" },
-							{ severity: "high" },
-							{ severity: "high" },
-							{ severity: "medium" },
-							{ severity: "low" },
-							{ severity: "LOW" },
+							// Backend enum casing (schema.prisma AlertSeverity) —
+							// the counting code lowercases before keying.
+							{ severity: "ERROR" },
+							{ severity: "ERROR" },
+							{ severity: "WARNING" },
+							{ severity: "WARNING" },
+							{ severity: "WARNING" },
+							{ severity: "INFO" },
+							{ severity: "info" },
+							{ severity: "INFO" },
 						],
 					},
 				});
@@ -184,10 +207,9 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(result.current.stats?.alerts.bySeverity.critical).toBe(2);
-		expect(result.current.stats?.alerts.bySeverity.high).toBe(3);
-		expect(result.current.stats?.alerts.bySeverity.medium).toBe(1);
-		expect(result.current.stats?.alerts.bySeverity.low).toBe(2);
+		expect(result.current.stats?.alerts.bySeverity.error).toBe(2);
+		expect(result.current.stats?.alerts.bySeverity.warning).toBe(3);
+		expect(result.current.stats?.alerts.bySeverity.info).toBe(3);
 	});
 
 	it("should handle responses with items instead of data", async () => {
