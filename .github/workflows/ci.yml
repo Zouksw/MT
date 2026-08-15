@@ -227,6 +227,10 @@ jobs:
 
       - name: Generate coverage report
         run: cd backend && pnpm run test:coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
+          REDIS_URL: redis://localhost:6379
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
