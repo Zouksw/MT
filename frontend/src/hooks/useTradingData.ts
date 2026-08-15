@@ -5,6 +5,7 @@ import useSWR from "swr";
 import type { AnomalyAlert } from "@/components/trading/AnomalyAlertBanner";
 import type { ChartType } from "@/components/trading/ChartToolbar";
 import type { PredictionOverlay } from "@/components/trading/ProfessionalChart";
+import { API_BASE } from "@/lib/config";
 import {
 	useCommodities,
 	useCommodityFundamentals,
@@ -13,7 +14,7 @@ import {
 	usePriceHistory,
 } from "@/lib/market-data";
 
-const BEEF_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BEEF_API = API_BASE;
 
 type Timeframe = "daily" | "weekly" | "monthly";
 
@@ -188,7 +189,7 @@ export function useTradingData() {
 				const headers: Record<string, string> = { "Content-Type": "application/json" };
 				if (token) headers.Authorization = `Bearer ${token}`;
 
-				const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				const apiBase = API_BASE;
 				const [signalRes, accRes] = await Promise.allSettled([
 					fetch(
 						`${apiBase}/api/signals/${selected.slug}?timeseriesPath=root.trading.${selected.slug}.price&currentPrice=${currentPrice}&horizon=10`,
@@ -266,7 +267,7 @@ export function useTradingData() {
 				const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
 				const headers: Record<string, string> = {};
 				if (token) headers.Authorization = `Bearer ${token}`;
-				const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				const apiBase = API_BASE;
 
 				const modelRes = await fetch(`${apiBase}/api/signals/models`, { headers });
 				const modelData = await modelRes.json();
@@ -319,7 +320,7 @@ export function useTradingData() {
 				const headers: Record<string, string> = { "Content-Type": "application/json" };
 				if (token) headers.Authorization = `Bearer ${token}`;
 
-				const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				const apiBase = API_BASE;
 				const res = await fetch(`${apiBase}/api/anomalies?commodityId=${selected.id}`, { headers });
 
 				if (!cancelled && res.ok) {
@@ -349,7 +350,7 @@ export function useTradingData() {
 				const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
 				const headers: Record<string, string> = {};
 				if (token) headers.Authorization = `Bearer ${token}`;
-				const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				const apiBase = API_BASE;
 
 				const res = await fetch(`${apiBase}/api/signals/${selected.slug}/predictions?horizon=10`, {
 					headers,

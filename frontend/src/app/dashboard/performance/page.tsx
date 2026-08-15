@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
+import { API_BASE as API_ORIGIN } from "@/lib/config";
 import { useIsMobile } from "@/lib/responsive-utils";
 import { getAuthToken } from "@/utils/auth";
 
@@ -116,7 +117,7 @@ interface EndpointLatencyRow {
 	count: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_BASE = `${API_ORIGIN}/api`;
 const POLL_INTERVAL_MS = 30_000;
 const MAX_HISTORY_POINTS = 60;
 

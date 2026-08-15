@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { getMapeFillColor } from "@/lib/ai-utils";
+import { API_BASE } from "@/lib/config";
 import { formatPercentValue } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 
@@ -61,10 +62,9 @@ export default function ModelsComparisonPage() {
 				const headers: Record<string, string> = { "Content-Type": "application/json" };
 				if (token) headers.Authorization = `Bearer ${token}`;
 
-				const res = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/signals/models/accuracy?days=${days}`,
-					{ headers },
-				);
+				const res = await fetch(`${API_BASE}/api/signals/models/accuracy?days=${days}`, {
+					headers,
+				});
 
 				if (res.ok) {
 					const data = await res.json();

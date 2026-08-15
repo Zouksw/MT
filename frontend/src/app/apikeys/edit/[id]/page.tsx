@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { API_BASE } from "@/lib/config";
 
 interface ApiKeyEditPageProps {
 	params: Promise<{ id: string }>;
@@ -34,16 +35,13 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 			try {
 				const { tokenManager } = await import("@/lib/tokenManager");
 				const token = tokenManager.getToken();
-				const response = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/api-keys/${id}`,
-					{
-						headers: {
-							"Content-Type": "application/json",
-							...(token ? { Authorization: `Bearer ${token}` } : {}),
-						},
-						credentials: "include",
+				const response = await fetch(`${API_BASE}/api/api-keys/${id}`, {
+					headers: {
+						"Content-Type": "application/json",
+						...(token ? { Authorization: `Bearer ${token}` } : {}),
 					},
-				);
+					credentials: "include",
+				});
 				if (!response.ok) throw new Error("Failed to fetch API key");
 				const result = await response.json();
 				const data = result.data || result;
@@ -73,18 +71,15 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 		try {
 			const { tokenManager } = await import("@/lib/tokenManager");
 			const token = tokenManager.getToken();
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/api-keys/${id}`,
-				{
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						...(token ? { Authorization: `Bearer ${token}` } : {}),
-					},
-					credentials: "include",
-					body: JSON.stringify({ name: name.trim(), isActive }),
+			const response = await fetch(`${API_BASE}/api/api-keys/${id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
-			);
+				credentials: "include",
+				body: JSON.stringify({ name: name.trim(), isActive }),
+			});
 
 			if (!response.ok) {
 				const error = await response.json();

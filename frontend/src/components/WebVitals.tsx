@@ -1,6 +1,7 @@
 "use client";
 
 import { useReportWebVitals } from "next/web-vitals";
+import { API_BASE } from "@/lib/config";
 
 export function WebVitals() {
 	useReportWebVitals((metric) => {
@@ -27,7 +28,7 @@ async function sendToAnalytics(metric: { name: string; value: number; id: string
 	if (!ALLOWED.includes(metric.name)) return;
 
 	try {
-		const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+		const apiBase = API_BASE;
 		await fetch(`${apiBase}/api/metrics/web-vitals`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },

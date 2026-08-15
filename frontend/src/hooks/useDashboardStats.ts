@@ -3,12 +3,11 @@
 import { useMemo } from "react";
 import { type CutForecastSummary, useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
+import { API_BASE as API_ORIGIN } from "@/lib/config";
 import type { Alert, Forecast } from "@/types/api";
 import { getAuthToken } from "@/utils/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL
-	? `${process.env.NEXT_PUBLIC_API_URL}/api`
-	: "http://localhost:8000/api";
+const API_BASE = `${API_ORIGIN}/api`;
 
 export interface DashboardStats {
 	datasets: {

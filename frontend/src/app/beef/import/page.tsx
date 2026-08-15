@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useBeefImport } from "@/hooks/useBeefImport";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
+import { API_BASE } from "@/lib/config";
 
 /**
  * Beef price CSV import page — the no-API-key real-data injection point.
@@ -49,7 +50,7 @@ export default function BeefImportPage() {
 
 	function downloadTemplate() {
 		// Direct download from the backend template endpoint.
-		const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+		const base = API_BASE;
 		window.open(`${base}/api/beef/import/template`, "_blank");
 	}
 

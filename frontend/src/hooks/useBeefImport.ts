@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { API_BASE } from "@/lib/config";
 import { tokenManager } from "@/lib/tokenManager";
 
 /**
@@ -30,7 +31,7 @@ export interface BeefImportResult {
 
 export type UploadStatus = "idle" | "uploading" | "success" | "error";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL = `${API_BASE}/api`;
 
 export function useBeefImport() {
 	const [status, setStatus] = useState<UploadStatus>("idle");
