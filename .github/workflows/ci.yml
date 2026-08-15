@@ -195,6 +195,29 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
 
+      # correlationAnalysis.test.ts still drives the real HTTP surface on
+      # :8000 (the one old-style suite predating the in-process createTestApp).
+      # Scraper boot noise is background-only; outbound fetch failures are
+      # per-source caught and do not affect the HTTP endpoints under test.
+      - name: Start backend server
+        run: |
+          cd backend
+          nohup npx tsx src/server.ts > /tmp/backend.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8000/health > /dev/null; then echo "backend up"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::backend failed to start"
+          tail -50 /tmp/backend.log
+          exit 1
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
+          REDIS_URL: redis://localhost:6379
+          INFERENCE_URL: http://127.0.0.1:10810
+          JWT_SECRET: ci-only-jwt-secret-32-chars-minimum-ok!
+          SESSION_SECRET: ci-only-session-secret-32-chars-minimum!
+
       - name: Run tests
         run: cd backend && pnpm test
         env:
