@@ -44,12 +44,12 @@ import { prisma } from "@/lib";
  *                       correct direction). exchange_rate_api's inverted value
  *                       is excluded from prediction training/verification.
  *   - corn_cme        → usda_ams (128 rows in correct USD/bu ≈ 4.5). The cme
- *                       source writes cents/bu and round-56 added a priceFactor
- *                       0.01 conversion, BUT Stooq (cme's upstream) is currently
- *                       blocked, so cme only has 2 stale pre-fix rows at 473.
- *                       usda_ams is the correct read until Stooq recovers and cme
- *                       writes fresh converted USD values. Revisit once cme has
- *                       post-fix rows.
+ *                       source now writes converted USD values (round-100
+ *                       swapped the dead Stooq upstream for Yahoo Finance —
+ *                       same native units, priceFactor 0.01 intact), but its
+ *                       post-fix history starts 2026-08-14 at one bar/day.
+ *                       usda_ams stays authoritative until cme accumulates
+ *                       enough post-fix rows to out-length it; revisit then.
  *   - natural_gas_cme → fred DHHNGSP (7400+ daily points vs cme's 2; the slug
  *                       gets a continuous history only from fred).
  */

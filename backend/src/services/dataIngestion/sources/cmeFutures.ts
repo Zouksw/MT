@@ -1,15 +1,21 @@
 /**
- * Commodity Futures & Daily Prices via FRED + Stooq
+ * Commodity Futures & Daily Prices via FRED + Yahoo Finance
  *
  * Primary: FRED public CSV (no API key needed for daily crude oil, natural gas,
  *          beef carcass, and exchange rates)
- * Fallback: Stooq.com CSV for CME futures (may be blocked by Cloudflare)
+ * Futures: Yahoo Finance v8 chart API for CME front-month futures.
+ *
+ * History: the original Stooq CSV source died 2026-05 — Stooq removed the
+ * `/q/l/` endpoint (404) and put a JavaScript proof-of-work challenge on
+ * `/q/d/l/` (unsolvable by plain fetch). Yahoo's chart endpoint is keyless,
+ * JSON, and returns the same native CME quote units.
  *
  * Covers: Live Cattle, Feeder Cattle, Lean Hogs, Corn, Soybeans, Wheat,
  * Soybean Meal, Soybean Oil, Coffee, Sugar, Cotton, Crude Oil, Natural Gas, Gold,
  * US Beef Carcass Price, USD/CNY, BRL/USD, AUD/USD, EUR/USD.
  */
 
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { logger } from "@/lib";
 import { ensureCommodity, formatDateYMD, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
@@ -23,17 +29,21 @@ export const FUTURES: Record<
 		category: string;
 		unit: string;
 		/**
-		 * Multiplier applied to Stooq's raw quote before writing, to convert
+		 * Multiplier applied to Yahoo's raw quote before writing, to convert
 		 * from the exchange's native quote unit into the `unit` declared above.
 		 *
-		 * Stooq returns CME futures in their native trading units:
-		 *   - grains (ZC/ZS/ZW): cents/bu       → USD/bu      needs /100 → 0.01
-		 *   - livestock (LE/GF/HE): cents/cwt   → USD/cwt     needs /100 → 0.01
-		 *   - softs (KC/SB/CT) + soybean oil (ZL): cents/lb   → USD/lb      needs /100 → 0.01
-		 *   - soybean meal (ZM): USD/ton (already USD)                     → 1
-		 *   - energy/metals (CL/NG/GC): already USD                        → 1
+		 * Yahoo returns CME futures in their native trading units:
+		 *   - grains (ZC/ZS/ZW): cents/bu → USD/bu  needs /100 → 0.01
+		 *   - softs (KC/SB/CT) + soybean oil (ZL): cents/lb → USD/lb  needs /100 → 0.01
+		 *   - livestock (LE/GF/HE): quoted cents/lb, declared USD/cwt —
+		 *     numerically equal (220.3 cents/lb = $220.3/cwt, 100 lb/cwt)
+		 *     → 1. NOTE: round-56 wrongly gave these 0.01 (would store $2.2/cwt);
+		 *     never exposed because Stooq died before the fix ever ran.
+		 *   - soybean meal (ZM): USD/ton (already USD) → 1
+		 *   - energy/metals (CL/NG/GC): already USD → 1
 		 *
-		 * Default 1 (no conversion). The cent-quoted contracts get 0.01.
+		 * Default 1 (no conversion). Only cent-quoted contracts whose declared
+		 * unit is per the same cent-unit get 0.01.
 		 * Without this, corn_cme stored 473 (cents) next to USDA's 4.5 (USD)
 		 * → 100× unit conflict (docs/KNOWN-ISSUES.md R2).
 		 */
@@ -41,31 +51,28 @@ export const FUTURES: Record<
 	}
 > = {
 	LE: {
-		ticker: "le.f",
+		ticker: "LE=F",
 		slug: "live_cattle_cme",
 		name: "Live Cattle Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
-		priceFactor: 0.01,
 	},
 	GF: {
-		ticker: "gf.f",
+		ticker: "GF=F",
 		slug: "feeder_cattle_cme",
 		name: "Feeder Cattle Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
-		priceFactor: 0.01,
 	},
 	HE: {
-		ticker: "he.f",
+		ticker: "HE=F",
 		slug: "lean_hogs_cme",
 		name: "Lean Hogs Futures (CME)",
 		category: "futures",
 		unit: "USD/cwt",
-		priceFactor: 0.01,
 	},
 	ZC: {
-		ticker: "zc.f",
+		ticker: "ZC=F",
 		slug: "corn_cme",
 		name: "Corn Futures (CME)",
 		category: "futures",
@@ -73,7 +80,7 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	ZS: {
-		ticker: "zs.f",
+		ticker: "ZS=F",
 		slug: "soybeans_cme",
 		name: "Soybean Futures (CME)",
 		category: "futures",
@@ -81,7 +88,7 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	ZW: {
-		ticker: "zw.f",
+		ticker: "ZW=F",
 		slug: "wheat_cme",
 		name: "Wheat Futures (CME)",
 		category: "futures",
@@ -89,14 +96,14 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	ZM: {
-		ticker: "zm.f",
+		ticker: "ZM=F",
 		slug: "soybean_meal_cme",
 		name: "Soybean Meal Futures (CME)",
 		category: "futures",
 		unit: "USD/ton",
 	},
 	ZL: {
-		ticker: "zl.f",
+		ticker: "ZL=F",
 		slug: "soybean_oil_cme",
 		name: "Soybean Oil Futures (CME)",
 		category: "futures",
@@ -104,7 +111,7 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	KC: {
-		ticker: "kc.f",
+		ticker: "KC=F",
 		slug: "coffee_cme",
 		name: "Coffee Futures (CME)",
 		category: "futures",
@@ -112,7 +119,7 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	SB: {
-		ticker: "sb.f",
+		ticker: "SB=F",
 		slug: "sugar11_cme",
 		name: "Sugar #11 Futures (CME)",
 		category: "futures",
@@ -120,7 +127,7 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	CT: {
-		ticker: "ct.f",
+		ticker: "CT=F",
 		slug: "cotton2_cme",
 		name: "Cotton #2 Futures (CME)",
 		category: "futures",
@@ -128,21 +135,21 @@ export const FUTURES: Record<
 		priceFactor: 0.01,
 	},
 	CL: {
-		ticker: "cl.f",
+		ticker: "CL=F",
 		slug: "crude_oil_cme",
 		name: "Crude Oil Futures (CME)",
 		category: "futures",
 		unit: "USD/bbl",
 	},
 	NG: {
-		ticker: "ng.f",
+		ticker: "NG=F",
 		slug: "natural_gas_cme",
 		name: "Natural Gas Futures (CME)",
 		category: "futures",
 		unit: "USD/MMBtu",
 	},
 	GC: {
-		ticker: "gc.f",
+		ticker: "GC=F",
 		slug: "gold_cme",
 		name: "Gold Futures (CME)",
 		category: "futures",
@@ -271,7 +278,70 @@ async function fetchFredDaily(
 	return { inserted, updated };
 }
 
-async function fetchStooqBar(ticker: string): Promise<{
+/** Minimal shape of Yahoo's v8 chart response (daily bars). */
+interface YahooChartResponse {
+	chart?: {
+		result?: Array<{
+			timestamp?: number[];
+			indicators?: {
+				quote?: Array<{
+					open?: Array<number | null>;
+					high?: Array<number | null>;
+					low?: Array<number | null>;
+					close?: Array<number | null>;
+					volume?: Array<number | null>;
+				}>;
+			};
+		}>;
+	};
+}
+
+/** Minimal structural type both native fetch and undici fetch responses satisfy. */
+interface ChartResponse {
+	ok: boolean;
+	json(): Promise<unknown>;
+}
+
+/**
+ * Explicit egress proxy for the Yahoo fetcher.
+ *
+ * Yahoo's edge is IP-blocked from this host: a direct connect ETIMEDOUTs
+ * (same egress-filter pattern as registry.npmjs.org; verified 2026-08-14 —
+ * curl via the local mihomo proxy returns 200, bare Node fetch times out).
+ * Native fetch ignores HTTP(S)_PROXY env vars, so the proxy must be an
+ * explicit undici dispatcher. Opt-in via SCRAPER_PROXY_URL (set in
+ * ecosystem.config.cjs env_production); unset means direct (dev default).
+ */
+let yahooProxyAgent: ProxyAgent | undefined;
+function fetchYahooChart(url: string): Promise<ChartResponse> {
+	const proxyUrl = process.env.SCRAPER_PROXY_URL;
+	if (proxyUrl) {
+		yahooProxyAgent ??= new ProxyAgent(proxyUrl);
+		return undiciFetch(url, {
+			headers: {
+				Accept: "application/json",
+				"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+			},
+			dispatcher: yahooProxyAgent,
+			signal: AbortSignal.timeout(10000),
+		});
+	}
+	return fetch(url, {
+		headers: {
+			Accept: "application/json",
+			"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+		},
+		signal: AbortSignal.timeout(10000),
+	});
+}
+
+/**
+ * Latest completed daily bar for a Yahoo Finance symbol (e.g. "LE=F").
+ *
+ * Walks back past today's intraday row (its OHLC is null until the session
+ * closes) to the most recent bar with a real close.
+ */
+async function fetchYahooBar(symbol: string): Promise<{
 	date: Date;
 	open: number;
 	high: number;
@@ -279,46 +349,31 @@ async function fetchStooqBar(ticker: string): Promise<{
 	close: number;
 	volume: number | null;
 } | null> {
-	const end = new Date();
-	const start = new Date();
-	start.setDate(start.getDate() - 7);
+	const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1d`;
 
-	const url = `https://stooq.com/q/l/?s=${encodeURIComponent(ticker)}&d1=${formatDateYMD(start)}&d2=${formatDateYMD(end)}&i=d`;
-	const res = await fetch(url, {
-		headers: {
-			Accept: "text/csv",
-			"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-		},
-		signal: AbortSignal.timeout(10000),
-	});
+	const res = await fetchYahooChart(url);
 	if (!res.ok) return null;
 
-	const lines = (await res.text()).trim().split("\n");
-	if (lines.length < 2) return null;
+	const data = (await res.json()) as YahooChartResponse;
+	const result = data.chart?.result?.[0];
+	const timestamps = result?.timestamp;
+	const quote = result?.indicators?.quote?.[0];
+	if (!timestamps || !quote?.close) return null;
 
-	const cols = lines[lines.length - 1].split(",");
-	if (cols.length < 7) return null;
+	for (let i = timestamps.length - 1; i >= 0; i--) {
+		const close = quote.close[i];
+		if (close == null) continue;
 
-	const close = parseFloat(cols[6]?.trim() ?? "");
-	if (Number.isNaN(close)) return null;
-
-	const ds = cols[1]?.trim() ?? "";
-	const date = new Date(
-		`${ds.substring(0, 4)}-${ds.substring(4, 6)}-${ds.substring(6, 8)}T00:00:00Z`,
-	);
-	const open = parseFloat(cols[3]?.trim() ?? "");
-	const high = parseFloat(cols[4]?.trim() ?? "");
-	const low = parseFloat(cols[5]?.trim() ?? "");
-	const vol = parseFloat(cols[7]?.trim() ?? "");
-
-	return {
-		date,
-		open: Number.isNaN(open) ? close : open,
-		high: Number.isNaN(high) ? close : high,
-		low: Number.isNaN(low) ? close : low,
-		close,
-		volume: Number.isNaN(vol) ? null : vol,
-	};
+		return {
+			date: new Date(timestamps[i] * 1000),
+			open: quote.open?.[i] ?? close,
+			high: quote.high?.[i] ?? close,
+			low: quote.low?.[i] ?? close,
+			close,
+			volume: quote.volume?.[i] ?? null,
+		};
+	}
+	return null;
 }
 
 async function fetchCMEFutures(): Promise<ScraperResult> {
@@ -338,15 +393,17 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 		}
 	}
 
-	// Phase 2: Try Stooq for remaining CME futures (may be Cloudflare-blocked)
+	// Phase 2: Yahoo Finance for the remaining CME futures (keyless JSON).
+	// Stooq died 2026-05: /q/l/ removed (404) and /q/d/l/ sits behind a
+	// JavaScript proof-of-work challenge plain fetch cannot pass.
 	for (const [symbol, cfg] of Object.entries(FUTURES)) {
 		// Skip commodities already covered by FRED
 		if (symbol in FRED_DAILY) continue;
 
 		try {
-			const bar = await fetchStooqBar(cfg.ticker);
+			const bar = await fetchYahooBar(cfg.ticker);
 			if (!bar) {
-				logger.debug(`[CME/Stooq] ${cfg.ticker}: no data`);
+				logger.debug(`[CME/Yahoo] ${cfg.ticker}: no data`);
 				continue;
 			}
 
@@ -359,10 +416,10 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 				metadata: { source: "cme", productSymbol: symbol },
 			});
 
-			// Convert Stooq's native quote (cents for grains/livestock/softs)
-			// into the declared USD unit. priceFactor defaults to 1 (no-op) for
-			// energy/metals/soybean-meal which Stooq already returns in USD.
-			// See the FUTURES table docstring for the per-contract rationale.
+			// Convert Yahoo's native quote (cents for grains/softs) into the
+			// declared USD unit. priceFactor defaults to 1 (no-op) for
+			// livestock/energy/metals/soybean-meal. See the FUTURES table
+			// docstring for the per-contract rationale.
 			const f = cfg.priceFactor ?? 1;
 			const r = await upsertPrice({
 				commodityId: commodity.id,
@@ -373,12 +430,12 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 				low: bar.low * f,
 				close: bar.close * f,
 				volume: bar.volume,
-				metadata: { productSymbol: symbol, stooqTicker: cfg.ticker },
+				metadata: { productSymbol: symbol, yahooSymbol: cfg.ticker },
 			});
 			inserted += r.inserted;
 			updated += r.updated;
 		} catch (err) {
-			logger.debug(`[CME/Stooq] ${cfg.ticker} failed: ${err instanceof Error ? err.message : err}`);
+			logger.debug(`[CME/Yahoo] ${cfg.ticker} failed: ${err instanceof Error ? err.message : err}`);
 		}
 	}
 
