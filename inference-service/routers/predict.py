@@ -1,3 +1,4 @@
+import gc
 import math
 
 from fastapi import APIRouter, HTTPException
@@ -90,6 +91,14 @@ def predict_handler(req: PredictRequest):
         raise HTTPException(500, f"Prediction failed: {e}") from e
 
     future_ts = [last_ts + (i + 1) * step for i in range(req.horizon)]
+
+    # torch/statsmodels wrappers create reference cycles that refcounting
+    # alone doesn't reclaim; under the 30-min × multi-commodity prediction
+    # burst the residue accumulates and RSS climbs until PM2's
+    # max-memory-restart kills the process (observed 2026-08-15: crossed
+    # the 3.5G cap at a burst peak). An explicit collect per request keeps
+    # steady-state RSS flat. Cheap (~ms) when there is little to collect.
+    gc.collect()
 
     return PredictResponse(
         timestamps=future_ts,
