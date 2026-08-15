@@ -1,6 +1,6 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-08-15（round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
+> 最后更新：2026-08-15（round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
 > §九 数字严谨要求：下列计数为 live 实测（截至日期见各条），运行对应命令获取当前值。
 
@@ -43,6 +43,26 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 **激活自动部署需补 secrets**（用户决策，涉及上传 SSH 私钥到 GitHub）：`DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` / `DEPLOY_PORT`（可选）/ `PROJECT_PATH`（可选，默认 /root）/ `APP_URL` / `SLACK_WEBHOOK`（可选）。未配置期间部署保持服务器手动。
 
 **Coverage**：backend 跑 `test:coverage` 并上传 Codecov（continue-on-error=true，软失败）。frontend coverage 未在 CI 跑（jest.config.js 配了 70% 阈值但 CI 不强制）。
+
+### round-104 全栈审计修复（2026-08-15，9 Critical / 21 High 清单化修复）
+
+**审计**：5 分区并行扫描（路由/服务/数据层/前端/推理）+ Critical 逐条人工复核源码，~90 条新发现（已排除 TECH-DEBT/KNOWN-ISSUES/DESIGN-SYSTEM-AUDIT 既有条目），交互报告 `/tmp/mt-fullstack-audit-20260815-122319.html`。修复按 9 批独立提交，每批 tsc + 隔离库测试 + live 验证：
+
+| 批 | 提交 | 内容 |
+|---|---|---|
+| 1 | a69c9d5 | timeseries DELETE/POST-data、models PATCH 跨用户越权（C1-C3）+ zod + 10 条跨用户负向测试 |
+| 2 | d8b8ae9 | MarketFactor 唯一键加 seriesKey——15 个 FRED 序列与 USDA-PSD 多指标同键互覆的静默数据销毁（C4）；迁移已部署生产 |
+| 3 | cba7cff | usdaAms priceField 候选链——total_loads/total_value（量）当价写入的量纲错误（C5），**配 USDA key 前置条件** |
+| 4 | fa6fb1c | signals/batch、signals/:slug、beef/forecasts(含 :cutCode)、inference/anomalies 全部挂 checkAIAccess+aiRateLimiter（C6 免费层旁路）；移除客户端可控 currentPrice（共识污染+缓存投毒） |
+| 5 | 0aef965 | 推理服务并发闸 Semaphore(3)+torch 线程预算(4)+懒加载双检锁+输入防线（C9，R4 内存事故的结构根因；HF_ENDPOINT 前移） |
+| 6 | a2d897a | WS join-timeseries 鉴权（C7）；5 源 OHLC honest flat（round-98 残留）；mlaNlrs/cepeaData 汇率走库（latestUsdRate 助手，方向归一化）；MLA 全国价停止扇出 3 个任意工厂（AU-NAT-MLA 单一归属） |
+| 7 | e9d3f58 | tokenBlacklist per-token TTL——共享 SET expireAt 被短命吊销重置导致长命已吊销 token 复活（High-2） |
+| 8 | (auth fix) | 前端 AuthContext 会话状态机（contexts/auth.tsx，cookie 验证 + /me 重建 + 统一 logout 全应用首个登出入口）+ 刷新即假登出修复 + AlertSeverity 词汇对齐后端枚举（分布图恒零修复）；backend /auth/me 支持 cookie（C8） |
+| 9 | 3d8c181 | MAPE 验证环三修：forecast_start_at 时间戳对齐（下标配对→锚定对齐）、真实分母（分母=分子重跑→窗口内全部预测）、SQL 聚合+groupBy 替换无界 findMany（High-4/6/16） |
+
+**测试**：后端 658→**836 pass**；前端 278→**296 pass**；pytest 47→**57 pass**（合计 983→1189）。前端测试含批 8 的 AuthContext 契约更新（unauthenticated 公共数据回退、枚举大小写计数）。数据库迁移 2 个（market_factors.series_key、prediction_logs.forecast_start_at，均已 migrate deploy 到生产，TD-14 基线后首批增量迁移）。
+
+**方法论教训（诚实记录）**：① `prisma migrate diff --from-migrations` 的 `--shadow-database-url` 绝不能指向目标库自身——会重放迁移清掉它（本日两次踩坑，scratch 库重种子恢复；生产从未受影响）。② 全量测试依赖共享 live inference 与登录限流（3 注册/小时、登录 5/分钟），冷 Redis+并行 worker 下偶发超时/429 抖动——单跑必过、连跑三次观察到不同文件抖动即环境性而非回归；根治待批 5 并发闸削峰后的观察。
 
 ## 二、定时任务（系统 crontab）
 
