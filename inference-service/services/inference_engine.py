@@ -14,6 +14,7 @@ online-training path was removed as an anti-pattern.
 
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -88,6 +89,26 @@ CHRONOS_BLOCKED_REASON: str | None = (
     "no chronos variants have cached weights" if not CHRONOS_USABLE else None
 )
 
+# ─── Concurrency gate (round-104 / audit C9) ─────────────────────────────────
+# Sync route handlers run in anyio's threadpool (default 40 threads). Without
+# a gate, the 30-minute consensus refresh (~17 commodities × 3 variants) can
+# run up to 40 concurrent CPU-bound chronos forwards — each allocating its
+# own intermediate tensors, each defaulting to all-core OpenMP. That
+# oversubscription is the RSS 3.5G+ spike PM2 killed at 3769MB
+# (2026-08-15). gc.collect / max_memory_restart / MALLOC_ARENA_MAX only
+# treated the symptoms; capping concurrent forwards addresses the cause.
+# Requests beyond the cap queue in the threadpool instead of exploding RSS.
+_CHRONOS_MAX_CONCURRENCY = max(
+    1, int(os.environ.get("INFERENCE_MAX_CONCURRENT_CHRONOS", "3"))
+)
+_chronos_semaphore = threading.Semaphore(_CHRONOS_MAX_CONCURRENCY)
+
+# Serializes ChronosPipeline.from_pretrained — the lazy-init path below was a
+# check-then-act race: after a boot-time preload failure, the first concurrent
+# request wave could load the SAME repo twice (double weights in RAM) and the
+# later writer would clobber the dict entry.
+_pipeline_init_lock = threading.Lock()
+
 _all_models: dict[str, None] = {**STATISTICAL_MODELS}
 for vid in CHRONOS_VARIANTS:
     _all_models[vid] = None  # chronos handled separately
@@ -158,7 +179,7 @@ def _predict_chronos(
     # the process every ~30min (119 restarts observed). inference_mode is the
     # standard remedy for inference-only workloads and is strictly cheaper than
     # no_grad (it also disables version counting + dispatch).
-    with torch.inference_mode():
+    with _chronos_semaphore, torch.inference_mode():
         ctx = torch.tensor(values, dtype=torch.float32)
         quantiles, mean = pipeline.predict_quantiles(
             inputs=[ctx],
@@ -224,15 +245,30 @@ def readiness_state() -> dict:
     }
 
 
+def chronos_concurrency_limit() -> int:
+    """Configured max concurrent chronos forwards (observability/tests)."""
+    return _CHRONOS_MAX_CONCURRENCY
+
+
 def _get_chronos_pipeline(repo_id: str):
-    """Return a cached ChronosPipeline for repo_id, loading it on first use."""
-    if repo_id not in _chronos_pipelines:
+    """Return a cached ChronosPipeline for repo_id, loading it on first use.
+
+    Double-checked under _pipeline_init_lock so concurrent first-requests
+    load each repo exactly once.
+    """
+    cached = _chronos_pipelines.get(repo_id)
+    if cached is not None:
+        return cached
+    with _pipeline_init_lock:
+        if repo_id in _chronos_pipelines:
+            return _chronos_pipelines[repo_id]
+
         import torch
         from chronos import ChronosPipeline
 
         logger.info("Loading Chronos pipeline for %s (one-time cost)...", repo_id)
         t0 = time.time()
-        _chronos_pipelines[repo_id] = ChronosPipeline.from_pretrained(
+        pipeline = ChronosPipeline.from_pretrained(
             repo_id, device_map="cpu", dtype=torch.float32
         )
         logger.info("Loaded %s in %.1fs", repo_id, time.time() - t0)
@@ -241,7 +277,8 @@ def _get_chronos_pipeline(repo_id: str):
         # _preload_failures, but if the on-demand load here succeeds the repo
         # IS ready — readiness_state() must not exclude it forever.
         _preload_failures.pop(repo_id, None)
-    return _chronos_pipelines[repo_id]
+        _chronos_pipelines[repo_id] = pipeline
+        return pipeline
 
 
 def list_models() -> list[dict]:

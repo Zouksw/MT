@@ -188,3 +188,38 @@ def test_get_chronos_pipeline_clears_stale_preload_failure(monkeypatch):
     assert "chronos_tiny" in state["ready_variants"], (
         "readiness_state must report the variant as ready after successful load"
     )
+
+
+# ─── round-104 / audit C9: concurrency gate ──────────────────────────────────
+
+
+def test_chronos_concurrency_limit_default_and_env(monkeypatch):
+    """The chronos forward semaphore must exist with a sane default and be
+    overridable (reload-free modules can't re-import, so we verify the
+    configured value is a positive int and the semaphore matches it)."""
+    from services.inference_engine import (
+        _chronos_semaphore,
+        _pipeline_init_lock,
+        chronos_concurrency_limit,
+    )
+
+    limit = chronos_concurrency_limit()
+    assert isinstance(limit, int) and limit >= 1
+
+    # The semaphore admits exactly `limit` holders — prove by draining it.
+    acquired = []
+    while _chronos_semaphore.acquire(blocking=False):
+        acquired.append(True)
+    try:
+        assert len(acquired) == limit, f"semaphore capacity {len(acquired)} != {limit}"
+        # One more non-blocking acquire must fail — this is the gate that
+        # turns the 40-thread burst into a bounded queue.
+        assert not _chronos_semaphore.acquire(blocking=False)
+    finally:
+        for _ in acquired:
+            _chronos_semaphore.release()
+
+    # The lazy-init lock must exist and be a plain (non-reentrant is fine)
+    # lock guarding _get_chronos_pipeline's double-checked path.
+    with _pipeline_init_lock:
+        pass

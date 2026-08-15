@@ -1,4 +1,11 @@
 import logging
+import os
+
+# HF_ENDPOINT must be set BEFORE importing the engine — huggingface_hub bakes
+# ENDPOINT into a module constant at import time, so a setdefault that runs
+# after the import chain is dead code (bare `uvicorn main:app` would still
+# hit the walled huggingface.co and hang ~30s per request).
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 import uvicorn
 from fastapi import FastAPI
@@ -21,6 +28,7 @@ app.include_router(health.router, tags=["health"])
 def startup():
     logger.info(f"Inference service starting on {settings.host}:{settings.port}")
     logger.info(f"Available models: {', '.join(MODEL_IDS)}")
+    _apply_torch_thread_budget()
     # Preload Chronos pipelines so the first /predict isn't a 30s cold load.
     # Without this, the consensus pipeline fires 3 variants in parallel on
     # first request, each cold-loading ~30s on CPU, and the backend client
@@ -28,11 +36,29 @@ def startup():
     preload_chronos_pipelines()
 
 
+def _apply_torch_thread_budget() -> None:
+    """Cap torch intra-op threads (default: all cores per forward).
+
+    With up to N concurrent chronos forwards now allowed by the engine's
+    semaphore, all-core OpenMP per forward would oversubscribe the CPU
+    (audit C9). A fixed budget keeps aggregate CPU sane; single-request
+    latency on an 8-core box barely moves at 4 threads. Override with
+    TORCH_NUM_THREADS.
+    """
+    try:
+        import torch
+
+        n = max(1, int(os.environ.get("TORCH_NUM_THREADS", "4")))
+        torch.set_num_threads(n)
+        logger.info(f"torch intra-op threads set to {n}")
+    except ImportError:
+        logger.info("torch not installed — skipping thread budget")
+    except Exception as e:  # never block startup on a thread knob
+        logger.warning(f"torch.set_num_threads failed: {e}")
+
+
 def preload_chronos_pipelines():
     """Load all usable Chronos variant pipelines at startup (one-time cost)."""
-    import os
-
-    os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
     try:
         from services.inference_engine import (
             CHRONOS_USABLE_VARIANTS,

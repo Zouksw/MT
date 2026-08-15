@@ -209,3 +209,35 @@ def test_predict_maps_runtime_error_to_503(client, monkeypatch):
     monkeypatch.setattr("routers.predict.predict", fake_predict)
     resp = client.post("/predict", json=BASE_PAYLOAD)
     assert resp.status_code == 503
+
+
+# ─── round-104 / audit C9+C5-adjacent: input hardening ───────────────────────
+
+
+def test_predict_rejects_timestamps_length_over_cap(client):
+    """timestamps had no max_length — an oversized array bypassed the values
+    OOM guard while pydantic still allocated the parsed list."""
+    payload = {**BASE_PAYLOAD, "timestamps": [1] * 20_001}
+    resp = client.post("/predict", json=payload)
+    assert resp.status_code == 422
+
+
+def test_predict_rejects_timestamps_values_length_mismatch(client):
+    """Shorter timestamps than values used to pass validation and silently
+    produce a mis-scaled future time axis in the step inference."""
+    payload = {**BASE_PAYLOAD, "timestamps": BASE_PAYLOAD["timestamps"][:2]}
+    resp = client.post("/predict", json=payload)
+    assert resp.status_code == 422
+
+
+def test_predict_rejects_null_in_exog(client):
+    """NaN/inf in exog can flow through SARIMAX as NaN forecasts; reject at
+    the edge like values. JSON carries null (pydantic rejects None for float)."""
+    payload = {
+        **BASE_PAYLOAD,
+        "model_id": "sarimax",
+        "exog": [[1.0], [2.0], [None], [4.0]],
+        "future_exog": [[1.0]] * 5,
+    }
+    resp = client.post("/predict", json=payload)
+    assert resp.status_code == 422

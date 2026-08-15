@@ -2,7 +2,7 @@ import gc
 import math
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from services.inference_engine import MODEL_IDS, predict
 
@@ -18,7 +18,11 @@ class PredictRequest(BaseModel):
     values: list[float] = Field(
         ..., min_length=2, max_length=MAX_VALUES_LENGTH, description="Historical time series values"
     )
-    timestamps: list[int] = Field(..., description="Timestamps in ms")
+    # Same length cap as values — an unbounded timestamps array bypassed the
+    # OOM guard while pydantic still parsed it (audit round-104).
+    timestamps: list[int] = Field(
+        ..., max_length=MAX_VALUES_LENGTH, description="Timestamps in ms"
+    )
     model_id: str = Field(default="arima", description=f"One of: {MODEL_IDS}")
     horizon: int = Field(default=10, ge=1, le=100, description="Number of steps to forecast")
     confidence_level: float = Field(default=0.95, ge=0.8, le=0.99)
@@ -41,6 +45,32 @@ class PredictRequest(BaseModel):
             if isinstance(x, float) and (math.isnan(x) or math.isinf(x)):
                 raise ValueError(f"values[{i}] is {x}; NaN/inf are not valid time-series points")
         return v
+
+    @field_validator("exog", "future_exog")
+    @classmethod
+    def _reject_non_finite_exog(cls, v: list[list[float]] | None) -> list[list[float]] | None:
+        """Same NaN/inf guard as values — pydantic-core accepts NaN literals in
+        nested float lists, and NaN exog can flow through SARIMAX as NaN
+        forecasts instead of raising (audit round-104)."""
+        if v is None:
+            return v
+        for i, row in enumerate(v):
+            for j, x in enumerate(row):
+                if isinstance(x, float) and (math.isnan(x) or math.isinf(x)):
+                    raise ValueError(f"exog[{i}][{j}] is {x}; NaN/inf are not valid inputs")
+        return v
+
+    @model_validator(mode="after")
+    def _timestamps_align_with_values(self) -> "PredictRequest":
+        """The step inference below reads timestamps[-1] - timestamps[-2] to
+        build the future axis; a timestamps array shorter than values silently
+        produces a mis-scaled or empty time axis."""
+        if len(self.timestamps) > 0 and len(self.timestamps) != len(self.values):
+            raise ValueError(
+                f"timestamps length ({len(self.timestamps)}) must match values "
+                f"length ({len(self.values)}) or be empty"
+            )
+        return self
 
 
 class PredictResponse(BaseModel):
