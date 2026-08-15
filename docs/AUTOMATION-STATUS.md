@@ -75,6 +75,12 @@
 
 **inference 特殊配置**：`env_production` 设 `HF_ENDPOINT=https://hf-mirror.com`（huggingface.co 被墙，用镜像）。chronos 启动时预加载（main.py startup hook），冷加载 ~90s（3 个变体各 ~30s）。
 
+**inference 内存上限 2G→3584M→4096M（2026-08-14/15，KNOWN-ISSUES R4）**：每 30 分钟预测刷新 burst 把 RSS 推过上限致 PM2 WORKER 周期性击杀（2G 时代当周 218 次；3584M 时代 15h 内 1 次——cme 复活后订阅商品 5→17、burst 15→~51 请求，2026-08-15 05:25 峰值 3769MB）。现行缓解：`max_memory_restart: '4096M'` + `MALLOC_ARENA_MAX=2`（glibc arena 碎片）+ predict 每请求 `gc.collect()`（引用环）。注意 **PM2 尺寸正则不认小数**（`'3.5G'` 被 WARN 拒绝且不生效），必须写整数 M。RSS 走势待跟踪。
+
+**backend `/health` 专属限流（2026-08-15）**：`healthRateLimiter` 60/min/IP（live 实证 58×200→429）。原因：全局限流器挂在 `/api` 不覆盖 `/health`，而 `/health/ready` 会扇出 DB/Redis/推理探测，可被匿名滥用。注意 interplay：cron-healthcheck 每 5 分钟 1 次远低于限值；但若本机其他进程打满 60/min 窗口，cron 探测会拿到 429 并误判重启——当前无此类调用方。
+
+**backend 出站代理（2026-08-14，R2 round-100）**：`env_production` 设 `SCRAPER_PROXY_URL=http://127.0.0.1:7890`（mihomo，systemd `mihomo.service` 保活）。**仅** cmeFutures 的 Yahoo fetcher 读取它（Yahoo edge 对本机直连 IP-blocked，bare fetch ETIMEDOUT）；backend 其余 fetch（FRED 等）保持直连。依赖链：mihomo 挂 → 仅 cme 期货数据断（scraper 静默 0 行，不 crash）；cron-healthcheck **不监控** mihomo（待办）。
+
 ## 五、测试体系
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
@@ -230,6 +236,28 @@
 | ruff | inference Python | pyproject.toml（py310, 100 列, E/W/F/I/UP） | ✅ test-inference job（round-25） |
 | husky + lint-staged | 根级 pre-commit | .husky/pre-commit → biome check --write | 本地 commit 时 |
 | knip | backend/frontend | knip.json（已配置，待 zod 兼容后启用） | 未启用 |
+
+## 六½、存储管理策略（2026-08-15 制定，当日实测 28G/75% → 22G/58%）
+
+**清单与处置**（40G 根分区）：
+
+| 目录 | 体积 | 处置 |
+|---|---|---|
+| `~/.local/share/pnpm`（store v3） | 3.6G | 🔴 **红线不动**（AGENTS.md §七.3：`store prune` 曾三次损坏 store） |
+| `~/.cache/huggingface` | 879M | 🔴 红线不动（chronos 权重，重启即用） |
+| `~/.vscode-server/extensions` + `data` | ~1G | 🔴 不动（用户工具链）；`cli/servers` 旧构建 **keep-1**（每个 ~400M，重连自动重下） |
+| 项目本体（backend/frontend/inference venv/node_modules/`.next`/dist） | ~5G | 🔴 不动 |
+| `/root/backups` | 184M | ✅ 有界：backup-db.sh `KEEP_COUNT=7`（26M/天压缩） |
+| `~/.npm`（_cacache+_npx） | 曾 1.9G | ✅ 已清 + 纳入分级阈值（npmmirror 可秒级重下） |
+| `/opt/iotdb` | 曾 2.2G | ✅ **已移除**（2026-08-15 审计：零进程/零服务/7 月后零修改/代码零引用——纯对标研究残留；data 目录 5M 已压缩归档至 `backups/iotdb-data-archive-20260815.tar.gz` 72K） |
+| systemd journal | 曾 312M | ✅ 上限 200M：`/etc/systemd/journald.conf.d/mt-storage.conf` + cron 每日 `--vacuum-size=200M` |
+| `/var/cache/apt` | 曾 164M | ✅ 已清 + 纳入分级阈值 |
+| PostgreSQL | 412M→**335M** | ✅ datapoints/timeseries 历史测试数据膨胀 77M 经 `VACUUM FULL` 回收（两表 0-2 活行）；prediction_logs 263M 保留（业务数据，增长 ~1.2k 行/天，年增 ~250M，暂无需归档） |
+| `.logs/` 应用日志 | 1.6M | ✅ 30 天保留；修复了原脚本漏匹配带日期轮转文件（`*-YYYYMMDD[.gz]` 不以 `.log` 结尾）的堆积漏洞 |
+
+**cron-cleanup.sh 分级响应**（每日 3AM）：<80% 仅常规清理；≥80% 清 `_npx` + apt 缓存；≥90% 追加 `_cacache`（紧急）。常规步：/tmp>7d、core dumps、playwright、日志 30d、journal vacuum、vscode 旧构建 keep-1。
+
+**遗留观察**：prediction_logs 与 sessions（7.8k 行）的归档策略待数据量翻倍后评估（当前不构成压力）；`~/.zcode`(1.2G)/`.claude`/`.codex` 为 AI 工具链，随会话自管理。
 
 ## 七、已知限制与待办
 

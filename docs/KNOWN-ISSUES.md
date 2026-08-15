@@ -70,6 +70,26 @@
 - 验证后清理 demo 行（`DELETE WHERE source LIKE 'manual:%'`），DB 无污染。
 - **结论**：CSV 导入是 D1 网络封锁下的可用数据注入路径。操作员可通过 `/beef/import` 页定期上传牛肉价格 CSV（模板：`GET /api/beef/import/template`），数据流→新鲜度→预测→MAPE 环全通。+7 测试守护此路径。
 
+**2026-08-14 复核（深度探查 + live 修复）**：产数源 2→**3**：
+| 源 | 行数 | 最新 | 说明 |
+|---|---|---|---|
+| fred | 62,078 | 2026-08-13 | ✅ 活——来自 cmeFutures 内**免 key** 的 FRED CSV 路径 |
+| exchange_rate_api | 156 | 2026-08-13 | ✅ 活 |
+| cme (Yahoo) | 12 合约 | **2026-08-12/13** | ✅ **本轮复活**（见 R2 round-100） |
+- `fredData.ts`（需 key 的独立源）今晨仍报 `Missing FRED_API_KEY`（ingestion_logs 01:34 实证）——fred 的"活"与它无关。
+- **stooq 根因澄清**：从未被墙——2026-05 删除 `/q/l/` 端点（404）并在 `/q/d/l/` 挂 JS PoW 挑战。round-63/80 对**此源**的"网络出口封锁"结论不成立（对 MLA/USDA 源站的封锁结论仍有效）。
+- `beef_cut_prices` 仍冻结 2026-04-30（2,401 行）；MLA/USDA/weather key 仍未提供。
+
+**2026-08-14 第二轮源探测（复用 mihomo 出口，全部 live 实测）**：
+| 源/主机 | 直连 | 代理 | 结论 |
+|---|---|---|---|
+| `faostatservices.fao.org`（FAOSTAT 新主机） | 401 | 401 | **迁移实锤**：旧 `fenixservices` 主机死，新主机活、端点结构相同但强制 `Authorization: Bearer`（假 token 403）。`faoPrices.ts` 已切新 URL + key 门控（缺 `FAO_API_KEY` 早退）。**FAO 加入 A2 key 清单（第 5 把）** |
+| `comexstat.mdic.gov.br`（SECEX） | 403 | 403（**经巴西专线节点**） | **Cloudflare 应用层 WAF**（bot 挑战页），非地域封锁——巴西 IP 一样拦。与 CEPEA 同类，plain fetch 无解；分类从"403 地域"改为"需 headless" |
+| `apps.fas.usda.gov`（USDA-PSD） | 000 | 404 | 主机代理可达但 `psdonline/api` 路径不对；FAS 官方开放 API 在 `api.fas.usda.gov`（data.gov 免费 key）。**PSD 加入 A2 key 清单（第 6 把，可选）** |
+| `www.inac.gub.uy` / `www.gub.uy/instituto-nacional-carnes` | 000 / 404 | 000 / 404 | INAC 站点下线/重构，全球性。维持"不可解"登记 |
+| `www.mla.com.au` | **200** | 200 | **Cloudflare 403 已消失**（直连即可达，无需代理）；但 `statistics/api/` 是 SPA 壳，真实 grid 端点契约仍需 key 才能核实。A1 维持"调研完成、卡 key" |
+| 订阅 51 节点地区分布 | — | — | 21 日本 / 10 美国 / 5 新加坡 / 2 香港 / 2 英国 / 荷兰法国巴西各 1-3 / **无中国大陆节点** → `.gov.cn` 族（chinaWholesale/chinaCustoms/dce/sse）维持"需中国出口"结论，除非订阅加大陆节点 |
+
 ---
 
 ### D2 — MAPE 验证环断裂（数据层后果）
@@ -182,6 +202,13 @@
 - **live 实测（2026-08-03）**：`/api/signals/brl_usd` currentPrice 0.197→**5.0592**、predictedChange 2460→0.24；`/api/market/commodities` brl_usd latestPrice 0.197→**5.0592**；`/api/analytics/seasonality/brl_usd` 12 月 avg 全在 **5.1–5.5**（fred 量级，不再混 ~0.2）。backend 634|1→**639|1**（+5 回归测试）。
 - **结论**：R2 读侧**全补全**——signals/market/watchlist/alerts/analytics 现对所有 conflict commodity 读权威源。数据层（两源仍写同 slug）未动（靠读侧过滤根治，避免 schema 迁移）。
 
+**round-100（2026-08-14，cme 源复活 + livestock 单位修正，live 验证）**：
+- **stooq 根因反转**：`/q/l/` 端点已删（404）、`/q/d/l/` 挂 JS PoW 反爬（plain fetch 不可过，换代理出口 IP 同样被挑战）——**非网络封锁**。替换上游为 **Yahoo Finance v8 chart API**（keyless JSON，同原生报价单位）；Yahoo edge 对本机直连 IP-blocked（bare fetch ETIMEDOUT、curl 经 mihomo 200，2026-08-14 实测）→ Yahoo fetcher 加 `SCRAPER_PROXY_URL` 显式 undici ProxyAgent（`ecosystem.config.cjs` env_production 指向 mihomo `127.0.0.1:7890`；其余 fetch 保持直连、不受影响）。
+- **livestock priceFactor 修正（潜伏 100× bug）**：LE/GF/HE 报价 cents/lb、声明单位 USD/cwt——数值恰好相等（226 cents/lb = $226/cwt），round-56 给的 0.01 是错的（会写 $2.2/cwt）；因 stooq 一直死着**从未暴露**。现移除（默认 1）。grains/softs 的 0.01 不变。
+- **live 验证**：重启后单轮 12 合约全写入：live_cattle **226.2** / feeder **342.8** / hogs **95.5** USD/cwt；corn **4.755** / soybeans **11.89** / wheat **6.77** USD/bu；meal **316.2** USD/ton；oil **0.685** / coffee **3.33** / sugar **0.168** / cotton **0.824** USD/lb；gold **4376** USD/oz——全部与 2026-08 行情量纲吻合。
+- **corn_cme 权威源维持 usda_ams**：cme 新历史自 08-14 起每日 1 bar 尚短；`authoritativeSources.ts` 注释已同步，cme 积累足够 post-fix 行后回切。
+- **测试**：round-56 与 round-100(D3) 两套重叠套件合并至 `sources/__tests__/cmeFutures.test.ts`（17 用例：cents/livestock/native-USD 三组 + corn 量纲 + Yahoo ticker 格式 + slug 唯一）。
+
 ---
 
 ### R3 — 历史幽灵模型 timer_xl / sundial 残留预测行（低优先级，数据完整性）
@@ -198,6 +225,15 @@
 - `getAllModelAccuracy` 只遍历 `getAllModels()+BASELINE_MODELS`（live 9 个），ghost 模型不进对比。
 - **唯一暴露面**：`GET /api/signals/models/:modelId/accuracy`（wildcard）+ `/predictions` + `/backtest`——直填 `timer_xl` 会返回该模型的真实 MAPE（timer_xl avg 0.728 / sundial avg 6.81）"像"活模型。但需鉴权 + 手填 URL，前端从不传 ghost id（模型列表来自 server），**实际不可达**。
 **处置决策（round-72，遵循 §十.5 外科手术）**：不删 DB 行（非己所造的数据，先记录）；不加 wildcard guard（前端不可达，会"顺手改进相邻代码"违反 §十.5）。仅**文档记录**为本条。若日后 wildcard 可达性提升（如前端加自由文本 model 选择器）或需要干净的 MAPE 数据集，再评估：选项 A 路由层 404 unknown model id；选项 B `DELETE FROM prediction_logs WHERE model_id IN ('timer_xl','sundial')`（332 行，不可逆，需备份确认）。
+
+---
+
+### R4 — inference 每 30 分钟被 PM2 内存上限击杀（2026-08-14 发现并修复）
+
+**来源**：2026-08-14 深度探查（PM2 守护日志四点证据链：backend-out "Refreshing predictions ×5" → inference-out 每逢 :03/:33 恰 15 个 POST /predict → pm2.log `[PM2][WORKER] exceeds --max-memory-restart (2.17~2.64G vs 2G)` → ecosystem `max_memory_restart: '2G'`）
+**事实**：backend 每 30 分钟刷一轮预测（5 commodity × 3 chronos = 15 请求），burst 期 torch CPU 推理缓冲把 RSS 推到 2.2–2.6GB，超 2G 上限 → PM2 WORKER 每 30 分钟 SIGINT 击杀，重启计数 320、当周 218 次。**非泄漏**（空闲 RSS ~560MB，3 pipeline 常驻），是工作集天花板 + glibc arena 不归还。用户可见症状被 round-99 的 /ready 修复掩盖（重启 7s 完成、请求全 200），故长期未被发现。
+**修复（2026-08-14）**：上限 2G→**`3584M`**。踩坑：PM2 尺寸正则**不认小数**，`'3.5G'` 被 WARN 拒绝且重启不生效——必须用整数 M。主机 14G 内存/11G available。
+**二次事件（2026-08-15 05:25）**：cme 复活后预测订阅商品 5→17（burst 15→~51 请求），如 R4 预警——RSS 在 burst 峰值冲到 **3769MB**（超 3584M 上限 11MB），15 小时内首次也是唯一一次击杀。缓解三件套（同日上线）：①上限 **4096M**；②`MALLOC_ARENA_MAX=2`（ecosystem env，治 glibc 多线程 arena 碎片——torch 多线程下默认 8×cores 个 arena 各自滞留内存）；③`routers/predict.py` 每请求 `gc.collect()`（torch/statsmodels 包装器的引用环 refcount 不回收）。重启后 live 验证：/ready 200、chronos 真实预测通路 OK、RSS 基线 603MB。**观察项**：若 RSS 仍持续爬升，下一步限并发或深入 torch 内存剖析。
 
 ---
 
@@ -250,6 +286,13 @@
 - **§七.3 安全**：**全程未跑 `store prune`**；pnpm 9 沿用 store v3（无 store 迁移）；store 3.6G 保留；bcrypt 风险不适用（后端用 bcryptjs 纯 JS）。
 - **验证（全绿）**：build 脚本产物核实（prisma 引擎/esbuild/sharp libvips 原生二进制全在）；`pnpm build`（backend+frontend）0 错误；3 服务全 online；backend **645|1** / frontend **278** / inference **47**（无回归）；价值链 chronos 382 verified（live）。
 - **副作用（接受）**：未来包 install 元数据经 npmmirror.com（用户授权）。**T1 RESOLVED**。详情见 AUTOMATION-STATUS round-74。
+
+### T2 — backend pnpm overrides 与 lockfile 漂移的 vite 地雷（2026-08-14 排除）
+
+**来源**：2026-08-14 `pnpm add undici` 时触发
+**事实**：`pnpm.overrides` 的 `"vite": "^5.4.21"`（vitest2+vite5 时代安全钉）从未随 vitest 4 + vite 6 升级同步，而 lockfile 已是 vite 6.4.3——**任何** `pnpm add/install` 都会把 vite 重解为 5.4.21 并炸掉 vitest 4（`ERR_PACKAGE_PATH_NOT_EXPORTED`）。属于"改了 package.json 不 install"埋下的延迟炸弹。
+**修复**：override 改 `"^6.4.3"`（≥6.4.3 覆盖原 CVE 意图），vite 恢复 6.4.3、vitest 4.1.10 全绿。
+**教训**：改 overrides 必须当场 install + 跑测试。顺带实证 AGENTS.md 的"Vitest 2"陈述已过期（实为 4.1.10）。
 
 ---
 

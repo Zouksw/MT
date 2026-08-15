@@ -1,6 +1,6 @@
 # MT 项目整体规划与实现状态评估
 
-> **评估日期**：2026-08-08（round-79）
+> **评估日期**：2026-08-08（round-79）｜**2026-08-12 复核**（rounds 80-99：§〇 Executive Summary / §3.3 测试覆盖 / §3.4 循环依赖 已同步当前实现）
 > **方法论**：ops-check + zoom-out + improve-codebase-architecture + grill-with-docs 四技能交叉验证，3 Explore agent 并行全量扫描，所有数字 live 实测
 > **评估范围**：运维健康 / 价值链实现 / 架构深度 / 规划对齐 / 文档一致性
 
@@ -14,9 +14,9 @@
 |---|---|---|
 | 运维健康 | ✅ **全绿** | 3 服务 online，3 health endpoint 200，全依赖（PG/Redis）可达 |
 | 价值链完整度 | ✅ **端到端通** | 19 爬虫全真实逻辑 + 9 模型全真实算法 + MAPE 环活 + 前端 0 mock |
-| 架构质量 | ⚠️ **良但有债** | 多数服务深（deep），7/20 路由过胖，1 处循环依赖 |
-| 规划对齐 | ⚠️ **spec 过期** | 资讯模块已建但 spec 标 ❌；6 vs 5 模型数矛盾 |
-| 文档一致性 | ⚠️ **AGENTS.md 准、其余漂移** | 5 个 headline 数全准；AUTOMATION-STATUS 头注过期 |
+| 架构质量 | ⚠️ **良但有债** | 多数服务深（deep），7/20 路由过胖（TD-6，低 ROI）；循环依赖已解（round-79 抽 modelRegistry.ts） |
+| 规划对齐 | ✅ **已对齐** | round-82 核实 spec §六/§七/§八 已同步实现（见 §4.4），原"spec 过期"已撤 |
+| 文档一致性 | ✅ **AGENTS.md 准、其余基本对齐** | 5 个 headline 数全准；AUTOMATION-STATUS 头注 round-80 已修；TECH-DEBT/KNOWN-ISSUES 历史项有意保留为索引 |
 
 **核心判断**：这个项目的**工程实现领先于它的文档**。代码扎实（无 stub、无 mock、无 AI-slop），但文档（尤其 PRODUCT-SPEC）落后于实现，造成"看起来比实际差"的错觉。
 
@@ -84,7 +84,7 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 
 **关键发现**：
 - **Chronos（预训练基座）显著优于统计基线**：1.77-1.93% vs 3.45-3.73% MAPE —— 验证了"IoTDB AINode 预训练模型"产品方向的正确性
-- **stl_forecaster 异常**（10.88 MAPE，3x 于同类）—— 阻尼趋势修复已文档化但生产 MAPE 仍高，待调查
+- **stl_forecaster 异常**（10.88 MAPE，3x 于同类）—— ✅ round-79 已修（signal-to-noise gate；历史 3287 行 pre-fix 不可追溯，新预测自稀释，见 §六 #2）
 - **ghost 模型 timer_xl/sundial**（167/165 行）—— round-75 已加 route 守卫，仅 0.13% 残留
 
 ### 2.4 MAPE 验证环：实现且活跃
@@ -129,14 +129,13 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 
 ### 3.3 测试覆盖
 
-- **路由集成测试**：10/20 有（alerts/apiKeys/beef/billing/datasets/health/inference/marketNews/signals/watchlist）
-- **无测试路由**：10（analytics/anomalies/auth/docs/marketData/metrics/models/portfolios/security/timeseries）
+- **路由集成测试**：**20/20 路由均有测试文件**（round-89/95/96 补齐此前无测试的 10 个路由；datasets 由 `data.test.ts` 覆盖；`docs.ts` 为纯 Swagger 静态服务，无业务逻辑）
 - **服务测试**：25 文件（多数无路由测试的服务有服务测试，如 anomalyService）
-- **测试基线**：backend 658|1 / frontend 278 / inference 47 = **983 全绿**
+- **测试基线**（2026-08-12 实测）：backend 783 passed|1 skipped / frontend 296 / inference 53 = **1132 全绿**
 
 ### 3.4 依赖健康
 
-- **1 处循环依赖**：`predictionCache.ts` ↔ `tradingSignals.ts`（getAllModels vs getCachedPrediction）—— 运行时因 JS 惰性绑定工作，但是真实循环
+- **循环依赖**：~~`predictionCache.ts` ↔ `tradingSignals.ts`~~ ✅ round-79 已解（抽 `modelRegistry.ts` 叶模块，见 §六 #4）
 - **0 BullMQ 残留**（TD-1 已 STALE，代码确无 bullmq/ioredis）
 - **4 个 0-importer 死导出**：getCutMapping、parseExcel、lastNDays、trackUsage（后者 TECH-DEBT 标注保留为未来配额候选）
 
