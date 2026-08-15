@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { logger, prisma } from "@/lib";
 import { success } from "@/lib/response";
+import { checkAIAccess } from "@/middleware/aiAccess";
 import type { AuthenticatedRequest } from "@/middleware/auth";
 import { authenticate, authorize } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
+import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { getPagination } from "@/schemas/common";
 import { aggregateBeefByCountry } from "@/services/beefAggregation";
 import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
@@ -498,6 +500,10 @@ router.get(
 router.get(
 	"/forecasts",
 	authenticate,
+	// One ensemble per forecastable cut — the heaviest inference path in the
+	// API (audit C6). Same tier gate + rate limiter as /api/inference/predict.
+	checkAIAccess,
+	aiRateLimiter,
 	asyncHandler(async (req, res) => {
 		const horizon = Math.min(Number(req.query.horizon) || 7, 30);
 
@@ -585,6 +591,11 @@ router.get(
 router.get(
 	"/forecasts/:cutCode",
 	authenticate,
+	// Multi-model ensemble for the cut's series — tier gate + rate limiter
+	// match /forecasts and /api/inference/predict (audit C6; the doc comment
+	// above claimed this gate but only authenticate was wired).
+	checkAIAccess,
+	aiRateLimiter,
 	asyncHandler(async (req, res) => {
 		const { cutCode } = req.params;
 		const horizon = Math.min(Number(req.query.horizon) || 10, 30);

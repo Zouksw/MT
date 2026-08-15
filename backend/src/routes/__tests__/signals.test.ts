@@ -6,12 +6,15 @@
 
 import type { Express } from "express";
 import request from "supertest";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { jwtUtils, prisma } from "@/lib";
 import { redis } from "@/lib/redis";
 import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
 let token: string;
+let viewerToken: string;
+let viewerUserId = "";
 
 function authHeaders(t?: string) {
 	return t ? { Authorization: `Bearer ${t}` } : {};
@@ -40,6 +43,23 @@ describe("Signals Routes (Integration)", () => {
 		app = createTestApp();
 		await requireDb("signals");
 		token = await getAdminToken(app);
+
+		// Free-tier user for the AI gate regression (round-104): the ensemble
+		// endpoints must 403 before any inference work happens.
+		const viewer = await prisma.user.create({
+			data: {
+				email: `signals-viewer-${Date.now()}@test`,
+				name: "Signals Viewer",
+				passwordHash: "test-hash-not-real",
+				role: "VIEWER",
+			},
+		});
+		viewerUserId = viewer.id;
+		viewerToken = jwtUtils.generateToken(viewer.id);
+	});
+
+	afterAll(async () => {
+		await prisma.user.deleteMany({ where: { id: viewerUserId } }).catch(() => {});
 	});
 
 	describe("GET /api/signals/models", () => {
@@ -272,6 +292,39 @@ describe("Signals Routes (Integration)", () => {
 			expect(res.body.success).toBe(true);
 			expect(res.body.data).toHaveProperty("predictions");
 			expect(res.body.data).toHaveProperty("total");
+		});
+	});
+	// round-104 / audit C6: the ensemble endpoints are the same cost class as
+	// POST /api/inference/predict and must carry the same tier gate. Before
+	// the fix, a free-tier VIEWER could run unlimited full-ensemble forecasts
+	// through these routes.
+	describe("AI tier gate (VIEWER blocked)", () => {
+		it("GET /:commodityId returns 403 for VIEWER", async () => {
+			const res = await request(app)
+				.get("/api/signals/brl_usd?horizon=3")
+				.set(authHeaders(viewerToken));
+			expect(res.status).toBe(403);
+			expect(res.body.success).toBe(false);
+		});
+
+		it("POST /batch returns 403 for VIEWER", async () => {
+			const res = await request(app)
+				.post("/api/signals/batch")
+				.set(authHeaders(viewerToken))
+				.send({ slugs: ["brl_usd"], horizon: 3 });
+			expect(res.status).toBe(403);
+		});
+
+		it("ADMIN still passes the gate", async () => {
+			// Nonexistent slug: the gate must pass (role check only) and the
+			// handler then 400s on commodity lookup — proving tier-gate
+			// ordering WITHOUT firing a real ensemble at the shared inference
+			// service (a live ensemble here competes with the api-workflows
+			// signal test and the background refresh cycle for CPU).
+			const res = await request(app)
+				.get("/api/signals/no_such_commodity_xyz?horizon=3")
+				.set(authHeaders(token));
+			expect(res.status).toBe(400);
 		});
 	});
 });

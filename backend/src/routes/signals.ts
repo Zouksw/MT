@@ -11,9 +11,11 @@ import { z } from "zod";
 import { prisma } from "@/lib";
 import { logger } from "@/lib/logger.js";
 import { success } from "@/lib/response";
+import { checkAIAccess } from "@/middleware/aiAccess";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
+import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { checkSignalChange } from "@/services/alertNotifications";
 import { runBacktest } from "@/services/backtesting";
 import {
@@ -34,8 +36,12 @@ const router = Router();
 
 const signalQuerySchema = z.object({
 	horizon: z.coerce.number().min(1).max(100).default(10),
-	currentPrice: z.coerce.number().positive().optional(),
 	models: z.string().optional(), // comma-separated model IDs
+	// `currentPrice` was removed (round-104): a client-supplied price flowed
+	// straight into the consensus math and, because the default cache key
+	// includes the query string, poisoned `signals:commodity` cache entries
+	// for 5 minutes. The server resolves the authoritative latest close —
+	// any client still sending the param has it stripped by zod.
 });
 
 // ─── Static routes (MUST come before /:commodityId) ───
@@ -289,6 +295,11 @@ const batchSignalsSchema = z.object({
 router.post(
 	"/batch",
 	authenticate,
+	// Full-ensemble inference per slug — same cost class as POST /api/inference/predict,
+	// so the same tier gate + rate limiter apply (audit C6: this was the free
+	// tier's unlimited side door into the AI layer).
+	checkAIAccess,
+	aiRateLimiter,
 	asyncHandler(async (req: AuthRequest, res) => {
 		const { slugs, horizon } = batchSignalsSchema.parse(req.body);
 
@@ -343,6 +354,11 @@ router.post(
 router.get(
 	"/:commodityId",
 	authenticate,
+	// Full-ensemble consensus — same cost class as /api/inference/predict,
+	// gated identically (audit C6). Gates run BEFORE cacheRoute so a cache
+	// hit can never serve AI output to a free-tier VIEWER.
+	checkAIAccess,
+	aiRateLimiter,
 	cacheRoute("signals:commodity", 300), // cache for 5 minutes
 	asyncHandler(async (req: AuthRequest, res) => {
 		const { commodityId } = req.params;
@@ -362,15 +378,14 @@ router.get(
 			);
 		}
 
-		let currentPrice = params.currentPrice;
-		if (!currentPrice || !Number.isFinite(currentPrice)) {
-			const latest = await prisma.commodityPrice.findFirst({
-				where: { ...priceWhere, ...authoritativeSourceWhere(commodity.slug) },
-				orderBy: { date: "desc" },
-				select: { close: true, commodityId: true },
-			});
-			currentPrice = latest?.close ? Number(latest.close) : 0;
-		}
+		// Server-resolved current price only (see schema note) — the latest
+		// authoritative close, never a client-supplied value.
+		const latest = await prisma.commodityPrice.findFirst({
+			where: { ...priceWhere, ...authoritativeSourceWhere(commodity.slug) },
+			orderBy: { date: "desc" },
+			select: { close: true, commodityId: true },
+		});
+		const currentPrice = latest?.close ? Number(latest.close) : 0;
 
 		const models = params.models ? params.models.split(",").filter((m) => m) : undefined;
 

@@ -302,6 +302,7 @@ router.post(
 	"/anomalies",
 	authenticate,
 	checkAIAccess,
+	aiRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { commodityId, threshold, historyPoints } = req.body;
 
