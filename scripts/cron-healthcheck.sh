@@ -82,7 +82,7 @@ case "$DATA_LAYER" in
 esac
 
 # Dependency-file integrity guard. Catches the recurring pnpm-store/venv
-# corruption pattern early (Round 5 js-yaml, Round 7 venv, Round 10
+# corruption pattern (Round 5 js-yaml, Round 7 venv, Round 10
 # is-core-module/core.json) before a silent failure surfaces as a confusing
 # build/test/runtime error.
 for f in \
@@ -95,3 +95,16 @@ do
         echo "[$NOW] INTEGRITY ALERT: missing $f — possible store corruption"
     fi
 done
+
+# mihomo proxy guard (round-103). The cme_futures Yahoo fetcher is the only
+# scraper that routes through 127.0.0.1:7890 (SCRAPER_PROXY_URL) — if mihomo
+# dies, cme silently writes 0 rows every 6h cycle (per-source catch, no crash,
+# no restart). systemd already auto-restarts the unit (Restart=on-failure),
+# so this is an observability probe, not a recovery action: alert when the
+# unit is not active OR the proxy port stops accepting connections (hung
+# process with active unit). Every other scraper fetches direct and is
+# unaffected — that asymmetry is why the backend as a whole stays "healthy".
+MIHOMO_STATE=$(systemctl is-active mihomo 2>/dev/null || echo "unknown")
+if [ "$MIHOMO_STATE" != "active" ] || ! timeout 2 bash -c 'exec 3<>/dev/tcp/127.0.0.1/7890' 2>/dev/null; then
+    echo "[$NOW] PROXY-DOWN: mihomo state=$MIHOMO_STATE port 7890 unreachable — cme_futures (Yahoo) will write 0 rows until restored"
+fi
