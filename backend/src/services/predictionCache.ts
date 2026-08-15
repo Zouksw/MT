@@ -174,6 +174,13 @@ export async function runAndCachePrediction(
 				predictedValues: result.values,
 				lowerBounds: result.lower_bound ?? undefined,
 				upperBounds: result.upper_bound ?? undefined,
+				// The forecast's own timeline start (first predicted step =
+				// day after the last training point). Verification aligns
+				// actuals to this, not to the log time (round-104).
+				forecastStartAt:
+					Array.isArray(result.timestamps) && result.timestamps.length > 0
+						? new Date(result.timestamps[0])
+						: undefined,
 			});
 		} catch (error) {
 			logger.error(

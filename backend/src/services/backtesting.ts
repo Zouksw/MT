@@ -40,51 +40,41 @@ export async function runBacktest(
 	for (const days of windows) {
 		const since = new Date(Date.now() - days * 86400000);
 
-		const where: {
-			modelId: string;
-			status: string;
-			verifiedAt: { gte: Date };
-			commodityId?: string;
-		} = {
-			modelId,
-			status: PS.VERIFIED,
-			verifiedAt: { gte: since },
-		};
-		if (commodityId) where.commodityId = commodityId;
-
-		const verified = await prisma.predictionLog.findMany({
-			where,
-			select: { mape: true, verifiedAt: true },
-			orderBy: { verifiedAt: "desc" },
-		});
-
-		// Denominator describes the SAME population as the numerator —
-		// predictions verified within window T — so predictionCount/
-		// verifiedCount is a coherent ratio. Both filter on `verifiedAt`.
-		// (Using `predictedAt` here made predictionCount structurally 0 for any
-		// window shorter than the horizon, since a prediction predicted within
-		// the window hasn't matured yet. See mapeTracking.ts for the live-data
-		// evidence.)
+		// Denominator (round-104): predictions MADE in the window (any
+		// terminal/active status). The previous count re-ran the numerator's
+		// own query (status=VERIFIED + verifiedAt ≥ since), so predictionCount
+		// === verifiedCount structurally — a "verification rate" pinned at
+		// 100% by construction. Young predictions that haven't matured now
+		// legitimately lower the ratio.
 		const totalCount = await prisma.predictionLog.count({
 			where: {
 				modelId,
-				status: PS.VERIFIED,
+				predictedAt: { gte: since },
+				status: { in: [PS.COMPLETED, PS.VERIFIED, PS.STALE, PS.UNVERIFIABLE] },
 				...(commodityId ? { commodityId } : {}),
-				verifiedAt: { gte: since },
 			},
 		});
 
-		let mape: number | null = null;
-		if (verified.length > 0) {
-			const sum = verified.reduce((s, l) => s + (l.mape?.toNumber() ?? 0), 0);
-			mape = Math.round((sum / verified.length) * 100) / 100;
-		}
+		// SQL-side average (round-104): rows were previously pulled into Node
+		// just to average them — unbounded on a 100k+ row table.
+		const agg = await prisma.predictionLog.aggregate({
+			where: {
+				modelId,
+				status: PS.VERIFIED,
+				verifiedAt: { gte: since },
+				...(commodityId ? { commodityId } : {}),
+			},
+			_avg: { mape: true },
+			_count: { _all: true },
+		});
+
+		const mape = agg._avg.mape == null ? null : Math.round(agg._avg.mape.toNumber() * 100) / 100;
 
 		windowResults.push({
 			days,
 			mape,
 			predictionCount: totalCount,
-			verifiedCount: verified.length,
+			verifiedCount: agg._count._all,
 		});
 	}
 

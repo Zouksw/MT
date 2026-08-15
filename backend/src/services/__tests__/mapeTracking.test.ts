@@ -1145,4 +1145,129 @@ describe("MAPE Tracking (real DB)", () => {
 			});
 		});
 	});
+	// ─── round-104 / audit: MAPE verification-loop correctness ────────────────
+
+	describe("verifyDuePredictions — forecastStartAt alignment (round-104)", () => {
+		const DAY = 86400000;
+		const utcDay = (offsetDays: number) =>
+			new Date(Math.floor(Date.now() / DAY) * DAY + offsetDays * DAY);
+
+		it("aligns actuals to the forecast timeline, not the log time", async () => {
+			const slug = `${ctx.prefix}-align-commodity`;
+			const commodity = await ctx.prisma.commodity.create({
+				data: { slug, name: "Align FX", category: "forex", unit: "USD" },
+			});
+
+			// Lagged-source scenario: training data ended T-20, so the forecast's
+			// day-1 is T-19 (forecastStartAt), but the log was written T-17
+			// (predictedAt). predictedValues map to days T-19..T-17.
+			// Decoy actuals T-16..T-14 exist precisely so the OLD predictedAt
+			// anchor would pair them with the wrong forecast steps.
+			const prices = [
+				{ d: -19, close: 100 }, // aligned day-1 actual
+				{ d: -18, close: 110 }, // aligned day-2
+				{ d: -17, close: 120 }, // aligned day-3
+				{ d: -16, close: 130 }, // decoys for the old anchor
+				{ d: -15, close: 140 },
+				{ d: -14, close: 150 },
+			];
+			for (const p of prices) {
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: commodity.id,
+						date: utcDay(p.d),
+						interval: "daily",
+						source: "r104-align",
+						open: p.close,
+						high: p.close,
+						low: p.close,
+						close: p.close,
+					},
+				});
+			}
+
+			const log = await ctx.prisma.predictionLog.create({
+				data: {
+					modelId: `${ctx.prefix}-align-model`,
+					commodityId: commodity.id,
+					horizon: 3,
+					predictedValues: [100, 110, 120],
+					status: "completed",
+					predictedAt: utcDay(-17),
+					forecastStartAt: utcDay(-19),
+				},
+			});
+
+			try {
+				await verifyDuePredictions();
+
+				const row = await ctx.prisma.predictionLog.findUnique({ where: { id: log.id } });
+				expect(row?.status).toBe("verified");
+				// Old anchor (predictedAt) paired [130,140,150] against
+				// [100,110,120] → MAPE ≈ 21%. Aligned pairing is exact → 0%.
+				expect(Number(row?.mape ?? -1)).toBeLessThan(0.5);
+			} finally {
+				await ctx.prisma.commodityPrice
+					.deleteMany({
+						where: { commodityId: commodity.id },
+					})
+					.catch(() => {});
+				await ctx.prisma.predictionLog
+					.deleteMany({
+						where: { id: log.id },
+					})
+					.catch(() => {});
+				await ctx.prisma.commodity.delete({ where: { id: commodity.id } }).catch(() => {});
+			}
+		});
+	});
+
+	describe("getModelAccuracy — real denominator (round-104)", () => {
+		it("predictionCount counts predictions MADE in the window, not a numerator re-count", async () => {
+			const model = `${ctx.prefix}-denom-model`;
+			const commodity = `${ctx.prefix}-fx-commodity`;
+			const createdIds: string[] = [];
+
+			// Two verified rows (predicted now, verified now).
+			for (let i = 0; i < 2; i++) {
+				const id = await logPrediction({
+					modelId: model,
+					commodityId: commodity,
+					horizon: 3,
+					predictedValues: [100, 110, 120],
+				});
+				await verifyPrediction(id, [100, 110, 120]);
+				createdIds.push(id);
+			}
+			// Three immature rows: predicted 5d ago on a 100-day horizon —
+			// inside the 30d MADE window, not yet verifiable.
+			for (let i = 0; i < 3; i++) {
+				const row = await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: model,
+						commodityId: commodity,
+						horizon: 100,
+						predictedValues: [1, 2, 3],
+						status: "completed",
+						predictedAt: new Date(Date.now() - 5 * 86400000),
+					},
+				});
+				createdIds.push(row.id);
+			}
+
+			try {
+				const accuracy = await getModelAccuracy(model, undefined, 30);
+				// OLD behavior: predictionCount === verifiedCount === 2 (the
+				// denominator re-ran the numerator query — ratio pinned 100%).
+				expect(accuracy.verifiedCount).toBe(2);
+				expect(accuracy.predictionCount).toBe(5);
+			} finally {
+				await ctx.prisma.predictionLog
+					.deleteMany({
+						where: { id: { in: createdIds } },
+					})
+					.catch(() => {});
+			}
+		});
+	});
 });

@@ -23,6 +23,10 @@ export interface LogPredictionParams {
 	lowerBounds?: number[];
 	upperBounds?: number[];
 	confidence?: number;
+	/** UTC timestamp of the first predicted step (day after the last training
+	 * point). Verification aligns actuals to this anchor — see schema note on
+	 * PredictionLog.forecastStartAt (round-104). */
+	forecastStartAt?: Date;
 }
 
 /**
@@ -44,6 +48,7 @@ export async function logPrediction(params: LogPredictionParams): Promise<string
 			lowerBounds: params.lowerBounds ?? undefined,
 			upperBounds: params.upperBounds ?? undefined,
 			confidence: params.confidence ?? undefined,
+			forecastStartAt: params.forecastStartAt ?? undefined,
 			status: PS.COMPLETED,
 		},
 	});
@@ -258,8 +263,13 @@ export async function markUnverifiablePredictions(): Promise<number> {
 	// Step 1: find commodity-IDs with due completed predictions (non-cut).
 	// Due = predictedAt <= cutoff AND predictedAt + horizon <= now. The SQL
 	// cutoff is the max-horizon superset; the per-row horizon check below
-	// refines it. We only need distinct commodityIds here.
-	const dueCommodities = await prisma.predictionLog.findMany({
+	// refines it. We only need per-commodity aggregates.
+	// Round-104: this was an unbounded findMany of EVERY due row (up to
+	// ~26k at 18 commodities × 3 models × 30min cadence × 10 days) loaded
+	// into Node only to collapse into per-commodity min/max. groupBy does
+	// the collapse SQL-side and returns one row per commodity.
+	const dueGroups = await prisma.predictionLog.groupBy({
+		by: ["commodityId"],
 		where: {
 			status: PS.COMPLETED,
 			predictedAt: { lte: cutoff },
@@ -268,34 +278,28 @@ export async function markUnverifiablePredictions(): Promise<number> {
 			// they should not be swept into the commodity-frozen bucket.
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
-		select: { commodityId: true, predictedAt: true, horizon: true },
+		_min: { predictedAt: true },
+		_max: { horizon: true },
 	});
 
-	if (dueCommodities.length === 0) {
+	if (dueGroups.length === 0) {
 		// No due (≤ cutoff) candidates — skip Pass A entirely and go
 		// straight to Pass B (within-cutoff lagging-source scan).
 		return markLaggingFrozenPredictions(cutoff, now);
 	}
 
-	// Group by commodityId, tracking the earliest due predictedAt per
-	// commodity (the bar any post-prediction actual must clear) and whether
-	// at least one row is truly due (predictedAt + horizon <= now).
+	// hasDueRow sound approximation: earliest predictedAt + the group's MAX
+	// horizon <= now implies earliest + ANY row's own horizon <= now, so the
+	// approximation can never claim due when no row is (only the converse —
+	// a missed due row is rechecked next cycle).
 	const byCommodity = new Map<string, { earliestPredictedAt: Date; hasDueRow: boolean }>();
-	for (const row of dueCommodities) {
-		const horizonMs = row.horizon * 86400000;
-		const isDue = row.predictedAt.getTime() + horizonMs <= now;
-		const existing = byCommodity.get(row.commodityId);
-		if (!existing) {
-			byCommodity.set(row.commodityId, {
-				earliestPredictedAt: row.predictedAt,
-				hasDueRow: isDue,
-			});
-		} else {
-			if (row.predictedAt < existing.earliestPredictedAt) {
-				existing.earliestPredictedAt = row.predictedAt;
-			}
-			if (isDue) existing.hasDueRow = true;
-		}
+	for (const g of dueGroups) {
+		const earliest = g._min.predictedAt as Date;
+		const maxHorizon = g._max.horizon ?? 0;
+		byCommodity.set(g.commodityId, {
+			earliestPredictedAt: earliest,
+			hasDueRow: earliest.getTime() + maxHorizon * 86400000 <= now,
+		});
 	}
 
 	// Step 2: for each candidate commodity, check if its latest daily price
@@ -549,7 +553,13 @@ export async function verifyDuePredictions(): Promise<number> {
 			status: PS.COMPLETED,
 			predictedAt: { lte: cutoff },
 		},
-		select: { id: true, commodityId: true, horizon: true, predictedAt: true },
+		select: {
+			id: true,
+			commodityId: true,
+			horizon: true,
+			predictedAt: true,
+			forecastStartAt: true,
+		},
 		// OLDEST first so the backlog drains. DESC kept re-sampling the same
 		// near-cutoff rows every run, starving older verifiable candidates.
 		// Batch raised 2000 → 5000 (round-46): with a 106k-row backlog the
@@ -592,6 +602,25 @@ export async function verifyDuePredictions(): Promise<number> {
 				continue;
 			}
 
+			// Actuals-window anchor: the forecast's own timeline start when
+			// recorded (round-104), falling back to predictedAt for legacy rows.
+			// predictedAt is the LOG time; when the source lags, the training
+			// series ends days before the log, so forecast day-1 is ALSO days
+			// before the log — anchoring actuals at predictedAt paired them
+			// with the wrong forecast steps and systematically inflated MAPE.
+			const anchor = log.forecastStartAt ?? log.predictedAt;
+			const anchorDay = Date.UTC(
+				anchor.getUTCFullYear(),
+				anchor.getUTCMonth(),
+				anchor.getUTCDate(),
+			);
+			// Actuals carry mixed intraday times (00:00, 16:00, …); fetch from
+			// half a day before the anchor day, then drop leading rows whose
+			// UTC day precedes it so index-pairing starts at forecast day-1.
+			const fetchFrom = new Date(anchorDay - 12 * 3600 * 1000);
+			const alignToAnchorDay = <T extends { date: Date }>(rows: T[]): T[] =>
+				rows.filter((r) => r.date.getTime() >= anchorDay);
+
 			// Fetch actuals AFTER the prediction was made, up to horizon.
 			// Dual-backend: cut-series predictions are logged with a virtual
 			// commodityId `cut:{factoryId}:{cutCode}` and their actuals live in
@@ -617,14 +646,15 @@ export async function verifyDuePredictions(): Promise<number> {
 					where: {
 						factoryId: parsed.factoryId,
 						cutCode: parsed.cutCode,
-						date: { gt: log.predictedAt },
+						date: { gte: fetchFrom },
 						source: { not: { startsWith: "bridge:" } },
 					},
 					orderBy: { date: "asc" },
-					take: log.horizon,
-					select: { price: true },
+					take: log.horizon + 1,
+					select: { price: true, date: true },
 				});
-				if (cutActuals.length < Math.min(log.horizon, 3)) {
+				const aligned = alignToAnchorDay(cutActuals).slice(0, log.horizon);
+				if (aligned.length < Math.min(log.horizon, 3)) {
 					skippedNoActuals++;
 					noActualsByCommodity.set(
 						log.commodityId,
@@ -632,7 +662,7 @@ export async function verifyDuePredictions(): Promise<number> {
 					);
 					continue;
 				}
-				actualValues = cutActuals.map((p) => Number(p.price));
+				actualValues = aligned.map((p) => Number(p.price));
 			} else {
 				// Multi-source guard (docs/KNOWN-ISSUES.md R2): filter actuals by
 				// the same authoritative source the training data used, so the
@@ -647,14 +677,15 @@ export async function verifyDuePredictions(): Promise<number> {
 					where: {
 						commodityId: log.commodityId,
 						interval: "daily",
-						date: { gt: log.predictedAt },
+						date: { gte: fetchFrom },
 						...(authoritativeSource ? { source: authoritativeSource } : {}),
 					},
 					orderBy: { date: "asc" },
-					take: log.horizon,
-					select: { close: true },
+					take: log.horizon + 1,
+					select: { close: true, date: true },
 				});
-				if (actualPrices.length < Math.min(log.horizon, 3)) {
+				const aligned = alignToAnchorDay(actualPrices).slice(0, log.horizon);
+				if (aligned.length < Math.min(log.horizon, 3)) {
 					skippedNoActuals++;
 					noActualsByCommodity.set(
 						log.commodityId,
@@ -662,7 +693,7 @@ export async function verifyDuePredictions(): Promise<number> {
 					);
 					continue;
 				}
-				actualValues = actualPrices.map((p) => Number(p.close));
+				actualValues = aligned.map((p) => Number(p.close));
 			}
 			const result = await verifyPrediction(log.id, actualValues);
 			if (result) verified++;
@@ -738,60 +769,72 @@ export async function getModelAccuracy(
 }> {
 	const since = new Date(Date.now() - days * 86400000);
 
-	const where: Prisma.PredictionLogWhereInput = {
+	const verifiedWhere = (since: Date): Prisma.PredictionLogWhereInput => ({
 		modelId,
 		status: PS.VERIFIED,
 		verifiedAt: { gte: since },
 		...EXCLUDE_TEST_ARTIFACTS,
-	};
-	if (commodityId) where.commodityId = commodityId;
-
-	const verified = await prisma.predictionLog.findMany({
-		where,
-		select: { mape: true, verifiedAt: true },
-		orderBy: { verifiedAt: "desc" },
+		...(commodityId ? { commodityId } : {}),
 	});
 
-	// Denominator describes the SAME population as the numerator — predictions
-	// verified within window T — so predictionCount/verifiedCount is a coherent
-	// ratio. Both filter on `verifiedAt`. (Round-86 added the status filter but
-	// left the timestamp column as `predictedAt`; that mismatch made
-	// predictionCount structurally 0 for any window shorter than the horizon,
-	// since a prediction predicted within the window cannot have matured yet.
-	// Verified on live data: chronos_tiny 7d → verifiedCount 968, predictionCount 0.)
-	const totalCount = await prisma.predictionLog.count({
+	// Denominator (round-104): predictions MADE in the window (predictedAt ≥
+	// since, any terminal/active status) — the honest base for a verification
+	// ratio. The previous "denominator" re-ran the numerator's own query
+	// (status=VERIFIED + verifiedAt ≥ since), so predictionCount ===
+	// verifiedCount structurally and the ratio was always 100%. Young
+	// predictions that haven't matured now legitimately lower the ratio.
+	const predictionCount = await prisma.predictionLog.count({
 		where: {
 			modelId,
-			status: PS.VERIFIED,
+			predictedAt: { gte: since },
+			status: { in: [PS.COMPLETED, PS.VERIFIED, PS.STALE, PS.UNVERIFIABLE] },
 			...EXCLUDE_TEST_ARTIFACTS,
 			...(commodityId ? { commodityId } : {}),
-			verifiedAt: { gte: since },
 		},
 	});
 
-	const computeAvg = (logs: typeof verified) => {
-		if (logs.length === 0) return null;
-		const sum = logs.reduce((s, l) => s + (l.mape?.toNumber() ?? 0), 0);
-		return Math.round((sum / logs.length) * 100) / 100;
-	};
-
+	// SQL-side aggregation (round-104): the previous implementation pulled
+	// every verified row in the window into Node to average in JS — unbounded
+	// memory/time on a 100k+ row table, re-fetched per model (×9) on every
+	// accuracy page load.
 	const last7d = new Date(Date.now() - 7 * 86400000);
-	const last7dLogs = verified.filter((l) => l.verifiedAt && l.verifiedAt >= last7d);
+	const last30d = new Date(Date.now() - 30 * 86400000);
+	const round2 = (v: number | null | undefined) => (v == null ? null : Math.round(v * 100) / 100);
 
-	// Most-recent verification timestamp — `verified` is ordered desc, so the
-	// first row is the latest. Surfaced as a freshness signal so the accuracy
-	// comparison page can show when a model's MAPE was last backed by real data
-	// (a frozen historical baseline vs an actively-verified primary model).
-	const lastVerifiedAt =
-		verified.length > 0 ? (verified[0].verifiedAt?.toISOString() ?? null) : null;
+	const [mainAgg, last7dAgg, last30dAgg, lastVerifiedRow] = await Promise.all([
+		prisma.predictionLog.aggregate({
+			where: verifiedWhere(since),
+			_avg: { mape: true },
+			_count: { _all: true },
+		}),
+		prisma.predictionLog.aggregate({
+			where: verifiedWhere(last7d),
+			_avg: { mape: true },
+		}),
+		prisma.predictionLog.aggregate({
+			where: verifiedWhere(last30d),
+			_avg: { mape: true },
+		}),
+		prisma.predictionLog.findFirst({
+			where: verifiedWhere(new Date(0)),
+			select: { verifiedAt: true },
+			orderBy: { verifiedAt: "desc" },
+		}),
+	]);
+
+	// Most-recent verification timestamp — surfaced as a freshness signal so
+	// the accuracy comparison page can show when a model's MAPE was last
+	// backed by real data (a frozen historical baseline vs an actively-
+	// verified primary model).
+	const lastVerifiedAt = lastVerifiedRow?.verifiedAt?.toISOString() ?? null;
 
 	return {
 		modelId,
-		avgMape: computeAvg(verified),
-		predictionCount: totalCount,
-		verifiedCount: verified.length,
-		last7dMape: computeAvg(last7dLogs),
-		last30dMape: computeAvg(verified),
+		avgMape: round2(mainAgg._avg.mape?.toNumber()),
+		predictionCount,
+		verifiedCount: mainAgg._count._all,
+		last7dMape: round2(last7dAgg._avg.mape?.toNumber()),
+		last30dMape: round2(last30dAgg._avg.mape?.toNumber()),
 		lastVerifiedAt,
 	};
 }

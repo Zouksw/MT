@@ -338,6 +338,13 @@ model PredictionLog {
   status          String    @default("pending")
   predictedAt     DateTime  @default(now()) @map("predicted_at")
   verifiedAt      DateTime? @map("verified_at")
+  // UTC start of the forecast's own timeline (first predicted step = the
+  // day after the last TRAINING point). Verification aligns actuals to this
+  // anchor, not to predictedAt — when a source lags, predictedAt (log time)
+  // can sit days after the training end, and index-pairing actuals from
+  // predictedAt systematically misaligned MAPE (round-104). Nullable for
+  // legacy rows; readers fall back to predictedAt.
+  forecastStartAt DateTime? @map("forecast_start_at")
 
   @@index([modelId])
   @@index([commodityId])
