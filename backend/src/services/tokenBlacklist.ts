@@ -39,9 +39,10 @@ export async function blacklistToken(token: string, reason: string = "logout"): 
 
 		// Get token jti or use hash as identifier
 		const tokenId = extractTokenId(token);
+		const client = await redis();
 
-		// Add to blacklist with TTL matching token expiration
-		await (await redis()).setEx(
+		// Source of truth: the per-token key, TTL'd to the token's own exp.
+		await client.setEx(
 			`${BLACKLIST_PREFIX}${tokenId}`,
 			ttl,
 			JSON.stringify({
@@ -51,12 +52,15 @@ export async function blacklistToken(token: string, reason: string = "logout"): 
 			}),
 		);
 
-		// Also add to a set for O(1) lookup
-		await (await redis()).sAdd(BLACKLIST_SET, tokenId);
-		await (await redis()).expireAt(
-			BLACKLIST_SET,
-			decoded?.exp || Math.floor(Date.now() / 1000) + 86400,
-		);
+		// Stats/compat set membership. Its TTL may only ever EXTEND — the old
+		// code reset expireAt to each revoked token's exp, so revoking a
+		// 1-hour token evicted the whole set and resurrected every
+		// longer-lived revoked token (audit round-104).
+		await client.sAdd(BLACKLIST_SET, tokenId);
+		const setTtl = await client.ttl(BLACKLIST_SET);
+		if (setTtl < ttl) {
+			await client.expire(BLACKLIST_SET, ttl);
+		}
 
 		logger.info(`Token ${tokenId.slice(0, 20)}... added to blacklist (${reason}, ${ttl}s TTL)`);
 
@@ -82,10 +86,19 @@ export async function blacklistToken(token: string, reason: string = "logout"): 
 export async function isTokenBlacklisted(token: string): Promise<boolean> {
 	try {
 		const tokenId = extractTokenId(token);
+		const client = await redis();
 
-		// Check Redis set for O(1) lookup
-		const exists = await (await redis()).sIsMember(BLACKLIST_SET, tokenId);
-		return exists;
+		// Source of truth: per-token key with TTL matching the token's own
+		// expiration. Survives revocations of OTHER tokens regardless of
+		// their lifetimes.
+		const perToken = await client.exists(`${BLACKLIST_PREFIX}${tokenId}`);
+		if (perToken) return true;
+
+		// Legacy fallback for entries whose per-token key already TTL'd out
+		// while the shared set still lists them: the token is past its own
+		// exp there, so JWT verification rejects it right after this check
+		// either way — this branch can only affect already-expired tokens.
+		return client.sIsMember(BLACKLIST_SET, tokenId);
 	} catch (error) {
 		logger.error(`[SECURITY] Failed to check token blacklist: ${error}`);
 
