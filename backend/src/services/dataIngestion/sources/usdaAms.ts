@@ -13,28 +13,50 @@ import { logger, prisma } from "@/lib";
 import { json, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
-const AMS_REPORTS: Record<string, { reportId: string; slug: string; priceField: string }> = {
+// Price-field candidates per report. MARS names its weighted-average price
+// field `weight_avg_price`; the cutout composite is `cutout_value` ($/cwt).
+// NEVER add total_loads / total_value / grade_volume here — those are
+// quantities (loads traded, aggregate dollars), not prices. The original
+// single-field config mapped beef_cutout→total_loads and
+// boxed_beef_choice→total_value, which would have written cart-load counts
+// and million-dollar aggregates into USD/cwt price rows (audit C5, round-104).
+// All four commodities are unit USD/cwt, so the raw $/cwt value is written
+// unconverted.
+const AMS_REPORTS: Record<string, { reportId: string; slug: string; priceFields: string[] }> = {
 	live_cattle_us: {
 		reportId: "LM_CT101",
 		slug: "live_cattle_us",
-		priceField: "weighted_avg",
+		priceFields: ["weight_avg_price", "weighted_avg", "avg_price"],
 	},
 	beef_cutout: {
 		reportId: "LM_XB403",
 		slug: "beef_cutout_us",
-		priceField: "total_loads",
+		priceFields: ["cutout_value", "weight_avg_price"],
 	},
 	feeder_cattle_us: {
 		reportId: "LM_CT105",
 		slug: "feeder_cattle_us",
-		priceField: "avg_price",
+		priceFields: ["weight_avg_price", "weighted_avg", "avg_price"],
 	},
 	boxed_beef_choice: {
 		reportId: "LM_XB459",
 		slug: "boxed_beef_choice",
-		priceField: "total_value",
+		priceFields: ["weight_avg_price", "weighted_avg", "avg_price"],
 	},
 };
+
+/**
+ * First price-like value among the candidate fields: finite number > 0.
+ * Returns null when the row carries none of them (row is then skipped —
+ * honest absence, never a fabricated or quantity-derived price).
+ */
+export function pickAMSPrice(row: AMSReportRow, priceFields: string[]): number | null {
+	for (const field of priceFields) {
+		const value = Number(row[field]);
+		if (Number.isFinite(value) && value > 0) return value;
+	}
+	return null;
+}
 
 interface AMSReportRow {
 	report_date: string;
@@ -95,8 +117,8 @@ async function updateAMSPrices(): Promise<ScraperResult> {
 		const date = new Date(dateStr);
 		date.setHours(0, 0, 0, 0);
 
-		const price = Number(latest[config.priceField]);
-		if (!price || Number.isNaN(price)) continue;
+		const price = pickAMSPrice(latest, config.priceFields);
+		if (price === null) continue;
 
 		const result = await upsertPrice({
 			commodityId: commodity.id,
@@ -147,8 +169,8 @@ async function fetchCutLevelPrices(): Promise<ScraperResult> {
 		date.setHours(0, 0, 0, 0);
 
 		const cutName = String(row.item_description ?? row.commodity ?? "");
-		const price = Number(row.weighted_avg ?? row.avg_price ?? row.price);
-		if (!cutName || !price || Number.isNaN(price)) continue;
+		const price = pickAMSPrice(row, ["weight_avg_price", "weighted_avg", "avg_price", "price"]);
+		if (!cutName || price === null) continue;
 
 		const { normalizeBeefCut } = await import("../beefCutNormalizer");
 		const cutCode = normalizeBeefCut(cutName);
