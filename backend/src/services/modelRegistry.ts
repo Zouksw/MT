@@ -21,12 +21,18 @@ export const ALL_MODELS = ["chronos_tiny", "chronos_mini", "chronos_base"] as co
 // BASELINE models — NOT part of the main consensus, but reported on the /ai
 // accuracy page so users can see chronos vs classical-method performance.
 // naive_forecaster is the standard "dumb baseline" any real model must beat.
+// stl_forecaster removed 2026-08-15 (B3): its verified pool froze 2026-07-26
+// when stat models left background scheduling, the post-fix forecaster has
+// zero new evidence, and its historical avg/median MAPE (10.87% / 5.73%) is
+// 3×–10× worse than every other baseline — advertising it on the accuracy
+// page overstated the offering. The model stays implemented in
+// inference-service (on-demand /predict still accepts the id); re-add here
+// only if it returns to scheduled evaluation with fresh evidence.
 export const BASELINE_MODELS = [
 	"naive_forecaster",
 	"arima",
 	"holtwinters",
 	"exponential_smoothing",
-	"stl_forecaster",
 ] as const;
 
 /**
