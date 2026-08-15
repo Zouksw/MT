@@ -2,8 +2,14 @@
  * FAO Food Price Index Scraper
  *
  * Fetches food price indices from FAOSTAT.
- * API: https://fenixservices.fao.org/faostat/api/v1/en/data/CP
- * Free, no API key required.
+ * API: https://faostatservices.fao.org/api/v1/en/data/CP
+ *
+ * 2025 migration: the old fenixservices.fao.org host is dead (DNS/conn fail);
+ * the API moved to faostatservices.fao.org with the SAME endpoint structure
+ * but now requires `Authorization: Bearer <key>` (verified 2026-08-14: no
+ * header → 401 "Missing Authorization Header", dummy token → 403). Key is
+ * free from the FAOSTAT API developer portal
+ * (https://www.fao.org/faostat/en/) — set FAO_API_KEY.
  *
  * Covers: Food, Meat, Dairy, Cereals, Oils price indices
  */
@@ -47,9 +53,13 @@ const FAO_INDICES: Record<string, { itemCode: string; slug: string }> = {
  *   (deterministic; the origin is hard-down, retrying cannot help).
  */
 export async function fetchWithRetry(url: string): Promise<Response | null> {
+	const headers: Record<string, string> = { Accept: "application/json" };
+	const key = process.env.FAO_API_KEY;
+	if (key) headers.Authorization = `Bearer ${key}`;
+
 	try {
 		const res = await fetch(url, {
-			headers: { Accept: "application/json" },
+			headers,
 			signal: AbortSignal.timeout(8000),
 		});
 		if (res.ok) return res;
@@ -61,7 +71,7 @@ export async function fetchWithRetry(url: string): Promise<Response | null> {
 			await new Promise((r) => setTimeout(r, 2000));
 			try {
 				const retry = await fetch(url, {
-					headers: { Accept: "application/json" },
+					headers,
 					signal: AbortSignal.timeout(8000),
 				});
 				if (retry.ok) return retry;
@@ -84,6 +94,16 @@ export async function fetchWithRetry(url: string): Promise<Response | null> {
 }
 
 async function fetchFAOPrices(): Promise<ScraperResult> {
+	// Key gate (same pattern as usdaAms/mlaNlrs): since the 2025 migration
+	// the FAOSTAT API rejects keyless requests with 401 — running without a
+	// key would just log 5 deterministic auth failures per cycle.
+	if (!process.env.FAO_API_KEY) {
+		logger.warn(
+			"[FAO] Missing FAO_API_KEY — skipping (FAOSTAT requires a key since its migration to faostatservices.fao.org)",
+		);
+		return { inserted: 0, updated: 0 };
+	}
+
 	let inserted = 0;
 	let updated = 0;
 
@@ -91,7 +111,7 @@ async function fetchFAOPrices(): Promise<ScraperResult> {
 		const commodity = await prisma.commodity.findUnique({ where: { slug: config.slug } });
 		if (!commodity) continue;
 
-		const url = `https://fenixservices.fao.org/faostat/api/v1/en/data/CP?area_code=351&item_code=${config.itemCode}&element_code=5510&year=2024,2025,2026&show_codes=true&show_unit=true`;
+		const url = `https://faostatservices.fao.org/api/v1/en/data/CP?area_code=351&item_code=${config.itemCode}&element_code=5510&year=2024,2025,2026&show_codes=true&show_unit=true`;
 		const res = await fetchWithRetry(url);
 		if (!res) continue;
 
