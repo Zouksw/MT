@@ -143,6 +143,22 @@
 - `organizations`（1 ref，`datasetService.ts:103` 硬编码 default-org）、`coldStorage`（1 ref，`routes/beef.ts:472`）、`weeklyKill`（1 ref，`routes/beef.ts:444`）、`usageRecord`（1 ref，`usageService.ts:74`）：**仍 EDGE 但 LIVE**——各有一个真实查询，非死模型。删除需 schema 迁移，单列轮次。
 - **结论**：当前 31 个 model 全部有 ≥1 生产引用，**无死模型**。本条整体 STALE（除 organizations 的单租户脚手架语义）。
 
+### TD-14 — 迁移历史与 schema 漂移：空库不可 migrate deploy 冷启动
+**发现**：2026-08-15（round-102，CI run 31859533931 Backend Tests 实证）
+**证据**：
+- `group_members`（schema.prisma 仍是活模型 `GroupMember`，line 539，被 User/Group 关联）**先于迁移基线存在**：`grep -l group_members migrations/*/migration.sql` 仅命中 `20260712040000_drop_unused_schema`（drop/alter 它），**无任何迁移 CREATE 它**。
+- 全新库 replay：`prisma migrate deploy` → `20260712040000` → `ERROR 42P01: relation "group_members" does not exist`（P3018）。
+- 生产库不炸只因该表在生产是 pre-baseline 手工/早期状态存在。
+
+**影响**：
+- 新环境（CI、灾备重建、新服务器）**无法**用 `migrate deploy` 冷启动。CI 已改用 `prisma db push` 绕过（commit fbd3e71，ci.yml 有注释）。
+- 已应用迁移不可编辑（Prisma checksum 校验会让生产 `migrate deploy` 报 modified-after-apply）→ 无法"就地修历史"。
+
+**根治选项（需单列轮次，均需生产窗口）**：
+1. `prisma migrate diff --from-empty --to-schema-datamodel` 生成单一 baseline 迁移，生产侧 `migrate resolve --applied` 标记（标准 squash 流程）；
+2. 或维护 `init-from-scratch.sql` 文档化冷启动路径。
+**在此之前**：新增迁移必须同时兼容「生产现有状态」与「db push 后状态」两种起点。
+
 ---
 
 ## 三½、零生产 caller 的死代码（2026-08-01 全量审计；2026-08-01 重核并修正多处事实错误）

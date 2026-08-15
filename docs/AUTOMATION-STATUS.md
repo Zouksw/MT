@@ -1,6 +1,6 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-08-08（正文逐轮记录至 round-79；头注此前停留在 round-25~29，2026-08-08 修正对齐正文真实最新轮次）
+> 最后更新：2026-08-15（round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
 > §九 数字严谨要求：下列计数为 live 实测（截至日期见各条），运行对应命令获取当前值。
 
@@ -16,12 +16,31 @@
 |---|---|---|
 | `security-scan` | pnpm audit（high+）+ Snyk | 软失败（continue-on-error） |
 | `lint-and-typecheck` | backend/frontend 各跑 biome lint + tsc --noEmit | ✅ 硬阻断 |
-| `test-backend` | PostgreSQL + Redis 服务容器 → prisma migrate → vitest | ✅ 硬阻断 |
+| `test-backend` | PG+Redis 装机 → **prisma db push（见下方漂移说明）** → seed → inference 服务拉起（:10810，chronos 无权重自动跳过）→ vitest | ✅ 硬阻断 |
 | `test-frontend` | jest + next build | ✅ 硬阻断 |
-| `test-inference` | setup-python 3.10 → ruff check → pytest | ✅ 硬阻断（round-25 新增） |
+| `test-inference` | setup-python 3.10 → ruff check → pytest（ruff 已入 requirements-dev.txt） | ✅ 硬阻断（round-25 新增） |
 | `build` | 仅 main push；构建 backend dist + frontend .next，上传 artifact | 依赖前 5 个 job |
-| `deploy` | 仅 main push；SSH 到生产 → git pull → build → prisma migrate → pm2 reload | 依赖 build |
-| `rollback` | deploy 失败时自动 git revert + 重建 | failure() 触发 |
+| `deploy` | 仅 main push；SSH 到生产 → git pull → build → prisma migrate → pm2 reload。**DEPLOY_* secrets 未配置时明确跳过（黄牌警告，不假红）** | 依赖 build |
+| `rollback` | 仅 `needs.deploy.result == 'failure'` 且 DEPLOY_* 已配置才真回滚；否则跳过并警告 | 精确触发（round-102 前 `if: failure()` 会因质量门失败连带空跑） |
+
+### round-102 CI 修复记录（2026-08-15，run 31858972501→31861990141 七连修，最终全绿）
+
+CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴露**八层**断裂，逐层修复（每层都有 run 实证）：
+
+1. **pnpm 安装冲突（4 个 Node job）**：`pnpm/action-setup@v4` 的 `version: 9` 与根 package.json 的 `packageManager: pnpm@9.15.9` 互斥 → "Multiple versions of pnpm specified"。修复：删 `version:` 输入，统一读 packageManager（更精确）。
+2. **ruff 未声明（test-inference）**：CI 全新环境 `ruff: command not found`（exit 127）——本地 venv 是手动装的。修复：requirements-dev.txt 加 `ruff>=0.6`。
+3. **secrets 进 steps.if 是非法上下文**：第一版 deploy 守护直接被 GitHub 拒文件（run 0 job，actionlint 抓出 `context "secrets" is not allowed here`）。修复：job 级 `env: DEPLOY_CONFIGURED` 桥接。
+4. **空库迁移不可重放（test-backend）**：`group_members` 表（schema.prisma 仍是活模型）先于迁移基线存在，仅被 `20260712040000_drop_unused_schema` 引用、无任何迁移创建它 → 全新库 replay 死 42P01。修复：CI 改 `prisma db push`；**生产不动**（历史已应用，已应用迁移改文件会 checksum 失败）。此漂移记入 TECH-DEBT TD-14，新环境无法用 migrate deploy 冷启动。
+5. **pnpm 暖缓存跳过 postinstall**：连续两 run 对比实证——冷 store 时 `@prisma/client` postinstall 生成 client（type-check 过），暖 store 时（"reused 382, Done in 1.4s"）postinstall 整个不跑 → tsc 死 `no exported member PrismaClient`、seed 死 `Cannot find module '.prisma/client/default'`。修复：lint / test-backend（db push 不带 --skip-generate）/ build / deploy 四处显式 `npx prisma generate`，永不依赖 postinstall。
+6. **seed.ts 三处 schema 漂移**：引用已删模型（`prisma.saved_queries`/`organization_members`，TD-13 时代删的）、已改名枚举值（`IOTDB_CACHE`→`TIMESERIES`，20260508 迁移）、残留 `savedQueries.length` 日志行 → 全新库 seed 必炸。修复后 seed 首次可在空库完整跑通，并补齐集成测试一直假设却从未存在的 fixture：fred DEXBZUS 尺度 brl_usd 行（7 个权威源守卫）、ingestion_logs（round-58 empty-flag 守卫）、5 篇 market news、14 个缺失商品（≥100 断言）。
+7. **testApp helper 硬编码生产库**：`REAL_DB_URL` 常量无视 DATABASE_URL 直连 mt_db——CI（无 mt_db）25 个 requireDb 文件团灭；本地「全绿」实为整套测试一直读写生产库。修复：尊重 `process.env.DATABASE_URL`（本地默认不变）。**这是 CI 红的真正最大单一根因。**
+8. **correlation 套件需要真 HTTP**：correlationAnalysis.test.ts 是 createTestApp 之前的老式套件，打 localhost:8000。修复：CI 后台拉起 `tsx src/server.ts`（mt_test env）+ 等 /health。另：coverage 步骤漏 env（同 5 类问题）补齐；branches 阈值 76.9% 是 vitest-4 之前的计数口径、实测 46.94%，按 config 自身「实测−2~3pp」政策调 50→45。
+
+**事故记录（诚实披露）**：修 #6 验证时，一次 scratch 验证未带 DATABASE_URL 覆盖直接跑了 seed → 生产库 users/sessions/api_keys/audit_logs 等 9 表被清（核心价值链表不在 seed 清理列表，未受影响）。**全部从当日 02:00 备份完整恢复**（users 1787 / sessions 7872 / api_keys 7 / audit_logs 8714 等），损失窗口≈一夜且 sessions 本为瞬态。防线固化：seed 现在拒绝在已有用户的库上运行，除非显式 `SEED_FORCE=1`（对生产库实测生效）。备份 cron（每日 2AM）证明价值。
+
+**最终状态（run 31861990141）**：security/lint/test-backend/test-frontend/test-inference/build 全绿；deploy 按「无 secrets 则明确跳过+黄牌」策略绿；rollback 正确 skipped。CI 对 main 的回归防护**自 round-74 以来首次真实生效**。
+
+**激活自动部署需补 secrets**（用户决策，涉及上传 SSH 私钥到 GitHub）：`DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` / `DEPLOY_PORT`（可选）/ `PROJECT_PATH`（可选，默认 /root）/ `APP_URL` / `SLACK_WEBHOOK`（可选）。未配置期间部署保持服务器手动。
 
 **Coverage**：backend 跑 `test:coverage` 并上传 Codecov（continue-on-error=true，软失败）。frontend coverage 未在 CI 跑（jest.config.js 配了 70% 阈值但 CI 不强制）。
 
@@ -261,7 +280,7 @@
 
 ## 七、已知限制与待办
 
-1. **本地 coverage 已修复（2026-08-01 实测）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33（backend 嵌套 override `test-exclude>minimatch`）+ round-36（frontend `coverageProvider:'v8'` + 移除 glob override）已修复。当前实测：**backend 48.92% / frontend 21.46%**，均过各自阈值（backend 45% / frontend 18%）。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
+1. **本地 coverage 已修复（2026-08-01 实测；2026-08-15 重校准）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33 + round-36 已修复。**round-102 首次端到端跑通 CI coverage 步骤**，对全新 seed 库实测：backend lines 57.2% / branches 46.94% / functions 63.11%（branches 阈值按「实测−2pp」政策 50→45，旧 76.9% 是 vitest-4 前计数口径）；frontend 21.46% 过其 18% 阈值。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
 2. **knip 本地无法运行**：knip 依赖 zod@4 ESM，本地 zod 解析失败。配置已就位（knip.json + 脚本），CI/未来版本兼容后即可用。
 3. **`invalidateCommodityCache` 已接入（round-45）**：原"零调用"的 commodity 缓存失效函数已在 `upsertPrice` 写后 fire-and-forget 接入（SCAN-by-prefix，对称 round-30 的 cut-series）。`unsubscribeCommodity` 仍仅测试用（订阅生命周期内部用，非死代码）。详见 `docs/TECH-DEBT.md`（部分条目已过期，动手前重新核实）。
 4. **PAT 凭据管理**：origin remote 仍含 HTTPS + token store（~/.git-credentials）。SSH key 方案已部分配置（~/.ssh/config 走 443），但公钥未加到 GitHub 账户。待用户完成 SSH 接入后可彻底移除 token。
