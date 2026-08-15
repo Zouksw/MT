@@ -156,4 +156,56 @@ describe("Watchlist Routes", () => {
 			expect(res.body.data.deleted).toBe(true);
 		});
 	});
+
+	// Ported verbatim (semantics kept) from the misnamed legacy file
+	// user.test.ts — merged round-100 so every route maps to a test file of
+	// the same name. Zero cases dropped; asserts may overlap the blocks above.
+	describe("legacy user.test.ts cases (merged round-100)", () => {
+		test("list returns a watchlists array", async () => {
+			const res = await request(app).get("/api/watchlists").set(authHeaders());
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(Array.isArray(res.body.data.watchlists)).toBe(true);
+		});
+
+		test("create echoes the watchlist name", async () => {
+			const name = `rt-test-echo-${Date.now()}`;
+			const res = await request(app).post("/api/watchlists").set(authHeaders()).send({ name });
+			expect(res.status).toBe(201);
+			expect(res.body.success).toBe(true);
+			expect(res.body.data.watchlist.name).toBe(name);
+		});
+
+		test("create rejects a duplicate watchlist name with 400", async () => {
+			const name = `rt-test-wdup-${Date.now()}`;
+			await request(app).post("/api/watchlists").set(authHeaders()).send({ name });
+			const second = await request(app).post("/api/watchlists").set(authHeaders()).send({ name });
+			expect(second.status).toBe(400);
+		});
+
+		test("add item then list reports itemCount", async () => {
+			const prisma = getPrisma();
+			const commodity = await prisma.commodity.findUnique({ where: { slug: "wheat_cme" } });
+			if (!commodity) {
+				throw new Error("test DB must include commodity 'wheat_cme' for the merged item test");
+			}
+			const create = await request(app)
+				.post("/api/watchlists")
+				.set(authHeaders())
+				.send({ name: `rt-test-items-${Date.now()}` });
+			const id = create.body.data.watchlist.id;
+
+			const add = await request(app)
+				.post(`/api/watchlists/${id}/items`)
+				.set(authHeaders())
+				.send({ commodityId: commodity.id });
+			expect(add.status).toBe(201);
+			expect(add.body.success).toBe(true);
+
+			const list = await request(app).get("/api/watchlists").set(authHeaders());
+			const wl = list.body.data.watchlists.find((w: { id: string }) => w.id === id);
+			expect(wl).toBeDefined();
+			expect(wl.itemCount).toBeGreaterThanOrEqual(1);
+		});
+	});
 });
