@@ -3,11 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-	detectFieldMapping,
-	type FieldMapping,
-	normalizePriceEntry,
-} from "../normalizer";
+import { detectFieldMapping, type FieldMapping, normalizePriceEntry } from "../normalizer";
 
 // ============================================================================
 // detectFieldMapping
@@ -52,14 +48,7 @@ describe("detectFieldMapping", () => {
 	});
 
 	it("should detect variant headers with spaces and underscores", () => {
-		const headers = [
-			"Trade Date",
-			"Open Price",
-			"High Price",
-			"Low Price",
-			"Close Price",
-			"Vol",
-		];
+		const headers = ["Trade Date", "Open Price", "High Price", "Low Price", "Close Price", "Vol"];
 		const mapping = detectFieldMapping(headers);
 
 		expect(mapping.date).toBe("Trade Date");
@@ -80,15 +69,11 @@ describe("detectFieldMapping", () => {
 	});
 
 	it("should throw if no date column found", () => {
-		expect(() => detectFieldMapping(["open", "close"])).toThrow(
-			"No date column found",
-		);
+		expect(() => detectFieldMapping(["open", "close"])).toThrow("No date column found");
 	});
 
 	it("should throw if no close column found", () => {
-		expect(() => detectFieldMapping(["date", "open"])).toThrow(
-			"No close/price column found",
-		);
+		expect(() => detectFieldMapping(["date", "open"])).toThrow("No close/price column found");
 	});
 
 	it("should detect datetime as date column", () => {
@@ -240,27 +225,21 @@ describe("normalizePriceEntry", () => {
 		const row = { date: "2024-01-15" };
 		const mapping: FieldMapping = { date: "date", close: "close" };
 
-		expect(() => normalizePriceEntry(row, mapping)).toThrow(
-			"Missing close price",
-		);
+		expect(() => normalizePriceEntry(row, mapping)).toThrow("Missing close price");
 	});
 
 	it("should throw if close price is NaN string", () => {
 		const row = { date: "2024-01-15", close: "abc" };
 		const mapping: FieldMapping = { date: "date", close: "close" };
 
-		expect(() => normalizePriceEntry(row, mapping)).toThrow(
-			"Missing close price",
-		);
+		expect(() => normalizePriceEntry(row, mapping)).toThrow("Missing close price");
 	});
 
 	it("should throw on unparseable date", () => {
 		const row = { date: "not-a-date", close: 50.0 };
 		const mapping: FieldMapping = { date: "date", close: "close" };
 
-		expect(() => normalizePriceEntry(row, mapping)).toThrow(
-			"Cannot parse date",
-		);
+		expect(() => normalizePriceEntry(row, mapping)).toThrow("Cannot parse date");
 	});
 
 	it("should extract metadata from unmapped columns", () => {

@@ -45,20 +45,9 @@ const CLOSE_PATTERNS = [
 	"value",
 	"end_price",
 ];
-const VOLUME_PATTERNS = [
-	"volume",
-	"vol",
-	"qty",
-	"quantity",
-	"amount",
-	"turnover",
-	"trade_volume",
-];
+const VOLUME_PATTERNS = ["volume", "vol", "qty", "quantity", "amount", "turnover", "trade_volume"];
 
-function matchHeader(
-	headers: string[],
-	patterns: string[],
-): string | undefined {
+function matchHeader(headers: string[], patterns: string[]): string | undefined {
 	const normalized = headers.map((h) =>
 		h
 			.toLowerCase()
@@ -84,9 +73,7 @@ export function detectFieldMapping(headers: string[]): FieldMapping {
 
 	const close = matchHeader(headers, CLOSE_PATTERNS);
 	if (!close) {
-		throw new Error(
-			`No close/price column found in headers: ${headers.join(", ")}`,
-		);
+		throw new Error(`No close/price column found in headers: ${headers.join(", ")}`);
 	}
 
 	const mapped = new Set([date, close]);
@@ -148,9 +135,7 @@ export function normalizePriceEntry(
 	const date = parseDate(raw[mapping.date]);
 	const close = parseNumber(raw[mapping.close]);
 	if (close == null) {
-		throw new Error(
-			`Missing close price in row: ${JSON.stringify(raw).slice(0, 200)}`,
-		);
+		throw new Error(`Missing close price in row: ${JSON.stringify(raw).slice(0, 200)}`);
 	}
 
 	const metadata: Record<string, unknown> = {};

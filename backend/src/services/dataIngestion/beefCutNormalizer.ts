@@ -718,9 +718,7 @@ const CUT_MAPPINGS: CutMapping[] = [
 const nameToCode = new Map<string, string>();
 
 for (const cut of CUT_MAPPINGS) {
-	const names = [cut.nameEn, cut.nameZh, cut.nameEs, cut.namePt].filter(
-		Boolean,
-	) as string[];
+	const names = [cut.nameEn, cut.nameZh, cut.nameEs, cut.namePt].filter(Boolean) as string[];
 	for (const name of names) {
 		const key = name.toLowerCase().trim();
 		if (!nameToCode.has(key)) {
@@ -817,10 +815,7 @@ export function normalizeBeefCut(name: string): string | null {
 	// Try with common suffixes/prefixes stripped
 	const stripped = key
 		.replace(/^(beef|bovine|de|do|da|the)\s+/i, "")
-		.replace(
-			/\s+(meat|cut|steak|roast|boneless|bone-in|trimmed|untrimmed)$/i,
-			"",
-		)
+		.replace(/\s+(meat|cut|steak|roast|boneless|bone-in|trimmed|untrimmed)$/i, "")
 		.trim();
 
 	if (nameToCode.has(stripped)) {
