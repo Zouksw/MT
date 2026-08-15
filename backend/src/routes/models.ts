@@ -383,10 +383,10 @@ router.patch(
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { isActive } = req.body;
-		if (typeof isActive === "undefined") {
-			throw new BadRequestError("No valid fields to update");
+		if (typeof isActive !== "boolean") {
+			throw new BadRequestError("isActive must be a boolean");
 		}
-		const model = await setModelActive(req.params.id, isActive);
+		const model = await setModelActive(req.params.id, isActive, req.userId, req.user.role);
 		return success(res, { model });
 	}),
 );

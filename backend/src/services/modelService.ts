@@ -9,10 +9,7 @@
 
 import type { ModelAlgorithm, Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
-import {
-	BadRequestError,
-	NotFoundError,
-} from "@/middleware/errorHandler";
+import { BadRequestError, ForbiddenError, NotFoundError } from "@/middleware/errorHandler";
 
 export interface ListModelsParams {
 	timeseriesId?: string;
@@ -78,15 +75,13 @@ export async function getModel(id: string) {
  * for the same timeseries. Used by the train route after the inference
  * service returns; the route keeps the socket.io emit.
  */
-export async function createModelRecord(
-	input: {
-		timeseriesId: string;
-		trainedById: string;
-		algorithm: ModelAlgorithm;
-		hyperparameters: Record<string, string | number | boolean>;
-		trainingSamples: number;
-	},
-) {
+export async function createModelRecord(input: {
+	timeseriesId: string;
+	trainedById: string;
+	algorithm: ModelAlgorithm;
+	hyperparameters: Record<string, string | number | boolean>;
+	trainingSamples: number;
+}) {
 	// Deactivate existing models for this timeseries
 	await prisma.forecastingModel.updateMany({
 		where: { timeseriesId: input.timeseriesId, isActive: true },
@@ -113,9 +108,7 @@ export async function createModelRecord(
 }
 
 /** Batch-insert forecast records (used by the predict route). */
-export async function createForecasts(
-	forecasts: Prisma.ForecastCreateManyInput[],
-): Promise<void> {
+export async function createForecasts(forecasts: Prisma.ForecastCreateManyInput[]): Promise<void> {
 	await prisma.forecast.createMany({ data: forecasts, skipDuplicates: true });
 }
 
@@ -141,17 +134,29 @@ export async function listForecasts(
 
 /**
  * Update a model's active status. When activating, deactivate other models
- * for the same timeseries so only one is active at a time.
+ * for the same timeseries so only one is active at a time. Only the trainer
+ * or an admin may update — the deactivate-others sweep made this a
+ * cross-user destructive operation before the ownership check existed.
  */
-export async function setModelActive(id: string, isActive: boolean) {
+export async function setModelActive(
+	id: string,
+	isActive: boolean,
+	userId: string,
+	role: string | undefined,
+) {
+	const model = await prisma.forecastingModel.findUnique({
+		where: { id },
+		select: { id: true, timeseriesId: true, trainedById: true },
+	});
+	if (!model) throw new NotFoundError("Model");
+	if (model.trainedById !== userId && role !== "ADMIN") {
+		throw new ForbiddenError("You can only update models you created");
+	}
 	if (isActive) {
-		const model = await prisma.forecastingModel.findUnique({ where: { id } });
-		if (model) {
-			await prisma.forecastingModel.updateMany({
-				where: { timeseriesId: model.timeseriesId, id: { not: id } },
-				data: { isActive: false },
-			});
-		}
+		await prisma.forecastingModel.updateMany({
+			where: { timeseriesId: model.timeseriesId, id: { not: id } },
+			data: { isActive: false },
+		});
 	}
 	return prisma.forecastingModel.update({ where: { id }, data: { isActive } });
 }

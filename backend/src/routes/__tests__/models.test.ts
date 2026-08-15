@@ -16,7 +16,7 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { prisma } from "@/lib";
+import { jwtUtils, prisma } from "@/lib";
 import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
@@ -102,5 +102,129 @@ describe("Models Routes (Integration)", () => {
 			expect(res.body.success).toBe(false);
 			expect(res.body.error.code).toBe("GONE");
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// PATCH ownership (round-104). setModelActive previously took no caller
+// identity: any authenticated user could toggle anyone's model, and the
+// activate path bulk-deactivates every other model on that series. Only the
+// trainer (or ADMIN) may patch — same rule deleteModel already enforces.
+// ---------------------------------------------------------------------------
+describe("PATCH /api/models/:id — ownership", () => {
+	const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+	let tokenTrainer = "";
+	let tokenOutsider = "";
+	let modelId = "";
+	let siblingId = "";
+	let orgId = "";
+	const userIds: string[] = [];
+
+	beforeAll(async () => {
+		const trainer = await prisma.user.create({
+			data: {
+				email: `model-trainer-${stamp}@test`,
+				name: "Model Trainer",
+				passwordHash: "test-hash-not-real",
+				role: "EDITOR",
+			},
+		});
+		const outsider = await prisma.user.create({
+			data: {
+				email: `model-outsider-${stamp}@test`,
+				name: "Model Outsider",
+				passwordHash: "test-hash-not-real",
+				role: "EDITOR",
+			},
+		});
+		userIds.push(trainer.id, outsider.id);
+		tokenTrainer = jwtUtils.generateToken(trainer.id);
+		tokenOutsider = jwtUtils.generateToken(outsider.id);
+
+		const org = await prisma.organizations.create({
+			data: {
+				id: `model-org-${stamp}`,
+				owner_id: trainer.id,
+				name: `Model ownership org ${stamp}`,
+				slug: `model-org-${stamp}`,
+			},
+		});
+		orgId = org.id;
+		const dataset = await prisma.dataset.create({
+			data: {
+				name: "Model ownership dataset",
+				slug: `model-ds-${stamp}`,
+				storageFormat: "CSV",
+				ownerId: trainer.id,
+				organization_id: org.id,
+			},
+		});
+		const series = await prisma.timeseries.create({
+			data: { datasetId: dataset.id, name: "Model series", slug: `model-series-${stamp}` },
+		});
+		const model = await prisma.forecastingModel.create({
+			data: {
+				timeseriesId: series.id,
+				algorithm: "ARIMA",
+				hyperparameters: {},
+				trainedById: trainer.id,
+				isActive: false,
+			},
+		});
+		const sibling = await prisma.forecastingModel.create({
+			data: {
+				timeseriesId: series.id,
+				algorithm: "ENSEMBLE",
+				hyperparameters: {},
+				trainedById: trainer.id,
+				isActive: true,
+			},
+		});
+		modelId = model.id;
+		siblingId = sibling.id;
+	});
+
+	afterAll(async () => {
+		// Dataset cascades timeseries → forecasting models; then org → users.
+		await prisma.dataset.deleteMany({ where: { organization_id: orgId } }).catch(() => {});
+		await prisma.organizations.deleteMany({ where: { id: orgId } }).catch(() => {});
+		await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
+	});
+
+	it("non-trainer gets 403 and nothing changes", async () => {
+		const res = await request(app)
+			.patch(`/api/models/${modelId}`)
+			.set(authHeaders(tokenOutsider))
+			.send({ isActive: true });
+		expect(res.status).toBe(403);
+		const unchanged = await prisma.forecastingModel.findUnique({ where: { id: modelId } });
+		expect(unchanged?.isActive).toBe(false);
+	});
+
+	it("non-boolean isActive is 400", async () => {
+		const res = await request(app)
+			.patch(`/api/models/${modelId}`)
+			.set(authHeaders(tokenTrainer))
+			.send({ isActive: "yes" });
+		expect(res.status).toBe(400);
+	});
+
+	it("trainer activates model — sibling on the same series is deactivated", async () => {
+		const res = await request(app)
+			.patch(`/api/models/${modelId}`)
+			.set(authHeaders(tokenTrainer))
+			.send({ isActive: true });
+		expect(res.status).toBe(200);
+		expect(res.body.data.model.isActive).toBe(true);
+		const sibling = await prisma.forecastingModel.findUnique({ where: { id: siblingId } });
+		expect(sibling?.isActive).toBe(false);
+	});
+
+	it("missing model id is 404", async () => {
+		const res = await request(app)
+			.patch("/api/models/nonexistent-model-id-xyz")
+			.set(authHeaders(tokenTrainer))
+			.send({ isActive: true });
+		expect(res.status).toBe(404);
 	});
 });

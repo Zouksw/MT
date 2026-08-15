@@ -1,5 +1,6 @@
 import type { Timeseries } from "@prisma/client";
 import { type Request, type Response, Router } from "express";
+import { z } from "zod";
 import { prisma } from "@/lib";
 import { paginated, success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
@@ -8,6 +9,28 @@ import { getPagination, limitSchema, paginationSchema } from "@/schemas/common";
 import type { QueryConditions } from "@/types";
 
 const router = Router();
+
+// POST body contract for /:id/data. `value` is required — a missing value
+// must be a 400, not a fabricated 0 data point (honesty framework).
+const dataPointCreateSchema = z.object({
+	timestamp: z.coerce.date().optional(),
+	value: z.union([z.number().finite(), z.string().min(1), z.boolean()]),
+});
+
+// Mutating endpoints resolve ownership through the parent dataset.
+// Same convention as datasetService.getDataset: 404 for both "missing" and
+// "not owned" so existence isn't disclosed cross-user; ADMIN bypasses
+// (mirrors modelService.deleteModel).
+async function getOwnedTimeseries(id: string, userId: string, role: string) {
+	const timeseries = await prisma.timeseries.findUnique({
+		where: { id },
+		include: { dataset: { select: { ownerId: true } } },
+	});
+	if (!timeseries || (timeseries.dataset.ownerId !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Timeseries");
+	}
+	return timeseries;
+}
 
 /**
  * Timeseries with extended data
@@ -246,21 +269,17 @@ router.post(
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res: Response) => {
 		const { id } = req.params;
-		const { timestamp, value } = req.body;
+		const { timestamp, value } = dataPointCreateSchema.parse(req.body ?? {});
 
-		const timeseries = await prisma.timeseries.findUnique({
-			where: { id },
-		});
-
-		if (!timeseries) {
-			throw new NotFoundError("Timeseries");
-		}
+		// Ownership check — anyone-authenticated could previously inject
+		// points into any user's series, polluting downstream forecasts.
+		await getOwnedTimeseries(id, req.userId as string, req.user?.role ?? "");
 
 		const datapoint = await prisma.datapoint.create({
 			data: {
 				timeseriesId: id,
-				timestamp: timestamp ? new Date(timestamp) : new Date(),
-				valueJson: JSON.stringify(value !== undefined ? value : 0),
+				timestamp: timestamp ?? new Date(),
+				valueJson: JSON.stringify(value),
 			},
 		});
 
@@ -298,22 +317,14 @@ router.delete(
 	asyncHandler(async (req: AuthRequest, res: Response) => {
 		const { id } = req.params;
 
-		const timeseries = await prisma.timeseries.findUnique({
-			where: { id },
-		});
+		// Ownership check — this is the most destructive endpoint in the
+		// workspace area; it previously let any authenticated user delete
+		// any user's series and all its data points.
+		const timeseries = await getOwnedTimeseries(id, req.userId as string, req.user?.role ?? "");
 
-		if (!timeseries) {
-			throw new NotFoundError("Timeseries");
-		}
-
-		// Delete from PostgreSQL
-		await prisma.datapoint.deleteMany({
-			where: { timeseriesId: id },
-		});
-
-		await prisma.timeseries.delete({
-			where: { id },
-		});
+		// Datapoints/Anomalies cascade via onDelete: Cascade — the manual
+		// deleteMany here was both redundant and non-transactional.
+		await prisma.timeseries.delete({ where: { id: timeseries.id } });
 
 		return success(res, {
 			success: true,
