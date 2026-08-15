@@ -189,7 +189,7 @@ jobs:
         run: cd backend && pnpm run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./backend/coverage/lcov.info
           flags: backend
@@ -320,14 +320,16 @@ jobs:
     environment:
       name: production
       url: https://trademind.example.com
+    # `secrets` is not a legal context in steps.if — bridge it through job env.
+    env:
+      DEPLOY_CONFIGURED: ${{ secrets.DEPLOY_HOST != '' }}
 
     steps:
       - name: Deploy to server
-        # Step-level `if` may read the secrets context (job-level may not).
         # Without DEPLOY_* secrets the ssh-action dies with "missing server
         # host" and paints the pipeline red for a config gap, not a code
         # fault — so skip explicitly and say why.
-        if: ${{ secrets.DEPLOY_HOST != '' }}
+        if: env.DEPLOY_CONFIGURED == 'true'
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -369,19 +371,19 @@ jobs:
             echo "Deployment completed successfully!"
 
       - name: Skip deploy (DEPLOY_* secrets not configured)
-        if: ${{ secrets.DEPLOY_HOST == '' }}
+        if: env.DEPLOY_CONFIGURED == 'false'
         run: |
           echo "::warning::All quality gates passed, but DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets are not set — production deploy skipped. Add them (Settings → Secrets → Actions) to activate auto-deploy; until then deploys stay manual on the server."
 
       - name: Verify deployment
-        if: ${{ secrets.DEPLOY_HOST != '' }}
+        if: env.DEPLOY_CONFIGURED == 'true'
         run: |
           sleep 30
           curl -f ${{ secrets.APP_URL }}/health || exit 1
           echo "Deployment verification successful!"
 
       - name: Notify deployment success
-        if: success() && secrets.DEPLOY_HOST != ''
+        if: success() && env.DEPLOY_CONFIGURED == 'true'
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
@@ -389,7 +391,8 @@ jobs:
             Deployment to production successful!
             Commit: ${{ github.sha }}
             Author: ${{ github.actor }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         continue-on-error: true
 
       - name: Notify deployment failure
@@ -402,7 +405,8 @@ jobs:
             Commit: ${{ github.sha }}
             Author: ${{ github.actor }}
             Please investigate immediately.
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         continue-on-error: true
 
   # ============================================================================
@@ -456,5 +460,6 @@ jobs:
             Deployment was rolled back due to failure!
             Previous version restored.
             Please investigate the issue.
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
         continue-on-error: true
