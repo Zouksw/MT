@@ -26,8 +26,7 @@ export const createRateLimiter = (options: {
 		// otherwise accumulate across cases in the same process and cause
 		// spurious 429s that mask real failures.
 		skip: (_req: Request) =>
-			process.env.NODE_ENV !== "production" &&
-			process.env.NODE_ENV !== "staging",
+			process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "staging",
 		handler: (_req: Request, res: Response) => {
 			res.status(429).json({
 				error: "Too many requests",
@@ -88,4 +87,16 @@ export const globalRateLimiter = createRateLimiter({
 	windowMs: 60 * 1000, // 1 minute
 	max: 300,
 	message: "Too many requests from this IP, please try again later.",
+});
+
+/**
+ * Health endpoint rate limiter. /health/ready fans out to DB/Redis/inference
+ * probes, so an unauthenticated client hammering it burns real resources.
+ * The global limiter is scoped to /api and does NOT cover /health.
+ * cron-healthcheck polls /health once per 5 min; 60/min is ample headroom.
+ */
+export const healthRateLimiter = createRateLimiter({
+	windowMs: 60 * 1000, // 1 minute
+	max: 60,
+	message: "Too many health check requests, please try again later.",
 });

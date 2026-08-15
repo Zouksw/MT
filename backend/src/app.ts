@@ -19,7 +19,7 @@ import { type Server as SocketIOInstance, Server as SocketIOServer } from "socke
 import { config, jwtUtils, logger } from "@/lib";
 import { errorHandler } from "@/middleware/errorHandler";
 import { errorLoggingMiddleware, loggingMiddleware } from "@/middleware/logging";
-import { globalRateLimiter } from "@/middleware/rateLimiter";
+import { globalRateLimiter, healthRateLimiter } from "@/middleware/rateLimiter";
 import { securityHeaders } from "@/middleware/security";
 import alertsRouter from "@/routes/alerts";
 import { analyticsRouter } from "@/routes/analytics";
@@ -162,7 +162,11 @@ export function createApp(): AppInstance {
 		});
 	}
 
-	// Health check routes
+	// Health check routes. /health/ready fans out to DB/Redis/inference
+	// probes — cap it so an unauthenticated client can't hammer it for
+	// resource exhaustion. The /api-scoped global limiter does not cover
+	// /health; cron-healthcheck polls once per 5 min, far under 60/min.
+	app.use("/health", healthRateLimiter);
 	app.use("/health", healthRouter);
 
 	// Global rate limiter — baseline abuse cap across all API routes. Stricter
