@@ -29,6 +29,15 @@
 4. **前端 5 孤儿路由 + /contact 幽灵路径**：alerts→Rules、apikeys 行→View、settings hub→Billing、beef→Factories 入站链接补齐；middleware PUBLIC_PATHS 去掉不存在的 /contact。
 5. 测试：两套重叠 cmeFutures 套件合并（17 用例）；backend 797|1（基线 795 +2）、frontend 296、inference 53。
 
+### round-103 战果（2026-08-15，CI 解堵后续轮）
+
+1. **CI 三周红根治**（round-102，8 层断裂，详见 AUTOMATION-STATUS round-102 节）：5 质量门 + build 全绿（run 31861990141），deploy/rollback 无 secrets 时明确跳过不再假红。
+2. **TD-14 迁移基线 squash**：生产/`schema` diff 验证零漂移后，8 旧迁移归档 `migrations_archive_20260815/`，`0_init` 基线（930 行/31 表）resolve 上生产；全新库 replay 实证通过；CI 恢复真实 `migrate deploy` 路径。
+3. **inac 源下线**（A4）：双路连接超时实证 → 注册+日调度移除（源文件保留）。
+4. **stl_forecaster 移出 BASELINE_MODELS**（B3）：冻结池 10.87% MAPE 差同池 3~10 倍，accuracy 页不再展示。
+5. **cron-healthcheck 接入 mihomo 探测**：unit + 7890 端口双探针，`PROXY-DOWN` 告警行（cme 数据链路的可观测性缺口关闭）。
+6. **测试**：docs 路由 +3（D2 收口）；生产库测试残留清理（6 用户/2 key，`wf-*`/`apiKeys-*` 模式）；基线 797→800，零回归。
+
 ---
 
 ## Track A — 数据层收尾（#1 缺口：beef_cut 冻结）
@@ -70,6 +79,7 @@
 
 ### A4 · 残余源决策（低优先，可选）
 - `.gov.cn`（china_wholesale/shipping/dce）：海外代理未必能到，评估下线或保留。`inac`（gub.uy）站点疑似全球下线，确认后下线。`fao` 源站 521 自身挂，等恢复。
+- **进展（2026-08-15 round-103）**：`inac` 实证下线（`www.inac.gub.uy` 直连+代理双路连接超时，仅 gub.uy 主门户 200；与 2026-08-14 复核一致）→ **注册与日调度已移除**（源文件保留待复活，恢复需同时改回 `dataIngestion/index.ts` 与 `server.ts` DAILY_SOURCES 两处）。`.gov.cn` 族维持保留（基础设施阻塞非源死亡，已在 KNOWN-ISSUES 登记"需中国出口"）。fao 已迁移新主机+key 门控（等 A2 第 5 把 key）。
 
 ---
 
@@ -91,6 +101,7 @@
 
 ### B3 · stl_forecaster 去留（独立产品决策，可选）
 - 历史 10.88% MAPE，代码已修（damped-trend gate）但 stat 不再进后台调度、无新证据。决策是否从 `BASELINE_MODELS` 移除。
+- **决策（2026-08-15 round-103）：从 BASELINE_MODELS 移除**。证据：verified 池冻结于 2026-07-26（stat 家族随 chronos-only 共识退出调度），stl avg/median MAPE 10.87%/5.73%，对比同池 arima 3.67%/0.43%、naive 3.45%/0.40%——差 3~10 倍，且修复后零新证据；accuracy 页展示它反而夸大供给。模型实现保留（inference 侧 on-demand /predict 仍接受该 id）；若重回排期评估并有新证据，加回 `modelRegistry.ts` 即可。测试基线 797→800（docs 套件 +3），零回归。
 
 ---
 
@@ -101,6 +112,7 @@
 - **文件**：`useTradingData.ts`(5 处)、`useBeefImport.ts:33`、`useDashboardStats.ts:9-11`、`lib/market-data.ts:8`、`app/apikeys/edit/[id]/page.tsx`、`app/dashboard/models/page.tsx:65`、`app/beef/import/page.tsx:52`、`app/dashboard/performance/page.tsx:119`、`components/WebVitals.tsx:30`。
 - **验收**：`grep -rn NEXT_PUBLIC_API_URL frontend/src` 仅命中 `lib/config.ts`；前后端联调无 404；frontend 测试不回退。
 - **规模**：M
+- **✅ 已完成并验收（round-100 改动，2026-08-15 round-103 核销）**：实测 `grep -rln NEXT_PUBLIC_API_URL frontend/src` 生产代码仅 `lib/config.ts`；另 3 处命中是测试文件设 env（合法）。API_BASE 被 24 个文件引用。
 
 ### C2 · Tailwind 三色源收敛（TD-12）
 - **做什么**：现三套色源并存（`tailwind.config.ts` hex[死]、`globals.css @theme inline` oklch[活]、`tokens.css` hex[死]）。定一套产品色板，消除 `StatCard.tsx:127` 硬编码 `info:#2563EB`、`#8B6914` 散落 37 处。
@@ -119,9 +131,9 @@
 ## Track D — 测试加固（伴随每轨 + 独立）
 
 ### D-per · 每轨改动配回归测试（硬约束）
-### D1 · `datasets` 路由测试（现仅 `data.test.ts` 部分覆盖）
-### D2 · `docs` 路由（纯 Swagger 静态，评估是否值得测，否则文档说明跳过原因）
-### D3 · scraper 测试覆盖（仅 3/19：fao/worldBank/cme → 补 usda/mla/cepea 等关键源）
+### D1 · `datasets` 路由测试 — ✅ round-101 已完成（data.test.ts 12 用例并入 datasets.test.ts，零用例损失）
+### D2 · `docs` 路由 — ✅ round-103 补 3 用例（`docs.test.ts`：Swagger UI 200 / spec JSON 结构 / securitySchemes 存在）。评估结论：路由薄但测试守护两个真实失败模式（挂载消失 + swaggerSpec 反射炸），比论证跳过更便宜
+### D3 · scraper 测试覆盖（仅 3/19：fao/worldBank/cme → 补 usda/mla/cepea 等关键源）— 未动（多数源卡 key/反爬，可测的解析逻辑待 fixture 构造，收益中等，暂缓）
 
 ---
 
@@ -154,4 +166,4 @@ D-per 伴随每一批；D1/D2/D3 穿插
 | API base 重构引 404 | C1 联调断 | grep 验证 + 集成测试 + 分批 commit |
 | key 仍不给 | A2/A3 停摆 | 其余轨（B1/C/D）不受影响，持续推进 |
 | cme 复活后 burst 变大（15→~51 请求/30min） | inference 内存逼近 3584M | R4 遗留观察：若 WORKER 再击杀则限并发或上调（14:26 周期起跟踪） |
-| mihomo 宕机 | 仅 cme 期货断流（scraper 静默 0 行，不 crash） | systemd Restart=on-failure；cron-healthcheck 不监控 mihomo（已登记 AUTOMATION-STATUS 待办） |
+| mihomo 宕机 | 仅 cme 期货断流（scraper 静默 0 行，不 crash） | systemd Restart=on-failure；**round-103 起 cron-healthcheck 每 5 分钟探测并告警（PROXY-DOWN 行）**——待办已关闭 |

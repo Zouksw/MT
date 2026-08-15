@@ -16,7 +16,7 @@
 |---|---|---|
 | `security-scan` | pnpm audit（high+）+ Snyk | 软失败（continue-on-error） |
 | `lint-and-typecheck` | backend/frontend 各跑 biome lint + tsc --noEmit | ✅ 硬阻断 |
-| `test-backend` | PG+Redis 装机 → **prisma db push（见下方漂移说明）** → seed → inference 服务拉起（:10810，chronos 无权重自动跳过）→ vitest | ✅ 硬阻断 |
+| `test-backend` | PG+Redis 装机 → **prisma migrate deploy（TD-14 基线 squash 后恢复真实迁移路径，2026-08-15）** → generate → seed → inference 服务拉起（:10810，chronos 无权重自动跳过）+ backend 拉起（:8000，correlation 套件）→ vitest | ✅ 硬阻断 |
 | `test-frontend` | jest + next build | ✅ 硬阻断 |
 | `test-inference` | setup-python 3.10 → ruff check → pytest（ruff 已入 requirements-dev.txt） | ✅ 硬阻断（round-25 新增） |
 | `build` | 仅 main push；构建 backend dist + frontend .next，上传 artifact | 依赖前 5 个 job |
@@ -98,7 +98,7 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 **backend `/health` 专属限流（2026-08-15）**：`healthRateLimiter` 60/min/IP（live 实证 58×200→429）。原因：全局限流器挂在 `/api` 不覆盖 `/health`，而 `/health/ready` 会扇出 DB/Redis/推理探测，可被匿名滥用。注意 interplay：cron-healthcheck 每 5 分钟 1 次远低于限值；但若本机其他进程打满 60/min 窗口，cron 探测会拿到 429 并误判重启——当前无此类调用方。
 
-**backend 出站代理（2026-08-14，R2 round-100）**：`env_production` 设 `SCRAPER_PROXY_URL=http://127.0.0.1:7890`（mihomo，systemd `mihomo.service` 保活）。**仅** cmeFutures 的 Yahoo fetcher 读取它（Yahoo edge 对本机直连 IP-blocked，bare fetch ETIMEDOUT）；backend 其余 fetch（FRED 等）保持直连。依赖链：mihomo 挂 → 仅 cme 期货数据断（scraper 静默 0 行，不 crash）；cron-healthcheck **不监控** mihomo（待办）。
+**backend 出站代理（2026-08-14，R2 round-100）**：`env_production` 设 `SCRAPER_PROXY_URL=http://127.0.0.1:7890`（mihomo，systemd `mihomo.service` 保活）。**仅** cmeFutures 的 Yahoo fetcher 读取它（Yahoo edge 对本机直连 IP-blocked，bare fetch ETIMEDOUT）；backend 其余 fetch（FRED 等）保持直连。依赖链：mihomo 挂 → 仅 cme 期货数据断（scraper 静默 0 行，不 crash）。**round-103（2026-08-15）起 cron-healthcheck 每 5 分钟探测 mihomo**（unit is-active + 127.0.0.1:7890 TCP 探测，宕机记 `PROXY-DOWN` 告警行，不重启——systemd Restart=on-failure 负责拉起，探测管可见性）。
 
 ## 五、测试体系
 
