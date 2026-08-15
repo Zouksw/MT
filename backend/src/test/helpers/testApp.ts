@@ -16,8 +16,14 @@ import type { Express } from "express";
 
 import { createApp } from "@/app";
 
-// Integration tests rely on seeded data (admin user, commodities) in mt_db.
-const REAL_DB_URL = "postgresql://mt_user:mt_password@localhost:5432/mt_db";
+// Integration tests rely on seeded data (admin user, commodities).
+// The URL must follow DATABASE_URL so the in-process app (src/lib/database
+// singleton, env-driven) and this helper share ONE database — CI exports
+// mt_test; without this the helper silently pointed at mt_db while the app
+// pointed elsewhere, and on CI (no mt_db) every requireDb suite died with
+// "database mt_db does not exist". Local default unchanged.
+const REAL_DB_URL =
+	process.env.DATABASE_URL ?? "postgresql://mt_user:mt_password@localhost:5432/mt_db";
 
 let cachedPrisma: PrismaClient | null = null;
 

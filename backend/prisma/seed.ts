@@ -2007,6 +2007,119 @@ async function main() {
 			unit: "index",
 			currency: "USD",
 		},
+
+		// ── CN wholesale + CBOT + FRED carcass (parity with the live prod
+		// catalog; api-workflows asserts ≥100 commodities, and these slugs
+		// exist in production from scraper-era writes) ──
+		{
+			slug: "apple_wholesale_cn",
+			name: "Apple Wholesale (China)",
+			nameCn: "全国富士苹果批发价",
+			category: "fruits",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "banana_wholesale_cn",
+			name: "Banana Wholesale (China)",
+			nameCn: "全国香蕉批发价",
+			category: "fruits",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "beef_carcass_us",
+			name: "US Beef Carcass Price (FRED)",
+			category: "beef_cuts",
+			unit: "USD/cwt",
+			currency: "USD",
+		},
+		{
+			slug: "beef_wholesale_cn",
+			name: "Beef Wholesale (China)",
+			nameCn: "全国牛肉批发价",
+			category: "beef_cuts",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "cabbage_wholesale_cn",
+			name: "Cabbage Wholesale (China)",
+			nameCn: "全国大白菜批发价",
+			category: "vegetables",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "carp_wholesale_cn",
+			name: "Carp Wholesale (China)",
+			nameCn: "全国鲤鱼批发价",
+			category: "aquatic",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "chicken_wholesale_cn",
+			name: "Chicken Wholesale (China)",
+			nameCn: "全国白条鸡批发价",
+			category: "other_meat",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "corn_cbOT",
+			name: "Corn (CBOT)",
+			category: "grain",
+			unit: "USD/ton",
+			currency: "USD",
+		},
+		{
+			slug: "egg_wholesale_cn",
+			name: "Egg Wholesale (China)",
+			nameCn: "全国鸡蛋批发价",
+			category: "other_meat",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "mutton_wholesale_cn",
+			name: "Mutton Wholesale (China)",
+			nameCn: "全国羊肉批发价",
+			category: "other_meat",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "pork_wholesale_cn",
+			name: "Pork Wholesale (China)",
+			nameCn: "全国猪肉批发价",
+			category: "other_meat",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "potato_wholesale_cn",
+			name: "Potato Wholesale (China)",
+			nameCn: "全国土豆批发价",
+			category: "vegetables",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
+		{
+			slug: "soybeans_cbOT",
+			name: "Soybeans (CBOT)",
+			category: "grain",
+			unit: "USD/ton",
+			currency: "USD",
+		},
+		{
+			slug: "tomato_wholesale_cn",
+			name: "Tomato Wholesale (China)",
+			nameCn: "全国西红柿批发价",
+			category: "vegetables",
+			unit: "CNY/kg",
+			currency: "CNY",
+		},
 	];
 
 	// Price baselines for generating realistic data
@@ -2036,7 +2149,25 @@ async function main() {
 		soybean_meal_cn: { base: 3800, volatility: 150 },
 		usd_cny: { base: 7.25, volatility: 0.1 },
 		aud_usd: { base: 0.65, volatility: 0.015 },
+		// brl_usd baseline sits at the exchange_rate_api scale (1/BRL ≈ 0.18)
+		// on purpose — the authoritative-source guards assert fred's USD/BRL
+		// ≈ 5.0 wins over this inverted scale (see the DEXBZUS fixture below).
 		brl_usd: { base: 0.18, volatility: 0.008 },
+		// CN wholesale + CBOT + FRED carcass (slugs above)
+		apple_wholesale_cn: { base: 6.0, volatility: 0.3 },
+		banana_wholesale_cn: { base: 4.0, volatility: 0.3 },
+		beef_carcass_us: { base: 260, volatility: 8 },
+		beef_wholesale_cn: { base: 60, volatility: 2.5 },
+		cabbage_wholesale_cn: { base: 1.6, volatility: 0.2 },
+		carp_wholesale_cn: { base: 12, volatility: 0.6 },
+		chicken_wholesale_cn: { base: 16, volatility: 0.8 },
+		corn_cbOT: { base: 170, volatility: 6 },
+		egg_wholesale_cn: { base: 9.0, volatility: 0.5 },
+		mutton_wholesale_cn: { base: 62, volatility: 2.5 },
+		pork_wholesale_cn: { base: 22, volatility: 1.2 },
+		potato_wholesale_cn: { base: 2.2, volatility: 0.2 },
+		soybeans_cbOT: { base: 380, volatility: 12 },
+		tomato_wholesale_cn: { base: 4.0, volatility: 0.4 },
 		ribeye_cn: { base: 120, volatility: 5 },
 		tenderloin_cn: { base: 180, volatility: 8 },
 		beef_tripe_cn: { base: 35, volatility: 2 },
@@ -2215,7 +2346,10 @@ async function main() {
 				low,
 				close,
 				volume: commodity.category === "futures" ? Math.floor(Math.random() * 20000 + 5000) : null,
-				source: "seed",
+				// brl_usd's baseline rows carry the inverted exchange_rate_api
+				// scale — label them as that source so the conflict with the
+				// authoritative fred fixture below is realistic.
+				source: commodity.slug === "brl_usd" ? "exchange_rate_api" : "seed",
 				metadata,
 			});
 
@@ -2231,6 +2365,131 @@ async function main() {
 	if (priceBatch.length > 0) {
 		await prisma.commodityPrice.createMany({ data: priceBatch, skipDuplicates: true });
 		priceCount += priceBatch.length;
+	}
+
+	// Authoritative-source fixture (round-41/67 regression guards): fred
+	// DEXBZUS writes USD/BRL ≈ 5.x while exchange_rate_api writes the inverted
+	// 1/BRL ≈ 0.2 above. signals/watchlist/marketService/inference tests pin
+	// that every read path resolves brl_usd to the fred magnitude.
+	{
+		const brl = await prisma.commodity.findUnique({ where: { slug: "brl_usd" } });
+		if (brl) {
+			const fredRows: {
+				commodityId: string;
+				date: Date;
+				interval: string;
+				open: number;
+				high: number;
+				low: number;
+				close: number;
+				volume: number | null;
+				source: string;
+				metadata: Record<string, unknown> | null;
+			}[] = [];
+			let rate = 5.05;
+			for (let d = 0; d < 120; d++) {
+				const date = new Date(NOW.getTime() - (120 - d) * 24 * 60 * 60 * 1000);
+				if (date.getDay() === 0 || date.getDay() === 6) continue;
+				rate = Math.max(4.6, Math.min(5.6, rate + (Math.random() - 0.5) * 0.06));
+				const close = parseFloat(rate.toFixed(4));
+				fredRows.push({
+					commodityId: brl.id,
+					date,
+					interval: "daily",
+					open: close,
+					high: parseFloat((close + 0.015).toFixed(4)),
+					low: parseFloat((close - 0.015).toFixed(4)),
+					close,
+					volume: null,
+					source: "fred",
+					metadata: { series: "DEXBZUS" },
+				});
+			}
+			await prisma.commodityPrice.createMany({ data: fredRows, skipDuplicates: true });
+			priceCount += fredRows.length;
+		}
+	}
+
+	// Ingestion-log fixtures: getSourceFreshness and dataHealth observability
+	// read ingestion_logs (recent window). Without rows the freshness table is
+	// empty and the round-58 empty-flag guards have nothing to iterate. One
+	// deliberately-void source exercises the empty:true path.
+	{
+		const logSources = [
+			{ source: "fred", inserted: 85 },
+			{ source: "exchange_rate_api", inserted: 180 },
+			{ source: "usda_ams", inserted: 42 },
+			{ source: "cme", inserted: 0 },
+		];
+		for (const s of logSources) {
+			await prisma.ingestionLog.create({
+				data: {
+					source: s.source,
+					status: "success",
+					inserted: s.inserted,
+					updated: 0,
+					durationMs: randInt(200, 4000),
+				},
+			});
+		}
+	}
+
+	// Market-news fixtures: the /api/news list test asserts a non-empty feed.
+	{
+		const NEWS: Array<{
+			title: string;
+			summary: string;
+			category: "PRICE_MOVE" | "SUPPLY" | "TRADE_POLICY" | "MARKET_INSIGHT" | "COMPANY";
+			source: string;
+		}> = [
+			{
+				title: "Brazil beef exports steady as BRL firms",
+				summary: "Weekly export volumes held flat while the real appreciated against the USD.",
+				category: "TRADE_POLICY",
+				source: "Trade Wire",
+			},
+			{
+				title: "US carcass prices edge higher on tight supplies",
+				summary:
+					"Choice carcass cutout gained for a third week as feedlot placements stayed light.",
+				category: "PRICE_MOVE",
+				source: "USDA summary",
+			},
+			{
+				title: "China wholesale beef price inches down",
+				summary: "Domestic wholesale beef eased slightly on softer out-of-home demand.",
+				category: "PRICE_MOVE",
+				source: "MOFCOM weekly",
+			},
+			{
+				title: "CME live cattle futures consolidate",
+				summary: "Front-month live cattle held a narrow range ahead of the Cattle on Feed report.",
+				category: "MARKET_INSIGHT",
+				source: "CME daily",
+			},
+			{
+				title: "Oceania grinding beef demand firms",
+				summary: "Manufacturing beef premiums widened as US lean demand picked up.",
+				category: "SUPPLY",
+				source: "Trade Wire",
+			},
+		];
+		for (const n of NEWS) {
+			await prisma.marketNews.create({
+				data: {
+					title: n.title,
+					slug: slugify(n.title),
+					summary: n.summary,
+					body: `${n.summary} Full article body seeded for integration fixtures.`,
+					category: n.category,
+					source: n.source,
+					sourceUrl: `https://example.com/${slugify(n.title)}`,
+					tags: [],
+					publishedAt: new Date(NOW.getTime() - randInt(1, 72) * 60 * 60 * 1000),
+					author: { connect: { email: "admin@trademind.com" } },
+				},
+			});
+		}
 	}
 
 	// Multi-source overlay: add a second source for key commodities so the
