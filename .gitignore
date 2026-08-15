@@ -123,3 +123,6 @@ backups/
 # Allow Prisma migration SQL files
 !backend/prisma/migrations/**/*.sql
 mt-backup/
+
+# user's global git config lives inside the repo root (repo IS the home dir)
+.gitconfig
