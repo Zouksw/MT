@@ -134,9 +134,11 @@ async function fetchFAOPrices(): Promise<ScraperResult> {
 			date,
 			interval: "yearly",
 			source: "fao_faostat",
+			// Annual series report one value per year — write the honest
+			// flat candle (round-104), not a fabricated ±1% band.
 			open: value,
-			high: value * 1.01,
-			low: value * 0.99,
+			high: value,
+			low: value,
 			close: value,
 			metadata: { itemCode: config.itemCode, year, flag: latest.Flag },
 		});

@@ -171,9 +171,12 @@ async function fetchFredMonthly(
 			// world_bank source string is now reserved for genuine WB rows (of
 			// which there are none while the WB API stays 404).
 			source: "fred",
+			// Monthly series report one value per month — no intraday OHLC
+			// exists. Write open=high=low=close so the chart shows the honest
+			// flat candle instead of a fabricated ±2% band (round-104).
 			open: value,
-			high: value * 1.02,
-			low: value * 0.98,
+			high: value,
+			low: value,
 			close: value,
 			volume: null,
 			metadata: {

@@ -8,7 +8,7 @@
  */
 
 import { logger } from "@/lib";
-import { ensureCommodity, upsertPrice } from "../helpers";
+import { ensureCommodity, latestUsdRate, upsertPrice } from "../helpers";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const CEPEA_URL = "https://www.cepea.esalq.usp.br/br/indicador/boi-gordo.aspx";
@@ -32,7 +32,11 @@ async function fetchCepeaData(): Promise<ScraperResult> {
 			if (priceMatch) {
 				const brlPerArroba = parseFloat(priceMatch[1].replace(".", "").replace(",", "."));
 				if (!Number.isNaN(brlPerArroba)) {
-					const usdPerKg = (brlPerArroba / 14.688) * 0.18;
+					// Live BRL→USD from the brl_usd series — the previous
+					// hardcoded 0.18 drifted up to ~8% (round-104). No rate
+					// → omit usdPerKg from metadata (honest absence).
+					const usdPerBrl = await latestUsdRate("brl_usd");
+					const usdPerKg = usdPerBrl !== null ? (brlPerArroba / 14.688) * usdPerBrl : null;
 
 					const commodity = await ensureCommodity({
 						slug: "boi_gordo_br",
@@ -51,14 +55,17 @@ async function fetchCepeaData(): Promise<ScraperResult> {
 						commodityId: commodity.id,
 						date,
 						interval: "daily",
-						open: brlPerArroba * 0.998,
-						high: brlPerArroba * 1.005,
-						low: brlPerArroba * 0.995,
+						// CEPEA publishes one indicator value per day — write the
+						// honest flat candle (round-104), not ±0.5% fabricated
+						// wicks.
+						open: brlPerArroba,
+						high: brlPerArroba,
+						low: brlPerArroba,
 						close: brlPerArroba,
 						source: "cepea",
 						metadata: {
 							brlPerArroba,
-							usdPerKg: parseFloat(usdPerKg.toFixed(2)),
+							...(usdPerKg !== null ? { usdPerKg: parseFloat(usdPerKg.toFixed(2)) } : {}),
 						},
 					});
 					inserted += priceResult.inserted;

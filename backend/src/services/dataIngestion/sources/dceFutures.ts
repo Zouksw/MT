@@ -214,9 +214,12 @@ async function upsertFuturesPrice(
 		metadata: { source: exchange },
 	});
 
-	const open = raw.open && raw.open !== "-" ? parseFloat(raw.open) : settle * 0.998;
-	const high = raw.high && raw.high !== "-" ? parseFloat(raw.high) : settle * 1.005;
-	const low = raw.low && raw.low !== "-" ? parseFloat(raw.low) : settle * 0.995;
+	// Missing ("-") OHLC fields fall back to the settle price — the honest
+	// flat candle. The previous settle*0.998/1.005/0.995 fallbacks fabricated
+	// wicks that never traded (round-104, same fix as the other daily sources).
+	const open = raw.open && raw.open !== "-" ? parseFloat(raw.open) : settle;
+	const high = raw.high && raw.high !== "-" ? Math.max(parseFloat(raw.high), open, settle) : settle;
+	const low = raw.low && raw.low !== "-" ? Math.min(parseFloat(raw.low), open, settle) : settle;
 	const volume = raw.volume && raw.volume !== "-" ? parseFloat(raw.volume) : null;
 
 	return upsertPrice({

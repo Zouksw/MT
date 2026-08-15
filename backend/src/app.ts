@@ -223,7 +223,15 @@ export function createApp(): AppInstance {
 
 		const subscriptions = new Set<string>();
 
+		// Workspace timeseries rooms stream forecast/anomaly broadcasts —
+		// same sensitivity as the "subscribe" rooms below, so the same auth
+		// requirement applies. Before round-104 an unauthenticated socket
+		// could join any series id and receive its broadcasts (audit C7).
 		socket.on("join-timeseries", (timeseriesId: string) => {
+			if (!socketUserId) {
+				socket.emit("error", { message: "Authentication required" });
+				return;
+			}
 			socket.join(`timeseries:${timeseriesId}`);
 			logger.info(`Socket ${socket.id} joined timeseries:${timeseriesId}`);
 		});

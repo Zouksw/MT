@@ -6,7 +6,29 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
+import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 import type { ScraperResult } from "./scraperManager";
+
+/**
+ * Latest USD-per-unit FX rate for a currency-pair commodity ("brl_usd",
+ * "aud_usd"). The writer sources use opposite directions — fred DEX* series
+ * quote foreign currency per USD (DEXBZUS ≈ 5.0), exchange_rate_api quotes
+ * USD per unit (≈ 0.19) — so normalize by magnitude. Returns null when no
+ * authoritative row exists; callers must skip the conversion (honest
+ * absence), never fall back to a hardcoded rate — the old 0.65/0.18
+ * constants in mlaNlrs/cepeaData silently mis-converted by up to ~8%
+ * (audit finding, round-104).
+ */
+export async function latestUsdRate(slug: string): Promise<number | null> {
+	const row = await prisma.commodityPrice.findFirst({
+		where: { commodity: { slug }, ...authoritativeSourceWhere(slug) },
+		orderBy: { date: "desc" },
+		select: { close: true },
+	});
+	const v = row ? Number(row.close) : Number.NaN;
+	if (!Number.isFinite(v) || v <= 0) return null;
+	return v > 1 ? 1 / v : v;
+}
 
 /**
  * Classify a scraper run into an IngestionLog `status`.

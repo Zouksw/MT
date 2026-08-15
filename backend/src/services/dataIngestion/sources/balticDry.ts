@@ -53,9 +53,11 @@ async function fetchBalticDry(): Promise<ScraperResult> {
 					commodityId: commodity.id,
 					date,
 					source: "baltic",
+					// Daily index — one value per day, write the honest flat
+					// candle (round-104), not a fabricated ±1% band.
 					open: value,
-					high: value * 1.01,
-					low: value * 0.99,
+					high: value,
+					low: value,
 					close: value,
 					metadata: { dataSource: "fred" },
 				});

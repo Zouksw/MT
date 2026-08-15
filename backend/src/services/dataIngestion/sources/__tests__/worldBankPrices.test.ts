@@ -95,8 +95,11 @@ describe("FRED source attribution (round-58 honesty fix)", () => {
 		const src = await fs.readFile(file, "utf8");
 
 		// Locate the upsertPrice call inside fetchFredMonthly and assert its
-		// source field. The literal must be "fred".
-		const upsertBlock = src.match(/source:\s*"([^"]+)",\s*\n\s*open:\s*value,/);
+		// source field. The literal must be "fred". Tolerate comments between
+		// the source and open fields (the round-104 flat-candle note sits there).
+		const upsertBlock = src.match(
+			/source:\s*"([^"]+)",(?:\s*\/\/[^\n]*\n|\s*\n)+\s*open:\s*value,/,
+		);
 		expect(upsertBlock, "expected to find the upsertPrice source field").not.toBeNull();
 		expect(upsertBlock?.[1]).toBe("fred");
 		// And the old misattribution must not be present in the write path.
