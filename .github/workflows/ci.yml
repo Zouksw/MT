@@ -166,13 +166,21 @@ jobs:
           cat /tmp/inference.log
           exit 1
 
-      - name: Run database migrations
-        run: cd backend && npx prisma migrate deploy
+      - name: Prepare test database schema
+        # migrate deploy cannot replay history from zero: the `group_members`
+        # table (still a live model in schema.prisma) predates the migration
+        # baseline and is only ever referenced by
+        # 20260712040000_drop_unused_schema — no migration creates it, so
+        # replay dies with 42P01 "relation group_members does not exist" on a
+        # fresh DB. Build the schema straight from schema.prisma instead.
+        # (Production keeps migrate deploy — its history is applied there.)
+        run: cd backend && npx prisma db push --skip-generate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
 
       # Route integration tests are fail-loud and require seeded fixtures
-      # (admin@trademind.com, wheat_cme, …) — migrate alone leaves an empty DB.
+      # (admin@trademind.com, wheat_cme, …) — a schema push alone leaves the
+      # tables empty.
       - name: Seed test database
         run: cd backend && npx prisma db seed
         env:
@@ -416,8 +424,16 @@ jobs:
     name: Rollback Deployment
     runs-on: ubuntu-latest
     needs: deploy
+    # `if: failure()` sees the whole needs chain, so this fires even when the
+    # deploy job was merely skipped by an upstream (quality-gate) failure —
+    # observed live: rollback "ran" and died at "missing server host" on every
+    # red pipeline. Two guards on the SSH step below: only when deploy
+    # actually FAILED (not skipped) and deploy credentials exist. Reverting a
+    # commit that was never deployed would be worse than useless.
     if: failure()
     timeout-minutes: 15
+    env:
+      DEPLOY_CONFIGURED: ${{ secrets.DEPLOY_HOST != '' }}
 
     steps:
       - name: Checkout code
@@ -426,6 +442,7 @@ jobs:
           fetch-depth: 0
 
       - name: Rollback deployment
+        if: needs.deploy.result == 'failure' && env.DEPLOY_CONFIGURED == 'true'
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -452,7 +469,13 @@ jobs:
 
             echo "Rollback completed!"
 
+      - name: Skip rollback (nothing was deployed by CI)
+        if: needs.deploy.result != 'failure' || env.DEPLOY_CONFIGURED == 'false'
+        run: |
+          echo "::warning::Rollback triggered, but CI never deployed anything in this run (deploy ${{ needs.deploy.result }}, DEPLOY_* secrets ${{ env.DEPLOY_CONFIGURED == 'true' && 'set' || 'unset' }}). Fix the failing quality gates instead — production was not touched."
+
       - name: Notify rollback
+        if: needs.deploy.result == 'failure' && env.DEPLOY_CONFIGURED == 'true'
         uses: 8398a7/action-slack@v3
         with:
           status: warning
