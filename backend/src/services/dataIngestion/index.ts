@@ -16,7 +16,7 @@ import { commodityPriceScraper } from "./sources/commodityPrices";
 import { dceFuturesScraper } from "./sources/dceFutures";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
-import { inacScraper } from "./sources/inacData";
+import { inacScraper } from "./sources/inacData"; // dormant — see decommission note in registerAllScrapers
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
@@ -35,7 +35,11 @@ export function registerAllScrapers(): void {
 
 	// Tier 2 — Beef supply chain (country-level trade & production)
 	scraperManager.registerSource("cepea", cepeaScraper);
-	scraperManager.registerSource("inac", inacScraper);
+	// "inac" decommissioned 2026-08-15: www.inac.gub.uy hangs (connection
+	// timeout on every path, direct AND via the mihomo exit — only the gub.uy
+	// portal answers). Every daily cycle burned a timed-out fetch to report
+	// success+0 rows. Source file kept for a future revival; re-register in
+	// both places (here + DAILY_SOURCES in server.ts) if the site returns.
 	scraperManager.registerSource("mla_nlrs", mlaNlrsScraper);
 	scraperManager.registerSource("secex", secexScraper);
 	scraperManager.registerSource("abares", abaresScraper);

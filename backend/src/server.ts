@@ -183,7 +183,10 @@ function start(): void {
 		"usda_psd",
 		"mla_nlrs",
 		"cepea",
-		"inac",
+		// "inac" removed 2026-08-15 — www.inac.gub.uy hangs on every path
+		// (direct + via proxy), so each run paid a fetch timeout to report
+		// success+0 rows. Registration commented out in
+		// dataIngestion/index.ts; restore both together if the site returns.
 		"abares",
 		"china_customs_stats",
 		"secex",

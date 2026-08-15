@@ -86,7 +86,7 @@
 | `faostatservices.fao.org`（FAOSTAT 新主机） | 401 | 401 | **迁移实锤**：旧 `fenixservices` 主机死，新主机活、端点结构相同但强制 `Authorization: Bearer`（假 token 403）。`faoPrices.ts` 已切新 URL + key 门控（缺 `FAO_API_KEY` 早退）。**FAO 加入 A2 key 清单（第 5 把）** |
 | `comexstat.mdic.gov.br`（SECEX） | 403 | 403（**经巴西专线节点**） | **Cloudflare 应用层 WAF**（bot 挑战页），非地域封锁——巴西 IP 一样拦。与 CEPEA 同类，plain fetch 无解；分类从"403 地域"改为"需 headless" |
 | `apps.fas.usda.gov`（USDA-PSD） | 000 | 404 | 主机代理可达但 `psdonline/api` 路径不对；FAS 官方开放 API 在 `api.fas.usda.gov`（data.gov 免费 key）。**PSD 加入 A2 key 清单（第 6 把，可选）** |
-| `www.inac.gub.uy` / `www.gub.uy/instituto-nacional-carnes` | 000 / 404 | 000 / 404 | INAC 站点下线/重构，全球性。维持"不可解"登记 |
+| `www.inac.gub.uy` / `www.gub.uy/instituto-nacional-carnes` | 000 / 404 | 000 / 404 | INAC 站点下线/重构，全球性。维持"不可解"登记。**2026-08-15 round-103 处置**：注册与日调度已移除（`dataIngestion/index.ts` + `server.ts` DAILY_SOURCES，源文件保留待复活）——此前每 24h 白付一次 fetch 超时换 success+0 行 |
 | `www.mla.com.au` | **200** | 200 | **Cloudflare 403 已消失**（直连即可达，无需代理）；但 `statistics/api/` 是 SPA 壳，真实 grid 端点契约仍需 key 才能核实。A1 维持"调研完成、卡 key" |
 | 订阅 51 节点地区分布 | — | — | 21 日本 / 10 美国 / 5 新加坡 / 2 香港 / 2 英国 / 荷兰法国巴西各 1-3 / **无中国大陆节点** → `.gov.cn` 族（chinaWholesale/chinaCustoms/dce/sse）维持"需中国出口"结论，除非订阅加大陆节点 |
 
