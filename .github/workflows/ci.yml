@@ -39,8 +39,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -81,8 +79,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -134,8 +130,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -147,8 +141,40 @@ jobs:
         run: |
           cd backend && pnpm install
 
+      # Route integration tests drive the real backend↔inference contract
+      # (POST /api/inference/predict → :10810). Chronos preload self-skips
+      # when no weights are cached (services/inference_engine.py checks the
+      # HF snapshot dir on disk), so a cold runner boots statistical models
+      # only — arima, the algorithm these tests request.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Start inference service
+        run: |
+          cd inference-service
+          python -m pip install -r requirements.txt
+          nohup python -m uvicorn main:app --host 127.0.0.1 --port 10810 > /tmp/inference.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:10810/health > /dev/null; then
+              echo "inference service up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::inference service failed to start"
+          cat /tmp/inference.log
+          exit 1
+
       - name: Run database migrations
         run: cd backend && npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
+
+      # Route integration tests are fail-loud and require seeded fixtures
+      # (admin@trademind.com, wheat_cme, …) — migrate alone leaves an empty DB.
+      - name: Seed test database
+        run: cd backend && npx prisma db seed
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
 
@@ -181,8 +207,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -251,8 +275,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -301,6 +323,11 @@ jobs:
 
     steps:
       - name: Deploy to server
+        # Step-level `if` may read the secrets context (job-level may not).
+        # Without DEPLOY_* secrets the ssh-action dies with "missing server
+        # host" and paints the pipeline red for a config gap, not a code
+        # fault — so skip explicitly and say why.
+        if: ${{ secrets.DEPLOY_HOST != '' }}
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -341,14 +368,20 @@ jobs:
 
             echo "Deployment completed successfully!"
 
+      - name: Skip deploy (DEPLOY_* secrets not configured)
+        if: ${{ secrets.DEPLOY_HOST == '' }}
+        run: |
+          echo "::warning::All quality gates passed, but DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets are not set — production deploy skipped. Add them (Settings → Secrets → Actions) to activate auto-deploy; until then deploys stay manual on the server."
+
       - name: Verify deployment
+        if: ${{ secrets.DEPLOY_HOST != '' }}
         run: |
           sleep 30
           curl -f ${{ secrets.APP_URL }}/health || exit 1
           echo "Deployment verification successful!"
 
       - name: Notify deployment success
-        if: success()
+        if: success() && secrets.DEPLOY_HOST != ''
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
