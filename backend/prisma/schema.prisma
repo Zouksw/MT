@@ -477,9 +477,16 @@ model MarketFactor {
   unit      String
   source    String
   metadata  Json?
+  seriesKey String   @default("") @map("series_key")
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([type, region, date])
+  // seriesKey disambiguates multiple series that share type+region+date
+  // (15 FRED "economic"/"US" series; USDA-PSD commodity×attribute rows per
+  // country). Without it the old [type, region, date] key made those
+  // upserts silently overwrite each other — write-time data destruction
+  // (audit C4, round-104). Other upsertFactor callers already encode the
+  // series into type/region and keep the default "".
+  @@unique([type, region, date, seriesKey])
   @@index([type, date(sort: Desc)])
   @@index([type, region, date(sort: Desc)])
   @@map("market_factors")

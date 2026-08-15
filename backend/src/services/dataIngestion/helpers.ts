@@ -178,7 +178,14 @@ export async function upsertPrice(data: {
 	return existed ? { inserted: 0, updated: 1 } : { inserted: 1, updated: 0 };
 }
 
-/** Upsert a MarketFactor row. Uses findUnique + upsert to track insert vs update counts. */
+/**
+ * Upsert a MarketFactor row. Uses findUnique + upsert to track insert vs update counts.
+ *
+ * `seriesKey` disambiguates series that share type+region+date (FRED's 15
+ * "economic"/"US" series, USDA-PSD's commodity×attribute rows). Callers that
+ * already encode the series into type/region (weather, exchange_rate,
+ * shipping, customs…) omit it and share the "" default.
+ */
 export async function upsertFactor(data: {
 	type: string;
 	region: string;
@@ -186,10 +193,17 @@ export async function upsertFactor(data: {
 	value: number;
 	unit: string;
 	source: string;
+	seriesKey?: string;
 	metadata?: Record<string, unknown>;
 }) {
+	const key = {
+		type: data.type,
+		region: data.region,
+		date: data.date,
+		seriesKey: data.seriesKey ?? "",
+	};
 	const existed = await prisma.marketFactor.findUnique({
-		where: { type_region_date: { type: data.type, region: data.region, date: data.date } },
+		where: { type_region_date_seriesKey: key },
 		select: { id: true, value: true, unit: true },
 	});
 
@@ -206,7 +220,7 @@ export async function upsertFactor(data: {
 	}
 
 	await prisma.marketFactor.upsert({
-		where: { type_region_date: { type: data.type, region: data.region, date: data.date } },
+		where: { type_region_date_seriesKey: key },
 		update: {
 			value: data.value,
 			unit: data.unit,
@@ -220,6 +234,7 @@ export async function upsertFactor(data: {
 			value: data.value,
 			unit: data.unit,
 			source: data.source,
+			seriesKey: data.seriesKey ?? "",
 			metadata: data.metadata ? json(data.metadata) : undefined,
 		},
 	});

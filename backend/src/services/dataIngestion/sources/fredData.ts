@@ -150,6 +150,9 @@ async function fetchFREDData(): Promise<ScraperResult> {
 					value,
 					unit: config.unit,
 					source: "fred",
+					// 15 series share type "economic" + region "US"/"global" —
+					// without the series key they overwrote each other per date.
+					seriesKey: seriesId,
 					metadata: {
 						seriesId,
 						name: config.name,

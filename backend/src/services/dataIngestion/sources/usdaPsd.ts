@@ -131,6 +131,10 @@ async function fetchPSDData(): Promise<ScraperResult> {
 					value: record.value,
 					unit: record.unit || "1000 MT",
 					source: "usda_psd",
+					// Each country row carries every commodity×attribute for the
+					// market year — the series key is what keeps them from
+					// overwriting each other on the same (type, region, date).
+					seriesKey: `${commodityCode}:${record.attribute}`,
 					metadata: {
 						commodity: config.commodityName,
 						commodityCode,
