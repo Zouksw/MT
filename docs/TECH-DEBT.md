@@ -150,14 +150,13 @@
 - 全新库 replay：`prisma migrate deploy` → `20260712040000` → `ERROR 42P01: relation "group_members" does not exist`（P3018）。
 - 生产库不炸只因该表在生产是 pre-baseline 手工/早期状态存在。
 
-**影响**：
-- 新环境（CI、灾备重建、新服务器）**无法**用 `migrate deploy` 冷启动。CI 已改用 `prisma db push` 绕过（commit fbd3e71，ci.yml 有注释）。
-- 已应用迁移不可编辑（Prisma checksum 校验会让生产 `migrate deploy` 报 modified-after-apply）→ 无法"就地修历史"。
-
-**根治选项（需单列轮次，均需生产窗口）**：
-1. `prisma migrate diff --from-empty --to-schema-datamodel` 生成单一 baseline 迁移，生产侧 `migrate resolve --applied` 标记（标准 squash 流程）；
-2. 或维护 `init-from-scratch.sql` 文档化冷启动路径。
-**在此之前**：新增迁移必须同时兼容「生产现有状态」与「db push 后状态」两种起点。
+**已解决（2026-08-15 round-103，基线 squash）**：
+1. 前置验证：`prisma migrate diff --from-url <prod> --to-schema-datamodel` = **No difference**（生产与 schema 零漂移，squash 安全前提）。
+2. 旧 8 个迁移整体移入 `prisma/migrations_archive_20260815/`（保留历史）；`prisma migrate diff --from-empty --to-schema-datamodel --script` 生成单一 `migrations/0_init/migration.sql`（930 行 / 31 表，**含 group_members 的 CREATE**）。
+3. 生产簿记：`_prisma_migrations` 备份（`pg_dump -t`）后清表 → `migrate resolve --applied 0_init` → `migrate deploy` no-op + status up-to-date。顺带清掉了簿记表里 3 组历史失败重试的重复行。
+4. **全新库重放证明**：scratch 库 `migrate deploy` → "All migrations have been successfully applied"；replay 后 `migrate diff` 对 schema = **No difference**。原 42P01 不复存在。
+5. CI 的 test-backend 从 `db push` 改回 `migrate deploy`（真实迁移路径重新受 CI 保护）。
+- 此后新增迁移只需对「生产现状 + 0_init 基线」兼容（两者现已一致）。
 
 ---
 

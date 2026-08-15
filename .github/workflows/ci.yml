@@ -173,17 +173,16 @@ jobs:
           cat /tmp/inference.log
           exit 1
 
-      - name: Prepare test database schema
-        # migrate deploy cannot replay history from zero: the `group_members`
-        # table (still a live model in schema.prisma) predates the migration
-        # baseline and is only ever referenced by
-        # 20260712040000_drop_unused_schema — no migration creates it, so
-        # replay dies with 42P01 "relation group_members does not exist" on a
-        # fresh DB. Build the schema straight from schema.prisma instead.
-        # (Production keeps migrate deploy — its history is applied there.)
-        # No --skip-generate: the client must exist for seed + vitest, and
-        # postinstall is unreliable on warm store caches (see lint job).
-        run: cd backend && npx prisma db push
+      - name: Run database migrations
+        # Migrations are replayable from zero again since the 2026-08-15
+        # baseline squash (TD-14): prisma/migrations now holds a single
+        # 0_init generated via `migrate diff --from-empty`, so CI exercises
+        # the real migration path fresh environments use. (The pre-squash
+        # history died with 42P01 on group_members — a pre-baseline table
+        # no migration ever created; old history lives in
+        # prisma/migrations_archive_20260815/.)
+        run: |
+          cd backend && npx prisma migrate deploy && npx prisma generate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mt_test?schema=public
 
