@@ -1,6 +1,6 @@
 "use client";
 
-import { Beef, DollarSign, Search, Target, Upload, Warehouse } from "lucide-react";
+import { Beef, DollarSign, Factory, Search, Target, Upload, Warehouse } from "lucide-react";
 import { useMemo, useState } from "react";
 import { BeefFreshnessBadge } from "@/components/beef/BeefFreshnessBadge";
 import { CutForecastCell } from "@/components/beef/CutForecastCell";
@@ -181,13 +181,22 @@ export default function BeefOverview() {
 				title="Beef Market Intelligence"
 				description="Factory-level and cut-level beef trading data across global markets"
 				actions={
-					<a
-						href="/beef/import"
-						className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-					>
-						<Upload className="size-4" />
-						Import Data
-					</a>
+					<div className="flex items-center gap-2">
+						<a
+							href="/beef/factories"
+							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+						>
+							<Factory className="size-4" />
+							Factories
+						</a>
+						<a
+							href="/beef/import"
+							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+						>
+							<Upload className="size-4" />
+							Import Data
+						</a>
+					</div>
 				}
 			/>
 

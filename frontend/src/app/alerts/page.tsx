@@ -322,6 +322,12 @@ export default function AlertList() {
 				breadcrumbs={[{ label: "Home", href: "/" }, { label: "Alerts & Notifications" }]}
 				actions={
 					<div className="flex items-center gap-3">
+						<a
+							href="/alerts/rules"
+							className="inline-flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors"
+						>
+							Rules
+						</a>
 						<Button
 							variant="ghost"
 							aria-label="Refresh alerts"

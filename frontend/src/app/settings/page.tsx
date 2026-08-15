@@ -5,6 +5,7 @@ import {
 	ChevronRight,
 	CircleCheck,
 	Clock,
+	CreditCard,
 	Database,
 	KeyRound,
 	Shield,
@@ -84,6 +85,12 @@ export default function SettingsPage() {
 			description: "Monitor data pipeline health and refresh sources",
 			icon: <Database className="size-[18px]" />,
 			path: "/settings/data-sources",
+		},
+		{
+			title: "Billing",
+			description: "View subscription plans and billing information",
+			icon: <CreditCard className="size-[18px]" />,
+			path: "/settings/billing",
 		},
 	];
 

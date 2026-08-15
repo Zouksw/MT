@@ -229,25 +229,33 @@ export default function ApiKeyList() {
 		{
 			key: "actions",
 			title: "Actions",
-			width: isMobile ? 80 : 120,
+			width: isMobile ? 80 : 150,
 			render: (_value: unknown, record: ApiKey) => (
-				<Button
-					variant="danger"
-					size="sm"
-					aria-label="Delete API key"
-					icon={<Trash2 className="size-3.5" />}
-					onClick={() => {
-						if (
-							window.confirm(
-								"Are you sure you want to delete this API key? This action cannot be undone.",
-							)
-						) {
-							handleDeleteKey(record.id);
-						}
-					}}
-				>
-					{!isMobile && "Delete"}
-				</Button>
+				<div className="flex items-center gap-2">
+					<a
+						href={`/apikeys/show/${record.id}`}
+						className="inline-flex items-center rounded-md border border-gray-300 px-2.5 py-1 text-sm text-foreground hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors"
+					>
+						View
+					</a>
+					<Button
+						variant="danger"
+						size="sm"
+						aria-label="Delete API key"
+						icon={<Trash2 className="size-3.5" />}
+						onClick={() => {
+							if (
+								window.confirm(
+									"Are you sure you want to delete this API key? This action cannot be undone.",
+								)
+							) {
+								handleDeleteKey(record.id);
+							}
+						}}
+					>
+						{!isMobile && "Delete"}
+					</Button>
+				</div>
 			),
 		},
 	];
