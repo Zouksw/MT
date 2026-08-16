@@ -52,12 +52,15 @@ function input(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-/** Build N datapoints with the given numeric values; ids are stable strings. */
+/** Build N datapoints with the given numeric values; ids are uuid-shaped.
+ *
+ * Regression guard (round-106): real Datapoint ids are uuid strings. The
+ * service previously wrapped them in BigInt(...) — which throws on any
+ * non-numeric string — so detection crashed on its happy path. Numeric
+ * fixture ids ("1000", "1001") masked that for months. */
 function datapoints(values: number[]) {
-	// NOTE: the service does BigInt(dataPoints[i].id) — so ids must be numeric
-	// strings to avoid BigInt("dp-0") throwing. Use "1000", "1001", ...
 	return values.map((v, i) => ({
-		id: String(1000 + i),
+		id: `a1b2c3d4-0000-4000-8000-${String(100000000000 + i).padStart(12, "0")}`,
 		valueJson: v as unknown as never,
 	}));
 }

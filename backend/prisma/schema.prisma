@@ -159,7 +159,7 @@ model Forecast {
 model Anomaly {
   id              String          @id @default(uuid())
   timeseriesId    String          @map("timeseries_id")
-  datapointId     BigInt?         @map("datapoint_id")
+  datapointId     String?         @map("datapoint_id")
   severity        AnomalySeverity
   detectionMethod DetectionMethod @map("detection_method")
   score           Decimal?        @db.Decimal(5, 2)

@@ -19,7 +19,7 @@ import type {
 
 export interface DetectedAnomaly {
 	timeseriesId: string;
-	datapointId: bigint;
+	datapointId: string;
 	severity: AnomalySeverity;
 	detectionMethod: DetectionMethod;
 	score: string;
@@ -143,7 +143,7 @@ export async function detectAnomalies(
 				message: `${anomaly.severity} severity anomaly detected (${anomaly.score} anomaly score)`,
 				metadata: {
 					...anomaly,
-					datapointId: anomaly.datapointId.toString(),
+					datapointId: anomaly.datapointId,
 				},
 			})),
 		});
@@ -183,7 +183,7 @@ function runDetection(
 				const severity = zScoreSeverity(zScore);
 				detected.push({
 					timeseriesId: validatedData.timeseriesId,
-					datapointId: BigInt(dataPoints[i].id),
+					datapointId: dataPoints[i].id,
 					severity,
 					detectionMethod: "STATISTICAL",
 					score: (zScore / 5).toFixed(2),
@@ -214,7 +214,7 @@ function runDetection(
 				const severity = percentChangeSeverity(percentChange);
 				detected.push({
 					timeseriesId: validatedData.timeseriesId,
-					datapointId: BigInt(dataPoints[i].id),
+					datapointId: dataPoints[i].id,
 					severity,
 					detectionMethod: "RULE_BASED",
 					score: Math.min(percentChange * 2, 1).toFixed(2),

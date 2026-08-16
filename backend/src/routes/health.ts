@@ -170,6 +170,13 @@ router.get(
 			logger.warn("[HEALTH] Redis check failed", error);
 			checks.redis = false;
 		}
+		// Redis is a hard dependency for this endpoint's contract: 503 when
+		// down. (Previously only the database flipped allHealthy — /ready
+		// returned 200 "ready" with checks.redis:false, so load balancers
+		// kept routing to Redis-less nodes.)
+		if (!checks.redis) {
+			allHealthy = false;
+		}
 
 		// Check inference service — readiness (chronos usable), not just liveness.
 		// The process being up (alive) doesn't mean chronos is available; /ready
@@ -191,6 +198,11 @@ router.get(
 		} catch (error) {
 			logger.warn("[HEALTH] Inference readiness check failed", error);
 			checks.inference = false;
+		}
+		// Inference readiness is a hard dependency too: predictions are the
+		// product. Not-ready → 503 (was: 200 with checks.inference:false).
+		if (!checks.inference) {
+			allHealthy = false;
 		}
 
 		// Data-layer snapshot (best-effort: never fails the readiness check).

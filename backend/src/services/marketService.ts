@@ -133,12 +133,17 @@ export async function getPriceHistory(slug: string, params: PriceHistoryParams) 
 export async function getPricesBySource(slug: string, interval: string, limit: number) {
 	const commodity = await requireCommodity(slug);
 
+	// `limit` applies across ALL sources combined. Order desc + take so the
+	// window is the NEWEST `limit` rows (ascending + take returned the oldest
+	// rows instead — multi-source comparison charts rendered each source's
+	// earliest history). Reverse afterwards to restore chronological order.
 	const prices = await prisma.commodityPrice.findMany({
 		where: { commodityId: commodity.id, interval },
-		orderBy: { date: "asc" },
+		orderBy: { date: "desc" },
 		take: limit,
 		select: { date: true, close: true, source: true, interval: true },
 	});
+	prices.reverse();
 
 	const bySource = new Map<string, Array<{ date: string; close: number }>>();
 	for (const p of prices) {
