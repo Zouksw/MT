@@ -11,6 +11,7 @@
 
 import { logger } from "@/lib";
 import { monthRange, parseMonth, upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const HS_CODES = ["0201", "0202"];
@@ -25,7 +26,7 @@ async function fetchSECEX(): Promise<ScraperResult> {
 
 	for (const hsCode of HS_CODES) {
 		try {
-			const res = await fetch("https://comexstat.mdic.gov.br/api/comexstat/data/product", {
+			const res = await scraperFetch("https://comexstat.mdic.gov.br/api/comexstat/data/product", {
 				method: "POST",
 				headers: { "Content-Type": "application/json", Accept: "application/json" },
 				body: JSON.stringify({
@@ -36,7 +37,7 @@ async function fetchSECEX(): Promise<ScraperResult> {
 					"unit-measure": "kg",
 					option: "all",
 				}),
-				signal: AbortSignal.timeout(30000),
+				timeoutMs: 30000,
 			});
 
 			if (!res.ok) {

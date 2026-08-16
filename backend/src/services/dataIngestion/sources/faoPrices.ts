@@ -16,6 +16,7 @@
 
 import { logger, prisma } from "@/lib";
 import { upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const FAO_INDICES: Record<string, { itemCode: string; slug: string }> = {
@@ -58,31 +59,12 @@ export async function fetchWithRetry(url: string): Promise<Response | null> {
 	if (key) headers.Authorization = `Bearer ${key}`;
 
 	try {
-		const res = await fetch(url, {
-			headers,
-			signal: AbortSignal.timeout(8000),
-		});
+		// Retry policy lives in the shared client (round-105 batch 10c):
+		// one 2s-spaced retry on 429 / 5xx-except-521; deterministic 4xx,
+		// 521, and network failures are never retried.
+		const res = await scraperFetch(url, { headers, timeoutMs: 8000, retries: 1 });
 		if (res.ok) return res;
-
-		// 429 and 5xx-except-521 are conventionally transient — one retry.
-		const transient = res.status === 429 || (res.status >= 500 && res.status !== 521);
-		if (transient) {
-			logger.warn(`[FAO] API returned ${res.status} (retrying once)`);
-			await new Promise((r) => setTimeout(r, 2000));
-			try {
-				const retry = await fetch(url, {
-					headers,
-					signal: AbortSignal.timeout(8000),
-				});
-				if (retry.ok) return retry;
-				logger.warn(`[FAO] Retry returned ${retry.status} (giving up)`);
-			} catch (err) {
-				logger.warn(`[FAO] Retry failed: ${err instanceof Error ? err.message : err}`);
-			}
-		} else {
-			// 4xx / 521 — deterministic, no retry.
-			logger.warn(`[FAO] API returned ${res.status} (not retried)`);
-		}
+		logger.warn(`[FAO] API returned ${res.status} (not retried or retry exhausted)`);
 		return null;
 	} catch (err) {
 		// Network timeout / DNS failure / connection refused — single

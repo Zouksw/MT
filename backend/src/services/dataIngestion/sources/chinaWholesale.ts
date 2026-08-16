@@ -12,6 +12,7 @@
 
 import { logger } from "@/lib";
 import { ensureCommodity, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const COMMODITIES: Record<
@@ -120,17 +121,20 @@ async function fetchNewMARA(): Promise<PriceItem[]> {
 
 	for (const cat of categories) {
 		try {
-			const res = await fetch("https://ncpscxx.moa.gov.cn/product/price-info/getPriceInfoList", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json;charset=UTF-8",
-					Origin: "https://ncpscxx.moa.gov.cn",
-					Referer: "https://ncpscxx.moa.gov.cn/",
-					Accept: "application/json",
+			const res = await scraperFetch(
+				"https://ncpscxx.moa.gov.cn/product/price-info/getPriceInfoList",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json;charset=UTF-8",
+						Origin: "https://ncpscxx.moa.gov.cn",
+						Referer: "https://ncpscxx.moa.gov.cn/",
+						Accept: "application/json",
+					},
+					body: JSON.stringify({ prodCatid: cat, pageSize: 50, currentPage: 1 }),
+					timeoutMs: 15000,
 				},
-				body: JSON.stringify({ prodCatid: cat, pageSize: 50, currentPage: 1 }),
-				signal: AbortSignal.timeout(15000),
-			});
+			);
 			if (!res.ok) continue;
 
 			const data = (await res.json()) as {
@@ -157,9 +161,9 @@ async function fetchNewMARA(): Promise<PriceItem[]> {
 async function fetchLegacyAPI(): Promise<PriceItem[]> {
 	const results: PriceItem[] = [];
 	try {
-		const res = await fetch("http://pfscnew.agri.gov.cn/price/queryPrice", {
+		const res = await scraperFetch("http://pfscnew.agri.gov.cn/price/queryPrice", {
 			headers: { Accept: "application/json", "User-Agent": "MT/1.0" },
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 		if (!res.ok) return results;
 

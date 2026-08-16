@@ -11,6 +11,7 @@
 
 import { logger, prisma } from "@/lib";
 import { json, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // Price-field candidates per report. MARS names its weighted-average price
@@ -79,10 +80,7 @@ async function fetchAMSReport(reportId: string): Promise<AMSReportRow[]> {
 	}
 
 	try {
-		const res = await fetch(url, {
-			headers,
-			signal: AbortSignal.timeout(15000),
-		});
+		const res = await scraperFetch(url, { headers, timeoutMs: 15000 });
 
 		if (!res.ok) {
 			logger.warn(`[USDA_AMS] Report ${reportId} returned ${res.status}`);

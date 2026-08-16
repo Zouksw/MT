@@ -9,6 +9,7 @@
 
 import { logger, prisma } from "@/lib";
 import { json, latestUsdRate } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const MLA_API_BASE = process.env.MLA_API_BASE || "https://services.mla.com.au/api";
@@ -56,9 +57,9 @@ async function fetchOTHGridPrices(): Promise<MLAOTHPrice[]> {
 	if (!MLA_API_KEY) return [];
 
 	try {
-		const res = await fetch(`${MLA_API_BASE}/oth/grid`, {
+		const res = await scraperFetch(`${MLA_API_BASE}/oth/grid`, {
 			headers: { "x-api-key": MLA_API_KEY, Accept: "application/json" },
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 		if (!res.ok) return [];
 		const data = (await res.json()) as { data: MLAOTHPrice[] };
@@ -73,9 +74,9 @@ async function fetchExportCutPrices(): Promise<MLAExportPrice[]> {
 	if (!MLA_API_KEY) return [];
 
 	try {
-		const res = await fetch(`${MLA_API_BASE}/export/beef-cuts`, {
+		const res = await scraperFetch(`${MLA_API_BASE}/export/beef-cuts`, {
 			headers: { "x-api-key": MLA_API_KEY, Accept: "application/json" },
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 		if (!res.ok) return [];
 		const data = (await res.json()) as { data: MLAExportPrice[] };
