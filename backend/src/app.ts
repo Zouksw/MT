@@ -12,6 +12,7 @@
 
 import { createServer, type Server } from "node:http";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import { type Server as SocketIOInstance, Server as SocketIOServer } from "socket.io";
@@ -153,6 +154,15 @@ export function createApp(): AppInstance {
 
 	app.use(express.json({ limit: "10mb" }));
 	app.use(express.urlencoded({ extended: true }));
+
+	// Parse Cookie headers into req.cookies. Required by every cookie read in
+	// the app: /auth/verify and /auth/me's HttpOnly `auth_token` fallback (the
+	// SPA's refresh-survival session), logout's cookie revocation, and the
+	// csrf_token double-submit. Without this middleware req.cookies is
+	// undefined and all those paths silently see "no cookie" — observed live
+	// in round-105: login SETS cookies fine (res.cookie needs no parser) but
+	// every read was dead, so a page refresh always unauthenticated.
+	app.use(cookieParser());
 
 	// Development request logging
 	if (config.server.nodeEnv !== "production") {

@@ -67,6 +67,36 @@ describe("Auth Routes (Integration)", () => {
 		});
 	});
 
+	describe("Cookie session (HttpOnly auth_token)", () => {
+		// The SPA's refresh-survival path: after a page reload the in-memory
+		// Bearer token is gone, so AuthContext re-verifies via the cookie alone.
+		// These tests lock in that req.cookies actually reaches the auth routes
+		// — before round-105 cookie-parser was never mounted, req.cookies was
+		// undefined, and every one of these calls returned 401 in production
+		// while passing no cookie-reading coverage at all.
+		test("GET /verify authenticates from the cookie alone", async () => {
+			const res = await request(app)
+				.get("/api/auth/verify")
+				.set("Cookie", `auth_token=${adminToken}`);
+
+			expect(res.status).toBe(200);
+			expect(res.body.data?.valid).toBe(true);
+		});
+
+		test("GET /me returns the profile from the cookie alone", async () => {
+			const res = await request(app).get("/api/auth/me").set("Cookie", `auth_token=${adminToken}`);
+
+			expect(res.status).toBe(200);
+			expect(res.body.data.user.email).toBe("admin@trademind.com");
+		});
+
+		test("rejects a garbage cookie value", async () => {
+			const res = await request(app).get("/api/auth/me").set("Cookie", "auth_token=not-a-jwt");
+
+			expect(res.status).toBe(401);
+		});
+	});
+
 	describe("POST /api/auth/refresh", () => {
 		test("rejects refresh without a token in body", async () => {
 			const res = await request(app).post("/api/auth/refresh").send({});
