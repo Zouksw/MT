@@ -9,7 +9,9 @@
  */
 
 import { logger } from "@/lib";
+import { fetchFredCsvSeries } from "../fredCsv";
 import { ensureCommodity, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 /** FRED monthly commodity price series (no API key needed via CSV download) */
@@ -119,77 +121,19 @@ export const FRED_MONTHLY: Record<
 async function fetchFredMonthly(
 	config: (typeof FRED_MONTHLY)[string],
 ): Promise<{ inserted: number; updated: number }> {
-	const end = new Date();
 	const start = new Date();
-	start.setMonth(start.getMonth() - 3); // Last 3 months
-
-	const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${config.seriesId}&cosd=${start.toISOString().slice(0, 10)}&coed=${end.toISOString().slice(0, 10)}`;
-
-	const res = await fetch(url, {
-		headers: { "User-Agent": "MT/1.0" },
-		signal: AbortSignal.timeout(15000),
+	start.setMonth(start.getMonth() - 3); // last 3 months
+	// Shared FRED CSV implementation (round-105) — this used to be a private
+	// near-duplicate of cmeFutures.fetchFredDaily. Flat candles + interval
+	// monthly + source "fred" semantics preserved (see fredCsv.ts header).
+	return fetchFredCsvSeries({
+		config,
+		start,
+		interval: "monthly",
+		commoditySource: "fred_monthly",
+		timeoutMs: 15000,
+		logPrefix: "[WORLD_BANK/FRED]",
 	});
-	if (!res.ok) {
-		logger.warn(`[WORLD_BANK/FRED] ${config.seriesId}: HTTP ${res.status}`);
-		return { inserted: 0, updated: 0 };
-	}
-
-	const text = await res.text();
-	const lines = text.trim().split("\n");
-	if (lines.length < 2) return { inserted: 0, updated: 0 };
-
-	let inserted = 0;
-	let updated = 0;
-
-	const commodity = await ensureCommodity({
-		slug: config.slug,
-		name: config.name,
-		category: config.category,
-		unit: config.unit,
-		metadata: { source: "fred_monthly", seriesId: config.seriesId },
-	});
-
-	// Skip header, parse CSV rows
-	for (let i = 1; i < lines.length; i++) {
-		const cols = lines[i].split(",");
-		if (cols.length < 2) continue;
-
-		const dateStr = cols[0].trim();
-		const value = parseFloat(cols[1].trim());
-		if (Number.isNaN(value) || !dateStr) continue;
-
-		const date = new Date(`${dateStr}T00:00:00Z`);
-		if (Number.isNaN(date.getTime())) continue;
-
-		const r = await upsertPrice({
-			commodityId: commodity.id,
-			date,
-			// Attribute to the real writer. The data is a FRED CSV download
-			// (config.seriesId, e.g. POILWTIUSDM); labelling it "world_bank"
-			// surfaced it under the "World Bank Pink Sheet" label on the
-			// data-sources board even though WB never wrote these rows. The
-			// world_bank source string is now reserved for genuine WB rows (of
-			// which there are none while the WB API stays 404).
-			source: "fred",
-			// Monthly series report one value per month — no intraday OHLC
-			// exists. Write open=high=low=close so the chart shows the honest
-			// flat candle instead of a fabricated ±2% band (round-104).
-			open: value,
-			high: value,
-			low: value,
-			close: value,
-			volume: null,
-			metadata: {
-				fredSeries: config.seriesId,
-				interval: "monthly",
-			},
-			interval: "monthly",
-		});
-		inserted += r.inserted;
-		updated += r.updated;
-	}
-
-	return { inserted, updated };
 }
 
 async function fetchWorldBankData(): Promise<ScraperResult> {
@@ -206,9 +150,9 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 	// logging "API restored — using primary source".
 	const wbUrl = "https://api.worldbank.org/v2/commodity?format=json&per_page=5000&date=2020:2026";
 	try {
-		const res = await fetch(wbUrl, {
+		const res = await scraperFetch(wbUrl, {
 			headers: { Accept: "application/json" },
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 		if (res.ok) {
 			const data = (await res.json()) as unknown[];

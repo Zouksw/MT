@@ -94,15 +94,35 @@ describe("FRED source attribution (round-58 honesty fix)", () => {
 		const file = path.join(__dirname, "..", "worldBankPrices.ts");
 		const src = await fs.readFile(file, "utf8");
 
-		// Locate the upsertPrice call inside fetchFredMonthly and assert its
-		// source field. The literal must be "fred". Tolerate comments between
-		// the source and open fields (the round-104 flat-candle note sits there).
-		const upsertBlock = src.match(
-			/source:\s*"([^"]+)",(?:\s*\/\/[^\n]*\n|\s*\n)+\s*open:\s*value,/,
+		// round-105: the FRED write path moved to the shared module
+		// (dataIngestion/fredCsv.ts) — assert the source literal THERE, same
+		// intent: rows are attributed to "fred", never "world_bank".
+		const sharedFile = path.join(__dirname, "..", "..", "fredCsv.ts");
+		const sharedSrc = await fs.readFile(sharedFile, "utf8");
+		const upsertBlock = sharedSrc.match(
+			/source:\s*"([^"]+)",(?:\s*\/\/[^\n]*\n|\s*\n)+\s*interval,/,
 		);
 		expect(upsertBlock, "expected to find the upsertPrice source field").not.toBeNull();
 		expect(upsertBlock?.[1]).toBe("fred");
-		// And the old misattribution must not be present in the write path.
+		// And the old misattribution must not be present in either write path.
 		expect(src).not.toContain('source: "world_bank"');
+		expect(sharedSrc).not.toContain('source: "world_bank"');
+	});
+});
+
+describe("FRED CSV shared module — URL window format (round-105)", () => {
+	it("builds cosd/coed as dashed ISO — dashless dates are ignored by FRED (full-history bug)", async () => {
+		const fs = await import("node:fs/promises");
+		const path = await import("node:path");
+		const file = path.join(__dirname, "..", "..", "fredCsv.ts");
+		const src = await fs.readFile(file, "utf8");
+		// The URL must use the dashed isoDay helper, NOT formatDateYMD
+		// (dashless YYYYMMDD is silently ignored by fredgraph.csv, which
+		// then returns the ENTIRE series history — observed live 2026-08-16:
+		// 4961 unintended monthly history rows in one run).
+		expect(src).toContain("const isoDay = (d: Date) => d.toISOString().slice(0, 10)");
+		expect(src).toMatch(/cosd=\$\{isoDay\(params\.start\)\}/);
+		// not merely absent from comments — absent from the URL construction
+		expect(src).not.toMatch(/formatDateYMD\(/);
 	});
 });

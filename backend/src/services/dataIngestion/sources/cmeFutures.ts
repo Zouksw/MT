@@ -15,9 +15,10 @@
  * US Beef Carcass Price, USD/CNY, BRL/USD, AUD/USD, EUR/USD.
  */
 
-import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { logger } from "@/lib";
+import { fetchFredCsvSeries } from "../fredCsv";
 import { ensureCommodity, formatDateYMD, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 export const FUTURES: Record<
@@ -218,64 +219,18 @@ const FRED_DAILY: Record<
 async function fetchFredDaily(
 	config: (typeof FRED_DAILY)[string],
 ): Promise<{ inserted: number; updated: number }> {
-	const end = new Date();
 	const start = new Date();
 	start.setDate(start.getDate() - 7);
-
-	const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${config.seriesId}&cosd=${formatDateYMD(start)}&coed=${formatDateYMD(end)}`;
-
-	const res = await fetch(url, {
-		headers: { "User-Agent": "MT/1.0" },
-		signal: AbortSignal.timeout(10000),
+	// Shared FRED CSV implementation (round-105) — this used to be a private
+	// near-duplicate of worldBankPrices.fetchFredMonthly.
+	return fetchFredCsvSeries({
+		config,
+		start,
+		interval: "daily",
+		commoditySource: "fred",
+		timeoutMs: 10000,
+		logPrefix: "[CME/FRED]",
 	});
-	if (!res.ok) {
-		logger.warn(`[CME/FRED] ${config.seriesId}: HTTP ${res.status}`);
-		return { inserted: 0, updated: 0 };
-	}
-
-	const text = await res.text();
-	const lines = text.trim().split("\n");
-	if (lines.length < 2) return { inserted: 0, updated: 0 };
-
-	// Skip header, parse CSV rows
-	let inserted = 0;
-	let updated = 0;
-
-	const commodity = await ensureCommodity({
-		slug: config.slug,
-		name: config.name,
-		category: config.category,
-		unit: config.unit,
-		metadata: { source: "fred", seriesId: config.seriesId },
-	});
-
-	for (let i = 1; i < lines.length; i++) {
-		const cols = lines[i].split(",");
-		if (cols.length < 2) continue;
-
-		const dateStr = cols[0].trim();
-		const value = parseFloat(cols[1].trim());
-		if (Number.isNaN(value) || !dateStr) continue;
-
-		const date = new Date(`${dateStr}T00:00:00Z`);
-		if (Number.isNaN(date.getTime())) continue;
-
-		const r = await upsertPrice({
-			commodityId: commodity.id,
-			date,
-			source: "fred",
-			open: value,
-			high: value,
-			low: value,
-			close: value,
-			volume: null,
-			metadata: { seriesId: config.seriesId, source: "fred_csv" },
-		});
-		inserted += r.inserted;
-		updated += r.updated;
-	}
-
-	return { inserted, updated };
 }
 
 /** Minimal shape of Yahoo's v8 chart response (daily bars). */
@@ -303,36 +258,21 @@ interface ChartResponse {
 }
 
 /**
- * Explicit egress proxy for the Yahoo fetcher.
- *
- * Yahoo's edge is IP-blocked from this host: a direct connect ETIMEDOUTs
- * (same egress-filter pattern as registry.npmjs.org; verified 2026-08-14 —
- * curl via the local mihomo proxy returns 200, bare Node fetch times out).
- * Native fetch ignores HTTP(S)_PROXY env vars, so the proxy must be an
- * explicit undici dispatcher. Opt-in via SCRAPER_PROXY_URL (set in
- * ecosystem.config.cjs env_production); unset means direct (dev default).
+ * Yahoo fetcher — routed through the shared client with opt-in proxy
+ * (round-105). Yahoo's edge is IP-blocked from this host (direct connect
+ * ETIMEDOUTs; via the local mihomo proxy it returns 200 — verified
+ * 2026-08-14), so production sets SCRAPER_PROXY_URL and scraperFetch
+ * dispatches through a cached undici ProxyAgent; unset means direct (dev).
  */
-let yahooProxyAgent: ProxyAgent | undefined;
 function fetchYahooChart(url: string): Promise<ChartResponse> {
-	const proxyUrl = process.env.SCRAPER_PROXY_URL;
-	if (proxyUrl) {
-		yahooProxyAgent ??= new ProxyAgent(proxyUrl);
-		return undiciFetch(url, {
-			headers: {
-				Accept: "application/json",
-				"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-			},
-			dispatcher: yahooProxyAgent,
-			signal: AbortSignal.timeout(10000),
-		});
-	}
-	return fetch(url, {
+	return scraperFetch(url, {
 		headers: {
 			Accept: "application/json",
 			"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
 		},
-		signal: AbortSignal.timeout(10000),
-	});
+		timeoutMs: 10000,
+		viaProxy: true,
+	}) as unknown as Promise<ChartResponse>;
 }
 
 /**
