@@ -99,6 +99,14 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 **测试基线（round-105 收官）**：后端 839→**855 pass**（+1 skip），前端 296，pytest 58，合计 1209（今日起步 1174）。round-105 共 14 个提交：1 个部署断层修复 + 1 个 cookie-parser 真缺陷 + 4 个结构重构批 + 2 个诚实性修复 + 1 个性能批 + 1 个错误类型化批 + 4 个文档/测试。
 
 
+### round-105 批 15-16：审计 Low 项清零（2026-08-16）
+
+**批 15 `dba8780` 草稿可见性**：marketNews 三条读路径对任何认证用户泄露草稿（列表默认混入 + ?status=draft 任意角色可过滤、详情无状态检查连正文可读、stats 暴露草稿计数）。现按 requireEditorRole 同口径（EDITOR/ADMIN）门禁：列表非编辑强制 published、详情对非编辑不披露 404（且不 bump 浏览数）、stats 非编辑只返回已发布计数（drafts 键省略，前端 `?? 0` 优雅降级）。+5 条 VIEWER 视角测试。
+
+**批 16 `5ec3104` /audit/stats 聚合**：原实现把全部审计日志拉进内存只为按 event/severity 计数（无界 findMany，批 9 在 mapeTracking 修过的同款模式）。改 SQL groupBy，内存 O(1)，响应形状不变（8 条既有测试钉住）。
+
+**审计清单状态**：round-104 的 9 Critical + 21 High 与 round-105 的 Medium/Low 具名项全部处理完毕。仅剩用户决策项：A2 API 密钥（USDA_MARS/MLA/FRED/OPENWEATHER/FAO）、CSRF 端点接验证或移除（TECH-DEBT 挂账）。
+
 ## 二、定时任务（系统 crontab）
 
 `crontab -l` 共 5 条：
