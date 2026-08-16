@@ -21,9 +21,15 @@ import { createApp } from "@/app";
 // singleton, env-driven) and this helper share ONE database — CI exports
 // mt_test; without this the helper silently pointed at mt_db while the app
 // pointed elsewhere, and on CI (no mt_db) every requireDb suite died with
-// "database mt_db does not exist". Local default unchanged.
+// "database mt_db does not exist". The local default is now also mt_test,
+// and mt_db (production) is refused outright — see test-setup.ts.
 const REAL_DB_URL =
-	process.env.DATABASE_URL ?? "postgresql://mt_user:mt_password@localhost:5432/mt_db";
+	process.env.DATABASE_URL ?? "postgresql://mt_user:mt_password@localhost:5432/mt_test";
+if (/\/mt_db(\?|$)/.test(REAL_DB_URL)) {
+	throw new Error(
+		`Refusing to run tests against the production database (${REAL_DB_URL}). Use mt_test (scripts/bootstrap-test-db.sh).`,
+	);
+}
 
 let cachedPrisma: PrismaClient | null = null;
 
@@ -36,7 +42,7 @@ export function createTestApp(): Express {
 }
 
 /**
- * A shared PrismaClient pointed at the real mt_db (where seed data lives).
+ * A shared PrismaClient pointed at the seeded test database (mt_test).
  * Reused across suites to avoid spawning a client per test. Integration tests
  * need the seed data (admin@trademind.com, wheat_cme, etc.).
  */
@@ -51,7 +57,7 @@ export function getPrisma(): PrismaClient {
 }
 
 /**
- * Check whether the real PostgreSQL (mt_db) is reachable. In-process tests no
+ * Check whether the test PostgreSQL (mt_test) is reachable. In-process tests no
  * longer need to probe an HTTP server, so this only verifies DB connectivity.
  */
 export async function isDbAvailable(): Promise<boolean> {

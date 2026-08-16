@@ -24,10 +24,17 @@ export interface TestContext {
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
 function resolveDbUrl(): string {
-	// CI sets DATABASE_URL to mt_test
-	// test-setup.ts sets it to mt_test
-	// Fallback for direct runs: try the real DB (integration tests need seed data)
-	return process.env.DATABASE_URL || "postgresql://mt_user:mt_password@localhost:5432/mt_db";
+	// CI sets DATABASE_URL to mt_test; test-setup.ts defaults it to mt_test.
+	// Never fall back to mt_db (production) — suites racing the live
+	// schedulers produce data-state flakes and leak fixtures into prod.
+	// The guard fails loud if mt_db arrives from any source (see test-setup).
+	const url = process.env.DATABASE_URL || "postgresql://mt_user:mt_password@localhost:5432/mt_test";
+	if (/\/mt_db(\?|$)/.test(url)) {
+		throw new Error(
+			`Refusing to run tests against the production database (${url}). Use mt_test (scripts/bootstrap-test-db.sh).`,
+		);
+	}
+	return url;
 }
 
 export async function createTestContext(suiteName: string): Promise<TestContext> {
