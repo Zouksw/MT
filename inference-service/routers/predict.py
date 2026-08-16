@@ -1,5 +1,6 @@
 import gc
 import math
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -11,7 +12,14 @@ router = APIRouter()
 # Guards against pathological inputs that would otherwise crash deep inside
 # statsmodels / torch and surface as an opaque 500.
 MAX_VALUES_LENGTH = 10_000  # a 10k-point series is already large; bigger risks OOM
-MAX_BATCH_SIZE = 50  # /predict/batch is sequential; cap to bound latency
+MAX_BATCH_SIZE = 50  # cap to bound latency and memory per request
+
+# Batch worker budget (round-105): chronos forwards are already capped at 3
+# concurrent by the engine semaphore, and statistical fits are GIL-bound, so
+# a pool of 4 captures the available parallelism (was: a serial for-loop —
+# a 9-model ensemble batch paid the sum of every model's latency) without
+# multiplying memory pressure (R4: concurrent chronos RSS spikes).
+BATCH_MAX_WORKERS = 4
 
 
 class PredictRequest(BaseModel):
@@ -139,18 +147,31 @@ def predict_handler(req: PredictRequest):
     )
 
 
+def _run_batch_item(req: PredictRequest):
+    """Run one batch entry, converting failures to per-item error objects.
+
+    Extracted so the serial and parallel paths share identical semantics:
+    an HTTPException (already mapped 422/503/500 by predict_handler) becomes
+    {"error", "model_id"} without aborting the batch; anything else escapes
+    and fails the request, same as the old serial loop.
+    """
+    try:
+        return predict_handler(req)
+    except HTTPException as e:
+        return {"error": e.detail, "model_id": req.model_id}
+
+
 @router.post("/predict/batch")
 def predict_batch(requests: list[PredictRequest]):
     if len(requests) > MAX_BATCH_SIZE:
         raise HTTPException(
             422,
-            f"Batch too large: {len(requests)} requests (max {MAX_BATCH_SIZE}). "
-            "Batch prediction is sequential; large batches block the service.",
+            f"Batch too large: {len(requests)} requests (max {MAX_BATCH_SIZE}).",
         )
-    results = []
-    for req in requests:
-        try:
-            results.append(predict_handler(req))
-        except HTTPException as e:
-            results.append({"error": e.detail, "model_id": req.model_id})
-    return results
+    if len(requests) <= 1:
+        return [_run_batch_item(req) for req in requests]
+    # executor.map preserves input order and defers raised exceptions to
+    # iteration, so the response contract is byte-identical to the serial
+    # loop while the items run concurrently (bounded by BATCH_MAX_WORKERS).
+    with ThreadPoolExecutor(max_workers=min(len(requests), BATCH_MAX_WORKERS)) as pool:
+        return list(pool.map(_run_batch_item, requests))

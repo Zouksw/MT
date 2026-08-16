@@ -14,6 +14,8 @@ Run:  cd inference-service && source venv/bin/activate && pytest -q
 
 from typing import Any
 
+from routers.predict import BATCH_MAX_WORKERS
+
 # A minimal valid payload reused across tests. Two values + two timestamps is
 # the smallest input the schema accepts (min_length=2 on `values`).
 BASE_PAYLOAD: dict[str, Any] = {
@@ -151,6 +153,39 @@ def test_predict_batch_returns_one_result_per_request(client, monkeypatch):
     assert "values" in body[2]
 
 
+def test_predict_batch_parallel_preserves_order_and_runs_concurrently(client, monkeypatch):
+    """round-105: the batch runs items on a thread pool but must remain
+    order-stable. The barrier proves concurrency: it only releases once
+    BATCH_MAX_WORKERS items are simultaneously in flight — under the old
+    serial loop the barrier would time out and this test fails fast."""
+
+    import threading
+    import time
+
+    entered = threading.Barrier(BATCH_MAX_WORKERS, timeout=10)
+
+    def fake_predict(**kwargs):
+        entered.wait()  # block until BATCH_MAX_WORKERS items are in flight
+        return {"values": [1.0] * kwargs["horizon"]}
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+
+    requests = [
+        {**BASE_PAYLOAD, "model_id": f"model_{i}"} for i in range(BATCH_MAX_WORKERS)
+    ]
+    start = time.monotonic()
+    resp = client.post("/predict/batch", json=requests)
+    elapsed = time.monotonic() - start
+
+    assert resp.status_code == 200
+    body = resp.json()
+    # Response order mirrors request order regardless of completion order.
+    assert [item["model_id"] for item in body] == [r["model_id"] for r in requests]
+    # The barrier released, so BATCH_MAX_WORKERS items overlapped — under the
+    # pre-round-105 serial loop this would have raised BrokenBarrierError.
+    assert elapsed < 10
+
+
 def test_predict_batch_rejects_non_list_body(client):
     """/predict/batch expects a JSON array; a single object is a 422."""
     resp = client.post("/predict/batch", json=BASE_PAYLOAD)
@@ -181,7 +216,7 @@ def test_predict_rejects_oversized_values(client):
 
 
 def test_predict_batch_rejects_oversized_batch(client):
-    """/predict/batch is sequential; capped at MAX_BATCH_SIZE (50). 51 → 422."""
+    """/predict/batch capped at MAX_BATCH_SIZE (50). 51 → 422."""
     requests = [{**BASE_PAYLOAD} for _ in range(51)]
     resp = client.post("/predict/batch", json=requests)
     assert resp.status_code == 422
