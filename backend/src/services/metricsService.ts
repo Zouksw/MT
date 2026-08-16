@@ -347,8 +347,20 @@ export async function getWebVitalsHistory(
 export async function getActiveUserCount(): Promise<number> {
 	try {
 		const client = await redis();
-		const sessionKeys = await client.keys("sess:*");
-		return sessionKeys.length;
+		// SCAN, not KEYS: KEYS blocks the single-threaded Redis server while
+		// traversing the whole keyspace — a latency spike on every metrics
+		// dashboard load as the session count grows (round-106).
+		let count = 0;
+		let cursor = 0;
+		do {
+			const { cursor: next, keys } = await client.scan(cursor, {
+				MATCH: "sess:*",
+				COUNT: 200,
+			});
+			cursor = next;
+			count += keys.length;
+		} while (cursor !== 0);
+		return count;
 	} catch (err) {
 		logger.warn("[METRICS] Failed to count active user sessions", err);
 		return 0;

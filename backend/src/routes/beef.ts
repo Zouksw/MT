@@ -525,20 +525,38 @@ router.get(
 			}
 		}
 
-		// Forecast each candidate (parallel, fault-tolerant). Only cuts passing
+		// Forecast the best-supported cuts (fault-tolerant). Only cuts passing
 		// the freshness gate are forecastable; the rest are skipped (honest
 		// omission — never fabricate from stale seed data).
-		const entries = await Promise.all(
-			Array.from(bestByCut.entries()).map(async ([cutCode, { factoryId, points }]) => {
+		//
+		// Bounds (round-106): each cut costs one freshness re-validation query
+		// + a full multi-model forecast ensemble, so this endpoint used to be
+		// O(N cuts) queries at unbounded concurrency in a single request —
+		// the rate limiter caps requests/min, not work/request. Cap to the
+		// 20 best-supported cuts and run ensembles with a 4-worker pool.
+		const MAX_FORECAST_CUTS = 20;
+		const FORECAST_CONCURRENCY = 4;
+		const cutEntries = Array.from(bestByCut.entries())
+			.sort((a, b) => b[1].points - a[1].points)
+			.slice(0, MAX_FORECAST_CUTS);
+
+		const entries = new Array<readonly [string, Record<string, unknown>] | null>(
+			cutEntries.length,
+		).fill(null);
+		let next = 0;
+		const worker = async () => {
+			while (next < cutEntries.length) {
+				const i = next++;
+				const [cutCode, { factoryId, points }] = cutEntries[i];
 				try {
 					// Re-validate via findForecastableFactoryForCut so the batch path
 					// applies the SAME freshness gate as the single-cut endpoint.
 					// (bestByCut only checked point count, not freshness.)
 					const check = await findForecastableFactoryForCut(cutCode);
-					if (!check || check.factoryId !== factoryId) return null;
+					if (!check || check.factoryId !== factoryId) continue;
 
 					const f = await generateBeefCutForecast(factoryId, cutCode, horizon);
-					return [
+					entries[i] = [
 						cutCode,
 						{
 							direction: f.direction,
@@ -550,12 +568,14 @@ router.get(
 							dataPoints: points,
 							horizon,
 						},
-					] as const;
+					];
 				} catch (err) {
 					logger.warn(`[beef/forecasts] forecast failed for cut ${cutCode}: ${err}`);
-					return null;
 				}
-			}),
+			}
+		};
+		await Promise.all(
+			Array.from({ length: Math.min(FORECAST_CONCURRENCY, cutEntries.length) }, worker),
 		);
 
 		const forecasts: Record<string, unknown> = {};

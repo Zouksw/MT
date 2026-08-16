@@ -570,15 +570,22 @@ router.post(
 		const results = await scraperManager.runAll();
 		const elapsed = Date.now() - startTime;
 
+		// One createMany instead of ~19 sequential round-trips (round-106).
+		const rows: Array<{
+			source: string;
+			status: string;
+			errorMessage?: string;
+			inserted?: number;
+			updated?: number;
+			durationMs: number;
+		}> = [];
 		for (const [source, result] of Object.entries(results)) {
 			if ("error" in result) {
-				await prisma.ingestionLog.create({
-					data: {
-						source,
-						status: "error",
-						errorMessage: result.error,
-						durationMs: elapsed,
-					},
+				rows.push({
+					source,
+					status: "error",
+					errorMessage: result.error,
+					durationMs: elapsed,
 				});
 			} else {
 				const r = result as { inserted: number; updated: number };
@@ -586,16 +593,17 @@ router.post(
 				// 0-row refresh-all run logs as "warning", matching the scheduled
 				// path and the single-source refresh.
 				const { status } = classifyIngestionStatus(r);
-				await prisma.ingestionLog.create({
-					data: {
-						source,
-						status,
-						inserted: r.inserted,
-						updated: r.updated,
-						durationMs: elapsed,
-					},
+				rows.push({
+					source,
+					status,
+					inserted: r.inserted,
+					updated: r.updated,
+					durationMs: elapsed,
 				});
 			}
+		}
+		if (rows.length > 0) {
+			await prisma.ingestionLog.createMany({ data: rows });
 		}
 
 		success(res, { results, elapsedMs: elapsed });

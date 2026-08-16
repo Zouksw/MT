@@ -306,14 +306,28 @@ export async function invalidateCache(pattern: string): Promise<number> {
 			return 0;
 		}
 
-		const keys = await redis.keys(pattern);
-		if (keys.length === 0) {
-			return 0;
-		}
+		// SCAN, not KEYS: KEYS blocks the single-threaded Redis server for the
+		// duration of a full-keyspace traversal — this runs on every dataset
+		// mutation, so as the keyspace grows each POST/PATCH/DELETE stalled
+		// every cached route (round-106).
+		let deleted = 0;
+		let cursor = 0;
+		do {
+			const { cursor: next, keys } = await redis.scan(cursor, {
+				MATCH: pattern,
+				COUNT: 200,
+			});
+			cursor = next;
+			if (keys.length > 0) {
+				await redis.del(keys);
+				deleted += keys.length;
+			}
+		} while (cursor !== 0);
 
-		await redis.del(keys);
-		logger.info(`Invalidated ${keys.length} cache entries matching: ${pattern}`);
-		return keys.length;
+		if (deleted > 0) {
+			logger.info(`Invalidated ${deleted} cache entries matching: ${pattern}`);
+		}
+		return deleted;
 	} catch (error) {
 		logger.error(`Cache invalidation error for pattern ${pattern}:`, error);
 		return 0;

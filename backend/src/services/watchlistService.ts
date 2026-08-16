@@ -173,33 +173,38 @@ async function batchRecentPricePairs(
 	if (commodityIds.length === 0) return pairs;
 	const { plainIds, conflictBySource } = await partitionBySource(commodityIds);
 
-	const ingest = (rows: Array<{ commodity_id: string; close: number; date: Date; rn: number }>) => {
+	const ingest = (rows: Array<{ commodity_id: string; close: number; date: Date }>) => {
 		for (const p of rows) {
-			if (p.rn > 2) continue;
 			if (!pairs.has(p.commodity_id)) pairs.set(p.commodity_id, []);
 			pairs.get(p.commodity_id)?.push({ close: p.close, date: p.date });
 		}
 	};
 
+	// The rn<=2 filter must apply INSIDE the query (subquery wrapper). The
+	// previous version computed ROW_NUMBER() over the WHOLE price history and
+	// shipped every daily row ever stored to Node, only to discard all but
+	// the two newest per commodity in the ingest loop (round-106).
 	if (plainIds.length > 0) {
-		const rows = await prisma.$queryRaw<
-			Array<{ commodity_id: string; close: number; date: Date; rn: number }>
-		>`
-      SELECT commodity_id, close, date,
-             ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
-      FROM commodity_prices
-      WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
+		const rows = await prisma.$queryRaw<Array<{ commodity_id: string; close: number; date: Date }>>`
+      SELECT commodity_id, close, date FROM (
+        SELECT commodity_id, close, date,
+               ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
+        FROM commodity_prices
+        WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
+      ) ranked
+      WHERE rn <= 2
     `;
 		ingest(rows);
 	}
 	for (const [source, ids] of conflictBySource) {
-		const rows = await prisma.$queryRaw<
-			Array<{ commodity_id: string; close: number; date: Date; rn: number }>
-		>`
-      SELECT commodity_id, close, date,
-             ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
-      FROM commodity_prices
-      WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
+		const rows = await prisma.$queryRaw<Array<{ commodity_id: string; close: number; date: Date }>>`
+      SELECT commodity_id, close, date FROM (
+        SELECT commodity_id, close, date,
+               ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
+        FROM commodity_prices
+        WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
+      ) ranked
+      WHERE rn <= 2
     `;
 		ingest(rows);
 	}

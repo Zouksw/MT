@@ -280,10 +280,39 @@ export async function getSourceFreshness() {
 	const now = new Date();
 	const sevenDaysAgo = new Date(now.getTime() - MS_PER_WEEK);
 
-	const recentLogs = await prisma.ingestionLog.findMany({
-		where: { createdAt: { gte: sevenDaysAgo } },
-		orderBy: { createdAt: "desc" },
-	});
+	// All three aggregates run in SQL (round-106): the previous version
+	// loaded EVERY ingestionLog row from the last 7 days into Node (10-min
+	// cycle × ~19 sources ≈ 19k rows and growing) only to count them in a
+	// JS loop on every board request.
+	const [bySource, byStatus, latestRows] = await Promise.all([
+		prisma.ingestionLog.groupBy({
+			by: ["source"],
+			where: { createdAt: { gte: sevenDaysAgo } },
+			_count: { _all: true },
+			_max: { createdAt: true },
+		}),
+		prisma.ingestionLog.groupBy({
+			by: ["source", "status"],
+			where: { createdAt: { gte: sevenDaysAgo } },
+			_count: { _all: true },
+		}),
+		// DISTINCT ON source, ordered desc → the latest row per source
+		// (carries lastInserted/lastUpdated).
+		prisma.ingestionLog.findMany({
+			distinct: ["source"],
+			where: { createdAt: { gte: sevenDaysAgo } },
+			orderBy: { createdAt: "desc" },
+			select: { source: true, inserted: true, updated: true },
+		}),
+	]);
+
+	const successBySource = new Map<string, number>();
+	for (const row of byStatus) {
+		if (row.status === "success") {
+			successBySource.set(row.source, row._count._all);
+		}
+	}
+	const latestBySource = new Map(latestRows.map((r) => [r.source, r]));
 
 	const sourceStats = new Map<
 		string,
@@ -295,22 +324,15 @@ export async function getSourceFreshness() {
 			lastUpdated: number;
 		}
 	>();
-	for (const log of recentLogs) {
-		const stat = sourceStats.get(log.source) || {
-			total: 0,
-			success: 0,
-			lastRun: null as Date | null,
-			lastInserted: 0,
-			lastUpdated: 0,
-		};
-		stat.total++;
-		if (log.status === "success") stat.success++;
-		if (!stat.lastRun || log.createdAt > stat.lastRun) {
-			stat.lastRun = log.createdAt;
-			stat.lastInserted = log.inserted;
-			stat.lastUpdated = log.updated;
-		}
-		sourceStats.set(log.source, stat);
+	for (const row of bySource) {
+		const latest = latestBySource.get(row.source);
+		sourceStats.set(row.source, {
+			total: row._count._all,
+			success: successBySource.get(row.source) ?? 0,
+			lastRun: row._max.createdAt ?? null,
+			lastInserted: latest?.inserted ?? 0,
+			lastUpdated: latest?.updated ?? 0,
+		});
 	}
 
 	const freshness = Array.from(sourceStats.entries()).map(([source, stat]) => ({
