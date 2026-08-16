@@ -15,7 +15,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
-import { asyncHandler, ForbiddenError } from "@/middleware/errorHandler";
+import { asyncHandler, ForbiddenError, NotFoundError } from "@/middleware/errorHandler";
 import {
 	createNews,
 	deleteNews,
@@ -74,12 +74,23 @@ router.get(
 		const skip = (page - 1) * limit;
 
 		const category = req.query.category ? categorySchema.parse(req.query.category) : undefined;
+		// Draft visibility (round-105): drafts are editorial material. Without
+		// EDITOR/ADMIN the listing is forced to published — including when the
+		// query string asks for drafts (previously any authenticated VIEWER
+		// saw every draft via the unfiltered default).
+		const canManage = req.user.role === "EDITOR" || req.user.role === "ADMIN";
+		const status =
+			canManage && req.query.status
+				? String(req.query.status)
+				: canManage
+					? undefined
+					: "published";
 		const { news, total } = await listNews({
 			skip,
 			take: limit,
 			search: req.query.search ? String(req.query.search) : undefined,
 			category,
-			status: req.query.status ? String(req.query.status) : undefined,
+			status,
 			commoditySlug: req.query.commoditySlug ? String(req.query.commoditySlug) : undefined,
 		});
 
@@ -101,8 +112,11 @@ router.get(
 router.get(
 	"/stats",
 	authenticate,
-	asyncHandler(async (_req: AuthenticatedRequest, res) => {
-		const stats = await getNewsStats();
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		// Drafts tally is editorial info (round-105): non-editors get
+		// published-only counts; the frontend falls back to `?? 0` for drafts.
+		const canManage = req.user.role === "EDITOR" || req.user.role === "ADMIN";
+		const stats = await getNewsStats(!canManage);
 		success(res, stats);
 	}),
 );
@@ -113,6 +127,11 @@ router.get(
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const post = await getNewsById(req.params.id);
+		// Draft visibility (round-105): a draft is indistinguishable from a
+		// missing article to non-editors — no-disclosure 404, no view bump.
+		if (post.status === "draft" && req.user.role !== "EDITOR" && req.user.role !== "ADMIN") {
+			throw new NotFoundError("Article not found");
+		}
 		// Fire-and-forget view bump — don't block the response on it.
 		void incrementView(req.params.id);
 		success(res, post);

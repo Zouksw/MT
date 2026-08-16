@@ -171,21 +171,30 @@ export async function incrementView(id: string): Promise<void> {
 }
 
 /** Aggregate counts for the list-page stat cards. */
-export async function getNewsStats(): Promise<{
+export async function getNewsStats(publishedOnly = false): Promise<{
 	total: number;
 	published: number;
-	drafts: number;
+	/** Omitted in publishedOnly mode — the drafts tally is editorial info. */
+	drafts?: number;
 	thisWeek: number;
 }> {
 	const now = new Date();
 	const weekAgo = new Date(now.getTime() - 7 * 86400000);
 	const [total, published, drafts, thisWeek] = await Promise.all([
-		prisma.marketNews.count(),
+		publishedOnly
+			? prisma.marketNews.count({ where: { status: "published" } })
+			: prisma.marketNews.count(),
 		prisma.marketNews.count({ where: { status: "published" } }),
-		prisma.marketNews.count({ where: { status: "draft" } }),
-		prisma.marketNews.count({ where: { publishedAt: { gte: weekAgo } } }),
+		publishedOnly
+			? Promise.resolve(undefined)
+			: prisma.marketNews.count({ where: { status: "draft" } }),
+		prisma.marketNews.count({
+			where: publishedOnly
+				? { status: "published", publishedAt: { gte: weekAgo } }
+				: { publishedAt: { gte: weekAgo } },
+		}),
 	]);
-	return { total, published, drafts, thisWeek };
+	return publishedOnly ? { total, published, thisWeek } : { total, published, drafts, thisWeek };
 }
 
 /** Create a news post. Slug derived from title; authorId from the caller. */

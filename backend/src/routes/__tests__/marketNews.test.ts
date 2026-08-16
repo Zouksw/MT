@@ -13,10 +13,14 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { jwtUtils } from "@/lib/jwt";
 import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
 let token: string;
+let viewerToken: string;
+let viewerUser: { id: string } | null = null;
+let draftId: string | null = null;
 
 // A throwaway article created during the run; cleaned up in afterAll so the
 // suite is idempotent across re-runs.
@@ -37,13 +41,33 @@ describe("Market News Routes (Integration)", () => {
 			.deleteMany({ where: { title: { startsWith: "[test]" } } })
 			.catch(() => {});
 		token = await getAdminToken(app);
+
+		// VIEWER fixture via direct prisma create + minted JWT (round-105):
+		// avoids the registration rate limiter, mirrors the timeseries/models
+		// test convention.
+		const p = getPrisma();
+		viewerUser = await p.user.create({
+			data: {
+				email: `news-viewer-${Date.now()}@test.mt`,
+				passwordHash: "test-hash-only",
+				name: "News Viewer Test",
+				role: "VIEWER",
+			},
+		});
+		viewerToken = jwtUtils.generateToken(viewerUser.id);
 	});
 
 	afterAll(async () => {
-		// Clean up any article this suite created so re-runs stay green.
+		// Clean up anything this suite created so re-runs stay green.
+		const prisma = getPrisma();
 		if (createdId) {
-			const prisma = getPrisma();
 			await prisma.marketNews.deleteMany({ where: { id: createdId } }).catch(() => {});
+		}
+		if (draftId) {
+			await prisma.marketNews.deleteMany({ where: { id: draftId } }).catch(() => {});
+		}
+		if (viewerUser) {
+			await prisma.user.deleteMany({ where: { id: viewerUser.id } }).catch(() => {});
 		}
 	});
 
@@ -213,6 +237,79 @@ describe("Market News Routes (Integration)", () => {
 		it("rejects unauthenticated requests", async () => {
 			const res = await request(app).get("/api/news");
 			expect(res.status).toBe(401);
+		});
+	});
+
+	describe("Draft visibility (round-105) — VIEWER must not see editorial material", () => {
+		it("sets up a draft as admin", async () => {
+			const res = await request(app)
+				.post("/api/news")
+				.set("Authorization", `Bearer ${token}`)
+				.send({
+					title: "[test] Draft visibility probe",
+					summary: "Draft probe summary.",
+					body: "Draft probe body.",
+					category: "PRICE_MOVE",
+					source: "test",
+					status: "draft",
+				});
+			expect(res.status).toBe(201);
+			expect(res.body.data.status).toBe("draft");
+			draftId = res.body.data.id;
+		});
+
+		it("VIEWER list excludes drafts (default AND explicit ?status=draft)", async () => {
+			const res = await request(app)
+				.get("/api/news?pageSize=100")
+				.set("Authorization", `Bearer ${viewerToken}`);
+			expect(res.status).toBe(200);
+			expect(res.body.data.some((n: { id: string }) => n.id === draftId)).toBe(false);
+
+			const forced = await request(app)
+				.get("/api/news?status=draft")
+				.set("Authorization", `Bearer ${viewerToken}`);
+			expect(forced.status).toBe(200);
+			// forced to published — the draft filter is ignored for VIEWERs
+			expect(forced.body.data.every((n: { status: string }) => n.status === "published")).toBe(
+				true,
+			);
+		});
+
+		it("ADMIN list CAN see drafts", async () => {
+			const res = await request(app)
+				.get("/api/news?status=draft")
+				.set("Authorization", `Bearer ${token}`);
+			expect(res.status).toBe(200);
+			expect(res.body.data.some((n: { id: string }) => n.id === draftId)).toBe(true);
+		});
+
+		it("VIEWER detail of a draft → 404 (no-disclosure); ADMIN → 200", async () => {
+			const asViewer = await request(app)
+				.get(`/api/news/${draftId}`)
+				.set("Authorization", `Bearer ${viewerToken}`);
+			expect(asViewer.status).toBe(404);
+
+			const asAdmin = await request(app)
+				.get(`/api/news/${draftId}`)
+				.set("Authorization", `Bearer ${token}`);
+			expect(asAdmin.status).toBe(200);
+			expect(asAdmin.body.data.status).toBe("draft");
+		});
+
+		it("VIEWER stats omit the drafts tally; ADMIN gets it", async () => {
+			const asViewer = await request(app)
+				.get("/api/news/stats")
+				.set("Authorization", `Bearer ${viewerToken}`);
+			expect(asViewer.status).toBe(200);
+			expect(asViewer.body.data).not.toHaveProperty("drafts");
+			expect(asViewer.body.data.total).toBe(asViewer.body.data.published);
+
+			const asAdmin = await request(app)
+				.get("/api/news/stats")
+				.set("Authorization", `Bearer ${token}`);
+			expect(asAdmin.status).toBe(200);
+			expect(typeof asAdmin.body.data.drafts).toBe("number");
+			expect(asAdmin.body.data.drafts).toBeGreaterThanOrEqual(1);
 		});
 	});
 });
