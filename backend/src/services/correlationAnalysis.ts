@@ -15,7 +15,7 @@ import { authoritativeSourceWhere } from "@/services/inference/authoritativeSour
 export interface CorrelationResult {
 	commodityA: string;
 	commodityB: string;
-	correlation: number; // -1 to 1
+	correlation: number | null; // -1 to 1; null = not computable (overlap <3 days or zero-variance series)
 	pValue: number | null;
 	sampleSize: number;
 	windowDays: number;
@@ -24,7 +24,7 @@ export interface CorrelationResult {
 
 export interface CorrelationMatrix {
 	commodities: string[];
-	matrix: number[][]; // NxN, diagonal = 1
+	matrix: Array<Array<number | null>>; // NxN, diagonal = 1; null = not computable
 	windowDays: number;
 	asOfDate: string;
 }
@@ -80,7 +80,7 @@ async function getPriceSeries(
 function pearsonCorrelation(
 	seriesA: Array<{ date: string; value: number }>,
 	seriesB: Array<{ date: string; value: number }>,
-): { correlation: number; sampleSize: number } {
+): { correlation: number | null; sampleSize: number } {
 	const mapB = new Map(seriesB.map((s) => [s.date, s.value]));
 
 	const pairs: Array<[number, number]> = [];
@@ -92,7 +92,7 @@ function pearsonCorrelation(
 	}
 
 	const n = pairs.length;
-	if (n < 3) return { correlation: 0, sampleSize: n };
+	if (n < 3) return { correlation: null, sampleSize: n };
 
 	const sumA = pairs.reduce((s, [a]) => s + a, 0);
 	const sumB = pairs.reduce((s, [, b]) => s + b, 0);
@@ -112,7 +112,7 @@ function pearsonCorrelation(
 	}
 
 	const denom = Math.sqrt(varA * varB);
-	if (denom === 0) return { correlation: 0, sampleSize: n };
+	if (denom === 0) return { correlation: null, sampleSize: n }; // constant series → undefined, not 0
 
 	const r = covAB / denom;
 	return {
@@ -170,7 +170,7 @@ export async function computeCorrelationMatrix(
 	);
 
 	const n = commodityIds.length;
-	const matrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+	const matrix: Array<Array<number | null>> = Array.from({ length: n }, () => Array(n).fill(null));
 
 	for (let i = 0; i < n; i++) {
 		matrix[i][i] = 1;

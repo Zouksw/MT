@@ -105,7 +105,7 @@ router.get(
 		}
 
 		// Correlation matrix — align by common dates
-		const correlations: Array<{ a: string; b: string; corr: number }> = [];
+		const correlations: Array<{ a: string; b: string; corr: number | null }> = [];
 		for (let i = 0; i < commodities.length; i++) {
 			for (let j = i; j < commodities.length; j++) {
 				const a = commodities[i].slug;
@@ -124,7 +124,7 @@ router.get(
 				}
 
 				if (alignedA.length < 5) {
-					correlations.push({ a, b, corr: 0 });
+					correlations.push({ a, b, corr: null }); // not computable ≠ uncorrelated
 					continue;
 				}
 

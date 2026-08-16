@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/Select";
 export default function AnalysisPage() {
 	const [matrixData, setMatrixData] = useState<{
 		commodities: string[];
-		matrix: number[][];
+		matrix: Array<Array<number | null>>;
 	} | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [windowDays, setWindowDays] = useState(30);

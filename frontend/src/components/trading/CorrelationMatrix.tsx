@@ -5,11 +5,12 @@ import { formatDecimal } from "@/lib/format";
 
 interface CorrelationMatrixProps {
 	commodities: string[];
-	matrix: number[][];
+	matrix: Array<Array<number | null>>;
 	loading?: boolean;
 }
 
-function getCellColor(value: number): string {
+function getCellColor(value: number | null): string {
+	if (value === null) return "transparent";
 	if (value >= 0.7) return "rgba(22, 163, 74, 0.3)";
 	if (value >= 0.3) return "rgba(22, 163, 74, 0.15)";
 	if (value > -0.3) return "rgba(0, 0, 0, 0.03)";
@@ -17,7 +18,8 @@ function getCellColor(value: number): string {
 	return "rgba(220, 38, 38, 0.3)";
 }
 
-function getTextColor(value: number): string {
+function getTextColor(value: number | null): string {
+	if (value === null) return "#9ca3af";
 	if (value >= 0.7) return "#16a34a";
 	if (value >= 0.3) return "#15803d";
 	if (value > -0.3) return "#374151";
@@ -111,18 +113,22 @@ export default function CorrelationMatrixChart({
 									fontSize: cellSize > 60 ? 12 : 10,
 									fontFamily: "monospace",
 									color: getTextColor(value),
-									fontWeight: Math.abs(value) > 0.5 ? 600 : 400,
+									fontWeight: value !== null && Math.abs(value) > 0.5 ? 600 : 400,
 								}}
 								onMouseEnter={(e) =>
 									setTooltip({
-										text: `${commodities[i]} × ${commodities[j]}: r = ${formatDecimal(value, 3)}`,
+										text: `${commodities[i]} × ${commodities[j]}: ${
+											value === null
+												? "insufficient overlapping data"
+												: `r = ${formatDecimal(value, 3)}`
+										}`,
 										x: e.clientX + 10,
 										y: e.clientY - 30,
 									})
 								}
 								onMouseLeave={() => setTooltip(null)}
 							>
-								{formatDecimal(value, 2)}
+								{value === null ? "—" : formatDecimal(value, 2)}
 							</div>
 						))}
 					</div>
