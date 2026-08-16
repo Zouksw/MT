@@ -75,6 +75,35 @@ describe("predict retry logic", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
+	it("throws TYPED errors — real upstream status, 502 for upstream 5xx, 503 for network (round-105)", async () => {
+		// Before round-105 every failure was a plain Error → errorHandler's
+		// unknown branch → OUR 500 + generic production message. These pins
+		// keep the honest mapping: 422 passes through as 422, upstream 500
+		// becomes 502 (gateway), unreachable becomes 503.
+		const { ApiError } = await import("@/middleware/errorHandler");
+
+		const notFound = vi.fn().mockResolvedValue(mockResponse(422, "degenerate series"));
+		vi.stubGlobal("fetch", notFound);
+		const err422 = await predict({ ...VALID_REQUEST }).catch((e) => e);
+		expect(err422).toBeInstanceOf(ApiError);
+		expect(err422.statusCode).toBe(422);
+
+		const upstream5xx = vi
+			.fn()
+			.mockResolvedValue(mockResponse(500, "engine blew up"))
+			.mockResolvedValue(mockResponse(500, "engine blew up"));
+		vi.stubGlobal("fetch", upstream5xx);
+		const err502 = await predict({ ...VALID_REQUEST }).catch((e) => e);
+		expect(err502).toBeInstanceOf(ApiError);
+		expect(err502.statusCode).toBe(502);
+
+		const dead = vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED"));
+		vi.stubGlobal("fetch", dead);
+		const err503 = await predict({ ...VALID_REQUEST }).catch((e) => e);
+		expect(err503).toBeInstanceOf(ApiError);
+		expect(err503.statusCode).toBe(503);
+	});
+
 	it("retries on 500 (transient server error)", async () => {
 		const fetchMock = vi
 			.fn()

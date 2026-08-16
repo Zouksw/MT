@@ -73,9 +73,16 @@ describe("Correlation Analysis (HTTP Integration)", () => {
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
 			expect(res.body.data).toHaveProperty("correlation");
-			expect(typeof res.body.data.correlation).toBe("number");
-			expect(res.body.data.correlation).toBeGreaterThanOrEqual(-1);
-			expect(res.body.data.correlation).toBeLessThanOrEqual(1);
+			// round-105 honesty: correlation is number | null. null = not
+			// computable (overlap <3 days or constant series) — then
+			// sampleSize must confirm it. When computable, range [-1, 1].
+			const corr = res.body.data.correlation;
+			if (corr === null) {
+				expect(res.body.data.sampleSize).toBeLessThan(3);
+			} else {
+				expect(corr).toBeGreaterThanOrEqual(-1);
+				expect(corr).toBeLessThanOrEqual(1);
+			}
 		});
 
 		it("rejects missing query params with 400", async () => {

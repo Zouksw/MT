@@ -1,3 +1,5 @@
+import { ApiError } from "@/middleware/errorHandler";
+
 export interface InferencePredictRequest {
 	values: number[];
 	timestamps: number[];
@@ -151,10 +153,15 @@ export async function predict(request: InferencePredictRequest): Promise<Inferen
 				// the identical request cannot succeed, so fail fast instead of
 				// wasting a second inference slot + 1s backoff + doubling latency.
 				// Only 5xx (server error) and network/timeout failures are retried.
-				if (res.status >= 400 && res.status < 500) {
-					throw new Error(`Inference service ${res.status}: ${body}`);
-				}
-				throw new Error(`Inference service ${res.status}: ${body}`);
+				// Typed (round-105): a plain Error here landed in errorHandler's
+				// unknown branch — a downstream outage surfaced as OUR 500 with
+				// a generic production message. Map honestly instead: upstream
+				// 4xx passes its real status through (bad input); upstream 5xx
+				// is a gateway condition (502).
+				throw new ApiError(
+					res.status >= 500 ? 502 : res.status,
+					`Inference service ${res.status}: ${body}`,
+				);
 			}
 
 			return (await res.json()) as InferencePredictResponse;
@@ -162,8 +169,14 @@ export async function predict(request: InferencePredictRequest): Promise<Inferen
 			lastError = err instanceof Error ? err : new Error(String(err));
 			// Don't retry deterministic 4xx client errors — they cannot succeed
 			// on a second identical attempt (the input hasn't changed).
-			const isClientError = /Inference service 4\d\d:/.test(lastError.message);
-			if (attempt === 0 && !isClientError) {
+			const isClientError =
+				err instanceof ApiError && err.statusCode >= 400 && err.statusCode < 500;
+			if (isClientError) {
+				// Deterministic upstream rejection — rethrow the typed error
+				// as-is (its real status), don't re-wrap it as a 503 below.
+				throw err;
+			}
+			if (attempt === 0) {
 				await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
 			} else {
 				break; // 4xx or second attempt — stop retrying
@@ -171,7 +184,12 @@ export async function predict(request: InferencePredictRequest): Promise<Inferen
 		}
 	}
 
-	throw new Error(`Prediction failed after retries: ${lastError?.message}`);
+	// Exhausted retries. If the upstream ANSWERED (typed ApiError from the
+	// !res.ok branch), keep its honest gateway status (502 for upstream 5xx;
+	// 4xx never reaches here — rethrown in the catch). Only a silent
+	// network/timeout failure (plain Error) means "unreachable" → 503.
+	if (lastError instanceof ApiError) throw lastError;
+	throw new ApiError(503, `Prediction failed after retries: ${lastError?.message}`);
 }
 
 export async function predictFromCache(request: PredictionRequest): Promise<PredictionResult> {

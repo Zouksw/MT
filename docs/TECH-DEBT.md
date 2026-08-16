@@ -248,3 +248,7 @@
 - 核实后清理一条，在条目末尾标 `**已清理（YYYY-MM-DD）**：…`，保留历史。
 - 新增 tech debt：附证据来源 + 审计日期。
 - ROI 排序（审计当时建议）：**高** = TD-1/7/8/9/11（删了零功能损失）；**中** = TD-2/3/6/10（需决策）；**低** = TD-5/4/12（一致性收益）。
+
+### CSRF 死端点（round-105 审计标记，2026-08-16）
+
+`GET /api/auth/csrf-token`（auth.ts:611）发放 double-submit token（随机 hex + httpOnly cookie），但**全后端无任何 `x-csrf-token` 验证点**，前端也从未调用（frontend/src 零引用）。属安全剧场：端点存在暗示有 CSRF 防护，实际防护来自别处——状态变更路由走 Authorization Bearer 头（自定义头无法被跨站设置，天然免疫 CSRF），cookie 会话只用于只读端点（/verify、/auth/me）+ logout。已在端点 doc 注释中如实标注。处置二选一（未决）：为 logout 等 cookie 可达的变更端点接真实验证，或移除端点（遵循 AGENTS §十.5：非己所造死代码先标记，不径直删）。

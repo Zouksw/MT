@@ -608,8 +608,16 @@ router.get(
  *                     token:
  *                       type: string
  */
-// GET /api/auth/csrf-token - Get CSRF token for form submissions
-// Returns a token that should be included in the x-csrf-token header for state-changing requests
+// GET /api/auth/csrf-token — issues a double-submit CSRF token.
+//
+// HONESTY NOTE (round-105 audit): NOTHING verifies x-csrf-token today — no
+// middleware, no route. The token this issues is currently decorative, and
+// the cookie is httpOnly so it can't even complete a double-submit flow.
+// The API's actual CSRF posture comes from elsewhere: state-changing routes
+// authenticate via the Authorization Bearer header (custom headers can't be
+// set cross-site), and the cookie session is read-only (/verify, /auth/me)
+// plus logout. Recorded in docs/TECH-DEBT.md — wire real verification or
+// remove before relying on it.
 router.get(
 	"/csrf-token",
 	asyncHandler(async (_req: Request, res: Response) => {
