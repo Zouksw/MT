@@ -132,7 +132,10 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 	const horizon = req.horizon || 10;
 	const currentPrice = req.currentPrice;
 
-	if (!currentPrice || currentPrice <= 0) {
+	// NaN slips past the old truthiness/inequality guard (!NaN is false,
+	// NaN <= 0 is false) and flowed into confidence/predictedChange as NaN
+	// (round-106).
+	if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
 		throw new Error("Valid current price is required");
 	}
 

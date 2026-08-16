@@ -103,7 +103,9 @@ router.get(
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const sub = await prisma.subscription.findUnique({
 			where: { userId: req.userId },
-			include: { usageRecords: true },
+			// Bounded (round-106): the unbounded include returned months of
+			// per-call usage records in one payload. Ordered by period start.
+			include: { usageRecords: { take: 100, orderBy: { periodStart: "desc" } } },
 		});
 
 		if (!sub) {

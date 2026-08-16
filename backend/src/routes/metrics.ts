@@ -160,10 +160,12 @@ router.post("/web-vitals", async (req: Request, res: Response) => {
 		});
 	}
 
-	if (typeof value !== "number" || value < 0) {
+	// Finite check (round-106): Infinity passed `value < 0` and persisted as
+	// an unparseable metric; NaN likewise (NaN < 0 is false).
+	if (typeof value !== "number" || value < 0 || !Number.isFinite(value)) {
 		return validationError(res, {
 			field: "value",
-			issue: "Value must be a non-negative number",
+			issue: "Value must be a finite non-negative number",
 			context: { value: String(value) },
 		});
 	}
@@ -173,6 +175,14 @@ router.post("/web-vitals", async (req: Request, res: Response) => {
 			field: "path",
 			issue: "Path must be a non-empty string",
 			context: { value: String(path) },
+		});
+	}
+	// Bound the public unauthenticated beacon's string field (round-106).
+	if (path.length > 500) {
+		return validationError(res, {
+			field: "path",
+			issue: "Path must be at most 500 characters",
+			context: { length: String(path.length) },
 		});
 	}
 

@@ -169,14 +169,23 @@ function runDetection(
 	const detected: DetectedAnomaly[] = [];
 
 	if (validatedData.method === "STATISTICAL") {
-		const values = dataPoints.map((dp) => Number(dp.valueJson) || 0);
-		const mean = values.reduce((a, b) => a + b, 0) / values.length;
-		const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+		// Only finite numeric points feed the statistics (round-106): the
+		// old `Number(x) || 0` coerced objects/strings in the Json column to
+		// 0, skewing mean/stdDev for every series containing non-numeric
+		// points.
+		const numericOf = (dp: { valueJson: Prisma.JsonValue }): number => {
+			const n = Number(dp.valueJson);
+			return Number.isFinite(n) ? n : Number.NaN;
+		};
+		const stats = dataPoints.map(numericOf).filter((v) => Number.isFinite(v)) as number[];
+		const mean = stats.reduce((a, b) => a + b, 0) / stats.length;
+		const variance = stats.reduce((a, b) => a + (b - mean) ** 2, 0) / stats.length;
 		const stdDev = Math.sqrt(variance);
 		const zThreshold = 3;
 
 		for (let i = validatedData.windowSize; i < dataPoints.length; i++) {
-			const value = Number(dataPoints[i].valueJson) || 0;
+			const value = numericOf(dataPoints[i]);
+			if (!Number.isFinite(value)) continue; // non-numeric point — not analyzable
 			const zScore = Math.abs((value - mean) / stdDev);
 
 			if (zScore > zThreshold) {
@@ -200,15 +209,27 @@ function runDetection(
 	} else if (validatedData.method === "RULE_BASED") {
 		const threshold = validatedData.threshold;
 		const windowSize = validatedData.windowSize;
+		const numericOf = (dp: { valueJson: Prisma.JsonValue }): number => {
+			const n = Number(dp.valueJson);
+			return Number.isFinite(n) ? n : Number.NaN;
+		};
 
 		for (let i = windowSize; i < dataPoints.length; i++) {
-			const currentValue = Number(dataPoints[i].valueJson) || 0;
+			const currentValue = numericOf(dataPoints[i]);
+			if (!Number.isFinite(currentValue)) continue; // non-numeric — skip
 			const windowValues = dataPoints
 				.slice(i - windowSize, i)
-				.map((dp) => Number(dp.valueJson) || 0);
-			const windowMean = windowValues.reduce((a, b) => a + b, 0) / windowSize;
+				.map(numericOf)
+				.filter(Number.isFinite) as number[];
+			if (windowValues.length === 0) continue;
+			const windowMean = windowValues.reduce((a, b) => a + b, 0) / windowValues.length;
 
-			const percentChange = Math.abs((currentValue - windowMean) / (windowMean || 1));
+			// A zero baseline made |value - 0| / 1 report |value| as a
+			// "percent change" (e.g. value 2 → 200%), feeding false
+			// CRITICAL anomalies. Percent change is undefined at zero —
+			// skip the point (round-06).
+			if (windowMean === 0) continue;
+			const percentChange = Math.abs((currentValue - windowMean) / windowMean);
 
 			if (percentChange > 1 - threshold) {
 				const severity = percentChangeSeverity(percentChange);
