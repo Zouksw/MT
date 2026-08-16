@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-16 — round-109 预测策略评估（只读，落档 PREDICTION-STRATEGY.md）
+
+实测数据面与模型面后给出最优方案。关键发现：32 个牛肉部位商品 30 个零数据点、beef_cut_prices 仅 30 天冻结快照（2026-04-30）；唯一深而活的牛肉序列是 beef_carcass_us（4,241 点 2014→今，verified MAPE 1.73）；verified 模型排名朴素基线最优（naive 3.45 < ES 3.53 < ARIMA 3.67 < HW 3.73 << STL 10.87）；Chronos 3 变体 ~4,340 条预测 0 条 verified；sarimax 0 条日志（外生管线从未接线，而 FX/饲料/原油数据在库且新鲜）。推荐方案：数据回填为 P0 前置 → 部位价短期用"胴体锚 + 汇率折算 + 部位升贴水"自上而下结构比例（不在 30 天噪声上外推）→ sarimax 外生接线（先在胴体序列回测增量）→ Chronos 重定位为过验证环的 ensemble 成员（naive 为淘汰门槛）→ rolling-origin 分层冠军选择 + split-conformal 校准区间 + 数据不足序列诚实降级。全部兼容预训练约束。
+
 ### 2026-08-16 — round-108 体积审计与压缩：/root 12G→9.7G，代码不臃肿、臃肿在制品层
 
 全部源码不足 5M（44 页/20 路由/19 爬虫/31 模型），磁盘大头为依赖镜像/构建缓存/无界日志/工具残留。压缩明细：卸载 venv 内 triton 689M（GPU 编译器，`torch 2.12.1+cpu` 不加载，pytest 60 + 全链 chronos 预测验证）；清 `.next/cache` 412M（`next start` 不读）；清 `.npm` 626M（含 `npx prisma@7` 残留 253M——与项目 prisma 5 大版本漂移，勿用）；Playwright 双浏览器去重 521M→259M（e2e 脚本从硬编码 `_npx` 路径改为经 frontend `@playwright/test` 解析，消除 cron ≥80% 清 `_npx` 时脚本失效的隐患）；backend/logs 215M→10M 并给 winston 加 `maxsize 10M×3` 轮换（原无界且无日期命名，cron 30d 规则匹配不到）；coverage 19M、`git gc` 43M→13M。红线未动：pnpm store 3.6G、HF 权重 879M、backups（keep-7 有界）。三套测试基线不回退（backend 909 / frontend 297 / pytest 60），三服务 live 验证。详见 PROJECT-ASSESSMENT §八、AUTOMATION-STATUS §六½。

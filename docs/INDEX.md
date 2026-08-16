@@ -25,6 +25,7 @@
 | [SKILLS.md](SKILLS.md) | **AI 代理 skill 使用规划**（技术栈→skill 映射、触发场景、已验证组合、不适用清单） |
 | [DESIGN-SYSTEM-AUDIT.md](DESIGN-SYSTEM-AUDIT.md) | 前端设计系统深度审计（token 漂移、a11y、AI-slop、组件深度，2026-08-07） |
 | [PROJECT-ASSESSMENT.md](PROJECT-ASSESSMENT.md) | 项目整体规划与实现状态评估（运维/价值链/架构/规划对齐，2026-08-08） |
+| [PREDICTION-STRATEGY.md](PREDICTION-STRATEGY.md) | 牛肉价格预测策略评估：数据/模型现状实测、缺口清单、最优方案（2026-08-16） |
 | [SECURITY.md](SECURITY.md) | 安全策略 |
 
 ## 开发与运维
