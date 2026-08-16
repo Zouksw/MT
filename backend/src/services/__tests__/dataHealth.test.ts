@@ -48,6 +48,15 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 		expect(typeof snap.predictionStale).toBe("number");
 		expect(typeof snap.predictionUnverifiable).toBe("number");
 		expect(typeof snap.verificationRatio).toBe("number");
+		// Invariants (round-106): typeof-only asserts passed for all-zero
+		// or nonsensical values. These relationships must hold for any
+		// real snapshot — /health/ready depends on this signal.
+		// (freshSourceCount is NOT bounded by registeredSourceCount: the
+		// registry can be empty while scraped sources still write rows.)
+		expect(snap.predictionVerified).toBeGreaterThanOrEqual(0);
+		expect(snap.predictionBacklog).toBeGreaterThanOrEqual(0);
+		expect(snap.verificationRatio).toBeGreaterThanOrEqual(0);
+		expect(snap.verificationRatio).toBeLessThanOrEqual(1);
 	});
 
 	it("anyDataFlowing is true when at least one source wrote rows in the window", async () => {

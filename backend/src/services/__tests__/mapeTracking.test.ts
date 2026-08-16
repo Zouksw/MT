@@ -585,7 +585,10 @@ describe("MAPE Tracking (real DB)", () => {
 			it("marks pre-fix predictions for conflict commodities as stale, leaves post-fix and clean-commodity rows untouched", async () => {
 				const prisma = ctx.prisma;
 				const brlId = await getBrlUsdId();
-				if (!brlId) return; // seed absent in this env — skip cleanly
+				if (!brlId)
+					throw new Error(
+						"Seed missing: brl_usd not found — reset mt_test via scripts/bootstrap-test-db.sh (round-106: silent returns were vacuously green)",
+					);
 
 				const before = new Date("2026-07-15T00:00:00Z"); // pre-fix (polluted)
 				const after = new Date("2026-07-28T00:00:00Z"); // post-fix (clean)
@@ -658,7 +661,8 @@ describe("MAPE Tracking (real DB)", () => {
 
 			it("is idempotent — running twice does not change already-stale rows or count them again", async () => {
 				const brlId = await getBrlUsdId();
-				if (!brlId) return;
+				if (!brlId)
+					throw new Error("Seed missing: brl_usd — reset mt_test via scripts/bootstrap-test-db.sh");
 
 				const before = new Date("2026-07-10T00:00:00Z");
 				const row = await seedConflictRow({
@@ -706,7 +710,8 @@ describe("MAPE Tracking (real DB)", () => {
 			it("restores post-fix stale rows to completed but leaves pre-fix stale rows stale", async () => {
 				const prisma = ctx.prisma;
 				const brlId = await getBrlUsdId();
-				if (!brlId) return; // seed absent — skip cleanly
+				if (!brlId)
+					throw new Error("Seed missing: brl_usd — reset mt_test via scripts/bootstrap-test-db.sh"); // seed absent — skip cleanly
 
 				const before = new Date("2026-07-15T00:00:00Z"); // pre-fix (genuinely polluted)
 				const after = new Date("2026-07-28T00:00:00Z"); // post-fix (mis-staled)

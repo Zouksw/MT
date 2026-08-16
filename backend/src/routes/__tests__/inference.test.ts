@@ -55,7 +55,12 @@ describe("Inference Routes (Integration)", () => {
 			const commodity = slugRes.body.data.find(
 				(c: { slug: string; id: string }) => c.slug === TEST_SLUG,
 			);
-			if (!commodity) return;
+			// Fail loud (round-106): silently returning made this test vacuously
+			// green whenever the seed drifted — it must actually run.
+			if (!commodity)
+				throw new Error(
+					`Seed missing: ${TEST_SLUG} not found — reset mt_test with scripts/bootstrap-test-db.sh`,
+				);
 
 			const res = await request(app)
 				.post("/api/inference/predict")

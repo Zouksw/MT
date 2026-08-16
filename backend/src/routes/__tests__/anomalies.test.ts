@@ -60,8 +60,10 @@ describe("Anomalies Routes", () => {
 			const res = await request(app).get("/api/anomalies?page=1&limit=10").set(authHeaders());
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			// paginated() returns { data, pagination }.
-			expect(res.body.data ?? res.body.pagination).toBeDefined();
+			// paginated() returns { data, pagination } — assert BOTH precisely;
+			// the old `data ?? pagination` fallback passed for almost any body.
+			expect(Array.isArray(res.body.data)).toBe(true);
+			expect(res.body.pagination).toMatchObject({ page: 1, limit: 10 });
 		});
 
 		test("rejects an invalid severity with 400", async () => {
@@ -82,9 +84,9 @@ describe("Anomalies Routes", () => {
 			const res = await request(app)
 				.get("/api/anomalies/00000000-0000-0000-0000-000000000000")
 				.set(authHeaders());
-			// Service returns null → route renders { anomaly: null } or 404;
-			// either way it must not be 500.
-			expect(res.status).toBeLessThan(500);
+			// getAnomaly throws NotFoundError for a missing id → exact 404
+			// (was `toBeLessThan(500)`, which any 2xx/4xx satisfied).
+			expect(res.status).toBe(404);
 		});
 	});
 

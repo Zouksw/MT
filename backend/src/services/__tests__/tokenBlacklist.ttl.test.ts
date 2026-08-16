@@ -62,7 +62,9 @@ describe("tokenBlacklist — per-token TTL (resurrection regression)", () => {
 	});
 
 	it("long-lived revocation SURVIVES the short-lived token's expiry (the resurrection bug)", async () => {
-		expect(await isTokenBlacklisted(shortToken)).toBe(true);
+		// The short token was blacklisted by test 1; re-asserting it here
+		// raced its 3s expiry (>3s of wall clock since beforeAll → the
+		// per-token key had already evicted → flaky red, round-106).
 		// Let the short token pass its exp + per-token key TTL eviction.
 		await sleep(3500);
 		// THE regression assertion: the long token must still be revoked.

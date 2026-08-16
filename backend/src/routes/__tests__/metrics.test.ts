@@ -90,8 +90,9 @@ describe("Metrics Routes", () => {
 			const res = await request(app)
 				.post("/api/metrics/web-vitals")
 				.send({ name: "LCP", value: 2.5, path: "/dashboard" });
-			expect(res.status).not.toBe(401);
-			expect(res.status).toBeLessThan(500);
+			// Pin the exact contract (was not-401 + <500 — a regression to
+			// 400 for valid vitals still passed, round-106).
+			expect(res.status).toBe(200);
 		});
 
 		test("rejects an invalid metric name with 400", async () => {
