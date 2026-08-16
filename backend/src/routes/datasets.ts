@@ -84,7 +84,9 @@ const router = Router();
 router.get(
 	"/",
 	authenticate,
-	cacheRoute("datasets:list", 300),
+	// varyByUser: the list is owner-scoped (below) — the cache key MUST
+	// include the user or user B would be served user A's cached list.
+	cacheRoute("datasets:list", 300, { varyByUser: true }),
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { search } = req.query;
 		const { skip, take } = getPagination(req.query);
@@ -94,6 +96,9 @@ router.get(
 			search: search as string | undefined,
 			skip,
 			take,
+			// Same policy as GET /:id (getDataset): datasets are private to
+			// their owner — the list must not enumerate other users' workspaces.
+			ownerId: req.userId,
 		});
 
 		res.json({

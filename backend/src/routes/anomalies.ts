@@ -269,7 +269,12 @@ router.patch(
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
 		const validatedData = updateAnomalySchema.parse(req.body);
-		const anomaly = await updateAnomaly(req.params.id, validatedData);
+		const anomaly = await updateAnomaly(
+			req.params.id,
+			validatedData,
+			req.userId as string,
+			req.user?.role,
+		);
 		return success(res, { anomaly });
 	}),
 );
@@ -299,7 +304,7 @@ router.delete(
 	"/:id",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
-		await deleteAnomaly(req.params.id);
+		await deleteAnomaly(req.params.id, req.userId as string, req.user?.role);
 		return successWithMessage(res, {}, "Anomaly deleted successfully");
 	}),
 );
@@ -411,7 +416,7 @@ router.post(
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res) => {
 		const validatedData = bulkResolveSchema.parse(req.body);
-		const count = await bulkResolveAnomalies(validatedData);
+		const count = await bulkResolveAnomalies(validatedData, req.userId as string, req.user?.role);
 		return successWithMessage(res, { count }, `Resolved ${count} anomalies`);
 	}),
 );

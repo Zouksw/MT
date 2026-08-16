@@ -244,8 +244,28 @@ function percentChangeSeverity(percentChange: number): AnomalySeverity {
 	return "MEDIUM";
 }
 
-/** Update an anomaly (typically to resolve it). */
-export async function updateAnomaly(id: string, data: z.infer<typeof updateAnomalySchema>) {
+/** Update an anomaly (typically to resolve it).
+ *
+ * Ownership (round-106): the anomaly's timeseries must belong to a dataset
+ * the caller owns (ADMIN bypasses). Previously ANY authenticated user could
+ * resolve/edit any other user's anomaly — "missing" and "not owned" return
+ * the same 404 so existence isn't disclosed cross-user.
+ */
+export async function updateAnomaly(
+	id: string,
+	data: z.infer<typeof updateAnomalySchema>,
+	userId: string,
+	role: string | undefined,
+) {
+	const existing = await prisma.anomaly.findUnique({
+		where: { id },
+		select: { id: true, timeseries: { select: { dataset: { select: { ownerId: true } } } } },
+	});
+	const ownerId = existing?.timeseries.dataset.ownerId;
+	if (!existing || (ownerId !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Anomaly");
+	}
+
 	return prisma.anomaly.update({
 		where: { id },
 		data: {
@@ -258,8 +278,21 @@ export async function updateAnomaly(id: string, data: z.infer<typeof updateAnoma
 	});
 }
 
-/** Delete an anomaly. */
-export async function deleteAnomaly(id: string): Promise<void> {
+/** Delete an anomaly. Same ownership rule as updateAnomaly. */
+export async function deleteAnomaly(
+	id: string,
+	userId: string,
+	role: string | undefined,
+): Promise<void> {
+	const existing = await prisma.anomaly.findUnique({
+		where: { id },
+		select: { id: true, timeseries: { select: { dataset: { select: { ownerId: true } } } } },
+	});
+	const ownerId = existing?.timeseries.dataset.ownerId;
+	if (!existing || (ownerId !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Anomaly");
+	}
+
 	await prisma.anomaly.delete({ where: { id } });
 }
 
@@ -299,11 +332,21 @@ export async function getAnomalyStats(
 	};
 }
 
-/** Bulk-resolve anomalies matching the filter. Returns the count updated. */
+/** Bulk-resolve anomalies matching the filter. Returns the count updated.
+ *
+ * Ownership (round-106): non-admins only ever touch anomalies on their own
+ * datasets' timeseries. Previously the updateMany had no scope at all — an
+ * empty body from any VIEWER resolved EVERY unresolved anomaly in the DB.
+ */
 export async function bulkResolveAnomalies(
 	validatedData: z.infer<typeof bulkResolveSchema>,
+	userId: string,
+	role: string | undefined,
 ): Promise<number> {
 	const where: Prisma.AnomalyWhereInput = { isResolved: false };
+	if (role !== "ADMIN") {
+		where.timeseries = { dataset: { ownerId: userId } };
+	}
 	if (validatedData.timeseriesId) where.timeseriesId = validatedData.timeseriesId;
 	if (validatedData.severity) where.severity = validatedData.severity as AnomalySeverity;
 	if (validatedData.start || validatedData.end) {

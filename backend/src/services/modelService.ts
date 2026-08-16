@@ -181,11 +181,27 @@ export async function deleteModel(
 	await prisma.forecastingModel.delete({ where: { id: modelId } });
 }
 
-/** Delete forecasts for a model with optional time-range filter. */
+/** Delete forecasts for a model with optional time-range filter.
+ *
+ * Ownership (round-106): mirrors setModelActive/deleteModel — only the
+ * trainer or an ADMIN may clear a model's forecasts. Previously any
+ * authenticated user could wipe any other user's forecast rows.
+ */
 export async function deleteForecasts(
 	modelId: string,
 	range?: { start?: string; end?: string },
+	userId?: string,
+	role?: string,
 ): Promise<number> {
+	const model = await prisma.forecastingModel.findUnique({
+		where: { id: modelId },
+		select: { trainedById: true },
+	});
+	if (!model) throw new NotFoundError("Model");
+	if (userId !== undefined && model.trainedById !== userId && role !== "ADMIN") {
+		throw new ForbiddenError("You can only delete forecasts of models you created");
+	}
+
 	const where: Prisma.ForecastWhereInput = { modelId };
 	if (range?.start || range?.end) {
 		where.timestamp = {};

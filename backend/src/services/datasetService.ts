@@ -38,9 +38,21 @@ export function serializeDataset(dataset: DatasetRow): SerializedDataset {
 	return serialized;
 }
 
-/** List datasets with optional search + pagination. */
-export async function listDatasets(options: { search?: string; skip: number; take: number }) {
+/** List datasets with optional search + pagination.
+ *
+ * Ownership (round-106): when `ownerId` is given, only that user's datasets
+ * are listed. Previously the list exposed EVERY user's datasets (owner name
+ * + email included) while GET /:id was owner-scoped — an inconsistent access
+ * model leaking private-workspace metadata.
+ */
+export async function listDatasets(options: {
+	search?: string;
+	skip: number;
+	take: number;
+	ownerId?: string;
+}) {
 	const where: Prisma.DatasetWhereInput = {};
+	if (options.ownerId) where.ownerId = options.ownerId;
 	if (options.search) {
 		where.OR = [
 			{ name: { contains: options.search, mode: "insensitive" } },

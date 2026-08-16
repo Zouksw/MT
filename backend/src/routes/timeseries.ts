@@ -144,18 +144,22 @@ router.get(
 router.get(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req: Request, res: Response) => {
+	asyncHandler(async (req: AuthRequest, res: Response) => {
 		const { id } = req.params;
 
 		const timeseries = await prisma.timeseries.findUnique({
 			where: { id },
 			include: {
-				dataset: { select: { id: true, name: true, slug: true } },
+				dataset: { select: { id: true, name: true, slug: true, ownerId: true } },
 				_count: { select: { dataPoints: true, anomalies: true } },
 			},
 		});
 
-		if (!timeseries) {
+		// Read scoping (round-106): same rule the mutations already enforce —
+		// owner-or-ADMIN, 404 for both missing and foreign series. Previously
+		// any authenticated user could read any series (and its counts) by id,
+		// bypassing the dataset gate one level up.
+		if (!timeseries || (timeseries.dataset.ownerId !== req.userId && req.user?.role !== "ADMIN")) {
 			throw new NotFoundError("Timeseries");
 		}
 
@@ -195,15 +199,19 @@ router.get(
 router.get(
 	"/:id/data",
 	authenticate,
-	asyncHandler(async (req: Request, res: Response) => {
+	asyncHandler(async (req: AuthRequest, res: Response) => {
 		const { id } = req.params;
 		const params = limitSchema.parse(req.query);
 
 		const timeseries = await prisma.timeseries.findUnique({
 			where: { id },
+			include: { dataset: { select: { ownerId: true } } },
 		});
 
-		if (!timeseries) {
+		// Read scoping (round-106): datapoints are the dataset's payload —
+		// a user who cannot open the dataset must not read its series'
+		// points by id either. Same 404-for-missing-and-foreign contract.
+		if (!timeseries || (timeseries.dataset.ownerId !== req.userId && req.user?.role !== "ADMIN")) {
 			throw new NotFoundError("Timeseries");
 		}
 

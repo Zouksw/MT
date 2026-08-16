@@ -453,10 +453,15 @@ router.delete(
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { start, end } = req.query;
-		const count = await deleteForecasts(req.params.modelId, {
-			start: start as string | undefined,
-			end: end as string | undefined,
-		});
+		const count = await deleteForecasts(
+			req.params.modelId,
+			{
+				start: start as string | undefined,
+				end: end as string | undefined,
+			},
+			req.userId,
+			req.user?.role,
+		);
 		return successWithMessage(res, { count }, `Deleted ${count} forecasts`);
 	}),
 );
