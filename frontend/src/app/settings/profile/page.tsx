@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
-import { authFetch, getAuthToken, setCachedUser } from "@/utils/auth";
+import { authFetch, setCachedUser } from "@/utils/auth";
 
 interface UserProfile {
 	id: string;
@@ -40,10 +40,10 @@ export default function ProfileSettingsPage() {
 	const fetchUserProfile = useCallback(async () => {
 		setLoading(true);
 		try {
-			const token = getAuthToken();
-			const response = await authFetch("/api/auth/me", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
+			// authFetch already attaches the memory token when present and the
+			// HttpOnly cookie otherwise — a forced `Bearer null` header here
+			// used to override the cookie path and 401 on every fresh load.
+			const response = await authFetch("/api/auth/me");
 			if (!response.ok) throw new Error("Failed to fetch profile");
 			const data = await response.json();
 			// Backend wraps in { success, data: { user } }.
@@ -72,10 +72,8 @@ export default function ProfileSettingsPage() {
 		}
 		setSaving(true);
 		try {
-			const token = getAuthToken();
 			const response = await authFetch("/api/auth/me", {
 				method: "PUT",
-				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
 				body: JSON.stringify({ name, avatarUrl: avatarUrl || undefined }),
 			});
 			if (!response.ok) throw new Error("Failed to update profile");
@@ -105,10 +103,8 @@ export default function ProfileSettingsPage() {
 
 		setChangingPassword(true);
 		try {
-			const token = getAuthToken();
 			const response = await authFetch("/api/auth/change-password", {
 				method: "POST",
-				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
 				body: JSON.stringify({ currentPassword, newPassword }),
 			});
 			if (!response.ok) {

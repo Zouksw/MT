@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib";
+import { NotFoundError } from "@/middleware/errorHandler";
 
 // Re-export rule creation (the only live rule-management entry point)
 export { createAlertRule, deleteAlertRule, listAlertRules, updateAlertRule } from "./alert-rules";
@@ -71,6 +72,35 @@ export async function listAlerts(
 	]);
 
 	return { alerts, total };
+}
+
+/**
+ * Get a single alert by id, owner-scoped. 404 covers both "missing" and
+ * "not owned" so existence isn't disclosed cross-user.
+ */
+export async function getAlertById(userId: string, alertId: string) {
+	const alert = await prisma.alert.findFirst({
+		where: { id: alertId, userId },
+		include: {
+			timeseries: {
+				select: {
+					id: true,
+					name: true,
+					dataset: {
+						select: {
+							name: true,
+						},
+					},
+				},
+			},
+		},
+	});
+
+	if (!alert) {
+		throw new NotFoundError("Alert");
+	}
+
+	return alert;
 }
 
 /**

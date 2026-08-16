@@ -4,6 +4,7 @@
  */
 
 import { type Response, Router } from "express";
+import { z } from "zod";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, UnauthorizedError } from "@/middleware/errorHandler";
@@ -13,8 +14,10 @@ import {
 	apiKeysSchemas,
 	createApiKey,
 	deleteApiKey,
+	getApiKeyById,
 	listApiKeys,
 	revokeApiKey,
+	updateApiKey,
 	updateApiKeyExpiration,
 } from "@/services/apiKeys";
 
@@ -144,6 +147,57 @@ router.get(
 			apiKeys,
 			total: apiKeys.length,
 		});
+	}),
+);
+
+/**
+ * GET /api/api-keys/:id - API key detail
+ *
+ * The /apikeys/show/[id] and /apikeys/edit/[id] pages both load through
+ * here; until this route existed both pages 404'd on every key
+ * (round-107 e2e page audit). Returns safe fields only — the raw key is
+ * shown exactly once at creation and never again.
+ */
+router.get(
+	"/:id",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
+
+		const apiKey = await getApiKeyById(req.userId, req.params.id);
+
+		return success(res, apiKey);
+	}),
+);
+
+/**
+ * PATCH /api/api-keys/:id - Rename / enable / disable
+ *
+ * The /apikeys/edit page saves here (name + isActive); until this route
+ * existed the page's save 404'd (round-107 e2e page audit).
+ */
+router.patch(
+	"/:id",
+	authenticate,
+	validate(
+		z.object({
+			name: z.string().min(1).max(255).optional(),
+			isActive: z.boolean().optional(),
+		}),
+	),
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
+
+		const updated = await updateApiKey(req.userId, req.params.id, {
+			name: req.body?.name,
+			isActive: req.body?.isActive,
+		});
+
+		return success(res, updated);
 	}),
 );
 

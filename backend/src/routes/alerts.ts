@@ -14,6 +14,7 @@ import {
 	createAlertRule,
 	deleteAlert,
 	deleteAlertRule,
+	getAlertById,
 	getAlertStats,
 	listAlertRules,
 	listAlerts,
@@ -372,6 +373,29 @@ router.delete(
 		const result = await deleteAlert(req.userId, id);
 
 		return success(res, result);
+	}),
+);
+
+/**
+ * GET /api/alerts/:id - Alert detail
+ *
+ * Registered last so it cannot swallow the literal routes above (/stats,
+ * /rules). The /alerts/show/[id] page has always fetched here; until this
+ * route existed the page 404'd for every alert id (round-107 e2e audit).
+ */
+router.get(
+	"/:id",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
+
+		const alert = await getAlertById(req.userId, req.params.id);
+
+		// Bare object (not { alert }): the page's useOne unwrap reads data.data
+		// and expects the alert fields directly.
+		return success(res, alert);
 	}),
 );
 

@@ -7,6 +7,7 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib";
+import { NotFoundError } from "@/middleware/errorHandler";
 
 /**
  * Generate a secure API key
@@ -201,6 +202,32 @@ export async function listApiKeys(userId: string) {
 }
 
 /**
+ * Get one API key by id, owner-scoped. Returns the same safe field set as
+ * listApiKeys — the raw key is NEVER retrievable after creation (by design).
+ */
+export async function getApiKeyById(userId: string, apiKeyId: string) {
+	const apiKey = await prisma.apiKey.findFirst({
+		where: { id: apiKeyId, userId },
+		select: {
+			id: true,
+			name: true,
+			lastCharacters: true,
+			isActive: true,
+			usageCount: true,
+			lastUsedAt: true,
+			expiresAt: true,
+			createdAt: true,
+		},
+	});
+
+	if (!apiKey) {
+		throw new NotFoundError("API key");
+	}
+
+	return apiKey;
+}
+
+/**
  * Revoke an API key
  */
 export async function revokeApiKey(userId: string, apiKeyId: string) {
@@ -308,6 +335,46 @@ export async function updateApiKeyExpiration(userId: string, apiKeyId: string, e
 		message: "API key expiration updated",
 		expiresAt,
 	};
+}
+
+/**
+ * Update editable API key fields (name, isActive). The /apikeys/edit page
+ * PATCHes here; until this existed the page's save 404'd (round-107 audit).
+ * Owner-scoped — same 404 for missing and not-owned.
+ */
+export async function updateApiKey(
+	userId: string,
+	apiKeyId: string,
+	patch: { name?: string; isActive?: boolean },
+) {
+	const apiKey = await prisma.apiKey.findFirst({
+		where: { id: apiKeyId, userId },
+		select: { id: true },
+	});
+
+	if (!apiKey) {
+		throw new NotFoundError("API key");
+	}
+
+	const updated = await prisma.apiKey.update({
+		where: { id: apiKeyId },
+		data: {
+			...(patch.name !== undefined ? { name: patch.name } : {}),
+			...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
+		},
+		select: {
+			id: true,
+			name: true,
+			lastCharacters: true,
+			isActive: true,
+			usageCount: true,
+			lastUsedAt: true,
+			expiresAt: true,
+			createdAt: true,
+		},
+	});
+
+	return updated;
 }
 
 /**

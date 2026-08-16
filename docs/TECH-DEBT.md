@@ -281,3 +281,17 @@ round-106 四路并行审查（路由+中间件 / 服务层 / 前端 / 推理+�
 - `authRateLimiter`（10/15min/IP）被 login+refresh+change-password 共用——NAT 环境误锁。
 - inference: `@app.on_event` 已弃用（应 lifespan）；负价格未拒（边界设计决策）；批量 gc.collect() 每项一次（可提升为每批一次）。
 - 前端剩余 biome 警告 10 条（noExplicitAny 等 judgment-call 规则，均存量）。
+
+### round-107 前后端打通审计遗留项（2026-08-16，已核实）
+
+round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-audit.mjs`），发现并修复 6 处前后端断裂（4 个缺失端点 + 2 个前端调用缺陷，详见 CHANGELOG）。遗留：
+
+**功能从未实现、页面已诚实降级（要做需产品决策）：**
+- API key **逐次使用日志**：`/apikeys/show` 页曾调 `GET /api/api-keys/:id/usage`（端点从未存在）——现页面诚实显示空态；后端仅在 key 行上有 `usageCount/lastUsedAt` 计数器。要做需新增 ApiUsageLog 表 + validateApiKey 写入。
+- API key **regenerate/rotate**：原按钮调 `POST /:id/regenerate`（不存在）已移除。要做需实现 rotate 端点（旧 key 撤销 + 新 key 一次性返回）。
+- **dataset 编辑/导出 UI**：`PATCH /api/datasets/:id` 后端存在但无编辑页；导出端点+页面皆无。原 show 页两个死按钮已移除。
+- **timeseries/show/[id] 页面不存在**：创建成功后现跳转 `/timeseries/edit/:id`（列表→编辑可达）。
+
+**小项：**
+- `/alerts/show` 页 Name 字段显示 "Unnamed Alert"（Alert 模型无 name；metadata.title 可用未映射）。
+- **前端零 WebSocket 消费**：后端 Socket.IO 服务（app.ts io + join-timeseries 房间）无任何前端调用（`socket.io-client` 零引用）——实时推送能力存在但从未接通。`.env.production` 的 `NEXT_PUBLIC_WS_URL=wss://api.your-domain.com` 亦为占位符（NEXT_PUBLIC_API_URL 同款教训：占位符会进产物）。

@@ -17,7 +17,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tag } from "@/components/ui/Tag";
-import { authFetch, getAuthToken, getCachedUser } from "@/utils/auth";
+import { authFetch, getCachedUser } from "@/utils/auth";
 
 interface UserProfile {
 	id: string;
@@ -36,10 +36,10 @@ export default function SettingsPage() {
 	const fetchUserData = useCallback(async () => {
 		setLoading(true);
 		try {
-			const token = getAuthToken();
-			const response = await authFetch("/api/auth/me", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
+			// authFetch already attaches the memory token when present and the
+			// HttpOnly cookie otherwise — a forced `Bearer null` header here
+			// used to override the cookie path and 401 on every fresh load.
+			const response = await authFetch("/api/auth/me");
 			if (!response.ok) throw new Error("Failed to fetch user data");
 			const data = await response.json();
 			// Backend wraps in { success, data: { user } }.

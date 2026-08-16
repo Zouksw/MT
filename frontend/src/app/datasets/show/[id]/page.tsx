@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, Download, Pencil, Plus, Trash2 } from "lucide-react";
+import { Database, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -88,7 +88,13 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 				throw new Error("Failed to fetch dataset");
 			}
 			const data = await response.json();
-			setDataset(data.data || data);
+			const payload = data.data || data;
+			setDataset(payload);
+			// GET /api/datasets/:id already embeds the owned timeseries rows
+			// (datasetService.getDataset includes them with datapoint counts) —
+			// the old separate /:id/timeseries fetch hit a route that never
+			// existed and silently left this table empty forever.
+			setTimeseries(payload.timeseries ?? []);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Unknown error");
 		} finally {
@@ -96,25 +102,9 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 		}
 	}, [id]);
 
-	const fetchTimeseries = useCallback(async () => {
-		if (!id) return;
-
-		try {
-			const response = await authFetch(`/api/datasets/${id}/timeseries`);
-			if (response.ok) {
-				const data = await response.json();
-				setTimeseries(data.data || data.items || []);
-			}
-		} catch (err) {
-			// eslint-disable-next-line no-console
-			console.error("Failed to fetch timeseries:", err);
-		}
-	}, [id]);
-
 	useEffect(() => {
 		fetchDataset();
-		fetchTimeseries();
-	}, [fetchDataset, fetchTimeseries]);
+	}, [fetchDataset]);
 
 	const handleDelete = async () => {
 		try {
@@ -165,10 +155,12 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 			),
 		},
 		{
-			key: "path",
-			title: "Path",
+			key: "slug",
+			title: "Slug",
 			render: (_v: unknown, record: TimeSeries) => (
-				<span className="text-muted-foreground text-sm">{record.path}</span>
+				<span className="text-muted-foreground text-sm">
+					{String((record as unknown as Record<string, unknown>).slug || "-")}
+				</span>
 			),
 		},
 		{
@@ -187,7 +179,7 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 				<span className="data-text text-[13px] text-foreground">
 					{Number(
 						((record as unknown as Record<string, unknown>)._count as Record<string, unknown>)
-							?.datapoints || 0,
+							?.dataPoints || 0,
 					)}
 				</span>
 			),
@@ -234,22 +226,9 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 							)}
 						</div>
 						<div className="flex items-center gap-2">
-							<Button
-								variant="secondary"
-								size="sm"
-								icon={<Pencil className="size-3.5" />}
-								onClick={() => router.push(`/datasets/edit/${dataset.id}`)}
-							>
-								Edit
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								icon={<Download className="size-3.5" />}
-								onClick={() => router.push(`/datasets/export/${dataset.id}`)}
-							>
-								Export
-							</Button>
+							{/* No Edit/Export actions: neither page nor backend endpoint
+							 * exists (PATCH /:id is backend-only; export has neither).
+							 * Recorded in TECH-DEBT — do not link routes that 404. */}
 							<Button
 								variant="danger"
 								size="sm"

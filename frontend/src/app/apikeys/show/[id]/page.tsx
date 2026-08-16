@@ -10,7 +10,7 @@
 
 "use client";
 
-import { Copy, Eye, Home, Key, Pencil, RefreshCw, Shield, Trash2 } from "lucide-react";
+import { Eye, Home, Key, Pencil, Shield, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
@@ -129,7 +129,9 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 	const isMobile = useIsMobile();
 
 	const [apiKey, setApiKey] = useState<ApiKeyWithDetails | null>(null);
-	const [usageLogs, setUsageLogs] = useState<ApiUsageLog[]>([]);
+	// Backend records no per-request usage logs (only usageCount/lastUsedAt
+	// counters on the key row), so this stays an honest constant empty list.
+	const usageLogs: ApiUsageLog[] = [];
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmModal, setConfirmModal] = useState<{
@@ -149,12 +151,16 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 
 		try {
 			setLoading(true);
-			const response = await authFetch(`/api/apikeys/${id}`);
+			const response = await authFetch(`/api/api-keys/${id}`);
 			if (!response.ok) throw new Error("Failed to fetch API key");
 			const data = await response.json();
+			const key = data.data || data;
 			setApiKey({
-				...(data.data || data),
-				keyPreview: `${(data.data || data).key?.substring(0, 8)}${(data.data || data).key?.slice(-4)}`,
+				...key,
+				// The raw key is shown exactly once at creation and is never
+				// retrievable afterwards (backend returns lastCharacters only) —
+				// preview is built from those, not from a nonexistent `key` field.
+				keyPreview: key.lastCharacters ? `iotd_••••••••••••••••${key.lastCharacters}` : undefined,
 			});
 		} catch {
 			setError("Unknown error");
@@ -163,62 +169,13 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 		}
 	}, [id]);
 
-	const fetchUsageLogs = useCallback(async () => {
-		if (!id) return;
-
-		try {
-			const response = await authFetch(`/api/apikeys/${id}/usage`);
-			if (response.ok) {
-				const data = await response.json();
-				setUsageLogs(data.data || data.items || []);
-			}
-		} catch {
-			// eslint-disable-next-line no-console
-			console.error("Failed to fetch usage logs:");
-		}
-	}, [id]);
-
 	useEffect(() => {
 		fetchApiKey();
-		fetchUsageLogs();
-	}, [fetchApiKey, fetchUsageLogs]);
+	}, [fetchApiKey]);
 
-	const handleCopyKey = () => {
-		if (apiKey?.key) {
-			navigator.clipboard.writeText(apiKey.key);
-			toast.showSuccess("API key copied to clipboard");
-		}
-	};
-
-	const handleRegenerate = () => {
-		setConfirmModal({
-			open: true,
-			title: "Regenerate API Key",
-			message:
-				"Regenerating this API key will invalidate the current key immediately. Any existing integrations using this key will stop working until they are updated with the new key.",
-			confirmLabel: "Regenerate",
-			onConfirm: async () => {
-				try {
-					const response = await authFetch(`/api/apikeys/${id}/regenerate`, { method: "POST" });
-					if (!response.ok) throw new Error("Failed to regenerate API key");
-					const data = await response.json();
-					const newKey = data.data || data;
-					setApiKey({
-						// biome-ignore lint/style/noNonNullAssertion: value guaranteed by middleware
-						...apiKey!,
-						...(typeof newKey === "object" ? newKey : {}),
-						keyPreview: newKey.key
-							? `${newKey.key.substring(0, 8)}${newKey.key.slice(-4)}`
-							: apiKey?.keyPreview,
-					});
-					toast.showSuccess("API key regenerated successfully. Make sure to copy the new key.");
-				} catch {
-					toast.showError("Failed to regenerate API key");
-				}
-				setConfirmModal((prev) => ({ ...prev, open: false }));
-			},
-		});
-	};
+	// Regenerate/Copy were removed: the backend never exposes the raw key
+	// after creation (and has no rotate endpoint), so both actions could only
+	// ever fail. Recorded in TECH-DEBT alongside the usage-log endpoint.
 
 	const handleRevoke = () => {
 		setConfirmModal({
@@ -229,7 +186,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 			confirmLabel: "Revoke",
 			onConfirm: async () => {
 				try {
-					const response = await authFetch(`/api/apikeys/${id}`, { method: "DELETE" });
+					const response = await authFetch(`/api/api-keys/${id}`, { method: "DELETE" });
 					if (!response.ok) throw new Error("Failed to revoke API key");
 					toast.showSuccess("API key revoked");
 					router.push("/apikeys");
@@ -328,24 +285,6 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
-					<Button
-						variant="ghost"
-						size="sm"
-						aria-label="Copy API key"
-						icon={<Copy className="size-3.5" />}
-						onClick={handleCopyKey}
-					>
-						{!isMobile && "Copy Key"}
-					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						aria-label="Regenerate API key"
-						icon={<RefreshCw className="size-3.5" />}
-						onClick={handleRegenerate}
-					>
-						{!isMobile && "Regenerate"}
-					</Button>
 					<a href={`/apikeys/edit/${apiKey.id}`}>
 						<Button
 							variant="ghost"
@@ -398,14 +337,6 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 									<code className="text-xs px-1.5 py-0.5 bg-muted rounded font-mono text-foreground">
 										{apiKey.keyPreview}
 									</code>
-									<Button
-										variant="ghost"
-										size="sm"
-										icon={<Copy className="size-3.5" />}
-										onClick={handleCopyKey}
-									>
-										Copy
-									</Button>
 								</div>
 							</div>
 
@@ -544,7 +475,7 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					<CardHeader>
 						<div className="flex items-center justify-between w-full">
 							<CardTitle>Recent Usage</CardTitle>
-							<Button variant="ghost" size="sm" onClick={fetchUsageLogs}>
+							<Button variant="ghost" size="sm" onClick={fetchApiKey}>
 								Refresh
 							</Button>
 						</div>
@@ -574,23 +505,11 @@ export default function ApiKeyDetailPage({ params }: { params: Promise<ApiKeyDet
 					</CardHeader>
 					<CardBody>
 						<div className="flex flex-wrap gap-3">
-							<Button variant="ghost" icon={<Copy className="size-3.5" />} onClick={handleCopyKey}>
-								Copy API Key
-							</Button>
-							<Button
-								variant="ghost"
-								icon={<RefreshCw className="size-3.5" />}
-								onClick={handleRegenerate}
-							>
-								Regenerate Key
-							</Button>
-							<Button
-								variant="ghost"
-								icon={<Eye className="size-3.5" />}
-								onClick={() => router.push("/docs/api")}
-							>
-								View API Docs
-							</Button>
+							<a href="/api/docs">
+								<Button variant="ghost" icon={<Eye className="size-3.5" />}>
+									View API Docs
+								</Button>
+							</a>
 						</div>
 					</CardBody>
 				</Card>

@@ -42,6 +42,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-16 — round-107b 前后端打通审计：44 页全扫描，6 处断裂修复（API 错误清零）
+
+以真实浏览器逐页访问全部 44 条路由（新增 `scripts/e2e-page-audit.mjs`，登录态 + 逐页收集 API ≥400/网络失败），并经代理实测全部写路径（登录/登出/apikey/dataset/dataset-import/alert-rule/news 创建全通）。
+
+**发现并修复的断裂（页面↔端点从未对接）：**
+- `/timeseries/create` → `POST /api/timeseries` 端点不存在（提交必 404）：后端补建（owner 作用域 + slug 去重 + schema 校验）；成功后跳转从不存在的 show 页改为 edit 页。
+- `/apikeys/show/[id]` → 资源名写错（`apikeys` vs `api-keys`）×4 处，且 `GET /:id`、`/:id/usage`、`/:id/regenerate` 端点从未存在：后端补 `GET /:id`（安全字段集，原始 key 永不回传）；keyPreview 改由 lastCharacters 构造；usage/regenerate/copy 等永败按钮移除（诚实降级，TECH-DEBT 记录未实现功能）。
+- `/apikeys/edit/[id]` → 保存打在 `PATCH /api/api-keys/:id`（端点不存在）：后端补 PATCH（name/isActive）。
+- `/alerts/show/[id]` → `GET /api/alerts/:id` 端点不存在（详情页必 404）：后端补建（owner 作用域，注册在 /stats、/rules 字面路由之后防吞并），返回裸对象匹配 useOne 解包。
+- `/settings` + `/settings/profile` → 强制 `Authorization: Bearer null` 头（内存 token 刷新即失）绕过 cookie 回退恒 401、靠 localStorage 缓存兜底：移除强制头（authFetch 自带 token/cookie 双路）。
+- `/datasets/show/[id]` → 调不存在的 `/:id/timeseries` 子路由（时序表恒空）+ `/datasets/edit|export` 死按钮：改用 GET /:id 已内嵌的 timeseries 数据；修复 path→slug、datapoints 计数字段名；移除死按钮。
+
+**验证**：44 页 API 错误清零（唯一残留 404 为拿 rule id 探测 alerts 端点的正确行为；真 alert id 实测零错误且字段渲染正确）；新增 12 项集成测试（含双用户越权断言）；backend 897→909、frontend 297 不变。测试数据已清理。遗留（usage 日志/rotate 端点/编辑导出 UI/前端零 WebSocket 消费）记录于 TECH-DEBT。
+
 ### 2026-08-16 — round-107 前端视觉精装 + 同源 API 架构修复（7 commits）
 
 以 GitHub 顶级设计（shadcn/ui dashboard、Tremor、Vercel Geist、TradingView、Linear）为参照的视觉升级战役；开工实测发现浏览器端整条数据链路实际断裂，先修架构再精装。

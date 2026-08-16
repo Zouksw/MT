@@ -1,10 +1,10 @@
 import type { Timeseries } from "@prisma/client";
-import { type Request, type Response, Router } from "express";
+import { type Response, Router } from "express";
 import { z } from "zod";
 import { prisma } from "@/lib";
 import { paginated, success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
-import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
+import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { getPagination, limitSchema, paginationSchema } from "@/schemas/common";
 import type { QueryConditions } from "@/types";
 
@@ -16,6 +16,73 @@ const dataPointCreateSchema = z.object({
 	timestamp: z.coerce.date().optional(),
 	value: z.union([z.number().finite(), z.string().min(1), z.boolean()]),
 });
+
+// POST / body contract — mirrors the /timeseries/create form field for field.
+const timeseriesCreateSchema = z.object({
+	datasetId: z.string().uuid(),
+	name: z.string().min(1).max(255),
+	slug: z
+		.string()
+		.min(1)
+		.max(255)
+		.regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
+	unit: z.string().max(50).optional(),
+	description: z.string().max(2000).optional(),
+	colorHex: z
+		.string()
+		.regex(/^#[0-9a-fA-F]{6}$/, "Hex color like #F59E0B")
+		.optional(),
+	timezone: z.string().max(64).default("UTC"),
+	isAnomalyDetectionEnabled: z.boolean().optional(),
+});
+
+/**
+ * POST /api/timeseries - Create a timeseries under an owned dataset.
+ *
+ * The /timeseries/create page has always submitted here; until this route
+ * existed the page 404'd on every submit (found in the round-107 e2e page
+ * audit). Ownership follows getOwnedTimeseries convention: 404 for missing
+ * AND not-owned, ADMIN bypasses.
+ */
+router.post(
+	"/",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		const input = timeseriesCreateSchema.parse(req.body ?? {});
+
+		const dataset = await prisma.dataset.findFirst({
+			where: {
+				id: input.datasetId,
+				...(req.user?.role === "ADMIN" ? {} : { ownerId: req.userId }),
+			},
+			select: { id: true },
+		});
+		if (!dataset) throw new NotFoundError("Dataset");
+
+		const duplicate = await prisma.timeseries.findFirst({
+			where: { datasetId: input.datasetId, slug: input.slug },
+			select: { id: true },
+		});
+		if (duplicate) {
+			throw new BadRequestError("Slug already exists in this dataset");
+		}
+
+		const created = await prisma.timeseries.create({
+			data: {
+				datasetId: input.datasetId,
+				name: input.name,
+				slug: input.slug,
+				unit: input.unit,
+				description: input.description,
+				colorHex: input.colorHex,
+				timezone: input.timezone,
+				isAnomalyDetectionEnabled: input.isAnomalyDetectionEnabled ?? false,
+			},
+		});
+
+		return success(res, created);
+	}),
+);
 
 // Mutating endpoints resolve ownership through the parent dataset.
 // Same convention as datasetService.getDataset: 404 for both "missing" and

@@ -69,7 +69,9 @@ export default function TimeseriesCreate() {
 		try {
 			const result = await createRecord<typeof form & { id: string }>("timeseries", form);
 			toast.showSuccess("Time series created");
-			router.push(`/timeseries/show/${result.id}`);
+			// No /timeseries/show/[id] page exists — return to the list, where
+			// the new row appears and edit is reachable.
+			router.push(`/timeseries/edit/${result.id}`);
 		} catch (err) {
 			toast.showError(err instanceof Error ? err.message : "Failed to create time series");
 		} finally {
