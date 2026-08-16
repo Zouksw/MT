@@ -42,6 +42,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-16 — round-107 前端视觉精装 + 同源 API 架构修复（7 commits）
+
+以 GitHub 顶级设计（shadcn/ui dashboard、Tremor、Vercel Geist、TradingView、Linear）为参照的视觉升级战役；开工实测发现浏览器端整条数据链路实际断裂，先修架构再精装。
+
+**批 0（架构，前端浏览器会话全线断裂的三层叠加缺陷）**
+- `API_BASE` 构建期被 `.env.local` 的 `http://localhost:8000` 内联进产物 → 跨源预检被生产 CORS 守卫 500；默认改同源 `""`（走 Next rewrites/nginx 代理），`NEXT_PUBLIC_API_URL` 仅用于真正的分域部署。
+- `.env.production` 占位符 `https://api.your-domain.com`（已停放域名）被烙进 routes-manifest rewrites——经代理的每个 `/api/*` 都拿到停放页 HTML；rewrites 改用服务端 `API_PROXY_TARGET`（默认内部后端）。
+- 后端 `authenticate` 中间件只认 Bearer 头——SPA 内存 token 刷新即失，cookie 会话形同虚设（round-104 设计未落地）；补 `auth_token` cookie 回退（与 /auth/verify 同优先级，SameSite=Strict 约束 CSRF 面）。
+- CORS 委托模式加同源豁免：浏览器 POST 必带 Origin，经自身入口代理的同源请求此前被跨源白名单误杀（登录/web-vitals POST 500）。
+- 验证：干净重构建后客户端 chunks 无旧值残留；浏览器 e2e /dashboard 零 API 错误；新增 Playwright 截图基建 `scripts/ui-screenshots.mjs`。
+
+**批 1-5（视觉，"Refined Industrial" 精装化——方向不变，执行拉满）**
+- 机加工卡片（Linear/Geist）：1px 顶部内高光 + 36px 垂直光泽 + 分层接触/环境阴影，token 层实现覆盖 shadcn Card + 旧 CSS 卡片 + Tailwind shadow 工具类。
+- 金色环境光：页面顶部 1100px 固定径向金晕（0.10 alpha）——安静的品牌签名；暗色中性色加 0.004 暖色偏置统一于金色调。
+- 终端数据排版（TradingView）：KPI/表格/趋势全部 tabular-nums；表头 mono 大写眉标；StatCard 图标芯片化（变体色 @10% 底）；`.eyebrow` 工具类。
+- 暗色玻璃图表：网格 #3f3f46→#262626、玻璃 tooltip + 金色标签、`goldGradientStops` 面积渐变——六个消费 chart-config 的 Recharts 组件自动继承；修复 ForecastTrendChart 在暗色页渲染浅色网格/白底 tooltip。
+- Hero 品牌时刻："Intelligence, Decoded" 暗色下金渐变（亮金→暗金；浅色保持 AA 安全平色）；bento 卡悬停金环。
+- `--panel` 层：侧栏一阶高于页面背景，导航轨读作独立层；`.data-table` 行高 40→44px + tabular-nums。
+
+测试基线：backend 894→897（+3 cookie 鉴权）、frontend 296→297（+1 分域覆盖）、pytest 60 不变；biome 10 预存警告不变。视觉验证：Playwright before/after 六页截图 + 视觉模型评审（hero 6.5→7.5、StatCard 6.5→7.5、环境光 4.5/5）。
+
 ### 2026-08-16 — round-106 全项目代码审查：~75 项发现，11 commit 修复（Critical/High/Medium 全清）
 
 四路并行审查（20 路由+7 中间件 / 33 服务 / 前端 44 页 91 组件 7 hooks / 推理服务+测试质量）产出 ~75 项发现；每项亲验后按主题分 10 批修复，遗留低优先级项记录于 `TECH-DEBT.md`。

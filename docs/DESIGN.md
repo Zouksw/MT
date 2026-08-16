@@ -245,3 +245,10 @@ box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 | 2026-05 | font-semibold max | font-bold (700) too heavy for dark backgrounds |
 | 2026-05 | Shadow-as-border | Cleaner than colored borders on dark theme |
 | 2026-06 | Consolidated duplicate DESIGN.md | `/root/DESIGN.md` (Apr) had stale colors (#22c55e/#ef4444 success/error, #171717 surface) that disagreed with the tailwind.config.ts tokens (#16A34A/#DC2626, #111827). This file (docs/DESIGN.md) is the single source of truth — it matches the implementation. Root version archived. |
+| 2026-08-16 | Machined dark surfaces (round-107) | Linear/Geist-style: 1px inner top highlight + vertical sheen + layered contact/ambient shadows on every card (`.dark [data-slot="card"]` + legacy classes + Tailwind shadow tokens). Dark surfaces read as physical material. |
+| 2026-08-16 | Ambient gold wash (round-107) | Fixed 1100px radial gold gradient (0.10 alpha) at page top — the quiet signature anchoring "gold = AI intelligence" under the noise overlay. |
+| 2026-08-16 | tabular-nums + Geist Mono for data (round-107) | TradingView terminal signal: KPI values, table cells, trend figures all tabular; table headers are mono uppercase eyebrows (rule 5 executed). `.eyebrow` utility for section kickers. |
+| 2026-08-16 | --panel layer (round-107) | Sidebar sits one step above page bg (below card elevation) — the navigation rail reads as a distinct layer. |
+| 2026-08-16 | Dark-glass chart tokens (round-107) | Grid #3f3f46 → #262626 (quiet), tooltip rgba(23,23,23,0.96) + gold label, `goldGradientStops` for area fills. Charts render dark-first; ForecastTrendChart's light-theme grid/white tooltip fixed. |
+| 2026-08-16 | Hero gold gradient headline (round-107) | "Intelligence, Decoded" carries #E3C566→#D4B04A→#A8821C on dark — the single gradient element, reserved for the brand moment. Light mode keeps flat primary (bright golds fail AA on white). |
+| 2026-08-16 | Icon chips in StatCard (round-107) | Icons in tinted rounded containers (variant color @10% alpha, shadcn-dashboard style). |
