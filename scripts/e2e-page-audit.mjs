@@ -20,10 +20,10 @@
  * Usage: node scripts/e2e-page-audit.mjs
  */
 import { createRequire } from "node:module";
-const require = createRequire(
-	"/root/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/package.json",
-);
-const { chromium } = require("playwright");
+// Resolve Playwright through the frontend's own @playwright/test install so
+// browser binaries (ms-playwright cache) are shared with `pnpm test:e2e`.
+const require = createRequire("/root/frontend/package.json");
+const { chromium } = require("@playwright/test");
 
 const BASE = "http://localhost:3000";
 
