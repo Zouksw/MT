@@ -86,6 +86,19 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 **测试基线**：后端 839→**853 pass**（+1 skip）：批 10a +8 调度器、10b +6 HTTP 客户端、10c 无新增（fao 契约测试改测共享客户端）。全部经 tsc + 全量回归 + build + pm2 restart + 生产实跑验证后独立提交。
 
+### round-105 批 11-14：审计 Medium 项 + 批 10 遗留清零（2026-08-16）
+
+**批 11 `85bfa2c` 相关性诚实性**：两条相关性路径在"无法计算"时伪造 0（signals 服务 <3 天重叠或零方差序列、analytics <5 天重叠）。改 `number | null`，前端矩阵 null 单元格渲染 "—"+提示。生产实测 20×20 矩阵 380/400 单元格原为伪造 0.0，现诚实 null。
+
+**批 12 `bb17333` predict/batch 并行化**：串行 for 循环 → `ThreadPoolExecutor(min(n,4))`，顺序/错误隔离契约逐字节不变；barrier 测试证明真并发。混合 4 模型批次 live 1.31s。pytest 57→58。
+
+**批 13 `e9509e2` 推理客户端错误类型化 + CSRF 诚实化**：predict() 抛普通 Error 被 errorHandler 吞成自身 500+通用消息；现类型化（上游 4xx 透传、5xx→502、网络→503）。CSRF 死端点（发 token 无验证点、前端零调用）按 §十.5 记入 TECH-DEBT，端点文档如实标注。
+
+**批 14 `29b1350` FRED CSV 合并 + cme 代理迁移**：cmeFutures/worldBank 两份近重复 FRED 抓取器合并为 `fredCsv.ts`；fetchYahooChart 双路径收敛为 `scraperFetch(viaProxy)`。**合并中挖出存量 bug**：`formatDateYMD` 的无连字符 YYYYMMDD 被 fredgraph.csv 静默忽略 → 返回全量历史（cme 一直如此；首个共享版部署写入 4961 行真实但非预期的月度历史——数据真实且归属正确，保留为历史回填，已在提交中记录）。修复为带连字符 ISO + URL 格式回归测试钉死。修复后 live：world_bank 0+20（回到窗口行为）、cme 0+12。
+
+**测试基线（round-105 收官）**：后端 839→**855 pass**（+1 skip），前端 296，pytest 58，合计 1209（今日起步 1174）。round-105 共 14 个提交：1 个部署断层修复 + 1 个 cookie-parser 真缺陷 + 4 个结构重构批 + 2 个诚实性修复 + 1 个性能批 + 1 个错误类型化批 + 4 个文档/测试。
+
+
 ## 二、定时任务（系统 crontab）
 
 `crontab -l` 共 5 条：
