@@ -138,6 +138,12 @@ const variantColors: Record<StatCardVariant, { text: string }> = {
 	error: { text: "#DC2626" },
 };
 
+// Icon chip background: the variant color at ~10% alpha, so icons sit in a
+// tinted container (shadcn-dashboard style) instead of floating raw glyphs.
+function chipBg(hex: string): string {
+	return `${hex}1A`;
+}
+
 export const StatCard = React.memo<StatCardProps>(
 	({
 		title,
@@ -179,21 +185,28 @@ export const StatCard = React.memo<StatCardProps>(
 				}
 				onClick={onClick}
 			>
-				<div className="flex items-center gap-2 mb-3">
-					{icon && <span style={{ color: colors.text }}>{icon}</span>}
-					<span className="text-xs font-medium text-muted-foreground">{title}</span>
+				<div className="flex items-center gap-2.5 mb-3">
+					{icon && (
+						<span
+							className="flex size-7 shrink-0 items-center justify-center rounded-md"
+							style={{ color: colors.text, backgroundColor: chipBg(colors.text) }}
+						>
+							{icon}
+						</span>
+					)}
+					<span className="text-xs font-medium tracking-wide text-muted-foreground">{title}</span>
 				</div>
 				<div className="flex items-end justify-between gap-2">
 					<span
-						className="text-[28px] font-semibold tracking-tight leading-none"
+						className="font-mono text-[26px] font-semibold tracking-tight leading-none tabular-nums"
 						style={{ color: colors.text }}
 					>
 						{displayValue}
-						{suffix && <span className="text-base font-medium ml-1">{suffix}</span>}
+						{suffix && <span className="text-sm font-medium ml-1">{suffix}</span>}
 					</span>
 					{trend && (
 						<span
-							className="text-xs font-medium"
+							className="text-xs font-medium tabular-nums"
 							style={{ color: trend.isPositive ? "#16A34A" : "#DC2626" }}
 						>
 							{trend.isPositive ? "+" : ""}

@@ -49,7 +49,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
 			<div className="flex justify-between items-start gap-4">
 				<div className="flex-1">
-					<h1 className="text-2xl font-semibold text-foreground tracking-tight m-0 mb-2">
+					<h1 className="text-2xl font-semibold text-foreground tracking-tighter m-0 mb-2">
 						{title}
 					</h1>
 					{description && <p className="text-sm text-muted-foreground m-0">{description}</p>}

@@ -104,7 +104,7 @@ export function Table<T>({
 							<th
 								key={col.key}
 								scope="col"
-								className={`px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
+								className={`px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/90 ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
 								style={{ width: col.width }}
 							>
 								{col.title}
@@ -122,7 +122,7 @@ export function Table<T>({
 								className={`border-b border-border last:border-0 transition-colors ${
 									hasClick
 										? "hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary cursor-pointer"
-										: ""
+										: "hover:bg-muted/40"
 								} ${rowProps?.className || ""}`.trim()}
 								onClick={rowProps?.onClick}
 								onDoubleClick={rowProps?.onDoubleClick}
@@ -144,7 +144,7 @@ export function Table<T>({
 									return (
 										<td
 											key={col.key}
-											className={`px-4 py-3 text-sm whitespace-nowrap ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
+											className={`px-4 py-3 text-sm whitespace-nowrap tabular-nums ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
 										>
 											{content as React.ReactNode}
 										</td>
