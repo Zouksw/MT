@@ -14,6 +14,7 @@
 
 import { logger } from "@/lib";
 import { ensureCommodity, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const BDI_SLUG = "baltic_dry_index";
@@ -29,9 +30,9 @@ async function fetchBalticDry(): Promise<ScraperResult> {
 	}
 
 	try {
-		const res = await fetch(
+		const res = await scraperFetch(
 			`https://api.stlouisfed.org/fred/series/observations?series_id=BALTIC_DRY&api_key=${fredKey}&observation_start=2025-01-01&sort_order=desc&file_type=json`,
-			{ signal: AbortSignal.timeout(10000) },
+			{ timeoutMs: 10000 },
 		);
 		if (res.ok) {
 			const data = (await res.json()) as { observations: Array<{ date: string; value: string }> };

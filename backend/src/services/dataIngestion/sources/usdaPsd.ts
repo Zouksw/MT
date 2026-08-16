@@ -8,6 +8,7 @@
 
 import { logger } from "@/lib";
 import { upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // PSD commodity codes mapped to our system
@@ -93,9 +94,9 @@ async function fetchPSDData(): Promise<ScraperResult> {
 	for (const [commodityCode, config] of Object.entries(PSD_COMMODITIES)) {
 		try {
 			const url = `https://apps.fas.usda.gov/psdonline/api/data/commodity/${commodityCode}?format=json`;
-			const res = await fetch(url, {
+			const res = await scraperFetch(url, {
 				headers: { Accept: "application/json" },
-				signal: AbortSignal.timeout(20000),
+				timeoutMs: 20000,
 			});
 
 			if (!res.ok) {

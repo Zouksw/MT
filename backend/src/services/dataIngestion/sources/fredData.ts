@@ -10,6 +10,7 @@
 
 import { logger } from "@/lib";
 import { upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 // FRED series IDs mapped to our system
@@ -118,9 +119,7 @@ async function fetchFREDData(): Promise<ScraperResult> {
 			// Fetch last 2 years of data
 			const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&observation_start=2024-01-01&sort_order=desc&file_type=json`;
 
-			const res = await fetch(url, {
-				signal: AbortSignal.timeout(15000),
-			});
+			const res = await scraperFetch(url, { timeoutMs: 15000 });
 
 			if (!res.ok) {
 				logger.warn(`[FRED] Series ${seriesId} returned ${res.status}`);

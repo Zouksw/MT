@@ -11,6 +11,7 @@
 
 import { logger } from "@/lib";
 import { ensureCommodity, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const DCE_PRODUCTS: Record<
@@ -115,9 +116,9 @@ async function fetchDCEFutures(): Promise<ScraperResult> {
 	for (const [symbol, config] of Object.entries(DCE_PRODUCTS)) {
 		try {
 			const url = `http://www.dce.com.cn/publicweb/quotesdata/jsp/settlement/${symbol}.json`;
-			const res = await fetch(url, {
+			const res = await scraperFetch(url, {
 				headers: { Accept: "application/json", "User-Agent": "MT/1.0" },
-				signal: AbortSignal.timeout(10000),
+				timeoutMs: 10000,
 			});
 
 			if (!res.ok) continue;
@@ -152,9 +153,9 @@ async function fetchDCEFutures(): Promise<ScraperResult> {
 	for (const [symbol, config] of Object.entries(CZCE_PRODUCTS)) {
 		try {
 			const url = `http://www.czce.com.cn/cnjysj/ccpm/${symbol}.json`;
-			const res = await fetch(url, {
+			const res = await scraperFetch(url, {
 				headers: { Accept: "application/json", "User-Agent": "MT/1.0" },
-				signal: AbortSignal.timeout(10000),
+				timeoutMs: 10000,
 			});
 
 			if (!res.ok) continue;

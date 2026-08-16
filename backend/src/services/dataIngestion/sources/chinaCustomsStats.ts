@@ -13,6 +13,7 @@
 
 import { logger } from "@/lib";
 import { monthRange, parseMonth, upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const HS_CODES = [
@@ -50,13 +51,13 @@ async function fetchChinaCustomsStats(): Promise<ScraperResult> {
 				unit: "KG",
 			});
 
-			const res = await fetch(`https://stats.customs.gov.cn/api/trade/query?${params}`, {
+			const res = await scraperFetch(`https://stats.customs.gov.cn/api/trade/query?${params}`, {
 				headers: {
 					Accept: "application/json",
 					"User-Agent": "MT/1.0",
 					Referer: "https://stats.customs.gov.cn/",
 				},
-				signal: AbortSignal.timeout(20000),
+				timeoutMs: 20000,
 			});
 
 			if (!res.ok) {

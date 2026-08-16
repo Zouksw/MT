@@ -9,6 +9,7 @@
 
 import { logger } from "@/lib";
 import { ensureCommodity, latestUsdRate, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const CEPEA_URL = "https://www.cepea.esalq.usp.br/br/indicador/boi-gordo.aspx";
@@ -18,12 +19,12 @@ async function fetchCepeaData(): Promise<ScraperResult> {
 	const updated = 0;
 
 	try {
-		const res = await fetch(CEPEA_URL, {
+		const res = await scraperFetch(CEPEA_URL, {
 			headers: {
 				Accept: "text/html",
 				"User-Agent": "Mozilla/5.0 (compatible; MT/1.0)",
 			},
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 
 		if (res.ok) {

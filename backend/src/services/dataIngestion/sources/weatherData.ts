@@ -8,6 +8,7 @@
 
 import { logger } from "@/lib";
 import { upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 interface WeatherStation {
@@ -43,7 +44,8 @@ async function fetchFromAPI(
 	station: WeatherStation,
 ): Promise<{ temp: number; humidity: number; rainfall: number } | null> {
 	const url = `https://api.openweathermap.org/data/2.5/weather?lat=${station.lat}&lon=${station.lon}&appid=${apiKey}&units=metric`;
-	const res = await fetch(url);
+	// Default 15s timeout added (was: bare fetch with no timeout at all).
+	const res = await scraperFetch(url);
 	if (!res.ok) return null;
 	const data = (await res.json()) as OpenWeatherMapResponse;
 	return {

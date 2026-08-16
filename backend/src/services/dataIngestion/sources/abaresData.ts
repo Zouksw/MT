@@ -10,6 +10,7 @@
 
 import { logger } from "@/lib";
 import { upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const INDICATORS = [
@@ -29,14 +30,14 @@ async function fetchABARESData(): Promise<ScraperResult> {
 	let updated = 0;
 
 	try {
-		const res = await fetch(
+		const res = await scraperFetch(
 			"https://www.agriculture.gov.au/abares/research-topics/agricultural-commodities",
 			{
 				headers: {
 					Accept: "text/html",
 					"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
 				},
-				signal: AbortSignal.timeout(20000),
+				timeoutMs: 20000,
 			},
 		);
 

@@ -9,6 +9,7 @@
 
 import { logger, prisma } from "@/lib";
 import { json } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const INAC_EXPORT_URL = "https://www.inac.gub.uy/estadisticas/exportaciones.html";
@@ -18,12 +19,12 @@ async function fetchINACData(): Promise<ScraperResult> {
 	let updated = 0;
 
 	try {
-		const res = await fetch(INAC_EXPORT_URL, {
+		const res = await scraperFetch(INAC_EXPORT_URL, {
 			headers: {
 				Accept: "text/html",
 				"User-Agent": "Mozilla/5.0 (compatible; MT/1.0)",
 			},
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 
 		if (res.ok) {

@@ -9,6 +9,7 @@
 
 import { logger } from "@/lib";
 import { upsertFactor } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 const SCFI_ROUTES: Record<string, string> = {
@@ -41,12 +42,12 @@ function extractValue(html: string, pattern: RegExp): number | null {
 
 async function fetchPage(path: string): Promise<string | null> {
 	try {
-		const res = await fetch(`https://www.sse.net.cn${path}`, {
+		const res = await scraperFetch(`https://www.sse.net.cn${path}`, {
 			headers: {
 				Accept: "text/html",
 				"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
 			},
-			signal: AbortSignal.timeout(15000),
+			timeoutMs: 15000,
 		});
 		return res.ok ? await res.text() : null;
 	} catch {

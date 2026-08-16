@@ -7,6 +7,7 @@
 
 import { logger, prisma } from "@/lib";
 import { upsertFactor, upsertPrice } from "../helpers";
+import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
 async function fetchExchangeRates(): Promise<ScraperResult> {
@@ -14,7 +15,9 @@ async function fetchExchangeRates(): Promise<ScraperResult> {
 	let updated = 0;
 
 	try {
-		const res = await fetch("https://open.er-api.com/v6/latest/USD");
+		// scraperFetch supplies the 15s default timeout bare fetch lacked —
+		// a hanging host used to stall this hourly cycle indefinitely.
+		const res = await scraperFetch("https://open.er-api.com/v6/latest/USD");
 		if (!res.ok) throw new Error(`ExchangeRate API returned ${res.status}`);
 		const data = (await res.json()) as { rates: Record<string, number> };
 
