@@ -5,6 +5,13 @@ import dynamic from "next/dynamic";
 import type React from "react";
 import { useState } from "react";
 
+import {
+	chartColors,
+	chartGridStyles,
+	chartTooltipStyles,
+	goldGradientStops,
+} from "@/lib/chart-config";
+
 // Dynamic imports for Recharts components
 const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.LineChart })), {
 	loading: () => (
@@ -117,28 +124,38 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
 							<LineChart data={displayData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
 								<defs>
 									<linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="5%" stopColor="#8B6914" stopOpacity={0.15} />
-										<stop offset="95%" stopColor="#8B6914" stopOpacity={0} />
+										{goldGradientStops.map((s) => (
+											<stop key={s.offset} {...s} />
+										))}
 									</linearGradient>
 								</defs>
-								<CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+								<CartesianGrid
+									strokeDasharray="3 3"
+									stroke={chartGridStyles.strokeDark}
+									vertical={false}
+								/>
 								<XAxis
 									dataKey="date"
-									tick={{ fontSize: 12, fill: "#6B7280" }}
-									axisLine={{ stroke: "#E5E7EB" }}
+									tick={{ fontSize: 11, fill: chartColors.gray400 }}
+									axisLine={{ stroke: chartGridStyles.strokeDark }}
 									tickLine={false}
 								/>
-								<YAxis tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+								<YAxis
+									tick={{ fontSize: 11, fill: chartColors.gray400 }}
+									axisLine={false}
+									tickLine={false}
+								/>
 								<Tooltip
 									contentStyle={{
-										backgroundColor: "rgba(255, 255, 255, 0.98)",
-										border: "1px solid #E5E7EB",
-										borderRadius: "8px",
-										boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-										padding: "10px 14px",
-										fontSize: 13,
+										backgroundColor: chartTooltipStyles.backgroundColor,
+										border: chartTooltipStyles.border,
+										borderRadius: chartTooltipStyles.borderRadius,
+										boxShadow: chartTooltipStyles.boxShadow,
+										padding: chartTooltipStyles.padding,
+										fontSize: chartTooltipStyles.fontSize,
+										color: chartTooltipStyles.color,
 									}}
-									labelStyle={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}
+									labelStyle={chartTooltipStyles.labelStyle}
 									formatter={(value: number) => [`${value}`, "Forecasts"]}
 								/>
 								<Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
@@ -146,14 +163,14 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
 									type="monotone"
 									dataKey="count"
 									name="Forecasts"
-									stroke="#8B6914"
+									stroke={chartColors.goldLight}
 									strokeWidth={2.5}
 									dot={false}
 									activeDot={{
 										r: 5,
 										strokeWidth: 2,
-										stroke: "#8B6914",
-										fill: "#FFFFFF",
+										stroke: chartColors.goldLight,
+										fill: "#0A0A0A",
 									}}
 									fill="url(#forecastGradient)"
 									isAnimationActive={true}

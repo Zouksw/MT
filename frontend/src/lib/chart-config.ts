@@ -60,7 +60,9 @@ export const chartGridStyles = {
 	stroke: chartColors.gray200,
 	strokeDasharray: "3 3",
 	strokeWidth: 1,
-	strokeDark: chartColors.gray700,
+	// Quiet dark grid — visible for alignment, never competing with data
+	strokeDark: "#262626",
+	strokeDarkOpacity: 0.9,
 };
 
 export const chartAxisStyles = {
@@ -85,16 +87,28 @@ export const chartAxisStyles = {
 	},
 };
 
-// Tooltip styles — dark-first per DESIGN.md
+// Tooltip styles — dark glass per DESIGN.md dark-first rule
 export const chartTooltipStyles = {
-	backgroundColor: "rgba(31, 31, 31, 0.98)",
-	border: "1px solid rgba(255, 255, 255, 0.08)",
-	borderRadius: 4,
-	padding: "12px",
-	boxShadow: "rgba(255, 255, 255, 0.08) 0px 0px 0px 1px, 0px 2px 8px rgba(0, 0, 0, 0.4)",
+	backgroundColor: "rgba(23, 23, 23, 0.96)",
+	border: "1px solid rgba(255, 255, 255, 0.10)",
+	borderRadius: 10,
+	padding: "10px 14px",
+	boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px -8px rgba(0, 0, 0, 0.6)",
 	fontSize: 12,
-	color: chartColors.gray400,
+	color: chartColors.gray300,
+	labelStyle: {
+		color: chartColors.goldBright,
+		fontWeight: 600,
+		marginBottom: 4,
+	},
 };
+
+// Gold area gradient — vertical fade for area/line fills (TradingView-style).
+// Map over these inside <defs><linearGradient x1="0" y1="0" x2="0" y2="1">.
+export const goldGradientStops = [
+	{ offset: "0%", stopColor: chartColors.goldLight, stopOpacity: 0.28 },
+	{ offset: "100%", stopColor: chartColors.goldLight, stopOpacity: 0.02 },
+];
 
 // Line chart specific
 export const lineChartStyles = {
