@@ -11,17 +11,19 @@ export const logger = winston.createLogger({
 	defaultMeta: { service: "mt" },
 	transports: [
 		new winston.transports.Console({
-			format: winston.format.combine(
-				winston.format.colorize(),
-				winston.format.simple(),
-			),
+			format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
 		}),
 		new winston.transports.File({
 			filename: "logs/error.log",
 			level: "error",
+			// Cap file growth — backend/logs once reached 215M with no rotation.
+			maxsize: 10_000_000,
+			maxFiles: 3,
 		}),
 		new winston.transports.File({
 			filename: "logs/combined.log",
+			maxsize: 10_000_000,
+			maxFiles: 3,
 		}),
 	],
 });
