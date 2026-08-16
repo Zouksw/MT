@@ -353,7 +353,9 @@ export default function BeefOverview() {
 																{p.cutCode.replace(/_/g, " ")}
 															</a>
 														</td>
-														<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
+														<td className="text-right font-mono font-medium text-foreground">
+															{formatPrice(p.price, false)}
+														</td>
 														<td>
 															<CutForecastCell forecast={cutForecasts?.[p.cutCode]} />
 														</td>

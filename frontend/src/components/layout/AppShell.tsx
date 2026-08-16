@@ -202,7 +202,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 	return (
 		<div className="flex min-h-screen bg-background">
 			{/* Desktop sidebar — fixed, hidden on <lg */}
-			<aside className="hidden lg:flex flex-col w-60 border-r border-border bg-background flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+			<aside className="hidden lg:flex flex-col w-60 border-r border-border bg-panel flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
 				<BrandMark />
 				<SidebarNav pathname={pathname} />
 			</aside>
@@ -218,7 +218,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 						onClick={() => setMobileOpen(false)}
 					/>
 					{/* Drawer panel */}
-					<aside className="relative w-72 max-w-[80vw] bg-background border-r border-border overflow-y-auto animate-in slide-in-from-left">
+					<aside className="relative w-72 max-w-[80vw] bg-panel border-r border-border overflow-y-auto animate-in slide-in-from-left">
 						<div className="flex items-center justify-between">
 							<BrandMark />
 							<button
