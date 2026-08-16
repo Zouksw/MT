@@ -20,6 +20,7 @@ import { authFetch } from "@/utils/auth";
 interface AlertRule {
 	id: string;
 	name: string;
+	timeseriesId: string;
 	type: "ANOMALY" | "FORECAST_READY" | "SYSTEM";
 	condition: AlertCondition;
 	severity: "INFO" | "WARNING" | "ERROR";
@@ -70,15 +71,15 @@ export default function AlertRules() {
 	const fetchRules = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await authFetch(`${API_BASE}/api/auth/me`);
+			// Rules live in the alertRule table behind GET /api/alerts/rules.
+			// (This previously read user.preferences.alertRules from /api/auth/me
+			// — a source the backend never writes, so the table stayed empty.)
+			const response = await authFetch(`${API_BASE}/api/alerts/rules`);
 
 			if (!response.ok) throw new Error("Failed to fetch alert rules");
 
-			const userData = await response.json();
-			const preferences = userData.user?.preferences || {};
-			const alertRules = preferences.alertRules || [];
-
-			setRules(alertRules);
+			const data = await response.json();
+			setRules(data.data?.rules ?? data.rules ?? []);
 		} catch {
 			toast.showError("Failed to load alert rules");
 		} finally {
@@ -414,6 +415,7 @@ function AlertRuleModal({
 	useEffect(() => {
 		if (visible && editingRule) {
 			setName(editingRule.name);
+			setTimeseriesId(editingRule.timeseriesId || "");
 			setType(editingRule.type);
 			setConditionType(editingRule.condition.type || "threshold");
 			setConditionOperator(editingRule.condition.operator || ">");

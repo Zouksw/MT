@@ -42,7 +42,10 @@ export default function SettingsPage() {
 			});
 			if (!response.ok) throw new Error("Failed to fetch user data");
 			const data = await response.json();
-			setUser(data.user);
+			// Backend wraps in { success, data: { user } }.
+			const profile = data.data?.user ?? data.user;
+			if (!profile) throw new Error("Malformed user response");
+			setUser(profile);
 		} catch {
 			const cachedUser = getCachedUser();
 			if (cachedUser) setUser(cachedUser);

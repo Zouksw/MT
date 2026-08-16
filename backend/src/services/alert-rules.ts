@@ -95,6 +95,66 @@ export async function createAlertRule(params: {
 }
 
 /**
+ * List the user's alert rules, newest first.
+ */
+export async function listAlertRules(userId: string): Promise<AlertRule[]> {
+	const rules = await prisma.alertRule.findMany({
+		where: { userId },
+		orderBy: { createdAt: "desc" },
+	});
+	return rules.map(mapRule);
+}
+
+/**
+ * Update an alert rule owned by `userId`. Returns null when the rule does
+ * not exist or belongs to another user (404 in both cases — never disclose
+ * other users' rule ids).
+ */
+export async function updateAlertRule(
+	userId: string,
+	ruleId: string,
+	patch: {
+		name?: string;
+		description?: string;
+		type?: AlertType;
+		condition?: AlertCondition;
+		severity?: AlertSeverity;
+		enabled?: boolean;
+		notificationChannels?: NotificationChannel[];
+		cooldownMinutes?: number;
+	},
+): Promise<AlertRule | null> {
+	const existing = await prisma.alertRule.findFirst({
+		where: { id: ruleId, userId },
+	});
+	if (!existing) return null;
+
+	const data: Prisma.AlertRuleUpdateInput = {};
+	if (patch.name !== undefined) data.name = patch.name;
+	if (patch.description !== undefined) data.description = patch.description;
+	if (patch.type !== undefined) data.type = patch.type;
+	if (patch.enabled !== undefined) data.enabled = patch.enabled;
+	if (patch.condition !== undefined) data.conditions = toJsonInput(patch.condition);
+	if (patch.severity !== undefined) data.severity = patch.severity;
+	if (patch.notificationChannels !== undefined) {
+		data.channels = toJsonInput(patch.notificationChannels);
+	}
+	if (patch.cooldownMinutes !== undefined) data.cooldownMinutes = patch.cooldownMinutes;
+
+	const updated = await prisma.alertRule.update({ where: { id: existing.id }, data });
+	return mapRule(updated);
+}
+
+/**
+ * Delete an alert rule owned by `userId`. Returns false when the rule does
+ * not exist or belongs to another user.
+ */
+export async function deleteAlertRule(userId: string, ruleId: string): Promise<boolean> {
+	const result = await prisma.alertRule.deleteMany({ where: { id: ruleId, userId } });
+	return result.count > 0;
+}
+
+/**
  * Evaluate all enabled alert rules against the latest data.
  *
  * This is the missing piece that made alert rules a dead-end feature: rules

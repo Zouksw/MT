@@ -82,7 +82,8 @@ export default function ApiKeyList() {
 			const response = await authFetch(`${API_BASE}/api/api-keys`);
 			if (!response.ok) throw new Error("Failed to fetch API keys");
 			const data = await response.json();
-			setApiKeys(data.apiKeys || []);
+			// Backend wraps in { success, data: { apiKeys, total } }.
+			setApiKeys(data.data?.apiKeys ?? data.apiKeys ?? []);
 		} catch {
 			toast.showError("Failed to load API keys");
 		} finally {
@@ -113,8 +114,10 @@ export default function ApiKeyList() {
 
 			if (!response.ok) throw new Error("Failed to create API key");
 
-			const data: CreateResponse = await response.json();
-			setCreatedKey(data);
+			// Envelope is { success, data: CreateResponse } — unwrap before
+			// storing, the modal reads createdKey.apiKey directly.
+			const envelope = await response.json();
+			setCreatedKey(envelope.data ?? envelope);
 			setCreateModalVisible(false);
 			setNewKeyName("");
 			setExpiryDays(null);

@@ -46,10 +46,13 @@ export default function ProfileSettingsPage() {
 			});
 			if (!response.ok) throw new Error("Failed to fetch profile");
 			const data = await response.json();
-			setUser(data.user);
-			setCachedUser(data.user);
-			setName(data.user.name || "");
-			setAvatarUrl(data.user.avatarUrl || "");
+			// Backend wraps in { success, data: { user } }.
+			const user = data.data?.user ?? data.user;
+			if (!user) throw new Error("Malformed profile response");
+			setUser(user);
+			setCachedUser(user);
+			setName(user.name || "");
+			setAvatarUrl(user.avatarUrl || "");
 		} catch {
 			toast.showError("Failed to load profile");
 		} finally {
@@ -77,8 +80,10 @@ export default function ProfileSettingsPage() {
 			});
 			if (!response.ok) throw new Error("Failed to update profile");
 			const data = await response.json();
-			setUser(data.user);
-			setCachedUser(data.user);
+			const user = data.data?.user ?? data.user;
+			if (!user) throw new Error("Malformed profile response");
+			setUser(user);
+			setCachedUser(user);
 			toast.showSuccess("Profile updated successfully");
 		} catch {
 			toast.showError("Failed to update profile");

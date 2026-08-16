@@ -6,17 +6,20 @@
 import { type Response, Router } from "express";
 import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
-import { asyncHandler, UnauthorizedError } from "@/middleware/errorHandler";
+import { asyncHandler, NotFoundError, UnauthorizedError } from "@/middleware/errorHandler";
 import { validate } from "@/middleware/security";
 import { limitSchema } from "@/schemas/common";
 import {
 	alertSchemas,
 	createAlertRule,
 	deleteAlert,
+	deleteAlertRule,
 	getAlertStats,
+	listAlertRules,
 	listAlerts,
 	markAlertAsRead,
 	markAllAlertsAsRead,
+	updateAlertRule,
 } from "@/services/alerts";
 
 const router = Router();
@@ -171,15 +174,8 @@ router.post(
 			throw new UnauthorizedError();
 		}
 
-		const {
-			timeseriesId,
-			name,
-			type,
-			condition,
-			severity,
-			notificationChannels,
-			cooldownMinutes,
-		} = req.body;
+		const { timeseriesId, name, type, condition, severity, notificationChannels, cooldownMinutes } =
+			req.body;
 
 		const rule = await createAlertRule({
 			userId: req.userId,
@@ -193,6 +189,74 @@ router.post(
 		});
 
 		return success(res, rule, 201);
+	}),
+);
+
+/**
+ * GET /api/alerts/rules
+ * List the authenticated user's alert rules
+ *
+ * The rules page previously "listed" rules by reading
+ * user.preferences.alertRules from /api/auth/me — a source nothing ever
+ * writes (rules live in the alertRule table), so the table was permanently
+ * empty even after a successful create.
+ */
+router.get(
+	"/rules",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
+
+		const rules = await listAlertRules(req.userId);
+
+		return success(res, { rules, total: rules.length });
+	}),
+);
+
+/**
+ * PATCH /api/alerts/rules/:id
+ * Update one of the user's own alert rules (partial; `enabled`-only bodies
+ * drive the UI toggle). Non-existent or foreign rule ids → 404.
+ */
+router.patch(
+	"/rules/:id",
+	authenticate,
+	validate(alertSchemas.updateRule),
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
+
+		const rule = await updateAlertRule(req.userId, req.params.id, req.body);
+		if (!rule) {
+			throw new NotFoundError("Alert rule not found");
+		}
+
+		return success(res, rule);
+	}),
+);
+
+/**
+ * DELETE /api/alerts/rules/:id
+ * Delete one of the user's own alert rules. Non-existent or foreign rule
+ * ids → 404 (deleteMany scoped to userId, so cross-user deletes are a no-op).
+ */
+router.delete(
+	"/rules/:id",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		if (!req.userId) {
+			throw new UnauthorizedError();
+		}
+
+		const deleted = await deleteAlertRule(req.userId, req.params.id);
+		if (!deleted) {
+			throw new NotFoundError("Alert rule not found");
+		}
+
+		return success(res, { id: req.params.id, deleted: true });
 	}),
 );
 

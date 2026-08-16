@@ -86,7 +86,8 @@ export default function AlertList() {
 			const response = await authFetch(`/api/alerts?${params}`);
 			if (!response.ok) throw new Error("Failed to fetch alerts");
 			const data = await response.json();
-			setAlerts(data.alerts || []);
+			// Backend wraps in { success, data: { alerts, total } }.
+			setAlerts(data.data?.alerts ?? data.alerts ?? []);
 		} catch {
 			toast.showError("Failed to load alerts");
 		} finally {

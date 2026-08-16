@@ -9,7 +9,7 @@ import { z } from "zod";
 import { prisma } from "@/lib";
 
 // Re-export rule creation (the only live rule-management entry point)
-export { createAlertRule } from "./alert-rules";
+export { createAlertRule, deleteAlertRule, listAlertRules, updateAlertRule } from "./alert-rules";
 // Re-export types
 export * from "./alert-types";
 
@@ -175,31 +175,45 @@ export async function getAlertStats(userId: string) {
 /**
  * Validation schemas
  */
+const conditionSchema = z.object({
+	type: z.enum(["threshold", "anomaly", "pattern", "forecast"]),
+	operator: z.enum([">", "<", "=", "!=", ">=", "<="]).optional(),
+	value: z.number().optional(),
+	anomalySeverity: z.array(z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])).optional(),
+	windowMinutes: z.number().positive().optional(),
+});
+
+const notificationChannelsSchema = z.array(
+	z.object({
+		type: z.enum(["email", "webhook", "slack"]),
+		config: z.object({
+			email: z.string().email().optional(),
+			webhookUrl: z.string().url().optional(),
+			slackWebhookUrl: z.string().url().optional(),
+		}),
+	}),
+);
+
 export const alertSchemas = {
 	createRule: z.object({
 		timeseriesId: z.string().uuid(),
 		name: z.string().min(1).max(255),
 		type: z.enum(["ANOMALY", "FORECAST_READY", "SYSTEM"]),
-		condition: z.object({
-			type: z.enum(["threshold", "anomaly", "pattern", "forecast"]),
-			operator: z.enum([">", "<", "=", "!=", ">=", "<="]).optional(),
-			value: z.number().optional(),
-			anomalySeverity: z
-				.array(z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]))
-				.optional(),
-			windowMinutes: z.number().positive().optional(),
-		}),
+		condition: conditionSchema,
 		severity: z.enum(["INFO", "WARNING", "ERROR"]),
-		notificationChannels: z.array(
-			z.object({
-				type: z.enum(["email", "webhook", "slack"]),
-				config: z.object({
-					email: z.string().email().optional(),
-					webhookUrl: z.string().url().optional(),
-					slackWebhookUrl: z.string().url().optional(),
-				}),
-			}),
-		),
+		notificationChannels: notificationChannelsSchema,
+		cooldownMinutes: z.number().int().min(0).optional(),
+	}),
+	// PATCH /rules/:id — partial update; `enabled`-only bodies drive the UI
+	// toggle. timeseriesId is intentionally not updatable (re-pointing a rule
+	// at a different series = create a new rule).
+	updateRule: z.object({
+		name: z.string().min(1).max(255).optional(),
+		type: z.enum(["ANOMALY", "FORECAST_READY", "SYSTEM"]).optional(),
+		condition: conditionSchema.optional(),
+		severity: z.enum(["INFO", "WARNING", "ERROR"]).optional(),
+		enabled: z.boolean().optional(),
+		notificationChannels: notificationChannelsSchema.optional(),
 		cooldownMinutes: z.number().int().min(0).optional(),
 	}),
 };
