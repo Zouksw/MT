@@ -146,7 +146,11 @@ export const Hero: React.FC = () => {
 							<h1 className="text-4xl sm:text-5xl lg:text-7xl tracking-tighter font-semibold text-gray-900 dark:text-white">
 								Global Beef Trade
 								<br />
-								<span className="text-primary">Intelligence, Decoded</span>
+								{/* Brand moment: gold gradient on dark only — light mode keeps the
+								 * flat AA-safe primary (bright golds fail contrast on white) */}
+								<span className="text-primary dark:bg-gradient-to-r dark:from-[#E3C566] dark:via-[#D4B04A] dark:to-[#A8821C] dark:bg-clip-text dark:text-transparent">
+									Intelligence, Decoded
+								</span>
 							</h1>
 						</MotionReveal>
 
@@ -181,21 +185,17 @@ export const Hero: React.FC = () => {
 						<MotionReveal delay={0.4}>
 							<div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-mono tabular-nums">
 								<div className="flex items-center gap-2">
-									<span className="text-primary font-semibold text-base">
-										{SITE_STATS.beefCuts}
-									</span>
+									<span className="text-primary font-semibold text-lg">{SITE_STATS.beefCuts}</span>
 									<span>Beef Cuts Tracked</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-primary font-semibold text-base">
-										{SITE_STATS.aiModels}
-									</span>
+									<span className="text-primary font-semibold text-lg">{SITE_STATS.aiModels}</span>
 									<span>AI Price Models</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-primary font-semibold text-base">5</span>
+									<span className="text-primary font-semibold text-lg">5</span>
 									<span>Export Markets</span>
 								</div>
 							</div>
@@ -269,7 +269,7 @@ export const Hero: React.FC = () => {
 					{features.map((feature, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 						<StaggerChild key={i} className={`${feature.span}`}>
-							<div className="group relative rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14]">
+							<div className="group relative rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-[#A8821C]/30 dark:hover:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.6)]">
 								<div className="relative z-10">
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 										{feature.title}
