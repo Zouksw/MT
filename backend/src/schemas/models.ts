@@ -23,6 +23,6 @@ export const trainModelSchema = z.object({
 });
 
 export const predictSchema = z.object({
-	horizon: z.coerce.number().min(1).max(10000).default(100),
+	horizon: z.coerce.number().min(1).max(100).default(100), // cap matches /api/inference (was 10000 — 10k Forecast rows per call, round-106)
 	confidenceLevel: z.coerce.number().min(0).max(1).default(0.95),
 });

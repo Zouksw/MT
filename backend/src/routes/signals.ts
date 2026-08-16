@@ -34,6 +34,16 @@ import { BASELINE_MODELS, generateForecast, getAllModels } from "@/services/trad
 
 const router = Router();
 
+/**
+ * Parse the `window` query param (days) for correlation endpoints. Garbage
+ * ("abc") previously produced NaN → Invalid Date → Prisma validation 500;
+ * huge values scanned full history. Fallback 30, clamp 1..730 (round-106).
+ */
+function parseWindowDays(window: unknown): number {
+	const parsed = parseInt(String(window ?? "30"), 10) || 30;
+	return Math.min(Math.max(parsed, 1), 730);
+}
+
 const signalQuerySchema = z.object({
 	horizon: z.coerce.number().min(1).max(100).default(10),
 	models: z.string().optional(), // comma-separated model IDs
@@ -156,7 +166,9 @@ router.get(
 		const { modelId } = req.params;
 		const commodityId = req.query.commodityId as string | undefined;
 		const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
-		const offset = parseInt(req.query.offset as string, 10) || 0;
+		// Clamp to a sane positive range: negative skip is rejected by Prisma
+		// with a 500; NaN falls back to 0 (round-106).
+		const offset = Math.max(parseInt(req.query.offset as string, 10) || 0, 0);
 
 		const where: Record<string, unknown> = {
 			modelId,
@@ -212,7 +224,7 @@ router.get(
 			throw new BadRequestError('Query params "a" and "b" (commodity slugs) are required');
 		}
 
-		const windowDays = parseInt(window || "30", 10);
+		const windowDays = parseWindowDays(window);
 		const result = await computeCorrelation(a, b, windowDays);
 
 		success(res, result);
@@ -234,7 +246,7 @@ router.get(
 			window?: string;
 		};
 
-		const windowDays = parseInt(window || "30", 10);
+		const windowDays = parseWindowDays(window);
 
 		let commodityIds: string[];
 		if (commodities) {

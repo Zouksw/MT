@@ -110,6 +110,12 @@ router.post(
 		if (!Array.isArray(logs) || logs.length === 0) {
 			return error(res, "Invalid logs format", 400, "VALIDATION_ERROR");
 		}
+		// Bound the batch (round-06): within the 10MB body limit a client
+		// could push tens of thousands of rows into one createMany — the
+		// inference batch endpoint rejects >50 for the same reason.
+		if (logs.length > 100) {
+			return error(res, "Too many logs in one batch (max 100)", 400, "VALIDATION_ERROR");
+		}
 
 		// Validate each log entry
 		const validEvents = [
@@ -153,17 +159,25 @@ router.post(
 		// Get userId from authenticated user (if available)
 		const userId = req.user?.id || null;
 
-		// Prepare logs for database
-		const processedLogs = logs.map((log: IncomingAuditLog) => ({
-			event: log.event,
-			timestamp: log.timestamp ? new Date(log.timestamp) : new Date(),
-			userId,
-			sessionId: log.sessionId,
-			details: (log.details || {}) as Prisma.InputJsonValue,
-			severity: log.severity,
-			userAgent: log.userAgent || null,
-			url: log.url || null,
-		}));
+		// Prepare logs for database. A non-ISO timestamp string previously
+		// produced Invalid Date, which Prisma rejects with a 500 (round-106).
+		const processedLogs = [];
+		for (const log of logs as IncomingAuditLog[]) {
+			const timestamp = log.timestamp ? new Date(log.timestamp) : new Date();
+			if (Number.isNaN(timestamp.getTime())) {
+				return error(res, `Invalid timestamp: ${log.timestamp}`, 400, "VALIDATION_ERROR");
+			}
+			processedLogs.push({
+				event: log.event,
+				timestamp,
+				userId,
+				sessionId: log.sessionId,
+				details: (log.details || {}) as Prisma.InputJsonValue,
+				severity: log.severity,
+				userAgent: log.userAgent || null,
+				url: log.url || null,
+			});
+		}
 
 		// Batch insert logs
 		await prisma.securityAuditLog.createMany({
@@ -276,9 +290,10 @@ router.get(
 			};
 		}
 
-		// Parse pagination parameters
-		const pageNum = parseInt(page as string, 10);
-		const limitNum = parseInt(limit as string, 10);
+		// Parse pagination parameters. NaN/negative values previously reached
+		// Prisma skip/take and 500'd; take is capped (round-106).
+		const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+		const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 20, 1), 200);
 		const skip = (pageNum - 1) * limitNum;
 
 		// Fetch logs with pagination

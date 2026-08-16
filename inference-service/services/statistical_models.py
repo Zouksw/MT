@@ -114,6 +114,15 @@ def predict_sarimax(
     which is a reasonable default for slowly-moving drivers (FX, freight).
     """
     arr = np.array(values, dtype=float)
+
+    # Validate exog BEFORE the short-series early return (round-106): a
+    # mismatched exog used to be silently ignored whenever len(values) < 4
+    # (naive fallback), so the length contract only held for longer series.
+    if exog and len(exog) > 0 and len(exog) != len(arr):
+        raise ValueError(
+            f"exog length ({len(exog)}) must equal values length ({len(arr)})"
+        )
+
     if len(arr) < 4:
         return predict_naive(values, horizon, confidence_level)
 
@@ -122,11 +131,6 @@ def predict_sarimax(
         return predict_arima(values, horizon, confidence_level)
 
     exog_arr = np.array(exog, dtype=float)
-    # Guard: exog must align with the target series.
-    if exog_arr.shape[0] != len(arr):
-        raise ValueError(
-            f"exog length ({exog_arr.shape[0]}) must equal values length ({len(arr)})"
-        )
     if exog_arr.ndim == 1:
         exog_arr = exog_arr.reshape(-1, 1)
 

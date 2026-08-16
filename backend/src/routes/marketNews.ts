@@ -69,8 +69,10 @@ router.get(
 	"/",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const limit = Number(req.query.pageSize) || Number(req.query.limit) || 20;
-		const page = Number(req.query.page) || 1;
+		const limit = Math.min(Number(req.query.pageSize) || Number(req.query.limit) || 20, 100);
+		// Clamp to a sane positive page: page=0 previously produced a negative
+		// skip that Prisma rejects with a 500 (round-106).
+		const page = Math.max(Number(req.query.page) || 1, 1);
 		const skip = (page - 1) * limit;
 
 		const category = req.query.category ? categorySchema.parse(req.query.category) : undefined;

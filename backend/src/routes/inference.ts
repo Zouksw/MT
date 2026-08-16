@@ -263,7 +263,9 @@ router.post(
 		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
-		const limit = Number(historyPoints) || 50;
+		// Clamp like `h` (round-06): an unclamped historyPoints reached Prisma
+		// take directly — ?historyPoints=5000000 pulled 5M rows into Node.
+		const limit = Math.min(Math.max(Number(historyPoints) || 50, 1), 1000);
 
 		const [historicalData, predictionResult] = await Promise.all([
 			prisma.commodityPrice.findMany({
@@ -314,7 +316,9 @@ router.post(
 		const uuid = commodity.id;
 
 		const th = Number(threshold) || 2.5;
-		const limit = Number(historyPoints) || 100;
+		// Clamp like the /predict visualize path (round-06): unclamped
+		// historyPoints went straight into Prisma take.
+		const limit = Math.min(Math.max(Number(historyPoints) || 100, 1), 1000);
 
 		const prices = await prisma.commodityPrice.findMany({
 			where: {
@@ -390,7 +394,9 @@ router.post(
 		const uuid = commodity.id;
 
 		const th = Number(threshold) || 2.5;
-		const limit = Number(historyPoints) || 100;
+		// Clamp like the /predict visualize path (round-06): unclamped
+		// historyPoints went straight into Prisma take.
+		const limit = Math.min(Math.max(Number(historyPoints) || 100, 1), 1000);
 
 		const prices = await prisma.commodityPrice.findMany({
 			where: {

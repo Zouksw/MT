@@ -62,6 +62,8 @@ router.get(
 	asyncHandler(async (_req, res) => {
 		const cuts = await prisma.beefCutTaxonomy.findMany({
 			orderBy: [{ primal: "asc" }, { nameEn: "asc" }],
+			// Same cap as the /cuts sibling above (round-106 consistency).
+			take: 200,
 		});
 		const grouped: Record<string, typeof cuts> = {};
 		for (const cut of cuts) {
@@ -113,10 +115,13 @@ router.get(
 		if (factoryCode && typeof factoryCode === "string") {
 			const factory = await prisma.factory.findUnique({
 				where: { code: factoryCode },
+				select: { id: true },
 			});
-			if (factory) {
-				where.factoryId = factory.id;
-			}
+			// A typo'd code previously dropped the filter SILENTLY — the
+			// response then contained every factory's prices under what the
+			// caller believed was a factory-filtered request (round-106).
+			if (!factory) throw new NotFoundError(`Factory not found: ${factoryCode}`);
+			where.factoryId = factory.id;
 		}
 		if (country && typeof country === "string" && !factoryCode) {
 			const factories = await prisma.factory.findMany({
@@ -190,7 +195,10 @@ router.get(
 				where: { code: factoryCode as string },
 				select: { id: true },
 			});
-			if (factory) where.factoryId = factory.id;
+			// Same honesty rule as /prices: unknown code → 404, never a
+			// silently unfiltered response (round-106).
+			if (!factory) throw new NotFoundError(`Factory not found: ${factoryCode}`);
+			where.factoryId = factory.id;
 		}
 		if (country && typeof country === "string") {
 			where.factory = { country: country as string };
@@ -302,9 +310,13 @@ router.get(
 		const { days = "90", factoryCode, source, from, to } = req.query;
 
 		// Date range: prefer explicit from/to; fall back to days=N window.
+		// Invalid date strings previously produced Invalid Date, which Prisma
+		// rejects with a 500 — now a 400 (round-106).
 		const dateFilter: Record<string, Date> = {};
 		if (from && typeof from === "string") {
-			dateFilter.gte = new Date(from);
+			const d = new Date(from);
+			if (Number.isNaN(d.getTime())) throw new BadRequestError(`Invalid 'from' date: ${from}`);
+			dateFilter.gte = d;
 		} else {
 			const daysNum = Math.min(Number(days) || 90, 730);
 			const since = new Date();
@@ -312,7 +324,9 @@ router.get(
 			dateFilter.gte = since;
 		}
 		if (to && typeof to === "string") {
-			dateFilter.lte = new Date(to);
+			const d = new Date(to);
+			if (Number.isNaN(d.getTime())) throw new BadRequestError(`Invalid 'to' date: ${to}`);
+			dateFilter.lte = d;
 		}
 
 		const where: Record<string, unknown> = {
@@ -336,12 +350,18 @@ router.get(
 				const factory = await prisma.factory.findUnique({
 					where: { code: codes[0] },
 				});
-				if (factory) where.factoryId = factory.id;
+				if (!factory) throw new NotFoundError(`Factory not found: ${codes[0]}`);
+				where.factoryId = factory.id;
 			} else {
 				const factories = await prisma.factory.findMany({
 					where: { code: { in: codes } },
 					select: { id: true },
 				});
+				// All-unknown list → 404 (silently dropping the whole filter
+				// returned unfiltered history as "filtered", round-106).
+				if (factories.length === 0) {
+					throw new NotFoundError(`No factories found for codes: ${codes.join(", ")}`);
+				}
 				where.factoryId = { in: factories.map((f) => f.id) };
 			}
 		}

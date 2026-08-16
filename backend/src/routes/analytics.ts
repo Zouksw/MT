@@ -70,7 +70,15 @@ router.get(
 	"/correlation",
 	authenticate,
 	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const slugs = req.query.slugs as string;
+		// Repeated query params (?slugs=a&slugs=b) arrive as string[] —
+		// .split on an array 500'd (round-106). Normalize to the first value.
+		const slugsRaw: unknown = req.query.slugs;
+		const slugs =
+			typeof slugsRaw === "string"
+				? slugsRaw
+				: Array.isArray(slugsRaw) && typeof slugsRaw[0] === "string"
+					? slugsRaw[0]
+					: undefined;
 		if (!slugs) {
 			return success(res, { correlations: [] });
 		}

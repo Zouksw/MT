@@ -80,6 +80,21 @@ class PredictRequest(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _timestamps_ordered(self) -> "PredictRequest":
+        """Unsorted timestamps silently produced a garbage future axis: when
+        ts[-1] < ts[-2] the negative diff was clamped to 1ms, so the forecast
+        came back spaced 1ms apart instead of a 422 (audit round-106)."""
+        if len(self.timestamps) > 1:
+            for i in range(1, len(self.timestamps)):
+                if self.timestamps[i] < self.timestamps[i - 1]:
+                    raise ValueError(
+                        f"timestamps must be non-decreasing; timestamps[{i}] "
+                        f"({self.timestamps[i]}) < timestamps[{i - 1}] "
+                        f"({self.timestamps[i - 1]})"
+                    )
+        return self
+
 
 class PredictResponse(BaseModel):
     timestamps: list[int]

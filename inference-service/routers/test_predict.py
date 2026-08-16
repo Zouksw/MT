@@ -276,3 +276,32 @@ def test_predict_rejects_null_in_exog(client):
     }
     resp = client.post("/predict", json=payload)
     assert resp.status_code == 422
+
+
+# ─── round-106: ordering + short-series exog hardening ───────────────────────
+
+
+def test_predict_rejects_unsorted_timestamps(client):
+    """Unsorted timestamps silently produced a garbage future axis: the
+    negative diff ts[-1]-ts[-2] was clamped to 1ms, so the forecast came
+    back spaced 1ms apart instead of a 422 (audit round-106)."""
+    payload = {
+        **BASE_PAYLOAD,
+        "timestamps": [100_000, 90_000, 95_000, 110_000],  # [1] < [0]
+    }
+    resp = client.post("/predict", json=payload)
+    assert resp.status_code == 422
+
+
+def test_sarimax_rejects_mismatched_exog_even_for_short_series():
+    """The exog length contract used to be skipped when len(values) < 4 (the
+    naive-fallback early return ran first) — 3 exog rows for 2 values silently
+    returned a naive forecast instead of the documented ValueError."""
+    from services.statistical_models import predict_sarimax
+
+    try:
+        predict_sarimax([1.0, 2.0], 3, 0.95, exog=[[1.0], [2.0], [3.0]])
+    except ValueError as exc:
+        assert "exog length" in str(exc)
+    else:
+        raise AssertionError("mismatched exog on a short series must raise ValueError")
