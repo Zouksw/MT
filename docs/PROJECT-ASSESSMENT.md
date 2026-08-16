@@ -245,3 +245,24 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 ---
 
 **本评估为只读研究，未改任何代码。结论：项目实现度极高，主要瓶颈是数据源激活（D1）而非工程能力。**
+
+---
+
+## 八、体积审计（2026-08-16，round-108）
+
+**结论：代码不臃肿，臃肿在制品层。** 全部源码（backend/src 1.8M + frontend/src 1.9M + inference 源码 ~0.2M + docs 0.5M）不足 5M，支撑 44 页/20 路由/19 爬虫/31 Prisma 模型，功能密度高。磁盘大头全部是依赖镜像、构建缓存、无界日志与工具残留，本轮已压缩（与 §AUTOMATION-STATUS 六½ 存储策略一致并深化到项目本体内部）。
+
+**清理明细**（/root 单遍 du：12G→9.7G；df 已用 24G(63%)→22G(57%)）：
+
+| 项 | 前→后 | 依据/验证 |
+|---|---|---|
+| venv triton（GPU 编译器） | 689M→0 | torch 为 `2.12.1+cpu`，requirements/代码零引用，CPU 路径不加载；pip check 无破损 + pytest 60 全过 + 全链 chronos 预测实测 |
+| `frontend/.next/cache` | 412M→0 | 纯构建缓存，`next start` 不读；清理后前端 200（18ms） |
+| `.npm`（cacache 349M + `npx prisma@7` 残留 253M） | 626M→7M | prisma@7 与项目 prisma 5 大版本漂移且无脚本引用；≥80% cron 阈值清理覆盖复发 |
+| Playwright 双浏览器 | 521M→259M | 删 1234 版+npx 副本；e2e 脚本改经 frontend `@playwright/test`（1.58.2/1208）解析——顺带消除旧 `_npx` 硬编码路径在 cron ≥80% 清理日失效的隐患；截图 harness 实跑验证 |
+| backend/logs（无界 winston） | 215M→10M | 截断保 5MB 尾 + File transport 加 `maxsize 10M × maxFiles 3`（原无日期命名，cron 30d 规则匹配不到）；backend 909 测试全过 + 重启后追加正常 |
+| coverage ×2 / `.git` 松散对象 | 19M / 43M→13M | 可再生制品；`git gc` 打包 |
+
+**保留不动（各有明确理由）**：pnpm store 3.6G（红线）、HF 权重 879M（3 Chronos 变体=产品 MODEL_IDS）、backups 184M（keep-7 有界策略）、venv 剩余 1.4G（torch CPU 716M+统计栈必需）、node_modules ×3（依赖手术需重装触 store，另列）、`.vscode-server`/`.zcode`/`.claude` 等 ~4.9G（用户/AI 工具链，非项目资产）。
+
+**可选后续（用户决策）**：backups keep-7→keep-3（-104M）；vscode-server 旧 `code-*` 构建（~150M，重连自动重下）；依赖数量审计（knip 已配置但被 zod 兼容阻塞，见 AUTOMATION-STATUS §六½ 上方表格）。
