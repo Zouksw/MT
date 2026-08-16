@@ -9,8 +9,23 @@
 
 import type { Prisma } from "@prisma/client";
 import { logger, prisma } from "@/lib";
+import { BadRequestError } from "@/middleware/errorHandler";
 import { batchLatestPrices } from "@/services/inference/authoritativeSources";
 import type { AlertCondition, AlertRule, NotificationChannel } from "./alert-types";
+
+/**
+ * Only "threshold" conditions have an evaluator in evaluateAlertRules —
+ * anomaly/pattern/forecast are schema-accepted but can NEVER fire. Accepting
+ * them lets users create rules that display as enabled but are structurally
+ * dead (round-106 honesty fix: reject loudly at the boundary instead).
+ */
+function assertConditionEvaluable(condition: AlertCondition): void {
+	if (condition.type !== "threshold") {
+		throw new BadRequestError(
+			`Condition type "${condition.type}" has no evaluator yet — only "threshold" rules can fire.`,
+		);
+	}
+}
 
 type AlertType = "ANOMALY" | "FORECAST_READY" | "SYSTEM";
 type AlertSeverity = "INFO" | "WARNING" | "ERROR";
@@ -74,6 +89,8 @@ export async function createAlertRule(params: {
 		description,
 	} = params;
 
+	assertConditionEvaluable(condition);
+
 	const rule = await prisma.alertRule.create({
 		data: {
 			userId,
@@ -128,6 +145,10 @@ export async function updateAlertRule(
 		where: { id: ruleId, userId },
 	});
 	if (!existing) return null;
+
+	if (patch.condition !== undefined) {
+		assertConditionEvaluable(patch.condition);
+	}
 
 	const data: Prisma.AlertRuleUpdateInput = {};
 	if (patch.name !== undefined) data.name = patch.name;

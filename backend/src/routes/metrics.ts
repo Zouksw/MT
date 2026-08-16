@@ -19,6 +19,7 @@ import {
 	getGlobalDurationsSorted,
 	getResponseTimeDistribution,
 	getSummaryWebVitals,
+	getTotalErrorCount,
 	getTotalRequestCount,
 	getWebVitalsHistory,
 	getWebVitalsSummary,
@@ -332,13 +333,21 @@ router.get("/summary", authenticate, async (_req: Request, res: Response) => {
 				: 0;
 		const apiLatencyP95 = parseFloat(percentile(globalDurations, 0.95).toFixed(2));
 
-		// Count error-status requests as a rough proxy — requests over 5s are
-		// likely errors/timeouts. (We don't track status codes explicitly.)
-		let errorCount = 0;
+		// Real error rate: share of recorded responses with status >= 400
+		// (round-106 — the field used to be "percent of requests slower than
+		// 5s", a latency proxy mislabelled as an error rate: a slow-but-
+		// successful scrape inflated "errors" while fast 500s counted as
+		// none). slowRequestRate keeps the old signal under an honest name.
+		const totalErr = getTotalErrorCount();
+		const errorRate = totalReq > 0 ? parseFloat(((totalErr / totalReq) * 100).toFixed(2)) : 0;
+		let slowCount = 0;
 		for (const d of globalDurations) {
-			if (d > 5000) errorCount++;
+			if (d > 5000) slowCount++;
 		}
-		const errorRate = totalReq > 0 ? parseFloat(((errorCount / totalReq) * 100).toFixed(2)) : 0;
+		const slowRequestRate =
+			globalDurations.length > 0
+				? parseFloat(((slowCount / globalDurations.length) * 100).toFixed(2))
+				: 0;
 
 		// Fetch web vitals + active users in parallel
 		const [summaryWv, activeUsers] = await Promise.all([
@@ -353,6 +362,7 @@ router.get("/summary", authenticate, async (_req: Request, res: Response) => {
 				p95: apiLatencyP95,
 			},
 			errorRate,
+			slowRequestRate,
 			uptime: parseFloat(uptimeSeconds.toFixed(2)),
 			activeUsers,
 		});

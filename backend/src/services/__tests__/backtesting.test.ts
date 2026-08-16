@@ -115,6 +115,19 @@ describe("runBacktest — trend classification (7d vs 90d MAPE)", () => {
 		const result = await runBacktest("model-1");
 		expect(result.trend).toBe("insufficient_data");
 	});
+
+	it("treats mape 0 (perfect model) as data, not insufficient (round-106)", async () => {
+		// `!recent?.mape` used to send a legitimately perfect 0% MAPE down the
+		// insufficient_data path. 0 must be usable by the trend math.
+		mocks.aggregate
+			.mockResolvedValueOnce(agg(0, 3)) // 7d: perfect
+			.mockResolvedValueOnce(agg(2, 5)) // 30d
+			.mockResolvedValueOnce(agg(2, 9)); // 90d → delta -2, improving
+		mocks.count.mockResolvedValue(9);
+
+		const result = await runBacktest("model-1");
+		expect(result.trend).not.toBe("insufficient_data");
+	});
 });
 
 describe("runBacktest — result shape & query contracts", () => {

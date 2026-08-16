@@ -161,6 +161,38 @@ describe("Price Forecast Engine", () => {
 
 			expect(forecast.bestModel).toBe("arima");
 		});
+
+		it("returns null support/resistance when no model qualifies (round-106 honesty)", async () => {
+			// Every model points DOWN → no non-down model implies a support
+			// floor. The old code invented currentPrice*0.95/1.05 bands; now
+			// support is null ("n/a") while resistance (non-up = all models)
+			// is the max predicted price.
+			mockedGetCached.mockImplementation(async () => makePrediction(100, 90, 2) as never);
+
+			const forecast = await generateForecast({
+				commodityId: "c1",
+				horizon: 10,
+				currentPrice: 100,
+				models: ["arima", "holtwinters"],
+			});
+
+			expect(forecast.supportLevel).toBeNull();
+			expect(forecast.resistanceLevel).not.toBeNull();
+			if (forecast.resistanceLevel !== null) {
+				expect(forecast.resistanceLevel).toBeLessThanOrEqual(100);
+			}
+
+			// Mirror case: every model points UP → resistance null.
+			mockedGetCached.mockImplementation(async () => makePrediction(100, 110, 2) as never);
+			const up = await generateForecast({
+				commodityId: "c1",
+				horizon: 10,
+				currentPrice: 100,
+				models: ["arima", "holtwinters"],
+			});
+			expect(up.resistanceLevel).toBeNull();
+			expect(up.supportLevel).not.toBeNull();
+		});
 	});
 
 	describe("generateForecast — fault tolerance (Promise.allSettled)", () => {

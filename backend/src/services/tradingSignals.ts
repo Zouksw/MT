@@ -66,10 +66,12 @@ export interface PriceForecast {
 	horizon: number;
 	/** Consensus price range across models: [min, max] of end-of-horizon values. */
 	range: { lower: number; upper: number };
-	/** Price floor implied by non-down models (former "support"). */
-	supportLevel: number;
-	/** Price ceiling implied by non-up models (former "resistance"). */
-	resistanceLevel: number;
+	/** Price floor implied by non-down models; null when no model qualifies
+	 * (e.g. every model points down) — an invented ±5% level must not be
+	 * presented as model-implied support (round-106 honesty fix). */
+	supportLevel: number | null;
+	/** Price ceiling implied by non-up models; null when no model qualifies. */
+	resistanceLevel: number | null;
 	/** Per-model forecasts. */
 	individualForecasts: ModelForecast[];
 	/** How many models point up / down / flat. */
@@ -222,8 +224,8 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 			predictedPrice: currentPrice,
 			horizon,
 			range: { lower: currentPrice, upper: currentPrice },
-			supportLevel: currentPrice,
-			resistanceLevel: currentPrice,
+			supportLevel: null,
+			resistanceLevel: null,
 			individualForecasts,
 			distribution: { up: 0, down: 0, flat: 0 },
 			timestamp: new Date().toISOString(),
@@ -282,14 +284,25 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 	const rangeLower = Math.min(...predictedPrices);
 	const rangeUpper = Math.max(...predictedPrices);
 
-	// Support & resistance: price floor from non-down models, ceiling from non-up models
-	const supportLevel = availableForecasts
-		.filter((f) => f.direction !== "down")
-		.reduce((min, f) => Math.min(min, f.predictedPrice), currentPrice * 0.95);
+	// Support & resistance: price floor from non-down models, ceiling from
+	// non-up models. When the qualifying set is EMPTY there is no model-implied
+	// level — return null ("n/a" in the UI) instead of inventing a ±5% band
+	// around the current price (round-106 honesty fix).
+	const supportCandidates = availableForecasts.filter((f) => f.direction !== "down");
+	const supportLevel = supportCandidates.length
+		? supportCandidates.reduce(
+				(min, f) => Math.min(min, f.predictedPrice),
+				Number.POSITIVE_INFINITY,
+			)
+		: null;
 
-	const resistanceLevel = availableForecasts
-		.filter((f) => f.direction !== "up")
-		.reduce((max, f) => Math.max(max, f.predictedPrice), currentPrice * 1.05);
+	const resistanceCandidates = availableForecasts.filter((f) => f.direction !== "up");
+	const resistanceLevel = resistanceCandidates.length
+		? resistanceCandidates.reduce(
+				(max, f) => Math.max(max, f.predictedPrice),
+				Number.NEGATIVE_INFINITY,
+			)
+		: null;
 
 	const predictedChange =
 		availableForecasts.reduce((sum, f) => sum + f.predictedChange, 0) / availableCount;
@@ -318,8 +331,8 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 			lower: Math.round(rangeLower * 100) / 100,
 			upper: Math.round(rangeUpper * 100) / 100,
 		},
-		supportLevel: Math.round(supportLevel * 100) / 100,
-		resistanceLevel: Math.round(resistanceLevel * 100) / 100,
+		supportLevel: supportLevel === null ? null : Math.round(supportLevel * 100) / 100,
+		resistanceLevel: resistanceLevel === null ? null : Math.round(resistanceLevel * 100) / 100,
 		individualForecasts,
 		distribution: { up: upCount, down: downCount, flat: flatCount },
 		bestModel,

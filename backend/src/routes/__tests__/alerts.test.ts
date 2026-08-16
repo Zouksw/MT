@@ -125,6 +125,16 @@ describe("Alerts Routes (Integration)", () => {
 			await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherId] } } });
 		});
 
+		it("rejects condition types with no evaluator (anomaly/pattern/forecast can never fire)", async () => {
+			const res = await request(app)
+				.post("/api/alerts/rules")
+				.set({ Authorization: `Bearer ${ownerToken}` })
+				.send({ ...ruleBody, name: `dead-type-${suffix}`, condition: { type: "anomaly" } });
+
+			expect(res.status).toBe(400);
+			expect(res.body.error.message).toContain("no evaluator");
+		});
+
 		it("GET /rules returns the created rule in the frontend shape", async () => {
 			const res = await request(app)
 				.get("/api/alerts/rules")

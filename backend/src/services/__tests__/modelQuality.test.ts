@@ -46,6 +46,17 @@ describe("weightedMedian", () => {
 		// Plain median of 4 values = avg of middle two = (20+30)/2 = 25
 		expect(result).toBe(25);
 	});
+
+	it("even-count equal weights return the midpoint, not the lower item (round-106)", () => {
+		// Two models at 0.5/0.5: cumulative hits exactly 0.5 after the first.
+		// The old `>= 0.5` check returned the LOWER price, biasing 2-model
+		// consensus downward; the plain-median contract demands the midpoint.
+		const result = weightedMedian([
+			{ price: 9.5, weight: 0.5 },
+			{ price: 11.0, weight: 0.5 },
+		]);
+		expect(result).toBe(10.25);
+	});
 });
 
 describe("weightedDirectionVote", () => {

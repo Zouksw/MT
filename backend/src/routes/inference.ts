@@ -476,8 +476,12 @@ router.get(
 			);
 		}
 
+		// Service unreachable: report "unknown", NOT "available" — claiming a
+		// model is available when we could not probe anything is fabricated
+		// status (round-106 honesty fix; the /train endpoint was retired for
+		// exactly this class of fabrication).
 		res.json({
-			models: VALID_MODELS.map((id) => ({ id, status: "available" })),
+			models: VALID_MODELS.map((id) => ({ id, status: "unknown" })),
 		});
 	}),
 );
@@ -490,7 +494,26 @@ router.get(
 		if (!VALID_MODELS.includes(id as ModelId)) {
 			throw new BadRequestError(`Unknown model: ${id}. Available: ${VALID_MODELS.join(", ")}`);
 		}
-		res.json({ id, status: "available" });
+
+		// The inference service exposes one /models listing (no per-model
+		// route); probe it and surface the entry for this id. Never guess.
+		const inferenceUrl = process.env.INFERENCE_URL || "http://localhost:10810";
+		try {
+			const response = await fetch(`${inferenceUrl}/models`, {
+				signal: AbortSignal.timeout(5000),
+			});
+			if (response.ok) {
+				const data = (await response.json()) as {
+					models?: Array<{ id: string; status?: string }>;
+				};
+				const entry = data.models?.find((m) => m.id === id);
+				res.json(entry ?? { id, status: "unknown" });
+				return;
+			}
+		} catch (error) {
+			logger.warn("[INFERENCE] Failed to probe models for /models/:id", error);
+		}
+		res.json({ id, status: "unknown" });
 	}),
 );
 

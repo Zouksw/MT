@@ -30,8 +30,8 @@ interface PriceForecastPanelProps {
 	predictedPrice: number;
 	horizon: number;
 	range?: { lower: number; upper: number };
-	supportLevel: number;
-	resistanceLevel: number;
+	supportLevel: number | null;
+	resistanceLevel: number | null;
 	distribution: { up: number; down: number; flat: number };
 	bestModelId?: string;
 	loading?: boolean;
@@ -172,7 +172,7 @@ export default function PriceForecastPanel({
 						<span className="text-xs text-gray-500">支撑位</span>
 						<br />
 						<span className="font-semibold font-mono" style={{ color: TRADING_COLORS.supportLine }}>
-							{formatPrice(supportLevel, false)}
+							{supportLevel === null ? "—" : formatPrice(supportLevel, false)}
 						</span>
 					</div>
 					<div>
@@ -182,7 +182,7 @@ export default function PriceForecastPanel({
 							className="font-semibold font-mono"
 							style={{ color: TRADING_COLORS.resistanceLine }}
 						>
-							{formatPrice(resistanceLevel, false)}
+							{resistanceLevel === null ? "—" : formatPrice(resistanceLevel, false)}
 						</span>
 					</div>
 				</div>

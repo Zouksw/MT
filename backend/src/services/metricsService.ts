@@ -21,6 +21,7 @@ interface EndpointMetrics {
 	count: number;
 	totalDuration: number;
 	durations: number[];
+	errorCount: number;
 }
 
 /** Keep only the last N durations per endpoint to bound memory. */
@@ -28,18 +29,27 @@ const MAX_DURATIONS = 100;
 
 const endpointMetrics = new Map<string, EndpointMetrics>();
 let totalRequestCount = 0;
+let totalErrorCount = 0;
+
+/** HTTP status codes >= 400 count as errors for errorRate. */
+export function isErrorStatus(statusCode: number): boolean {
+	return statusCode >= 400;
+}
 
 /**
- * Record a request's duration. Called from the metrics route's
- * `res.on("finish")` hook. Mutates the process-wide store.
+ * Record a request's duration (+ final status code). Called from the metrics
+ * route's `res.on("finish")` hook. Mutates the process-wide store.
  */
-export function recordRequest(endpoint: string, durationMs: number): void {
+export function recordRequest(endpoint: string, durationMs: number, statusCode?: number): void {
 	totalRequestCount++;
+	const isError = statusCode !== undefined && isErrorStatus(statusCode);
+	if (isError) totalErrorCount++;
 
 	const existing = endpointMetrics.get(endpoint);
 	if (existing) {
 		existing.count++;
 		existing.totalDuration += durationMs;
+		if (isError) existing.errorCount++;
 		existing.durations.push(durationMs);
 		if (existing.durations.length > MAX_DURATIONS) {
 			existing.durations.shift();
@@ -49,6 +59,7 @@ export function recordRequest(endpoint: string, durationMs: number): void {
 			count: 1,
 			totalDuration: durationMs,
 			durations: [durationMs],
+			errorCount: isError ? 1 : 0,
 		});
 	}
 }
@@ -56,6 +67,11 @@ export function recordRequest(endpoint: string, durationMs: number): void {
 /** Total number of requests recorded this process lifetime. */
 export function getTotalRequestCount(): number {
 	return totalRequestCount;
+}
+
+/** Total number of error (>=400) responses recorded this process lifetime. */
+export function getTotalErrorCount(): number {
+	return totalErrorCount;
 }
 
 // --- Formatting helpers ---

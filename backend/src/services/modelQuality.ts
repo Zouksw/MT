@@ -105,9 +105,17 @@ export function weightedMedian(predictedPrices: Array<{ price: number; weight: n
 			: (sorted[mid - 1].price + sorted[mid].price) / 2;
 	}
 	let cumulative = 0;
-	for (const p of sorted) {
-		cumulative += p.weight / totalWeight;
-		if (cumulative >= 0.5) return p.price;
+	for (let i = 0; i < sorted.length; i++) {
+		cumulative += sorted[i].weight / totalWeight;
+		if (cumulative > 0.5) return sorted[i].price;
+		if (cumulative === 0.5) {
+			// Exact half-point (e.g. two items at 0.5/0.5): the weighted median
+			// is the midpoint of this and the next item — matching the plain
+			// median for even equal-weight sets. Returning the lower item
+			// biased 2-model consensus downward (round-106).
+			const next = sorted[i + 1];
+			return next ? (sorted[i].price + next.price) / 2 : sorted[i].price;
+		}
 	}
 	return sorted[sorted.length - 1].price;
 }

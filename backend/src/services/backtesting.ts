@@ -101,7 +101,10 @@ function computeTrend(windows: BacktestWindow[]): {
 	const recent = windows.find((w) => w.days === 7);
 	const longTerm = windows.find((w) => w.days === 90);
 
-	if (!recent?.mape || !longTerm?.mape) {
+	// mape: 0 is a legitimate (perfect) value — only null/undefined means
+	// "not enough verified predictions". `!recent?.mape` treated a perfect
+	// model as insufficient_data (round-106).
+	if (recent?.mape == null || longTerm?.mape == null) {
 		return {
 			direction: "insufficient_data",
 			description: "Not enough verified predictions to determine trend",

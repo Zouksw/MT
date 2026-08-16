@@ -521,16 +521,14 @@ function AlertRuleModal({
 					<label className="block text-sm font-medium text-foreground mb-1">Condition</label>
 					<div className="flex gap-2">
 						<div className="w-2/5">
+							{/* Only "threshold" has a backend evaluator — anomaly/
+							    forecast conditions can never fire (round-106). */}
 							<Select
 								value={conditionType}
 								onChange={(val) => {
 									setConditionType(val);
 								}}
-								options={[
-									{ value: "threshold", label: "Threshold" },
-									{ value: "anomaly", label: "Anomaly" },
-									{ value: "forecast", label: "Forecast Ready" },
-								]}
+								options={[{ value: "threshold", label: "Threshold" }]}
 								fullWidth
 							/>
 						</div>

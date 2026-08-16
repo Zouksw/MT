@@ -63,14 +63,11 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 	loading = false,
 }) => {
 	const chartData = React.useMemo(() => {
-		if (!data) {
-			return SEVERITY_CONFIG.map((s) => ({
-				name: s.name,
-				value: s.key === "error" ? 2 : s.key === "warning" ? 5 : 12,
-				color: s.color,
-				mutedColor: s.mutedColor,
-			}));
-		}
+		// No data yet (stats still loading / a fetch failed) → render the
+		// honest "No alerts" empty state. This used to fabricate 2/5/12
+		// demo alerts whenever `data` was undefined — fake numbers presented
+		// as real on the dashboard (round-106).
+		if (!data) return [];
 
 		return SEVERITY_CONFIG.map((s) => ({
 			name: s.name,
