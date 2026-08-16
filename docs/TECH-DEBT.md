@@ -252,3 +252,32 @@
 ### CSRF 死端点（round-105 审计标记，2026-08-16）
 
 `GET /api/auth/csrf-token`（auth.ts:611）发放 double-submit token（随机 hex + httpOnly cookie），但**全后端无任何 `x-csrf-token` 验证点**，前端也从未调用（frontend/src 零引用）。属安全剧场：端点存在暗示有 CSRF 防护，实际防护来自别处——状态变更路由走 Authorization Bearer 头（自定义头无法被跨站设置，天然免疫 CSRF），cookie 会话只用于只读端点（/verify、/auth/me）+ logout。已在端点 doc 注释中如实标注。处置二选一（未决）：为 logout 等 cookie 可达的变更端点接真实验证，或移除端点（遵循 AGENTS §十.5：非己所造死代码先标记，不径直删）。
+
+### round-106 全项目审查遗留项（2026-08-16，均已核实、待决策/后续批次）
+
+round-106 四路并行审查（路由+中间件 / 服务层 / 前端 / 推理+测试质量）产出 ~75 项发现，Critical/High 与多数 Medium 已在批 1-10 修复（11 个 commit）。以下为**遗留未修**项，按处置类型分组：
+
+**产品/设计决策类（等方向）：**
+- **套餐限额从未执行**：`usageService.checkLimit/trackUsage` 零生产 caller（仅测试引用）——广告的 watchlists/AI 模型/signals 限额从不强制，`UsageRecord` 从不写入，`GET /billing/usage` 永远空数组。要么接入 watchlist/signal/predict 路由，要么停止广告限额（诚实优先）。
+- **ForecastTrendChart 待真数据源**：dashboard 槽位已移除（组件保留），需后端逐日预测计数端点（如 `/stats/forecasts-per-day`）后重接。
+- **datasets 全员共享硬编码 org**：`datasetService.ts:106` `default-org-id` upsert——所有用户的 dataset 落进同一个 org（schema 明确 org 应 per-user）。需 per-user org 或 org 可选迁移。
+- **/spreads 混币种统计**：beef.ts spreads 按 source+country 聚合 min/max/avg，但 currency 列存在多币种（BRL/USD 混算）。需按币种分组或先归一。
+- **beef cheek → OFFAL 死别名**：beefCutNormalizer.ts:764 映射到不存在的 cutCode，行被静默丢弃。需 taxonomy 决策（加 CHEEK 码或删别名）。
+
+**死代码类（AGENTS §十.5：先记录不删）：**
+- `modelService.createModelRecord` 零 caller（模型列表完全依赖 seed）。
+- `cache.ts` null-cache 读路径（无人写 `null:` 键，白付一次 EXISTS RT）。
+- `tokenBlacklist` 的 getBlacklistStats/clearBlacklist/checkTokenBlacklist 零生产 caller；stats 永远返回 null。
+- `middleware/auth.ts:91` 1% 采样的 session-count 查询结果被丢弃（每次白付一次 count）。
+- `marketData.ts:54` `_importSchema` 定义未用；前端 `ui/select.tsx` 零导入；`ui/button.tsx`+`ui/card.tsx` 与 `ui/Button/`+`ui/Card/` 双实现并存。
+- `alertNotifications.lastDirections` 内存 Map：重启即失（首比较不通知）且无界增长；`beefAggregation.topCuts` 无 orderBy 非确定 + bridge 代理行混入国家均值未标注。
+
+**低优先级正确性/加固（后续批次可做）：**
+- `datasetService` 0 数据点导入返回 success 且 rowsCount 被覆盖（非累加）。
+- `notificationChannels` 每次调用打 "SMTP not configured" 警告（应打一次）。
+- `helpers.monthRange` 31 日 setMonth 跳月（现两 caller 均传月初，latent）；`normalizer.ts:114` 回退路径本地时区构 Date（其余 UTC）。
+- `authService.verifyTokenSession` findMany 全量 session（应 count）；`renameWatchlist` 撞唯一名 P2002 → 500。
+- metrics GET 仅 authenticate（/api/security/audit 是 ADMIN 门）——是否提权待定；socket `join-timeseries` 房间名未校验且不计入 20 房上限；`/api/docs` Swagger 无鉴权暴露全端点面。
+- `authRateLimiter`（10/15min/IP）被 login+refresh+change-password 共用——NAT 环境误锁。
+- inference: `@app.on_event` 已弃用（应 lifespan）；负价格未拒（边界设计决策）；批量 gc.collect() 每项一次（可提升为每批一次）。
+- 前端剩余 biome 警告 10 条（noExplicitAny 等 judgment-call 规则，均存量）。

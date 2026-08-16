@@ -42,6 +42,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-16 — round-106 全项目代码审查：~75 项发现，11 commit 修复（Critical/High/Medium 全清）
+
+四路并行审查（20 路由+7 中间件 / 33 服务 / 前端 44 页 91 组件 7 hooks / 推理服务+测试质量）产出 ~75 项发现；每项亲验后按主题分 10 批修复，遗留低优先级项记录于 `TECH-DEBT.md`。
+
+**真缺陷（功能坏/数据错）**
+- 测试基建：裸跑 `pnpm test` 静默指向**生产库 mt_db**（两套件随生产数据漂移变红）；默认改 mt_test + 三处拒绝生产库护栏 + `scripts/bootstrap-test-db.sh`。
+- 5 个前端页面因未解 `{success,data}` 信封完全坏掉（alerts 列表恒空、apikeys 一次性密钥渲染空白且不可恢复、profile 恒报加载失败）；alerts/rules 的列表/编辑/启停/删除从未接通（后端补 GET/PATCH/DELETE /api/alerts/rules，userId 作用域）。
+- anomaly 检测在真实 uuid 上必崩（`BigInt(uuid)` 500）；多源对比图返回**最旧**数据；`/health/ready` 在 Redis/推理宕机时仍 200。
+- IDOR 五路径：任意用户可全库 bulk-resolve 异常、删他人模型预测、按 id 读他人时序点、列表泄露他人 dataset。
+
+**诚实性（8 项）**：模型状态伪造 available→unknown、errorRate 实为慢请求占比→真错误率（记录状态码）、支撑/阻力位无模型时捏造 ±5%→null、演示数据图表/假 sessions 页/死 alert 条件类型/加权中位数偶数偏置/完美 MAPE 误判缺数据。
+
+**性能（5 条热路径）**：watchlist 全表拉取→子查询 rn≤2、freshness 1.9 万行拉内存→SQL groupBy、Redis KEYS×2→SCAN、beef forecasts 无界并行→top20+4 池、refresh-all 循环写→createMany。
+
+**输入校验**：NaN window/负分页/Invalid Date/重复参数 → 500 一律收敛为 400/404/clamp；historyPoints 无上限（500 万行 OOM 向量）；推理服务未排序时间戳→422。
+
+**测试质量**：空转跳过（种子缺失静默绿）改响亮失败；冒烟断言（<500 即过）钉精确契约；TTL 竞态消除。
+
+测试基线：backend 983→894（+1 skip），frontend 296，pytest 58→62。生产迁移：`anomalies.datapoint_id` bigint→text（空表，零风险）。
+
 ### 2026-07-27 — 项目整理：AI 全自动开发规范化 + 冗余清理 + 安全
 
 把仓库整理成规范、完整的「AI 全自动开发」项目。**纯文档/配置整理，零业务代码变更。**
