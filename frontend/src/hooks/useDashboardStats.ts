@@ -216,11 +216,11 @@ export const useDashboardStats = () => {
 		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
 
 	const errors = [datasetsError, timeseriesError, forecastsError].filter(Boolean);
-	const error = !isAuth
-		? new Error("Not authenticated")
-		: errors.length > 0
-			? (errors[0] as Error)
-			: null;
+	// Signed-out visitors are a NORMAL state for /dashboard (the page renders
+	// a sign-in CTA) — reporting it as an error drew a red banner + toast on
+	// top of that CTA. Only authenticated-session fetch failures are errors
+	// (round-106).
+	const error = !isAuth ? null : errors.length > 0 ? (errors[0] as Error) : null;
 
 	// Period-over-period trends are not computed by the backend today. Rather
 	// than fabricate `0` (which the UI rendered as a flat "0%" badge — a fake),

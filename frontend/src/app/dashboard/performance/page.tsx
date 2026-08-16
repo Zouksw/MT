@@ -306,7 +306,17 @@ export default function PerformancePage() {
 			if (wvData.status === "fulfilled") setWebVitals(wvData.value);
 			if (latencyData.status === "fulfilled") setApiLatency(latencyData.value);
 			if (histData.status === "fulfilled") setHistoryData(histData.value);
-			setError(null);
+			// allSettled never throws, so the catch below can't see rejected
+			// fetches — a total backend outage previously left every card at
+			// "--" with NO error state (and the memory chart spinning forever),
+			// because setError(null) ran unconditionally (round-106).
+			const outcomes = [serverData, wvData, latencyData, histData];
+			if (outcomes.every((o) => o.status === "rejected")) {
+				const firstReason = (outcomes[0] as PromiseRejectedResult).reason;
+				setError(firstReason instanceof Error ? firstReason : new Error("Failed to fetch metrics"));
+			} else {
+				setError(null);
+			}
 		} catch (err) {
 			setError(err instanceof Error ? err : new Error("Failed to fetch metrics"));
 		} finally {

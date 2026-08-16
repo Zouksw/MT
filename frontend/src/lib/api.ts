@@ -3,7 +3,6 @@
 import useSWR, { mutate } from "swr";
 import { API_BASE } from "@/lib/config";
 import { swrFetcher } from "@/lib/swr-fetcher";
-import { tokenManager } from "@/lib/tokenManager";
 import { authFetch } from "@/utils/auth";
 
 // ── SWR fetcher with auth ──────────────────────────────────────────────────

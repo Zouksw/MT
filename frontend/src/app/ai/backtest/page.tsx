@@ -47,6 +47,10 @@ function trendLabel(trend: string): string {
 export default function BacktestPage() {
 	const [models, setModels] = useState<string[]>([]);
 	const [selectedModel, setSelectedModel] = useState<string>("");
+	// Retry nonce (round-106): the retry button used to setSelectedModel to its
+	// current value — React bails out on identical state, so the fetch effect
+	// never re-ran and the button did nothing. Bumping this forces a refetch.
+	const [_retryNonce, setRetryNonce] = useState(0);
 	const [backtest, setBacktest] = useState<BacktestResult | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -187,7 +191,13 @@ export default function BacktestPage() {
 			{error && (
 				<ErrorDisplay
 					error={error}
-					retry={() => setSelectedModel(selectedModel)}
+					retry={() => {
+						// Setting state to its current value triggers React's
+						// bail-out and the fetch effect never re-runs — the
+						// button did nothing. Bump the nonce to force a
+						// refetch (round-106).
+						setRetryNonce((n) => n + 1);
+					}}
 					context="backtest data"
 				/>
 			)}

@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
-import { tokenManager } from "@/lib/tokenManager";
 import CutForecastSection from "../CutForecastSection";
 
 // Mock the hook so the component doesn't hit the network.

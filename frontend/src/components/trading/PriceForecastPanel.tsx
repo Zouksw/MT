@@ -159,8 +159,7 @@ export default function PriceForecastPanel({
 											: undefined,
 							}}
 						>
-							{predictedChange > 0 ? "+" : ""}
-							{predictedChange}%
+							{formatSignedPercent(predictedChange, 1)}
 						</span>
 					</div>
 				</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";

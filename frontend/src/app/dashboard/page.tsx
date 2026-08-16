@@ -29,13 +29,6 @@ import { formatCompact, formatPrice } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
 import { getCachedUser } from "@/utils/auth";
 
-const ForecastTrendChart = dynamic(
-	() =>
-		import("@/components/dashboard/ForecastTrendChart").then((mod) => ({
-			default: mod.ForecastTrendChart,
-		})),
-	{ loading: () => <div className="bg-muted animate-pulse rounded-lg" style={{ height: 300 }} /> },
-);
 const AlertDistributionChart = dynamic(
 	() =>
 		import("@/components/dashboard/AlertDistributionChart").then((mod) => ({
@@ -410,10 +403,11 @@ export default function DashboardPage() {
 						/>
 					</div>
 
+					{/* ForecastTrendChart slot removed (round-106): its only usage passed
+					    no data prop, so the panel showed 暂无预测趋势数据 forever and the
+					    7D/30D/90D selector was dead UI. There is no per-day forecast-count
+					    endpoint today — re-add the slot when one exists (see TECH-DEBT). */}
 					<div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6`}>
-						<div className="lg:col-span-2">
-							<ForecastTrendChart loading={loading} />
-						</div>
 						<div>
 							<AlertDistributionChart data={stats?.alerts.bySeverity} loading={loading} />
 						</div>

@@ -1,16 +1,6 @@
 "use client";
 
-import {
-	Building,
-	Calendar,
-	ChartColumn,
-	Database,
-	Globe,
-	ShieldCheck,
-	TrendingUp,
-	Users,
-	Zap,
-} from "lucide-react";
+import { ChartColumn, Database, Globe, ShieldCheck, TrendingUp, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { MarketingNav } from "@/components/landing/MarketingNav";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";

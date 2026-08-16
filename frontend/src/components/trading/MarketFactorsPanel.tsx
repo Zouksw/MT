@@ -70,7 +70,9 @@ function FactorGroup({
 	if (!latest) return null;
 
 	const trend =
-		factors.length >= 2 ? ((latest.value - factors[1].value) / factors[1].value) * 100 : null;
+		factors.length >= 2 && factors[1].value !== 0
+			? ((latest.value - factors[1].value) / factors[1].value) * 100
+			: null;
 
 	return (
 		<div className="border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">

@@ -123,7 +123,11 @@ export default function BeefOverview() {
 	);
 	const usStorage = coldStorage.find((s: { country: string }) => s.country === "US");
 
-	const isLoading = pricesLoading && killLoading && storageLoading && cutsLoading;
+	// Loading is true until EVERY source settles (||, not &&: the old &&
+	// cleared the skeleton as soon as ANY one of the four requests finished,
+	// flashing the "No Beef Price Data Available" empty state while the slow
+	// endpoints were still loading, round-106).
+	const isLoading = pricesLoading || killLoading || storageLoading || cutsLoading;
 	const hasNoData =
 		!isLoading && latestPrices.length === 0 && weeklyKills.length === 0 && coldStorage.length === 0;
 

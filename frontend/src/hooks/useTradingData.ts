@@ -175,6 +175,21 @@ export function useTradingData() {
 		return grouped;
 	}, [beefPrices]);
 
+	// Commodity switch hygiene (round-106): a failed fetch for the NEW
+	// commodity previously left the OLD commodity's signal / anomalies /
+	// prediction history / chart overlays on screen, attributed to the new
+	// selection — wrong data on the core trading page. Clear all
+	// commodity-scoped AI state whenever the selection changes; the
+	// loaders below repopulate whatever succeeds.
+	useEffect(() => {
+		setSignal(null);
+		setPreviousDirection(null);
+		setBestModelId(undefined);
+		setPredictionHistory([]);
+		setAnomalies([]);
+		setPredictionOverlays([]);
+	}, []);
+
 	// Fetch AI signal when commodity changes
 	const loadSignal = useCallback(
 		async (signal?: AbortSignal) => {

@@ -6,7 +6,6 @@ import { useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody } from "@/components/ui/Card";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -372,8 +371,8 @@ export default function AIPredictPage() {
 							<>
 								{/* Success Alert */}
 								<Alert variant="success" title="Prediction Completed Successfully" className="mb-6">
-									Generated {result.prediction.values.length} predictions using {result.algorithm}{" "}
-									model
+									Generated {result.prediction?.values?.length ?? 0} predictions using{" "}
+									{result.algorithm} model
 								</Alert>
 
 								{/* Prediction Chart */}

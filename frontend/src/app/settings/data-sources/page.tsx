@@ -515,7 +515,7 @@ export default function DataSourcesPage() {
 												</div>
 											</div>
 											<div className="flex items-center gap-4 text-xs text-muted-foreground">
-												{fresh && fresh.empty ? (
+												{fresh?.empty ? (
 													// empty: last run wrote 0 rows — show this instead of a
 													// misleading "N% success" (successRate counts runs that
 													// didn't throw, not runs that wrote data). Round-58.

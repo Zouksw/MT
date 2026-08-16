@@ -37,7 +37,7 @@ function formatDate(iso: string | null | undefined): string {
 
 export const SnapshotBanner: React.FC<SnapshotBannerProps> = ({ freshness }) => {
 	// Only render when the backend explicitly says all rows are non-live.
-	if (!freshness || !freshness.allStale) return null;
+	if (!freshness?.allStale) return null;
 
 	const dateStr = formatDate(freshness.latestDate);
 	const parts: string[] = [];
