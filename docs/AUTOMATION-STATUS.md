@@ -76,6 +76,16 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
    **修复**：body parser 后挂 `cookieParser()`（新增依赖 cookie-parser@1.4.7）；+3 条 cookie-only 集成测试锁死该路径（无中间件时必 401）。
    **live 矩阵**：VIEWER 403 ×3（signals/batch、beef/forecasts、inference/anomalies）+ 无 token 401 + cookie-only /verify 200 + cookie-only /me 200。测试 836→**839 pass**（+1 skip）。
 
+### round-105 批 10：调度器深模块 + 共享爬虫 HTTP 客户端（2026-08-16，审计批 10 三连提交）
+
+**10a `82f441b` 调度器深模块**：server.ts 九处手写 `try/catch + setTimeout 首跑 + setInterval` 模式收进 `services/scheduler.ts`（错误隔离——作业抛错只记日志、下个 tick 照跑；重叠跳过；timer unref）。server.ts 收缩为一张声明式作业表（`backgroundJobs()`：节奏、启动时序、历史注释一处可读）；预测订阅拆成两个作业保持"商品失败不影响 cuts"的独立性。8 条 fake-timer 单测 + 生产重启逐时序验证（5s/15s/45s 作业精确触发，成功日志与旧格式一致）。
+
+**10b `2edd455` 共享 HTTP 客户端**：19 源原本无共享 HTTP 层——4 个泛用封装 + ~9 端点函数 + ~11 处裸 fetch，超时六种（8/10/15/20/30s/无）、UA 三种、重试仅 fao 一处、代理仅 cme 一处、commodityPrices/weatherData **完全无超时**（挂起主机可无限拖延采集周期）。新建 `dataIngestion/http.ts`（scraperFetch：默认 15s 超时、headers/method/body 透传、fao 式瞬态重试（429/5xx≠521 一次 2s 间隔；确定性状态与网络错误不重试）、opt-in 代理（undici ProxyAgent 泛化 cme 模式，进程级缓存））。11 个零行为变更源迁移（超时/头逐字保留），6 条单测；生产重启实测 16 源全跑通、迁移的 commodity_prices 写入 4 行汇率。
+
+**10c `7f16407` auth/POST 源迁移**：faoPrices.fetchWithRetry 收缩为 `scraperFetch(..., retries:1)`——重试策略从单源私有移入共享客户端，round-63 的 5 条契约测试原样通过（行为等价性被测试钉死）；usdaAms（可选 Bearer）、mlaNlrs（x-api-key×2）、secex（POST 30s）、chinaWholesale（MARA POST + legacy GET）全部迁移。**遗留（有意）**：cmeFutures 的 proxy+Yahoo fetch（ChartResponse 双类型待解耦）与 cme/worldBank 的近重复 FRED-CSV 抓取器，后续批处理。
+
+**测试基线**：后端 839→**853 pass**（+1 skip）：批 10a +8 调度器、10b +6 HTTP 客户端、10c 无新增（fao 契约测试改测共享客户端）。全部经 tsc + 全量回归 + build + pm2 restart + 生产实跑验证后独立提交。
+
 ## 二、定时任务（系统 crontab）
 
 `crontab -l` 共 5 条：
