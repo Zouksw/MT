@@ -1,6 +1,6 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-08-15（round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
+> 最后更新：2026-08-16（round-105：部署断层修复 + cookie-parser 挂载；round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
 > §九 数字严谨要求：下列计数为 live 实测（截至日期见各条），运行对应命令获取当前值。
 
@@ -63,6 +63,18 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 **测试**：后端 658→**836 pass**；前端 278→**296 pass**；pytest 47→**57 pass**（合计 983→1189）。前端测试含批 8 的 AuthContext 契约更新（unauthenticated 公共数据回退、枚举大小写计数）。数据库迁移 2 个（market_factors.series_key、prediction_logs.forecast_start_at，均已 migrate deploy 到生产，TD-14 基线后首批增量迁移）。
 
 **方法论教训（诚实记录）**：① `prisma migrate diff --from-migrations` 的 `--shadow-database-url` 绝不能指向目标库自身——会重放迁移清掉它（本日两次踩坑，scratch 库重种子恢复；生产从未受影响）。② 全量测试依赖共享 live inference 与登录限流（3 注册/小时、登录 5/分钟），冷 Redis+并行 worker 下偶发超时/429 抖动——单跑必过、连跑三次观察到不同文件抖动即环境性而非回归；根治待批 5 并发闸削峰后的观察。
+
+### round-105 部署断层修复 + cookie-parser 缺失（2026-08-16）
+
+**发现路径**：收尾验证 batch-9 时发现生产 30 分钟刷新 tick 写入的 612 行 `forecast_start_at` 全部 NULL，而 tsx 探针（直跑源码）能正常写入——顺藤摸瓜：
+
+1. **部署断层（流程缺陷）**：PM2 后端跑 `dist/server.js`、前端跑 `next start`（`.next` 产物），但 08-15 的多次 `pm2 restart` 都没有重新构建——dist 停留在 08-15 11:55 构建（**早于 batch 1-9 全部提交**），`.next/BUILD_ID` 停留在 08-14。即 round-104 的修复"已提交已测试已重启"，但生产进程实际运行的一直是旧编译代码（推理服务 Python 直跑源码除外，batch 5 真实生效）。根因：`restart.sh`（含构建步骤）按约束禁用后，裸 `pm2 restart` 只拉起进程不构建。
+   **修复**：`backend: pnpm build` + `frontend: pnpm build` + PM2 重启；dist grep 确认 forecastStartAt/checkAIAccess/getOwnedTimeseries/auth_token/setEx 全部在场。
+   **教训**：*PM2 restart ≠ 部署*。此后凡改 TS/TSX 代码上线，必须 `pnpm build` → `pm2 restart` → live 验证三连；live 验证必须打真实编译进程（curl :8000/:3000），不能只用 tsx 直跑源码替代。
+
+2. **cookie-parser 从未挂载（真实缺陷，d1b252f）**：新代码上线后 live 复验批 8 发现 cookie `/auth/me` 仍 401——全后端从未 `app.use(cookieParser())`，`res.cookie()` 写 cookie 不需要它，但所有 `req.cookies` 读取（/verify 与 /me 的 cookie 回退、logout 的 cookie 吊销、csrf_token 双提交）静默读到 undefined。即批 8 的"刷新存活会话"在生产从未生效过（刷新页面必然假登出、logout 从不吊销 cookie 会话）。
+   **修复**：body parser 后挂 `cookieParser()`（新增依赖 cookie-parser@1.4.7）；+3 条 cookie-only 集成测试锁死该路径（无中间件时必 401）。
+   **live 矩阵**：VIEWER 403 ×3（signals/batch、beef/forecasts、inference/anomalies）+ 无 token 401 + cookie-only /verify 200 + cookie-only /me 200。测试 836→**839 pass**（+1 skip）。
 
 ## 二、定时任务（系统 crontab）
 
