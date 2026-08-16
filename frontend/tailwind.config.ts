@@ -106,13 +106,16 @@ const config: Config = {
 				"ring-border": "0 0 0 1px rgba(0, 0, 0, 0.1)",
 				card: "0 0 0 1px rgba(0, 0, 0, 0.05)",
 				"card-hover": "0 0 0 1px rgba(0, 0, 0, 0.08)",
-				"card-hover-dark": "0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3)",
+				"card-hover-dark":
+					"inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.55)",
 				"card-elevated": "0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.08)",
-				"card-elevated-dark": "0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.3)",
+				"card-elevated-dark":
+					"inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 32px -12px rgba(0, 0, 0, 0.5)",
 				"button-hover": "0 0 0 1px rgba(0, 0, 0, 0.08)",
 				focus: "0 0 0 2px rgba(184, 134, 11, 0.6)",
 				"shadow-border-dark": "0 0 0 1px rgba(255, 255, 255, 0.08)",
-				"card-dark": "0 0 0 1px rgba(255, 255, 255, 0.08)",
+				"card-dark":
+					"inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.5)",
 			},
 			transitionTimingFunction: {
 				enter: "cubic-bezier(0, 0, 0.2, 1)",

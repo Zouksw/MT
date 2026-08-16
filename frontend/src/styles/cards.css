@@ -6,7 +6,7 @@
 /* Unified card base classes */
 
 .card-base {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background-color: #ffffff;
   border: none;
   box-shadow: var(--shadow-card);
@@ -15,7 +15,11 @@
 
 .dark .card-base {
   background-color: #171717;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px -16px rgba(0, 0, 0, 0.5);
 }
 
 .card-base:hover {
@@ -23,11 +27,15 @@
 }
 
 .dark .card-base:hover {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 12px 32px -16px rgba(0, 0, 0, 0.55);
 }
 
 .card-elevated {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background-color: #ffffff;
   border: none;
   box-shadow: var(--shadow-card), 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -36,7 +44,11 @@
 
 .dark .card-elevated {
   background-color: #1f1f1f;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 16px -4px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 12px 32px -12px rgba(0, 0, 0, 0.5);
 }
 
 /* Glass Card Base — shadow-as-border */
@@ -69,11 +81,19 @@
 
 .dark .content-card {
   background-color: #171717;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px -16px rgba(0, 0, 0, 0.5);
 }
 
 .dark .content-card:hover {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 12px 32px -16px rgba(0, 0, 0, 0.55);
 }
 
 /* Content card with accent strip */
@@ -117,7 +137,10 @@
 
 .dark .ant-card {
   background-color: #171717;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .ant-card:hover {
@@ -125,7 +148,10 @@
 }
 
 .dark .ant-card:hover {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* Stat card — gradient top accent, background tint */
