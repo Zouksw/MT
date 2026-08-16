@@ -50,14 +50,23 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
 		const authHeader = req.headers.authorization;
 
-		if (!authHeader?.startsWith("Bearer ")) {
+		// Bearer header first, then the HttpOnly auth_token cookie — same
+		// precedence as /auth/verify (routes/auth.ts). The SPA keeps its JWT in
+		// memory only (tokenManager), so after a page refresh there is no
+		// Authorization header, but the SameSite=Strict cookie session is still
+		// alive; without this fallback every data request would 401 despite a
+		// valid session. CSRF exposure is bounded by SameSite=Strict (cookie is
+		// never sent cross-site).
+		const token = authHeader?.startsWith("Bearer ")
+			? authHeader.substring(7)
+			: (req.cookies?.auth_token as string | undefined);
+
+		if (!token) {
 			return res.status(401).json({
 				success: false,
 				error: { message: "No token provided", code: "UNAUTHORIZED" },
 			});
 		}
-
-		const token = authHeader.substring(7);
 
 		// Check if token is blacklisted
 		if (await isTokenBlacklisted(token)) {

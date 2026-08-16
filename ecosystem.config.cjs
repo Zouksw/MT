@@ -61,6 +61,9 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 3000,
+        // Internal backend origin the Next server proxies /api/* to
+        // (next.config.mjs rewrites). Browser requests stay same-origin.
+        API_PROXY_TARGET: 'http://localhost:8000',
       },
       // Logging
       error_file: path.join(ROOT, '.logs/frontend-error.log'),

@@ -32,13 +32,19 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
-  // API Proxy
+  // API Proxy — server-side only. API_PROXY_TARGET is the INTERNAL backend
+  // origin the Next server forwards /api/* to (Express default :8000). This is
+  // deliberately a separate variable from NEXT_PUBLIC_API_URL (which only
+  // exists for a split-origin deployment where the BROWSER must call the API
+  // on a different hostname); reusing NEXT_PUBLIC_API_URL here let the
+  // .env.production placeholder (https://api.your-domain.com) get baked into
+  // routes-manifest.json, silently routing every API call to a parked domain.
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const proxyTarget = process.env.API_PROXY_TARGET || 'http://localhost:8000';
     return [
       {
         source: '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
+        destination: `${proxyTarget}/api/:path*`,
       },
     ];
   },

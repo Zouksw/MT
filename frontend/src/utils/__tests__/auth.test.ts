@@ -58,7 +58,6 @@ describe("auth utilities", () => {
 	beforeEach(() => {
 		localStorageMock.clear();
 		jest.clearAllMocks();
-		process.env.NEXT_PUBLIC_API_URL = "http://localhost:8000";
 	});
 
 	afterEach(() => {
@@ -131,7 +130,7 @@ describe("auth utilities", () => {
 			await authFetch("/api/test", { method: "GET" });
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				"http://localhost:8000/api/test",
+				"/api/test",
 				expect.objectContaining({
 					credentials: "include",
 					headers: expect.objectContaining({
@@ -139,6 +138,30 @@ describe("auth utilities", () => {
 					}),
 				}),
 			);
+		});
+
+		it("should prefix a split-origin API base when NEXT_PUBLIC_API_URL is set", async () => {
+			// API_BASE is evaluated at module load, so re-import the module chain
+			// with the env var in place to exercise the split-origin branch.
+			jest.resetModules();
+			process.env.NEXT_PUBLIC_API_URL = "https://api.example.com";
+			try {
+				jest.isolateModules(() => {
+					const isolatedAuth = require("../auth");
+					const { tokenManager: isolatedTokenManager } = require("@/lib/tokenManager");
+					isolatedTokenManager.getToken.mockReturnValue("test-token");
+
+					void isolatedAuth.authFetch("/api/test", { method: "GET" });
+
+					expect(global.fetch).toHaveBeenCalledWith(
+						"https://api.example.com/api/test",
+						expect.objectContaining({ credentials: "include" }),
+					);
+				});
+			} finally {
+				delete process.env.NEXT_PUBLIC_API_URL;
+				jest.resetModules();
+			}
 		});
 
 		it("should make fetch request without auth headers when no token", async () => {
@@ -151,7 +174,7 @@ describe("auth utilities", () => {
 			await authFetch("/api/test", { method: "GET" });
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				"http://localhost:8000/api/test",
+				"/api/test",
 				expect.not.objectContaining({
 					headers: expect.objectContaining({
 						Authorization: expect.any(String),
@@ -173,7 +196,7 @@ describe("auth utilities", () => {
 			});
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				"http://localhost:8000/api/test",
+				"/api/test",
 				expect.objectContaining({
 					headers: expect.objectContaining({
 						Authorization: "Bearer test-token",
@@ -192,7 +215,7 @@ describe("auth utilities", () => {
 			await authFetch("/api/test", { method: "POST" });
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				"http://localhost:8000/api/test",
+				"/api/test",
 				expect.objectContaining({
 					headers: expect.objectContaining({
 						"Content-Type": "application/json",

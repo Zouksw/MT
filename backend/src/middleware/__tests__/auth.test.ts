@@ -73,6 +73,60 @@ describe("authenticate middleware", () => {
 		});
 	});
 
+	it("should authenticate via auth_token cookie when no Authorization header", async () => {
+		// Page-refresh scenario: SPA memory token gone, SameSite=Strict cookie alive.
+		mockReq.headers = {};
+		mockReq.cookies = { auth_token: "cookie-session-token" };
+		mockIsTokenBlacklisted.mockResolvedValue(false);
+		mockVerifyToken.mockReturnValue({ userId: "user-1" });
+		mockUserFindUnique.mockResolvedValue({
+			id: "user-1",
+			email: "u@example.com",
+			name: "User",
+			role: "USER",
+		});
+
+		await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+		expect(mockIsTokenBlacklisted).toHaveBeenCalledWith("cookie-session-token");
+		expect(mockVerifyToken).toHaveBeenCalledWith("cookie-session-token");
+		expect(mockReq.userId).toBe("user-1");
+		expect(mockNext).toHaveBeenCalled();
+	});
+
+	it("should prefer Bearer header over auth_token cookie", async () => {
+		mockReq.headers = { authorization: "Bearer header-token" };
+		mockReq.cookies = { auth_token: "cookie-session-token" };
+		mockIsTokenBlacklisted.mockResolvedValue(false);
+		mockVerifyToken.mockReturnValue({ userId: "user-1" });
+		mockUserFindUnique.mockResolvedValue({
+			id: "user-1",
+			email: "u@example.com",
+			name: "User",
+			role: "USER",
+		});
+
+		await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+		expect(mockVerifyToken).toHaveBeenCalledWith("header-token");
+		expect(mockNext).toHaveBeenCalled();
+	});
+
+	it("should reject a blacklisted auth_token cookie", async () => {
+		mockReq.headers = {};
+		mockReq.cookies = { auth_token: "revoked-cookie-token" };
+		mockIsTokenBlacklisted.mockResolvedValue(true);
+
+		await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
+
+		expect(mockRes.status).toHaveBeenCalledWith(401);
+		expect(mockRes.json).toHaveBeenCalledWith({
+			success: false,
+			error: { message: "Token has been revoked", code: "UNAUTHORIZED" },
+		});
+		expect(mockNext).not.toHaveBeenCalled();
+	});
+
 	it("should return 401 when token is blacklisted", async () => {
 		mockReq.headers = { authorization: "Bearer blacklisted-token" };
 		mockIsTokenBlacklisted.mockResolvedValue(true);

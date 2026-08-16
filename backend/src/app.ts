@@ -70,57 +70,78 @@ export function createApp(): AppInstance {
 		},
 	});
 
-	// CORS middleware with whitelist support
-	// Security: In production, requires explicit ALLOWED_ORIGINS configuration
-	const corsOptions: cors.CorsOptions = {
-		credentials: true,
-		origin: (origin, callback) => {
-			// Allow requests with no origin (like mobile apps or curl requests)
-			if (!origin) return callback(null, true);
-
-			const allowedOrigins = config.server.corsOrigin;
-
-			// Security check: Production should have explicit CORS whitelist
-			if (
-				config.server.nodeEnv === "production" &&
-				(allowedOrigins.length === 0 ||
-					allowedOrigins.includes("*") ||
-					allowedOrigins.some(
-						(origin) =>
-							origin === "http://localhost:3000" ||
-							origin === "http://localhost:3001" ||
-							origin === "http://localhost:3002",
-					))
-			) {
-				logger.error(
-					"SECURITY: Default localhost origins detected in production CORS configuration. " +
-						"Please set CORS_ORIGIN environment variable with your production domains.",
-				);
-				return callback(new Error("CORS: localhost origins not allowed in production"));
-			}
-
-			// Check if origin is exactly in allowed list
-			if (allowedOrigins.indexOf(origin) !== -1) {
-				callback(null, true);
-			} else {
-				// For development, allow variations with different ports
-				if (
-					config.server.nodeEnv !== "production" &&
-					allowedOrigins.some((allowed) =>
-						origin?.startsWith(
-							allowed.replace(":3000", "").replace(":3001", "").replace(":3002", ""),
-						),
-					)
-				) {
-					callback(null, true);
-				} else {
-					callback(new Error("CORS policy violation: Origin not allowed"));
-				}
-			}
-		},
+	// CORS middleware with whitelist support.
+	// Security: In production, requires explicit ALLOWED_ORIGINS configuration.
+	//
+	// Same-origin exemption (delegation mode): browsers attach an Origin header
+	// to every POST, so requests proxied from our own frontend entry (nginx
+	// `proxy_set_header Host $host`, or the Next.js /api rewrites) arrive with an
+	// Origin that the strict whitelist below would reject — 500ing every
+	// same-origin POST (login, web-vitals, all mutations). When the Origin's
+	// host:port equals the request's Host (or X-Forwarded-Host behind a proxy),
+	// the request is same-origin and CORS does not apply, so we skip the
+	// whitelist entirely.
+	const isSameOriginRequest = (req: express.Request, origin: string): boolean => {
+		try {
+			const originHost = new URL(origin).host;
+			const forwarded = req.headers["x-forwarded-host"];
+			const host =
+				(typeof forwarded === "string" ? forwarded.split(",")[0].trim() : undefined) ||
+				req.headers.host;
+			return !!host && originHost === host;
+		} catch {
+			return false;
+		}
 	};
 
-	app.use(cors(corsOptions));
+	const corsOptionsDelegate: cors.CorsOptionsDelegate<express.Request> = (req, callback) => {
+		const origin = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
+
+		// Allow requests with no origin (mobile apps, curl, server-to-server)
+		if (!origin || isSameOriginRequest(req, origin)) {
+			return callback(null, { credentials: true });
+		}
+
+		const allowedOrigins = config.server.corsOrigin;
+
+		// Security check: Production should have explicit CORS whitelist
+		if (
+			config.server.nodeEnv === "production" &&
+			(allowedOrigins.length === 0 ||
+				allowedOrigins.includes("*") ||
+				allowedOrigins.some(
+					(o) =>
+						o === "http://localhost:3000" ||
+						o === "http://localhost:3001" ||
+						o === "http://localhost:3002",
+				))
+		) {
+			logger.error(
+				"SECURITY: Default localhost origins detected in production CORS configuration. " +
+					"Please set CORS_ORIGIN environment variable with your production domains.",
+			);
+			return callback(new Error("CORS: localhost origins not allowed in production"));
+		}
+
+		// Check if origin is exactly in allowed list
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			return callback(null, { credentials: true, origin: true });
+		}
+
+		// For development, allow variations with different ports
+		if (
+			config.server.nodeEnv !== "production" &&
+			allowedOrigins.some((allowed) =>
+				origin.startsWith(allowed.replace(":3000", "").replace(":3001", "").replace(":3002", "")),
+			)
+		) {
+			return callback(null, { credentials: true, origin: true });
+		}
+
+		callback(new Error("CORS policy violation: Origin not allowed"));
+	};
+
+	app.use(cors(corsOptionsDelegate));
 
 	// Security middleware
 	app.use(securityHeaders);
