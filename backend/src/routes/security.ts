@@ -133,12 +133,7 @@ router.post(
 		for (const log of logs) {
 			if (!log.event || !validEvents.includes(log.event)) {
 				logger.warn("Invalid audit log event:", log.event);
-				return error(
-					res,
-					`Invalid event: ${log.event}`,
-					400,
-					"VALIDATION_ERROR",
-				);
+				return error(res, `Invalid event: ${log.event}`, 400, "VALIDATION_ERROR");
 			}
 
 			if (!log.sessionId) {
@@ -146,12 +141,7 @@ router.post(
 			}
 
 			if (!log.severity || !validSeverities.includes(log.severity)) {
-				return error(
-					res,
-					`Invalid severity: ${log.severity}`,
-					400,
-					"VALIDATION_ERROR",
-				);
+				return error(res, `Invalid severity: ${log.severity}`, 400, "VALIDATION_ERROR");
 			}
 
 			// Validate details is an object
@@ -257,15 +247,7 @@ router.get(
 	"/audit",
 	authenticate,
 	asyncHandler(async (req: AuthRequest, res: Response) => {
-		const {
-			userId,
-			event,
-			severity,
-			startDate,
-			endDate,
-			page = "1",
-			limit = "50",
-		} = req.query;
+		const { userId, event, severity, startDate, endDate, page = "1", limit = "50" } = req.query;
 
 		// Check if user is admin
 		if (req.user?.role !== "ADMIN") {
@@ -399,38 +381,36 @@ router.get(
 			where: dateFilter,
 		});
 
-		// Get all logs for aggregation
-		const allLogs = await prisma.securityAuditLog.findMany({
-			where: dateFilter,
-			select: {
-				event: true,
-				severity: true,
-				timestamp: true,
-				details: true,
-			},
-		});
+		// Aggregate in SQL (round-105): the previous version pulled EVERY
+		// matching row into memory (findMany, no cap) just to count by event
+		// and severity — the same unbounded-aggregation pattern round-104
+		// fixed in mapeTracking. groupBy keeps the endpoint O(1) in memory
+		// as the audit table grows (frontend submits events continuously).
+		const [byEventRows, bySeverityRows, criticalEvents] = await Promise.all([
+			prisma.securityAuditLog.groupBy({
+				by: ["event"],
+				where: dateFilter,
+				_count: { _all: true },
+			}),
+			prisma.securityAuditLog.groupBy({
+				by: ["severity"],
+				where: dateFilter,
+				_count: { _all: true },
+			}),
+			prisma.securityAuditLog.findMany({
+				where: {
+					...dateFilter,
+					severity: "critical",
+				},
+				orderBy: { timestamp: "desc" },
+				take: 10,
+			}),
+		]);
 
-		// Aggregate by event type
 		const byEvent: Record<string, number> = {};
-		allLogs.forEach((log) => {
-			byEvent[log.event] = (byEvent[log.event] || 0) + 1;
-		});
-
-		// Aggregate by severity
+		for (const row of byEventRows) byEvent[row.event] = row._count._all;
 		const bySeverity: Record<string, number> = {};
-		allLogs.forEach((log) => {
-			bySeverity[log.severity] = (bySeverity[log.severity] || 0) + 1;
-		});
-
-		// Get recent critical events
-		const criticalEvents = await prisma.securityAuditLog.findMany({
-			where: {
-				...dateFilter,
-				severity: "critical",
-			},
-			orderBy: { timestamp: "desc" },
-			take: 10,
-		});
+		for (const row of bySeverityRows) bySeverity[row.severity] = row._count._all;
 
 		return success(res, {
 			total: totalEvents,
