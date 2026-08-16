@@ -5,6 +5,18 @@
  *   - network-level request failures
  *   - whether the page rendered meaningful content vs an error boundary
  *
+ * net::ERR_ABORTED on page routes is Next.js prefetch cancellation (normal).
+ *
+ * PREREQUISITE: [id] routes need owned fixtures; create via the proxy before
+ * running (they are deliberately deleted after each audit session):
+ *   login:   POST /api/auth/login {"email":"admin@trademind.com","password":"Admin123!"}
+ *   apikey:  POST /api/api-keys   {"name":"e2e-audit-key"}
+ *   dataset: POST /api/datasets   {"name":"e2e-audit-ds","slug":"e2e-audit-ds","source":"MANUAL","storageFormat":"TIMESERIES","frequency":"DAILY","isPublic":false}
+ *   series:  POST /api/timeseries {"datasetId":"<ds>","name":"ts","slug":"e2e-audit-ts"}
+ *   news:    POST /api/news       {"title":"t","summary":"s","body":"b","source":"MANUAL","category":"MARKET_INSIGHT","status":"published"}
+ *   alert:   prisma insert (Alert row owned by admin, timeseriesId from above)
+ * then paste the returned ids into IDS below.
+ *
  * Usage: node scripts/e2e-page-audit.mjs
  */
 import { createRequire } from "node:module";
@@ -18,10 +30,10 @@ const BASE = "http://localhost:3000";
 // Dynamic ids were created via the API in this audit session (e2e-audit-*
 // records) so [id] routes resolve to real owned data.
 const IDS = {
-	apikey: "5aa82d39-ce8f-43e9-8682-559bafa68a74",
-	dataset: "75d4d5e7-8419-4a59-b855-11ee787fc526",
-	timeseries: "217d2abd-08bd-4bb0-ab7f-eb0d2b1b0b28",
-	news: "e1b4fcc8-aff1-4a86-aca0-1fc1f2b2c5a3",
+	apikey: "32ecf017-979e-49dc-85c6-7fea752b0f32",
+	dataset: "240ef912-fbab-4261-8a0c-78d148be7111",
+	timeseries: "cd4eb271-5a1a-468f-b6d9-7fda05d85b3f",
+	news: "e56614d3-c2b0-4b38-b806-36c7aba8ebf3",
 	rule: "76d4a48d-df4a-4e46-8506-fac995052e4f",
 	alert: "b85e992b-a14b-4fef-957c-7dcfeb041469",
 	cut: "BRISKET_NAVEL",
