@@ -24,6 +24,7 @@ import {
 	verifyDuePredictions,
 } from "@/services/mapeTracking";
 import {
+	generateBaselinePredictions,
 	scheduleBeefCutPredictions,
 	schedulePredictionsFromPostgreSQL,
 } from "@/services/predictionCache";
@@ -160,6 +161,23 @@ function backgroundJobs(): ScheduledJob[] {
 			run: async () => {
 				const cutCount = await scheduleBeefCutPredictions();
 				logger.info(`🥩 Scheduled cut predictions for ${cutCount} beef cut series`);
+			},
+		},
+		{
+			// Baseline revival (round-110): statistical baselines left
+			// background scheduling 2026-07-26 when chronos became primary, so
+			// the "naive bar" lost same-generation verified evidence. One batch
+			// per day through the same runAndCachePrediction → logPrediction →
+			// MAPE-verification path; rows mature into verified evidence ~10
+			// days later. Daily (not 30-min) to bound row growth — the accuracy
+			// comparison page needs ~120/model per 30d window, which 16 rows/day
+			// provides. See generateBaselinePredictions docs.
+			name: "baseline-predictions",
+			firstRunDelayMs: 2 * MS_PER_MINUTE,
+			intervalMs: 24 * MS_PER_HOUR,
+			run: async () => {
+				const n = await generateBaselinePredictions();
+				logger.info(`📊 Baseline batch: ${n} predictions (naive-bar evidence, daily)`);
 			},
 		},
 

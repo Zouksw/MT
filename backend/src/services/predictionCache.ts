@@ -16,7 +16,7 @@ import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
-import { getAllModels } from "./modelRegistry";
+import { BASELINE_MODELS, getAllModels } from "./modelRegistry";
 
 const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
@@ -410,6 +410,73 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 	);
 
 	return subscribed;
+}
+
+/**
+ * Generate one batch of BASELINE model predictions for fresh commodities.
+ *
+ * Baseline revival (round-110, PREDICTION-STRATEGY §4 item 5): statistical
+ * baselines left background scheduling on 2026-07-26 when chronos became the
+ * primary ensemble, so their verified pools froze — the "naive bar" any real
+ * model must beat has no same-generation evidence to be compared against
+ * (chronos fresh-cohort MAPE 0.68-0.70 vs naive's frozen 05-19→07-26 pool
+ * mixed across 7 commodities is not a fair comparison).
+ *
+ * This runs the 4 baseline models on every fresh commodity (same ≥2 daily
+ * prices within STALE_WINDOW_DAYS gate as schedulePredictionsFromPostgreSQL).
+ * Each call goes through runAndCachePrediction → logPrediction, so the rows
+ * enter the MAPE verification loop and mature into verified evidence ~10
+ * days later. Cadence is deliberately DAILY (server.ts), not the 30-min
+ * primary cadence: baselines only need enough verified rows for the accuracy
+ * comparison page (16 rows/day → ~120/model in a 30d window), and the daily
+ * cadence keeps prediction_logs growth and inference load bounded.
+ *
+ * Deliberately does NOT use subscribeCommodity: the subscriptions map is
+ * keyed by commodityId, so a second subscribe for baselines would REPLACE
+ * the chronos subscription instead of adding to it. Calling
+ * runAndCachePrediction directly leaves the 30-min primary machinery intact.
+ *
+ * @returns number of baseline predictions generated this run
+ */
+export async function generateBaselinePredictions(): Promise<number> {
+	const since = new Date();
+	since.setDate(since.getDate() - STALE_WINDOW_DAYS);
+
+	const commodities = await prisma.commodity.findMany({
+		where: {
+			isActive: true,
+			prices: { some: { interval: "daily", date: { gte: since } } },
+		},
+		select: {
+			id: true,
+			_count: {
+				select: { prices: { where: { interval: "daily", date: { gte: since } } } },
+			},
+		},
+	});
+
+	let generated = 0;
+	let fresh = 0;
+	for (const commodity of commodities) {
+		if (commodity._count.prices < 2) continue;
+		fresh++;
+		for (const modelId of BASELINE_MODELS) {
+			try {
+				await runAndCachePrediction(commodity.id, modelId, 10);
+				generated++;
+			} catch (error) {
+				// Per-model failure must not abort the batch — the remaining
+				// models still produce comparison evidence this cycle.
+				logger.error(`[BASELINE] Failed ${modelId} for ${commodity.id}: ${error}`);
+			}
+		}
+	}
+
+	logger.info(
+		`[BASELINE] Generated ${generated} baseline predictions (${BASELINE_MODELS.length} models × ${fresh} fresh commodities)`,
+	);
+
+	return generated;
 }
 
 /**
