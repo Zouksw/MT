@@ -23,8 +23,8 @@ the model functions directly so the result is about model quality, not latency.
 """
 
 import os
-import sys
 import statistics
+import sys
 from datetime import datetime
 
 import numpy as np
@@ -35,12 +35,15 @@ import psycopg2
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from services.statistical_models import predict_arima, predict_sarimax  # noqa: E402
 
-
 # ============================================================================
-# Config
+# Config — overridable via CLI: sarimax_vs_arima.py [target] [exog] [target_src] [exog_src]
 # ============================================================================
-TARGET_SLUG = "crude_oil_cme"        # y — the series we forecast
-EXOG_SLUG = "natural_gas_cme"        # x — the exogenous driver
+TARGET_SLUG = sys.argv[1] if len(sys.argv) > 1 else "crude_oil_cme"   # y
+EXOG_SLUG = sys.argv[2] if len(sys.argv) > 2 else "natural_gas_cme"   # x
+# Source filters: aud_usd carries 55 exchange_rate_api rows with the known
+# R2 unit-inversion bug — pass "fred" for it. None means no filter.
+TARGET_SOURCE = sys.argv[3] if len(sys.argv) > 3 else None
+EXOG_SOURCE = sys.argv[4] if len(sys.argv) > 4 else None
 HORIZON = 10                          # forecast 10 trading days ahead
 WINDOW = 500                          # trailing days used to fit each model
 N_ROLLOUTS = 60                       # number of rolling-origin forecasts
@@ -64,7 +67,8 @@ def load_env_db_url() -> str:
     raise RuntimeError("Could not find DATABASE_URL in backend/.env")
 
 
-def load_aligned_series(db_url: str, target_slug: str, exog_slug: str):
+def load_aligned_series(db_url: str, target_slug: str, exog_slug: str,
+                        target_source=None, exog_source=None):
     """Load two daily series, inner-joined on date so they are perfectly aligned."""
     conn = psycopg2.connect(db_url)
     try:
@@ -76,12 +80,19 @@ def load_aligned_series(db_url: str, target_slug: str, exog_slug: str):
             JOIN commodity_prices g
               ON g.date = o.date
              AND g.interval = 'daily'
-            JOIN commodities oc ON oc.id = o.commodity_id AND oc.slug = %s
-            JOIN commodities gc ON gc.id = g.commodity_id AND gc.slug = %s
+             AND (%(exog_source)s IS NULL OR g.source = %(exog_source)s)
+            JOIN commodities oc ON oc.id = o.commodity_id AND oc.slug = %(target_slug)s
+            JOIN commodities gc ON gc.id = g.commodity_id AND gc.slug = %(exog_slug)s
             WHERE o.interval = 'daily'
+              AND (%(target_source)s IS NULL OR o.source = %(target_source)s)
             ORDER BY o.date ASC
             """,
-            (target_slug, exog_slug),
+            {
+                "target_slug": target_slug,
+                "exog_slug": exog_slug,
+                "target_source": target_source,
+                "exog_source": exog_source,
+            },
         )
         rows = cur.fetchall()
     finally:
@@ -182,14 +193,15 @@ def main():
     print("=" * 78)
     print("SARIMAX vs ARIMA — Multivariate Backtest Experiment")
     print("=" * 78)
-    print(f"Target (y)   : {TARGET_SLUG}")
-    print(f"Exogenous(x) : {EXOG_SLUG}")
+    print(f"Target (y)   : {TARGET_SLUG}" + (f" (source={TARGET_SOURCE})" if TARGET_SOURCE else ""))
+    print(f"Exogenous(x) : {EXOG_SLUG}" + (f" (source={EXOG_SOURCE})" if EXOG_SOURCE else ""))
     print(f"Horizon      : {HORIZON} days")
     print(f"Window       : {WINDOW} days | Rollouts: {N_ROLLOUTS} | Step: {STEP_BETWEEN}")
     print()
 
     db_url = load_env_db_url()
-    dates, y, x = load_aligned_series(db_url, TARGET_SLUG, EXOG_SLUG)
+    dates, y, x = load_aligned_series(db_url, TARGET_SLUG, EXOG_SLUG,
+                                      TARGET_SOURCE, EXOG_SOURCE)
     print(f"Loaded {len(y)} aligned daily observations")
     print(f"  span : {dates[0].date()} → {dates[-1].date()}")
     print(f"  y    : {y.min():.2f} – {y.max():.2f} (last={y[-1]:.2f})")

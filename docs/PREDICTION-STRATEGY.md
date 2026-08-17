@@ -97,3 +97,9 @@
 - **验证环饿死 bug 修复**（commit 54ada15）：心跳僵尸商品（live_cattle_cme 等 5 个，3 个月仅 3 行散点价）躲过 `latestPrice<=predictedAt` 冻结判定，2.7 万永久跳过行占满 6h 验证批次的 oldest-first 5000 行窗口 → 08-04 后 chronos 在真新鲜商品上的预测全部滞留 completed。新增窗口过期清扫（anchor+horizon+7d 宽限 + actuals 守卫）+ restore 窗口感知化。live 首跑：清扫 26,691 行，随后一批 verified 1,536/2,262。
 - **chronos 实证到位**：新队列（4 个新鲜商品）avg MAPE chronos_mini 0.68 / base 0.70 / tiny 0.70——**显著优于历史统计混合队列**（naive 3.45，但那是含 crude 12.70 的混合口径，不可直接比）。同台可比需统计基线复产（待办 5）。
 - 测试：backend 909→911（+2 新测试，2 个旧 restore 测试改为窗口语义），全绿；三服务 live 200。
+
+### 第 3、4 项实验结果（同日，experiments/sarimax_vs_arima.py 参数化后实跑）
+
+- **联动实测（§3.1 前置）**：日收益率相关（3 年/10 年双窗口）——beef_carcass_us ↔ **aud_usd r=+0.129（10y，n=2487，t≈6.4）唯一稳健**；usd_cny 3y +0.04 / 10y -0.064 符号翻转不可用；brl_usd 0.016、原油/天然气 ≈-0.06 均无信号。结论：胴体↔澳元联动真实但弱（r²≈1.7%），"胴体锚"传导只能以胴体自身趋势为主、汇率作辅助。
+- **sarimax 门禁回测（§3.2）**：rolling-origin 60 起（500 天窗、H=10、同窗同horizon成对比较）——beef_carcass_us × aud_usd(fred)：ARIMA mean MAPE **8.10%** vs SARIMAX **8.34%**（SARIMAX 胜率 46.7%）；对照配对 crude × natgas 同样零提升（4.28% vs 4.28%）。**按门禁"增量不显著就不上"→ sarimax 外生接线暂缓**。根因分析：库内外生变量与胴体仅同期弱相关，future_exog 只能前向填充——同期变量天然无法转化为预测优势；要有增量需先找到**领先**指标（lagged exog，如 aud 领先胴体 N 天），列为后续实验方向而非接线方向。
+- 实验脚本已参数化（`python experiments/sarimax_vs_arima.py [target] [exog] [target_src] [exog_src]`），source 过滤支持（aud_usd 的 55 行 exchange_rate_api 脏数据已隔离）。
