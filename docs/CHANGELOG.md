@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-17 — round-110 按预测策略方案开工：验证环僵尸饿死修复，chronos 实证到位
+
+按 PREDICTION-STRATEGY §四排序执行第 2 项时发现真根因并非"chronos 未纳入验证环"，而是**心跳僵尸商品饿死验证环**：live_cattle_cme 等 5 个 CME 商品功能上已死但偶发单行心跳价（3 个月 3 行、最新 08-13），同时骗过 verifyDue 的跳过不改状态与 markUnverifiable 的 `latestPrice<=predictedAt` 冻结判定，2.7 万永久跳过行占满 oldest-first take:5000 窗口 → 08-04 后所有验证批次 5000/5000 空转。修复（commit 54ada15）：新增 `expireWindowElapsedPredictions` 窗口过期清扫（anchor+horizon+7d 宽限 + actuals 守卫）+ `restoreVerifiablePredictions` 窗口感知重写（防乒乓）+ 接入 6h 验证任务。live 首跑清扫 26,691 行、随后一批 verified **1,536/2,262**——chronos 首批同代实证 avg MAPE **0.68-0.70**（usd_cny 0.35 / aud 0.47 / brl 0.40 / beef_carcass_us 1.43）。同步修正 PREDICTION-STRATEGY 初版"chronos 0 verified"错误声明（LIMIT 18 截断所致，实际历史已有 ~2,073/variant）并补 round-110 执行记录。backend 909→911 全绿（+2 新测试，2 个旧 restore 测试改窗口语义）。遗留下一批：统计基线复产（07-26 停产，naive 门槛缺同代证据）、sarimax 外生回测、胴体↔汇率联动实测。
+
 ### 2026-08-16 — round-109 预测策略评估（只读，落档 PREDICTION-STRATEGY.md）
 
 实测数据面与模型面后给出最优方案。关键发现：32 个牛肉部位商品 30 个零数据点、beef_cut_prices 仅 30 天冻结快照（2026-04-30）；唯一深而活的牛肉序列是 beef_carcass_us（4,241 点 2014→今，verified MAPE 1.73）；verified 模型排名朴素基线最优（naive 3.45 < ES 3.53 < ARIMA 3.67 < HW 3.73 << STL 10.87）；Chronos 3 变体 ~4,340 条预测 0 条 verified；sarimax 0 条日志（外生管线从未接线，而 FX/饲料/原油数据在库且新鲜）。推荐方案：数据回填为 P0 前置 → 部位价短期用"胴体锚 + 汇率折算 + 部位升贴水"自上而下结构比例（不在 30 天噪声上外推）→ sarimax 外生接线（先在胴体序列回测增量）→ Chronos 重定位为过验证环的 ensemble 成员（naive 为淘汰门槛）→ rolling-origin 分层冠军选择 + split-conformal 校准区间 + 数据不足序列诚实降级。全部兼容预训练约束。

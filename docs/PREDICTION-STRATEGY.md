@@ -24,11 +24,12 @@
 
 ### 模型面（9 模型 = 6 统计 + 3 Chronos）
 
-- **verified 平均 MAPE（全商品混合口径）**：naive **3.45** < ES 3.53 < ARIMA 3.67 < HW 3.73 << STL 10.87。
-  **朴素基线是已验证最优模型**——对含大量汇率/低频序列的池子，这是统计上完全正常的结果。
-- **Chronos 3 变体：各 ~4,340 条 completed、0 条 verified**——预训练大模型从未被验证环检验过，却已作为"核心差异化"上线。
+- **verified 平均 MAPE（全商品混合口径，统计模型 05-19→07-26 队列）**：naive **3.45** < ES 3.53 < ARIMA 3.67 < HW 3.73 << STL 10.87。
+  **朴素基线是该历史队列的已验证最优**——对含大量汇率/低频序列的池子，这是统计上完全正常的结果。
+- **Chronos 验证情况（round-110 修正）**：初版本文档写"0 条 verified"是**笔者的查询错误**（GROUP BY 结果被 LIMIT 18 截断）——实际各变体已有 ~2,073 条 verified（07-26→08-04 队列），且 08-04 后验证中断的根因是**僵尸商品饿死验证环**的 bug（心跳价格行躲过冻结判定，2.7 万行占满 oldest-first 5000 行候选窗口），非模型问题。round-110 修复后首批解锁 1,536 条：chronos 新队列 avg MAPE **0.68-0.70**（usd_cny 0.35 / aud 0.47 / brl 0.40 / beef_carcass_us 1.43）。
 - **sarimax：prediction_logs 0 条**——唯一支持外生变量的模型（engine/routers 均已实现 exog 接口），批量预测管线从未喂过外生数据。库里现成的深而新的 FX/饲料/原油没有进入任何预测。
-- 按商品分层的 verified MAPE：usd_cny 0.68 / eur 1.28 / beef_carcass_us 1.73 / brl 0.83 / aud 3.78 / natgas 5.30 / crude 12.70——**可预测性由序列本身决定**，算法间差异远小于序列间差异。
+- **统计基线 07-26 起停止生成**（chronos 上线切换，stl 已于 08-15 移除 B3）——"naive 门槛"比较缺新证据，基线需在新鲜商品上复产（见 §四）。
+- 按商品分层的 verified MAPE：usd_cny 0.35-0.68 / eur 1.28 / beef_carcass_us 1.43-1.73 / brl 0.40-0.83 / aud 0.47-3.78 / natgas 5.30 / crude 12.70——**可预测性由序列本身决定**，算法间差异远小于序列间差异。
 
 ---
 
@@ -38,7 +39,7 @@
 |---|---|---|---|
 | 1 | **牛肉部位价数据**：30/32 空窗、1 个月冻结快照 | P0 | 上表；没有数据一切模型无从谈起 |
 | 2 | **外生变量管线**：FX/饲料/原油在库但未接预测 | P1 | sarimax 0 条日志 |
-| 3 | **Chronos 未验证**：核心 AI 卖点零实证 | P1 | 4,340 条 completed 0 verified |
+| 3 | **Chronos 验证中断**（08-04 后）+ **统计基线停产**（07-26 后）：验证证据链断档 | P1 | ~~4,340 条 0 verified~~（修正：僵尸饿死 bug，round-110 已修，见 §五）；基线复产待做 |
 | 4 | **模型选择机制**：9 模型并列，无按 序列×horizon 冠军选择；STL(10.87) 仍参与共识投票 | P2 | prediction_logs + modelQuality.ts |
 | 5 | **区间校准**：有 lower/upper 但无覆盖率保证（conformal 类） | P2 | inference_engine 输出结构 |
 | 6 | **层次协调**：胴体(11年)↔部位(30天)、市场↔工厂 无自上而下传递 | P2 | 无对应实现 |
@@ -83,8 +84,16 @@
 ## 四、实施排序建议
 
 1. **数据回填**（P0，运营 + CSV 导入）：无此则其余全停。
-2. **Chronos 纳入验证环**（小改动大诚信收益：4,340 条历史已可回溯验证）。
+2. ~~**Chronos 纳入验证环**~~（✅ round-110：根因是僵尸商品饿死验证环而非模型被排除——新增 expireWindowElapsedPredictions 清扫 + restore 窗口感知重写；首批解锁 1,536 条 chronos verified，MAPE 见 §一）。
 3. **sarimax 外生接线**（在 beef_carcass_us 上先回测增量）。
 4. **correlationAnalysis 实测 胴体/汇率↔部位价 联动**（决定 3.1 是否成立）。
-5. conformal 区间 + 淘汰制准入。
+5. conformal 区间 + 淘汰制准入 + **统计基线在新鲜商品复产**（naive 门槛需要新证据：统计模型 07-26 停产后，verified 池冻结，无法与 chronos 新队列同台比较）。
 6. 预测卡片融入 /beef 行情页（spec §三 已定方向）。
+
+---
+
+## 五、round-110 执行记录（2026-08-17）
+
+- **验证环饿死 bug 修复**（commit 54ada15）：心跳僵尸商品（live_cattle_cme 等 5 个，3 个月仅 3 行散点价）躲过 `latestPrice<=predictedAt` 冻结判定，2.7 万永久跳过行占满 6h 验证批次的 oldest-first 5000 行窗口 → 08-04 后 chronos 在真新鲜商品上的预测全部滞留 completed。新增窗口过期清扫（anchor+horizon+7d 宽限 + actuals 守卫）+ restore 窗口感知化。live 首跑：清扫 26,691 行，随后一批 verified 1,536/2,262。
+- **chronos 实证到位**：新队列（4 个新鲜商品）avg MAPE chronos_mini 0.68 / base 0.70 / tiny 0.70——**显著优于历史统计混合队列**（naive 3.45，但那是含 crude 12.70 的混合口径，不可直接比）。同台可比需统计基线复产（待办 5）。
+- 测试：backend 909→911（+2 新测试，2 个旧 restore 测试改为窗口语义），全绿；三服务 live 200。

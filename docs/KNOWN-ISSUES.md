@@ -108,6 +108,8 @@
 
 **round-71 补充（2026-08-03 live 实测）**：round-66 的 `markUnverifiablePredictions` 是**点时检查 + 不可逆**——标记时若源已死则永久 unverifiable，verifyDuePredictions 只读 `completed` 不回收。但当源**后来复活**（如 beef_carcass_us 经历 FRED 数据滞后，标记时 latest price >7d 旧，FRED 随后补发 08-01/08-02 daily 行），那些预测**现在窗口内有 actuals** 却仍困在 unverifiable。live 实测：beef_carcass_us（唯一有 fresh actuals 的商品）07-27→08-02 的 738 条 chronos 预测全被误标 unverifiable，accuracy 页 chronos 永远 0 verified。commit ad2cd4b 加 `restoreVerifiablePredictions()`（markLaggingFrozen 的对称逆操作）：扫 unverifiable 行，若商品 latest price 现已 > 最早被困预测的 predictedAt（源复活、有 post-prediction actuals）→ 标回 `completed`。幂等。接 server.ts 启动钩子（markUnverifiable 之后跑）。+3 测试（mutation-verified）。live：beef_carcass_us unverifiable 738→0，completed 48→262/variant（786 条恢复，跨 3 chronos）。这些行重入 verify 队列，下个 verify 周期产首批 beef chronos verified MAPE。
 
+**round-110 补充（2026-08-17 live 实测）**：发现第三种饿死模式——**心跳僵尸商品**。live_cattle_cme 等 5 个 CME 商品源功能上已死但偶发单行"心跳"价（live_cattle：3 个月仅 3 行 cme，最新 08-13），同时骗过两个既有守卫：verifyDuePredictions 永远跳过（10 天窗口凑不够 3 actuals）但不改状态；markUnverifiable 冻结不了（其判定需 `latestPrice <= predictedAt`，心跳行更新）。2.7 万永久跳过行占满 oldest-first take:5000 候选窗口 → 08-04 后每 6h 批次 5000/5000 全跳过，chronos 在 4 个真新鲜商品上的预测全部滞留 completed。commit 54ada15：新增 `expireWindowElapsedPredictions()`（anchor+horizon+7d 宽限已过且窗口 actuals 永远够不到 `min(horizon,3)` 门槛 → unverifiable；NOT EXISTS 守卫数窗口内 actuals 防误杀）+ `restoreVerifiablePredictions` 改窗口感知（复活判定从"有更新的价格"改为"过去窗口内有 actuals 回填"，防与清扫乒乓）。live 首跑：清扫 26,691 行，紧接验证批 verified 1,536/2,262（chronos 新队列 avg MAPE 0.68-0.70：usd_cny 0.35 / aud 0.47 / brl 0.40 / beef_carcass 1.43）。
+
 ---
 
 ### D3 — 数据层静默失效已被暴露（2026-07-31 live 实测，round-48~50）
