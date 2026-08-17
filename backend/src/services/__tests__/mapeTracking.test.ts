@@ -10,6 +10,7 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+	expireWindowElapsedPredictions,
 	getAllModelAccuracy,
 	getModelAccuracy,
 	invalidatePollutedPredictions,
@@ -1077,16 +1078,29 @@ describe("MAPE Tracking (real DB)", () => {
 				}
 			}
 
-			it("restores an unverifiable row to completed when its commodity now has a post-prediction actual (source revived)", async () => {
-				// Prediction at now-30d (frozen when marked). Latest price is now
-				// at now-5d — NEWER than the prediction → source revived → restore.
+			it("restores an unverifiable row to completed when its window was backfilled with actuals (source revived)", async () => {
+				// Prediction at now-30d, horizon 10 (window now-30d→now-20d).
+				// Round-110 semantics: revival requires actuals INSIDE the past
+				// window (the FRED backfill pattern) — 3 backfilled rows land
+				// in-window, plus one newer row showing the source publishes
+				// again. A newer-but-outside-window price alone must NOT revive.
 				const predictedAt = new Date(Date.now() - 30 * 86400000);
-				const revivedPriceDate = new Date(Date.now() - 5 * 86400000);
 				const { commodity, prediction } = await makeUnverifiableWithPrice({
 					slug: "revived",
 					predictedAt,
-					latestPriceDate: revivedPriceDate,
+					latestPriceDate: new Date(Date.now() - 5 * 86400000),
 				});
+				for (let i = 1; i <= 3; i++) {
+					await ctx.prisma.commodityPrice.create({
+						data: {
+							commodityId: commodity.id,
+							date: new Date(predictedAt.getTime() + i * 86400000),
+							interval: "daily",
+							close: 1,
+							source: "test",
+						},
+					});
+				}
 
 				try {
 					const n = await restoreVerifiablePredictions();
@@ -1130,12 +1144,23 @@ describe("MAPE Tracking (real DB)", () => {
 
 			it("is idempotent — a second run restores nothing (rows already completed)", async () => {
 				const predictedAt = new Date(Date.now() - 30 * 86400000);
-				const revivedPriceDate = new Date(Date.now() - 5 * 86400000);
 				const { commodity, prediction } = await makeUnverifiableWithPrice({
 					slug: "idempotent-restore",
 					predictedAt,
-					latestPriceDate: revivedPriceDate,
+					latestPriceDate: new Date(Date.now() - 5 * 86400000),
 				});
+				// In-window backfill so the first run has something to revive.
+				for (let i = 1; i <= 3; i++) {
+					await ctx.prisma.commodityPrice.create({
+						data: {
+							commodityId: commodity.id,
+							date: new Date(predictedAt.getTime() + i * 86400000),
+							interval: "daily",
+							close: 1,
+							source: "test",
+						},
+					});
+				}
 
 				try {
 					const first = await restoreVerifiablePredictions();
@@ -1273,6 +1298,215 @@ describe("MAPE Tracking (real DB)", () => {
 					})
 					.catch(() => {});
 			}
+		});
+	});
+
+	describe("expireWindowElapsedPredictions — zombie-source drain (round-110)", () => {
+		// Heartbeat zombies: rare fresh-looking price rows, never ≥3 actuals in
+		// any 10-day window. These parked ~27k rows in the verify loop's
+		// oldest-first take:5000 window and starved every real candidate.
+		const DAY = 86400000;
+		let zombieCommodityId: string;
+		let liveCommodityId: string;
+		let zombieLogId: string;
+		let liveLogId: string;
+
+		afterEach(async () => {
+			// Cascade-deleting the commodities removes their price rows; logs
+			// have no FK and are swept by id/prefix.
+			await ctx.prisma.predictionLog
+				.deleteMany({
+					where: {
+						OR: [
+							{
+								commodityId: {
+									in: [zombieCommodityId, liveCommodityId].filter(Boolean) as string[],
+								},
+							},
+							{ commodityId: "cut:zombie-factory:TESTCUT_EXPIRE" },
+						],
+					},
+				})
+				.catch(() => {});
+			await ctx.prisma.commodity
+				.deleteMany({
+					where: { slug: { startsWith: `${ctx.prefix}-expire-` } },
+				})
+				.catch(() => {});
+		});
+
+		it("expires zombie-window rows, keeps actuals-guarded rows, skips cut keys — and is idempotent", async () => {
+			// Zombie commodity: one heartbeat price row 2d ago (looks fresh,
+			// defeats the latestPrice<=predictedAt freeze test) — but zero
+			// prices inside the 30d-old prediction's window.
+			const zombie = await ctx.prisma.commodity.create({
+				data: {
+					slug: `${ctx.prefix}-expire-zombie`,
+					name: "expire zombie",
+					category: "test",
+					unit: "USD/kg",
+				},
+			});
+			zombieCommodityId = zombie.id;
+			const zombieAnchor = new Date(Date.now() - 30 * DAY);
+			await ctx.prisma.commodityPrice.create({
+				data: {
+					commodityId: zombie.id,
+					date: new Date(Date.now() - 2 * DAY),
+					interval: "daily",
+					close: 100,
+					source: "test",
+				},
+			});
+			zombieLogId = (
+				await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: `${ctx.prefix}-expire-model`,
+						commodityId: zombie.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+						status: "completed",
+						predictedAt: zombieAnchor,
+						forecastStartAt: zombieAnchor,
+					},
+				})
+			).id;
+
+			// Live commodity: ≥3 actuals INSIDE the same-aged window — the
+			// expiry sweep must NOT touch it (the verify loop owns it).
+			const live = await ctx.prisma.commodity.create({
+				data: {
+					slug: `${ctx.prefix}-expire-live`,
+					name: "expire live",
+					category: "test",
+					unit: "USD/kg",
+				},
+			});
+			liveCommodityId = live.id;
+			const liveAnchor = new Date(Date.now() - 30 * DAY);
+			for (let i = 1; i <= 5; i++) {
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: live.id,
+						date: new Date(liveAnchor.getTime() + i * DAY),
+						interval: "daily",
+						close: 100 + i,
+						source: "test",
+					},
+				});
+			}
+			liveLogId = (
+				await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: `${ctx.prefix}-expire-model`,
+						commodityId: live.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+						status: "completed",
+						predictedAt: liveAnchor,
+						forecastStartAt: liveAnchor,
+					},
+				})
+			).id;
+
+			// Cut-series key: excluded from the sweep by design (separate
+			// BeefCutPrice actuals path).
+			const cutLog = await ctx.prisma.predictionLog.create({
+				data: {
+					modelId: `${ctx.prefix}-expire-model`,
+					commodityId: "cut:zombie-factory:TESTCUT_EXPIRE",
+					horizon: 10,
+					predictedValues: [1, 2, 3],
+					status: "completed",
+					predictedAt: new Date(Date.now() - 30 * DAY),
+					forecastStartAt: new Date(Date.now() - 30 * DAY),
+				},
+			});
+
+			await expireWindowElapsedPredictions();
+
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: zombieLogId } }))?.status,
+			).toBe("unverifiable");
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: liveLogId } }))?.status,
+			).toBe("completed");
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: cutLog.id } }))?.status,
+			).toBe("completed");
+
+			// Idempotent: the zombie row is no longer `completed`; a second
+			// sweep must not flip the guarded/cut rows either.
+			await expireWindowElapsedPredictions();
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: liveLogId } }))?.status,
+			).toBe("completed");
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: cutLog.id } }))?.status,
+			).toBe("completed");
+		});
+
+		it("restoreVerifiable is window-aware: a newer heartbeat does not revive, in-window backfill does", async () => {
+			const zombie = await ctx.prisma.commodity.create({
+				data: {
+					slug: `${ctx.prefix}-expire-restore`,
+					name: "expire restore",
+					category: "test",
+					unit: "USD/kg",
+				},
+			});
+			zombieCommodityId = zombie.id;
+			liveCommodityId = zombie.id; // cleanup sweep handles both
+			const anchor = new Date(Date.now() - 30 * DAY);
+
+			// Heartbeat AFTER the window (the ping-pong trap): newer than the
+			// prediction, useless for verification.
+			await ctx.prisma.commodityPrice.create({
+				data: {
+					commodityId: zombie.id,
+					date: new Date(Date.now() - 1 * DAY),
+					interval: "daily",
+					close: 100,
+					source: "test",
+				},
+			});
+			zombieLogId = (
+				await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: `${ctx.prefix}-restore-model`,
+						commodityId: zombie.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3],
+						status: "unverifiable",
+						predictedAt: anchor,
+						forecastStartAt: anchor,
+					},
+				})
+			).id;
+
+			// Newer-price-alone must NOT revive (old latestPrice-based test
+			// would have — ping-pong with the expiry sweep every cycle).
+			await restoreVerifiablePredictions();
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: zombieLogId } }))?.status,
+			).toBe("unverifiable");
+
+			// Genuine backfill: 3 actuals land INSIDE the past window.
+			for (let i = 1; i <= 3; i++) {
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: zombie.id,
+						date: new Date(anchor.getTime() + i * DAY),
+						interval: "daily",
+						close: 100 + i,
+						source: "test",
+					},
+				});
+			}
+			await restoreVerifiablePredictions();
+			expect(
+				(await ctx.prisma.predictionLog.findUnique({ where: { id: zombieLogId } }))?.status,
+			).toBe("completed");
 		});
 	});
 });

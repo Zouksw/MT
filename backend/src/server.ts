@@ -16,6 +16,7 @@ import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
 import {
+	expireWindowElapsedPredictions,
 	invalidatePollutedPredictions,
 	markUnverifiablePredictions,
 	restorePostFixConflictPredictions,
@@ -191,6 +192,16 @@ function backgroundJobs(): ScheduledJob[] {
 			firstRunDelayMs: 15000, // lets scrapers finish first
 			intervalMs: 6 * MS_PER_HOUR,
 			run: async () => {
+				// Zombie-source drain FIRST (round-110): heartbeat commodities
+				// (rare fresh-looking price rows, never ≥3 actuals in any 10-day
+				// window) parked ~27k permanently-skippable rows inside the
+				// oldest-first take:5000 candidate set, starving every real
+				// candidate — chronos on fresh sources stopped verifying after
+				// 2026-08-04. Expired rows exit the queue; the verify batch
+				// below then spends its window on rows that can actually verify.
+				const expired = await expireWindowElapsedPredictions();
+				if (expired > 0)
+					logger.info(`📊 Expired ${expired} window-elapsed predictions (zombie-source drain)`);
 				const n = await verifyDuePredictions();
 				logger.info(`📊 Auto-verified ${n} due predictions (MAPE accuracy update)`);
 			},

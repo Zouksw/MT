@@ -423,77 +423,128 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 }
 
 /**
- * Restore `unverifiable` predictions whose commodity has since received fresh
- * actuals — the symmetric inverse of markLaggingFrozenPredictions.
+ * Expire completed predictions whose verification window has fully elapsed
+ * without reaching the actuals bar — the zombie-source drain.
  *
- * Context: markUnverifiablePredictions marks a prediction `unverifiable` when,
- * at marking time, the commodity's latest daily price was ≤ the prediction's
- * timestamp AND older than the 7d source-dead window. This is a point-in-time
- * check: it captures "source dead → no future actuals can ever arrive". But
- * the marking is **irreversible** — once `unverifiable`, `verifyDuePredictions`
- * (which only reads `completed`) never reclaims the row.
+ * Why this pass exists (observed live, 2026-08-17): a commodity whose source
+ * is functionally dead but emits rare "heartbeat" rows (live_cattle_cme: 3
+ * cme rows across 3 months, latest 2026-08-13) defeats BOTH existing guards:
+ *   - verifyDuePredictions skips it (its 10-day window never holds ≥3
+ *     actuals) but leaves it `completed` — so it is re-read every cycle;
+ *   - markUnverifiablePredictions can't freeze it (its test requires
+ *     latestPrice <= predictedAt; the heartbeat is newer).
+ * Five such commodities parked ~27k rows inside the oldest-first `take: 5000`
+ * candidate window, so every 6h verification run processed 5000 guaranteed
+ * skips and starved every real candidate — chronos predictions on genuinely
+ * fresh sources (usd_cny / aud_usd / brl_usd / beef_carcass_us) have not
+ * verified since 2026-08-04 despite mature horizons and rich actuals.
  *
- * The failure mode (observed live, 2026-08-03): beef_carcass_us (FRED daily,
- * CBBTCUSD) had a transient data lag during which ~738 chronos predictions
- * (07-27 → 08-02) were marked unverifiable. FRED then published the lagged
- * daily rows (08-01, 08-02) — those predictions now HAVE post-prediction
- * actuals in their horizon window (5 of 10 days covered) and are genuinely
- * verifiable, but remain stranded at `unverifiable`. Result: beef_carcass_us
- * chronos accuracy shows 0 verified indefinitely despite being the one
- * commodity with fresh actuals.
+ * Invariant: a past window can only gain actuals via late backfill (the FRED
+ * lag pattern). Once window-end + STALE_WINDOW_DAYS grace has passed with
+ * fewer actuals than the verifier's bar (min(horizon, 3)), the row can never
+ * verify → mark it `unverifiable`. The NOT EXISTS guard counts actuals the
+ * way the verifier does (from anchor-day midnight, source-unfiltered —
+ * stricter source filters only ever shrink that count, so unfiltered ≥ bar
+ * is a safe "don't expire" direction).
  *
- * This function reclaims them: for each distinct commodity with
- * `unverifiable` rows, check if its latest daily price is now NEWER than the
- * row's predictedAt (source revived, post-prediction actuals exist). If so,
- * restore those rows to `completed` so the verify loop can process them.
+ * Complements (does not replace) markUnverifiablePredictions: that pass
+ * catches sources dead since before the prediction; this pass catches
+ * sources that emit heartbeats after it. Idempotent — only touches
+ * `completed` rows, and re-checks the predicate in the UPDATE's WHERE.
  *
- * Idempotent — a second run finds nothing (the rows are `completed`, and the
- * verify loop will consume them into `verified`). Does NOT touch rows whose
- * commodity is still genuinely frozen (latest price still ≤ predictedAt) —
- * those stay `unverifiable` honestly.
+ * Cut-series keys are excluded (their actuals live in BeefCutPrice, a
+ * separate verification path).
+ *
+ * @returns number of predictions expired to `unverifiable` this run
+ */
+export async function expireWindowElapsedPredictions(): Promise<number> {
+	// Grace = the platform-wide stale window: sources that lag (FRED once
+	// published 2-day-late rows) get one recency-standard's worth of time to
+	// backfill a past window before it is declared permanently unverifiable.
+	const result = await prisma.$executeRaw`
+		UPDATE prediction_logs AS pl
+		SET status = 'unverifiable'
+		WHERE pl.status = 'completed'
+			AND pl.commodity_id NOT LIKE 'cut:%'
+			-- Same candidate pre-filter as verifyDuePredictions (MAX_HORIZON_DAYS).
+			AND pl.predicted_at <= NOW() - INTERVAL '10 days'
+			-- Window long elapsed: anchor + horizon + grace is still in the past.
+			AND (
+				COALESCE(pl.forecast_start_at, pl.predicted_at)
+				+ make_interval(days => pl.horizon::int)
+				+ make_interval(days => ${STALE_WINDOW_DAYS}::int)
+			) < NOW()
+			-- Guard: the window can never reach the verifier's actuals bar.
+			AND NOT EXISTS (
+				SELECT cp.commodity_id
+				FROM commodity_prices AS cp
+				WHERE cp.commodity_id = pl.commodity_id
+					AND cp.interval = 'daily'
+					AND cp.date >= date_trunc('day', COALESCE(pl.forecast_start_at, pl.predicted_at))
+					AND cp.date < COALESCE(pl.forecast_start_at, pl.predicted_at)
+						+ make_interval(days => pl.horizon::int + 1)
+				GROUP BY cp.commodity_id
+				HAVING COUNT(*) >= LEAST(pl.horizon, 3)
+			)
+	`;
+	return result;
+}
+
+/**
+ * Restore `unverifiable` predictions whose verification window has since been
+ * backfilled with actuals — the symmetric inverse of the expiry/freeze passes.
+ *
+ * Window-aware (round-110): the revive test is "the earliest stranded row's
+ * window now holds enough actuals", NOT "any price newer than the prediction
+ * exists". The old test revived heartbeat zombies on every run — after
+ * expireWindowElapsedPredictions drains them to `unverifiable`, a
+ * latest-price-based test would flip them back to `completed` in the same
+ * cycle (ping-pong on ~27k rows every 6h). Actuals inside the past window
+ * mean genuine backfill (the FRED lag case); a newer price outside the
+ * window means nothing for verification.
+ *
+ * Per-commodity granularity: if the earliest stranded row's window gained
+ * actuals, the commodity is revived as a whole and the verifier processes
+ * each row individually. Rows among them whose own windows are still empty
+ * are skipped by the verifier and re-expired by the next sweep — one
+ * bounded transient, not a loop.
  *
  * @returns number of predictions restored to `completed`
  */
 export async function restoreVerifiablePredictions(): Promise<number> {
-	// Candidate commodities: those with at least one unverifiable row.
-	const candidates = await prisma.predictionLog.findMany({
-		where: {
-			status: PS.UNVERIFIABLE,
-			NOT: { commodityId: { startsWith: "cut:" } },
-		},
-		select: { commodityId: true, predictedAt: true },
-		distinct: ["commodityId"],
-	});
+	// Earliest-anchor stranded row per commodity (DISTINCT ON picks the first
+	// row per commodity_id under the ORDER BY).
+	const earliest = await prisma.$queryRaw<
+		Array<{ commodity_id: string; anchor: Date; horizon: number }>
+	>`
+		SELECT DISTINCT ON (commodity_id)
+			commodity_id,
+			COALESCE(forecast_start_at, predicted_at) AS anchor,
+			horizon
+		FROM prediction_logs
+		WHERE status = 'unverifiable'
+			AND commodity_id NOT LIKE 'cut:%'
+		ORDER BY commodity_id, COALESCE(forecast_start_at, predicted_at) ASC
+	`;
 
-	if (candidates.length === 0) return 0;
-
-	// A commodity is "revived" if its latest daily price is strictly newer than
-	// the earliest unverifiable prediction for it (post-prediction actuals now
-	// exist in the window). We use the earliest predictedAt per commodity as
-	// the bar — if even the oldest stranded row has post-prediction actuals,
-	// all newer rows on that commodity do too.
-	const earliestByCommodity = new Map<string, Date>();
-	for (const row of candidates) {
-		const existing = earliestByCommodity.get(row.commodityId);
-		if (!existing || row.predictedAt < existing) {
-			earliestByCommodity.set(row.commodityId, row.predictedAt);
-		}
-	}
+	if (earliest.length === 0) return 0;
 
 	const revivedCommodityIds: string[] = [];
-	for (const [commodityId, earliestPred] of earliestByCommodity) {
-		const latestPrice = await prisma.commodityPrice.findFirst({
-			where: { commodityId, interval: "daily" },
-			orderBy: { date: "desc" },
-			select: { date: true },
+	for (const row of earliest) {
+		// Mirror the verifier's window: actuals from anchor-day midnight up to
+		// anchor + horizon (+1 for the take(horizon+1) fetch), bar min(horizon,3).
+		const anchor = new Date(row.anchor);
+		const anchorDay = Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate());
+		const windowEnd = new Date(anchor.getTime() + (row.horizon + 1) * 86400000);
+		const actualCount = await prisma.commodityPrice.count({
+			where: {
+				commodityId: row.commodity_id,
+				interval: "daily",
+				date: { gte: new Date(anchorDay), lt: windowEnd },
+			},
 		});
-		// Restore only if the source has produced actuals NEWER than the
-		// prediction — i.e. the "no future actuals" assumption that justified
-		// the unverifiable marking no longer holds. Use date-only comparison
-		// (price dates are midnight-anchored) so a same-day actual counts as
-		// post-prediction for an earlier-in-day prediction.
-		if (latestPrice && latestPrice.date > earliestPred) {
-			revivedCommodityIds.push(commodityId);
+		if (actualCount >= Math.min(row.horizon, 3)) {
+			revivedCommodityIds.push(row.commodity_id);
 		}
 	}
 

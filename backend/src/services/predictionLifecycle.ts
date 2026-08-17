@@ -7,8 +7,10 @@
  *   completed → verified      (verifyPrediction, when actuals arrive + MAPE computed)
  *   completed → stale         (invalidatePollutedPredictions, pre-fix conflict data)
  *   stale → completed         (restorePostFixConflictPredictions, post-fix reclaim)
- *   completed → unverifiable  (markUnverifiable + markLaggingFrozen, source dead)
- *   unverifiable → completed  (restoreVerifiable, source revived)
+ *   completed → unverifiable  (markUnverifiable + markLaggingFrozen, source dead;
+ *                              expireWindowElapsed, heartbeat-zombie source whose
+ *                              verification window elapsed without enough actuals)
+ *   unverifiable → completed  (restoreVerifiable, window backfilled with actuals)
  *
  * This module owns the status vocabulary so that the ~25 scattered string
  * literals ("completed"/"verified"/etc.) across mapeTracking, predictionCache,
