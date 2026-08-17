@@ -1,5 +1,107 @@
-import { describe, expect, it } from "vitest";
-import { weightedDirectionVote, weightedMedian } from "../modelQuality";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "../modelQuality";
+
+// resolveModelWeights tests mock the accuracy source (mapeTracking → DB).
+const mocks = vi.hoisted(() => ({
+	getAllModelAccuracy: vi.fn(),
+	logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("@/lib", () => ({ logger: mocks.logger }));
+vi.mock("../mapeTracking", () => ({
+	getAllModelAccuracy: (...args: unknown[]) => mocks.getAllModelAccuracy(...args),
+}));
+
+function acc(modelId: string, avgMape: number | null, verifiedCount = 50) {
+	return {
+		modelId,
+		avgMape,
+		predictionCount: verifiedCount,
+		verifiedCount,
+		last7dMape: null,
+		last30dMape: null,
+		lastVerifiedAt: null,
+		isPrimary: true,
+	};
+}
+
+describe("resolveModelWeights — elimination bar (round-110)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("gives weight 0 to a model strictly worse than naive with thick evidence", async () => {
+		// naive 3.0 with 50 verified rows = active bar; chronos_x at 5.0 with
+		// 50 rows is strictly worse → eliminated. chronos_y at 1.5 survives.
+		mocks.getAllModelAccuracy.mockResolvedValue([
+			acc("naive_forecaster", 3.0),
+			acc("chronos_x", 5.0),
+			acc("chronos_y", 1.5),
+		]);
+
+		const weights = await resolveModelWeights(["chronos_x", "chronos_y"]);
+
+		expect(weights.get("chronos_x")).toBe(0);
+		expect(weights.get("chronos_y")).toBe(1); // sole survivor takes all
+	});
+
+	it("does not eliminate on thin evidence (below the verified-count guard)", async () => {
+		// Both worse than naive, but chronos_x has only 5 verified rows —
+		// noise, not evidence. It keeps an ordinary (small) weight.
+		mocks.getAllModelAccuracy.mockResolvedValue([
+			acc("naive_forecaster", 3.0),
+			acc("chronos_x", 9.0, 5),
+			acc("chronos_y", 2.0),
+		]);
+
+		const weights = await resolveModelWeights(["chronos_x", "chronos_y"]);
+
+		expect(weights.get("chronos_x")).toBeGreaterThan(0);
+		expect(weights.get("chronos_y")).toBeGreaterThan(weights.get("chronos_x") as number);
+	});
+
+	it("does not eliminate when the naive bar itself is thin", async () => {
+		// naive has only 3 verified rows — the bar can't be trusted, nobody is
+		// eliminated even though chronos_x is nominally worse.
+		mocks.getAllModelAccuracy.mockResolvedValue([
+			acc("naive_forecaster", 3.0, 3),
+			acc("chronos_x", 6.0),
+			acc("chronos_y", 2.0),
+		]);
+
+		const weights = await resolveModelWeights(["chronos_x", "chronos_y"]);
+
+		expect(weights.get("chronos_x")).toBeGreaterThan(0);
+	});
+
+	it("never eliminates naive_forecaster itself", async () => {
+		mocks.getAllModelAccuracy.mockResolvedValue([
+			acc("naive_forecaster", 3.0),
+			acc("chronos_y", 1.5),
+		]);
+
+		const weights = await resolveModelWeights(["naive_forecaster", "chronos_y"]);
+
+		expect(weights.get("naive_forecaster")).toBeGreaterThan(0);
+	});
+
+	it("equal-weight fallback when every model is eliminated", async () => {
+		mocks.getAllModelAccuracy.mockResolvedValue([
+			acc("naive_forecaster", 3.0),
+			acc("chronos_x", 6.0),
+			acc("chronos_y", 5.0),
+		]);
+
+		const weights = await resolveModelWeights(["chronos_x", "chronos_y"]);
+
+		expect(weights.get("chronos_x")).toBeCloseTo(0.5);
+		expect(weights.get("chronos_y")).toBeCloseTo(0.5);
+	});
+});
 
 describe("weightedMedian", () => {
 	it("returns the plain median when all weights are equal", () => {

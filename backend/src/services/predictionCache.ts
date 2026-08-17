@@ -16,6 +16,7 @@ import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
+import { applyConformalInterval, getIntervalMultipliers } from "./intervalCalibration";
 import { BASELINE_MODELS, getAllModels } from "./modelRegistry";
 
 const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
@@ -134,11 +135,29 @@ export async function runAndCachePrediction(
 			confidence_level: confidenceLevel,
 		});
 
+		// Conformal interval calibration (round-110): replace the model-native
+		// interval with the empirically calibrated ŷ·(1±q) when the model has
+		// ≥30 verified residuals of history — coverage backed by evidence
+		// instead of a distributional assumption. Falls through to native
+		// bounds on thin evidence or non-positive series.
+		let lowerBound = result.lower_bound ?? undefined;
+		let upperBound = result.upper_bound ?? undefined;
+		try {
+			const multipliers = await getIntervalMultipliers();
+			const calibrated = applyConformalInterval(result.values, multipliers.get(modelId));
+			lowerBound = calibrated.lowerBound ?? lowerBound;
+			upperBound = calibrated.upperBound ?? upperBound;
+		} catch (error) {
+			// Calibration is an enhancement, never a hard dependency — the
+			// prediction (and its native interval) must still be served.
+			logger.warn(`[CONFORMAL] calibration lookup failed for ${modelId}: ${error}`);
+		}
+
 		const cached: CachedPrediction = {
 			timestamps: result.timestamps,
 			values: result.values,
-			lowerBound: result.lower_bound ?? undefined,
-			upperBound: result.upper_bound ?? undefined,
+			lowerBound,
+			upperBound,
 			algorithm: modelId,
 			cachedAt: Date.now(),
 			commodityId,
@@ -172,8 +191,12 @@ export async function runAndCachePrediction(
 				commodityId,
 				horizon,
 				predictedValues: result.values,
-				lowerBounds: result.lower_bound ?? undefined,
-				upperBounds: result.upper_bound ?? undefined,
+				// Log the CALIBRATED bounds — the ones actually served in
+				// `cached` — so logged intervals stay consistent with what
+				// users saw (verification only reads predictedValues; bounds
+				// are informational).
+				lowerBounds: lowerBound,
+				upperBounds: upperBound,
 				// The forecast's own timeline start (first predicted step =
 				// day after the last training point). Verification aligns
 				// actuals to this, not to the log time (round-104).

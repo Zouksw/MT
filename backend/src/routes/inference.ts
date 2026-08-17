@@ -8,6 +8,35 @@ import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
 import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inference";
 import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
+import { applyConformalInterval, getIntervalMultipliers } from "@/services/intervalCalibration";
+
+/**
+ * Conformal-calibrate a raw inference result's interval (round-110). The
+ * on-demand paths build responses from predictFromCache directly — unlike
+ * runAndCachePrediction they skip the calibration hook, so it is applied
+ * here. Enhancement-not-dependency: on any failure the native bounds are
+ * returned untouched.
+ */
+async function calibrateBounds(
+	modelId: string,
+	result: {
+		values: number[];
+		lowerBound?: number[];
+		upperBound?: number[];
+	},
+): Promise<{ lowerBound?: number[]; upperBound?: number[] }> {
+	try {
+		const multipliers = await getIntervalMultipliers();
+		const calibrated = applyConformalInterval(result.values, multipliers.get(modelId));
+		return {
+			lowerBound: calibrated.lowerBound ?? result.lowerBound,
+			upperBound: calibrated.upperBound ?? result.upperBound,
+		};
+	} catch (error) {
+		logger.warn(`[CONFORMAL] route calibration failed for ${modelId}: ${error}`);
+		return { lowerBound: result.lowerBound, upperBound: result.upperBound };
+	}
+}
 
 const router = Router();
 
@@ -140,11 +169,12 @@ router.post(
 			confidenceLevel: cl,
 		});
 
+		const { lowerBound, upperBound } = await calibrateBounds(modelId, result);
 		const response = {
 			timestamps: result.timestamps,
 			values: result.values,
-			lowerBound: result.lowerBound,
-			upperBound: result.upperBound,
+			lowerBound,
+			upperBound,
 			algorithm: modelId,
 		};
 
@@ -216,11 +246,12 @@ router.post(
 					confidenceLevel: cl,
 				});
 
+				const { lowerBound, upperBound } = await calibrateBounds(modelId, result);
 				const response = {
 					timestamps: result.timestamps,
 					values: result.values,
-					lowerBound: result.lowerBound,
-					upperBound: result.upperBound,
+					lowerBound,
+					upperBound,
 					algorithm: modelId,
 				};
 

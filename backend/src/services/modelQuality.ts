@@ -13,6 +13,15 @@
  *
  * The floor (default 2%) prevents a near-perfect MAPE (e.g. 0.5%) from
  * dominating with a 200x weight — quality is rewarded, not monopolized.
+ *
+ * Elimination bar (round-110, PREDICTION-STRATEGY §3.3/3.4): a model with
+ * sufficient same-window verified evidence that is strictly WORSE than
+ * naive_forecaster gets weight 0 — out of the direction vote and the median
+ * entirely, not merely down-weighted. naive is the bar any real model must
+ * beat; a model losing to it adds noise, not information. Guarded by
+ * MIN_VERIFIED_TO_ELIMINATE on BOTH the model and naive so elimination never
+ * fires on thin evidence. If every requested model is eliminated, the
+ * existing equal-weight fallback applies (documented edge, not a signal).
  */
 
 import { logger } from "@/lib";
@@ -20,6 +29,13 @@ import { getAllModelAccuracy } from "./mapeTracking";
 
 /** MAPE floor — a model can't weigh more than 1/floor = 50x the worst. */
 const MAPE_FLOOR_PCT = 2;
+
+/**
+ * Minimum verified rows in the window for BOTH the model and the naive bar
+ * before elimination may fire. Below this, a worse-than-naive MAPE is more
+ * likely noise than evidence — the model keeps its ordinary weight.
+ */
+const MIN_VERIFIED_TO_ELIMINATE = 20;
 
 export interface ModelWeight {
 	modelId: string;
@@ -49,6 +65,7 @@ export async function resolveModelWeights(
 
 	try {
 		const accuracies = await getAllModelAccuracy(undefined, days);
+		const accByModel = new Map(accuracies.map((a) => [a.modelId, a]));
 		const mapeByModel = new Map<string, number>();
 		for (const a of accuracies) {
 			if (a.avgMape != null && a.avgMape > 0) {
@@ -62,11 +79,32 @@ export async function resolveModelWeights(
 		const defaultMape =
 			knownMapes.length > 0 ? knownMapes[Math.floor(knownMapes.length / 2)] : MAPE_FLOOR_PCT * 4; // 8% if nothing is known at all
 
-		// Raw weight = 1 / max(mape, floor).
-		const raw: Array<{ id: string; w: number }> = [];
+		// Elimination bar: naive_forecaster's verified MAPE (when the evidence
+		// is thick enough to trust). A model strictly worse than this loses its
+		// vote entirely; naive itself and thin-evidence models are exempt.
+		const naiveBar = accByModel.get("naive_forecaster");
+		const barActive =
+			naiveBar?.avgMape != null && naiveBar.verifiedCount >= MIN_VERIFIED_TO_ELIMINATE;
+
+		// Raw weight = 1 / max(mape, floor); eliminated models get 0.
+		const raw: Array<{ id: string; w: number; eliminated: boolean }> = [];
 		for (const id of modelIds) {
-			const mape = mapeByModel.get(id) ?? defaultMape;
-			raw.push({ id, w: 1 / Math.max(mape, MAPE_FLOOR_PCT) });
+			const acc = accByModel.get(id);
+			const mape = acc?.avgMape ?? defaultMape;
+			const eliminated =
+				barActive &&
+				id !== "naive_forecaster" &&
+				acc?.avgMape != null &&
+				acc.verifiedCount >= MIN_VERIFIED_TO_ELIMINATE &&
+				acc.avgMape > (naiveBar?.avgMape as number);
+			raw.push({ id, w: eliminated ? 0 : 1 / Math.max(mape, MAPE_FLOOR_PCT), eliminated });
+		}
+
+		const eliminatedIds = raw.filter((r) => r.eliminated).map((r) => r.id);
+		if (eliminatedIds.length > 0) {
+			logger.info(
+				`[WEIGHTS] Eliminated from consensus (worse than naive bar): ${eliminatedIds.join(", ")}`,
+			);
 		}
 
 		// Normalize to sum=1.
