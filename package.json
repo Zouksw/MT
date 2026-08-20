@@ -2,15 +2,12 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.14",
 		"@types/bcrypt": "^6.0.0",
-		"@types/supertest": "^7.2.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^16.4.0",
-		"supertest": "^7.2.2",
 		"tsx": "^4.21.0"
 	},
 	"pnpm": {
 		"overrides": {
-			"minimatch@<3.1.4": ">=3.1.4",
 			"ws@<8.20.1": ">=8.20.1"
 		},
 		"onlyBuiltDependencies": [
@@ -18,8 +15,7 @@
 			"prisma",
 			"@prisma/client",
 			"@prisma/engines",
-			"sharp",
-			"msw"
+			"sharp"
 		]
 	},
 	"packageManager": "pnpm@9.15.9",

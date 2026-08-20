@@ -317,7 +317,6 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 | biome | backend/frontend TS | biome.json（tab, 100 列, noUnusedVariables:error） | ✅ lint job |
 | ruff | inference Python | pyproject.toml（py310, 100 列, E/W/F/I/UP） | ✅ test-inference job（round-25） |
 | husky + lint-staged | 根级 pre-commit | .husky/pre-commit → biome check --write | 本地 commit 时 |
-| knip | backend/frontend | knip.json（已配置，待 zod 兼容后启用） | 未启用 |
 
 ## 六½、存储管理策略（2026-08-15 制定，当日实测 28G/75% → 22G/58%）
 
@@ -345,7 +344,7 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 ## 七、已知限制与待办
 
 1. **本地 coverage 已修复（2026-08-01 实测；2026-08-15 重校准）**：历史曾因 test-exclude/minimatch 版本冲突 + Next 15 babel-plugin-istanbul 不兼容导致崩溃。round-33 + round-36 已修复。**round-102 首次端到端跑通 CI coverage 步骤**，对全新 seed 库实测：backend lines 57.2% / branches 46.94% / functions 63.11%（branches 阈值按「实测−2pp」政策 50→45，旧 76.9% 是 vitest-4 前计数口径）；frontend 21.46% 过其 18% 阈值。不盲目 `pnpm install --force`（历史教训：触发 node_modules 损坏）。
-2. **knip 本地无法运行**：knip 依赖 zod@4 ESM，本地 zod 解析失败。配置已就位（knip.json + 脚本），CI/未来版本兼容后即可用。
+2. **knip 已移除（round-112，2026-08-20）**：knip.json 属死工具配置——knip 未安装、CI 0 引用、workspaces 结构与"非 pnpm workspace"矛盾，且本地 zod@4 ESM 解析失败从未跑通过。零代码依赖死代码检测仍以 grep/Explore 复核为主（TECH-DEBT 各条目的方法论）。
 3. **`invalidateCommodityCache` 已接入（round-45）**：原"零调用"的 commodity 缓存失效函数已在 `upsertPrice` 写后 fire-and-forget 接入（SCAN-by-prefix，对称 round-30 的 cut-series）。`unsubscribeCommodity` 仍仅测试用（订阅生命周期内部用，非死代码）。详见 `docs/TECH-DEBT.md`（部分条目已过期，动手前重新核实）。
 4. **PAT 凭据管理**：origin remote 仍含 HTTPS + token store（~/.git-credentials）。SSH key 方案已部分配置（~/.ssh/config 走 443），但公钥未加到 GitHub 账户。待用户完成 SSH 接入后可彻底移除 token。
 5. **数据采集器 dormant**：MLA + USDA-AMS 需 `MLA_API_KEY`/`USDA_MARS_API_KEY`。无 key 替代方案：admin CSV 上传（`/beef/import`）已就绪。
