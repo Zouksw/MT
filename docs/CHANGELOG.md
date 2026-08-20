@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-21 — round-113 多技能交叉审查（7 技能 + 对抗性子代理，2 修复提交）
+
+用户指令"利用尽可能多的 skills 审查前几个 goal 发现的事项"。对 round-108~112 的发现与改动交叉审查：code-review 五轴（round-112 全部 diff 语义等价性逐处验证）、security STRIDE（CSRF 移除无暴露——logout 要求 Bearer 头；Socket.IO 摘除缩小攻击面；diff 无泄密）、deprecation（已删端点前端/swagger/测试/文档 0 残留）、testing-patterns（4 项测试改造合规）、ops-check（三服务+后台任务全绿）。核心是 doubt-driven 的**全新上下文对抗性审查**（只给工件+契约）：round-110 三个统计工件返回 17 项发现，RECONCILE 后修复 5 项（commit 3bb737d）：conformal 池补测试工件过滤（A1-1）、证据门槛改按行数（A1-3）、q≥1 拒绝（A1-2，live q90 最大 0.29）、缓存按 days 分键（A1-5）、真中位数（A2-1）。**生产反向实证 A1-3 是真 bug**：修复后校准模型 10→8——幽灵模型 sundial/timer_xl 的 10 行×~10 步残差此前一直骗过"30 行"门槛、一直在接收校准区间。另清 6 处未用 import（64be16e，3 处 round-112 残留 + 3 处先前存在；inacScraper 墓碑保留）。延后项（验证环 expire/restore/verifier 语义不一致族 A3-1~4、findMany 全量拉取 A1-4 等低危潜伏项）连同理由落档 TECH-DEBT §八。backend 909 → 914 全绿（+5 新测试）。
+
 ### 2026-08-20 — round-112 清除没必要存在的代码（4 提交，净 -1,000+ 行）
 
 用户明确判断"代码质量低、鸡肋功能多、存在没必要代码"，据此对既有审计标记（TECH-DEBT TD-15~18、round-105/106/107 遗留）逐项重新核实 0-caller 后执行删除，每批 tsc+全量测试绿+build+PM2 重启+live 验证+独立提交：

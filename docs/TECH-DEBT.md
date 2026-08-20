@@ -365,3 +365,42 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **核实后未删（有证据保留）**：apikeys show/edit 页（列表→show→edit 接线完整，round-107 孤岛记录过期）；`unsubscribeCommodity`/`getSubscribedCommodities`（订阅 API 配对面）；watchlist/portfolios/datasets/timeseries 等整功能域（页面可达且工作，属产品面非死代码——下线需产品决策）。
 
 **仍开放（产品/运维决策，未动）**：TD-15 部署描述四套并存（compose/helm/docker/nginx 归档或启用）；TD-2 organizations 单租户脚手架（需 schema 迁移）；pm2-logrotate 装而未跑（轮转实际走系统 logrotate，可卸）；`ui/button.tsx`+`ui/card.tsx` 双实现双活（设计系统迁移）；裸 fetch 39 处收敛（TD-8）；mt.service 未安装（重启自愈缺口）。
+
+---
+
+## 八、round-113 多技能交叉审查（2026-08-20/21，7 技能 + 对抗性子代理）
+
+> 目标"利用尽可能多的 skills 审查前几个 goal 发现的事项"。使用技能：code-review-and-quality、careful、security-and-hardening、doubt-driven-development（含全新上下文对抗性审查子代理）、deprecation-and-migration、javascript-testing-patterns、ops-check（+ zoom-out 收束）。交叉模型复核：非交互环境按 doubt-driven 规程声明跳过。
+
+### 审查对象与结论
+
+| 对象 | 技能 | 结论 |
+|---|---|---|
+| round-112 四个删除提交（31 文件 -1,210/+182） | code-review 五轴 + careful | **通过**。cache/auth/alertNotifications 三处 diff 语义等价性逐一验证；发现 6 处未用 import（3 处 round-112 残留 + 3 处先前存在，commit 64be16e 清理，inacScraper 墓碑保留） |
+| round-112 安全面（CSRF 移除/auth 热路径/tokenBlacklist 裁剪/Socket.IO 摘除） | security STRIDE | **无暴露**：logout 要求 Bearer 头（跨站不可伪造）→ CSRF 端点移除无缺口；diff 无泄密行；Socket.IO 摘除缩小攻击面 |
+| 已删端点（csrf-token、billing/usage） | deprecation 清单 | **迁移完整**：前端/swagger/测试/API.md 全部 0 残留；cookieParser 存在理由注释更新 |
+| round-112/113 测试改造（4 项） | testing-patterns | **通过**（AAA/自清理/确定性）；conformal 覆盖率测试已种子化（0.879 闪断根治，3x 稳定） |
+| 部署/任务健康 | ops-check + observability | **全绿**：三服务 200、Redis PONG、BASELINE/CONFORMAL/auto-verify 照常、错误日志无新增 |
+| round-110 统计工件（intervalCalibration / modelQuality 淘汰 / mapeTracking expire-restore） | doubt-driven 对抗审查（17 项发现） | RECONCILE 见下表：**5 项修复（3bb737d）、1 项生产实证的真 bug、若干延后并记录** |
+
+### 对抗审查 RECONCILE 表（发现 → 处置）
+
+**已修复（commit 3bb737d，+5 测试，914 全绿，生产实证）**：
+- A1-1（High）conformal 池无测试工件过滤 → 与 mapeTracking 同一 EXCLUDE_TEST_ARTIFACTS（已导出共享）。**修复前确曾发生同类事故**（mapeTracking.ts 注释记录的 TESTCUT/chronos_tiny 泄漏）。
+- A1-3（Medium）证据门槛按残差数而非行数 → 改按行数。**生产反向实证**：修复后校准模型 10→8——幽灵模型 sundial/timer_xl（10 行×~10 步≈100 残差）此前一直骗过门槛、**一直在接收校准区间**。
+- A1-2（High·边界）q≥1 会产生负下界 → 拒绝（实测 live q90 最大 0.29，属污染防御）。
+- A1-5（Medium·潜伏）60s 缓存不按 days 分键 → 按 days 分键。
+- A2-1（Low）偶数池"中位数"取上中位 → 真中位数。
+
+**核实后判定为噪音/已正确（审查者亦确认）**：分位数 off-by-one（n≥30 正确）、naive 自豁免/双方≥20 门槛/严格劣于/全淘汰回退/除零、$executeRaw 参数转型、set-based 清扫、crash-safety。
+
+**延后（记录理由，后续批次）**：
+- **A3-1/2/3/4（验证环 expire/restore/verifier 语义不一致族）**：① restore 是一次性任务（无 intervalMs，每次重启才跑）而 expire 每 6h——中途回填要等重启才被回收；② restore/expire 数 actuals 不按 authoritative-source 过滤而 verifier 按——组合可造出永久 completed 僵尸（本轮修的饿死模式的变体）；③ expire 窗口有上界而 verifier 取数无上界——迟复源会被 expire 排干但 verifier 本可验证（方向上哪个更诚实是设计决策：verifier 无上界取数本身可疑）。**四项互相纠缠，piecemeal 修会引入乒乓/僵尸循环，列为一个整体重设计项**。今日风险低：backlog 已排空、26k verified 池健康、restore 只在重启时跑一次。
+- **A1-4（Medium）findMany 全量拉取 60d verified 行进 Node**：round-104 已谴责的反模式重现；当前 26k 行×每 30min 一次实测可承受（无索引支撑是次要问题）。根治需 SQL 侧 percentile_cont 重写聚合，单列批次。
+- **A1-6/A1-7/A2-2/A2-3/INT-1（Low/latent）**：无 stampede 守卫、不可达的 clamp、重复 modelId 求和、池化口径、Redis 双写者 shape/TTL 不一致——均为潜伏项，随上述重设计一并评估。
+- **A3-5（Low）horizon≤0 无 DB 约束**：现无写入方可达；若做验证环重设计则加 CHECK 约束。
+- **A3-6（Low）raw SQL 未声明 UTC 假设**：PG 会话时区恰为 UTC 才正确；重设计时显式 `AT TIME ZONE 'utc'`。
+
+### round-113 提交清单
+
+`64be16e`（未用 import 清理）、`3bb737d`（conformal 加固 + 5 修复 + 5 测试）+ 本文档提交。backend 909 → 914 全绿（+5 全为新测试，无删减）。
