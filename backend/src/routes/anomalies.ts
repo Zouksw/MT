@@ -209,22 +209,9 @@ router.post(
 
 		const { anomalies, meta } = await detectAnomalies(validatedData, userId);
 
-		// Emit WebSocket event (HTTP/socket boundary — stays in the route)
-		const io = req.app.get("io");
-		if (io) {
-			try {
-				io.to(`timeseries:${validatedData.timeseriesId}`).emit("anomalies:detected", {
-					timeseriesId: validatedData.timeseriesId,
-					count: anomalies.length,
-					method: validatedData.method,
-				});
-			} catch (wsError) {
-				logger.warn("WebSocket emit failed for anomalies:detected event", {
-					timeseriesId: validatedData.timeseriesId,
-					error: wsError instanceof Error ? wsError.message : "Unknown error",
-				});
-			}
-		}
+		// The WebSocket broadcast to timeseries rooms was removed with the
+		// zero-consumer Socket.IO server (round-112); anomalies persist via
+		// detectAnomalies and are read back through this API.
 
 		return success(res, { anomalies, meta }, 201);
 	}),

@@ -46,17 +46,6 @@ describe("Billing Routes (Integration)", () => {
 		});
 	});
 
-	describe("GET /api/billing/usage", () => {
-		it("should return usage stats", async () => {
-			const res = await request(app)
-				.get("/api/billing/usage")
-				.set({ Authorization: `Bearer ${token}` });
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-		});
-	});
-
 	describe("POST /api/billing/cancel", () => {
 		it("rejects cancel with 400 when the user has no paid subscription", async () => {
 			// Previously this test was a tautology — it accepted BOTH the success

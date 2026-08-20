@@ -1,13 +1,18 @@
 /**
  * Express application factory.
  *
- * Pure assembly of the Express app: middleware, routes, error handler, and the
- * Socket.IO server. This module has NO process-level side effects (no listen,
- * no scrapers, no crons, no prediction queue) so it can be imported by tests
- * via `supertest(request(app))` without starting background work.
+ * Pure assembly of the Express app: middleware, routes, error handler. This
+ * module has NO process-level side effects (no listen, no scrapers, no crons,
+ * no prediction queue) so it can be imported by tests via
+ * `supertest(request(app))` without starting background work.
  *
  * The runtime entry point (`server.ts`) calls `createApp()` then starts the
  * HTTP listener and background jobs.
+ *
+ * Socket.IO was REMOVED (round-112): the server ran a full realtime stack
+ * (connection auth, room join/subscribe handlers, emits on signals/anomalies/
+ * models/alerts) with zero consumers — the frontend never shipped
+ * socket.io-client. Emit sites collapsed to their DB-persistence paths.
  */
 
 import { createServer, type Server } from "node:http";
@@ -15,9 +20,8 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
-import { type Server as SocketIOInstance, Server as SocketIOServer } from "socket.io";
 
-import { config, jwtUtils, logger } from "@/lib";
+import { config, logger } from "@/lib";
 import { errorHandler } from "@/middleware/errorHandler";
 import { errorLoggingMiddleware, loggingMiddleware } from "@/middleware/logging";
 import { globalRateLimiter, healthRateLimiter } from "@/middleware/rateLimiter";
@@ -46,13 +50,11 @@ import { watchlistRouter } from "@/routes/watchlist";
 export interface AppInstance {
 	app: Express;
 	httpServer: Server;
-	io: SocketIOInstance;
 }
 
 /**
- * Build the Express application with all middleware, routes, error handling,
- * and a Socket.IO server bound to the HTTP server. Returns the assembled
- * pieces without starting the listener.
+ * Build the Express application with all middleware, routes, and error
+ * handling. Returns the assembled pieces without starting the listener.
  */
 export function createApp(): AppInstance {
 	const app = express();
@@ -61,14 +63,6 @@ export function createApp(): AppInstance {
 	// and correct rate-limit keying in production.
 	app.set("trust proxy", 1);
 	const httpServer = createServer(app);
-
-	// Socket.IO setup
-	const io = new SocketIOServer(httpServer, {
-		cors: {
-			origin: config.server.corsOrigin,
-			credentials: true,
-		},
-	});
 
 	// CORS middleware with whitelist support.
 	// Security: In production, requires explicit ALLOWED_ORIGINS configuration.
@@ -234,90 +228,5 @@ export function createApp(): AppInstance {
 	// Error handling
 	app.use(errorHandler);
 
-	// WebSocket connection
-	io.on("connection", (socket) => {
-		// Authenticate socket via handshake query
-		const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-		let socketUserId: string | null = null;
-
-		if (token && typeof token === "string") {
-			try {
-				const payload = jwtUtils.verifyToken(token);
-				socketUserId = payload.userId;
-				logger.info(`Socket ${socket.id} authenticated as user ${socketUserId}`);
-			} catch (error) {
-				logger.warn(`Socket ${socket.id} provided invalid token`, error);
-			}
-		} else {
-			logger.warn(`Socket ${socket.id} connected without authentication`);
-		}
-
-		const subscriptions = new Set<string>();
-
-		// Workspace timeseries rooms stream forecast/anomaly broadcasts —
-		// same sensitivity as the "subscribe" rooms below, so the same auth
-		// requirement applies. Before round-104 an unauthenticated socket
-		// could join any series id and receive its broadcasts (audit C7).
-		socket.on("join-timeseries", (timeseriesId: string) => {
-			if (!socketUserId) {
-				socket.emit("error", { message: "Authentication required" });
-				return;
-			}
-			socket.join(`timeseries:${timeseriesId}`);
-			logger.info(`Socket ${socket.id} joined timeseries:${timeseriesId}`);
-		});
-
-		socket.on("leave-timeseries", (timeseriesId: string) => {
-			socket.leave(`timeseries:${timeseriesId}`);
-			logger.info(`Socket ${socket.id} left timeseries:${timeseriesId}`);
-		});
-
-		// Realtime rooms — require authentication
-		socket.on("subscribe", (room: string) => {
-			if (!socketUserId) {
-				socket.emit("error", { message: "Authentication required" });
-				return;
-			}
-
-			const validRoom = /^(commodity:|portfolio:|signals:|orders:)([a-zA-Z0-9_-]+)$/;
-			const match = validRoom.exec(room);
-			if (!match) {
-				socket.emit("error", { message: "Invalid room name" });
-				return;
-			}
-
-			const [, prefix, roomId] = match;
-
-			// Private rooms require ownership verification
-			if ((prefix === "portfolio:" || prefix === "orders:") && roomId !== socketUserId) {
-				socket.emit("error", { message: "Access denied" });
-				return;
-			}
-
-			if (subscriptions.size >= 20) {
-				socket.emit("error", { message: "Max subscriptions (20) reached" });
-				return;
-			}
-
-			socket.join(room);
-			subscriptions.add(room);
-			logger.info(`Socket ${socket.id} subscribed to ${room}`);
-		});
-
-		socket.on("unsubscribe", (room: string) => {
-			socket.leave(room);
-			subscriptions.delete(room);
-			logger.info(`Socket ${socket.id} unsubscribed from ${room}`);
-		});
-
-		socket.on("disconnect", () => {
-			subscriptions.clear();
-			logger.info(`Client disconnected: ${socket.id}`);
-		});
-	});
-
-	// Make io accessible to routes
-	app.set("io", io);
-
-	return { app, httpServer, io };
+	return { app, httpServer };
 }

@@ -96,32 +96,10 @@ router.post(
 	}),
 );
 
-// GET /api/billing/usage — usage stats for current period
-router.get(
-	"/usage",
-	authenticate,
-	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		const sub = await prisma.subscription.findUnique({
-			where: { userId: req.userId },
-			// Bounded (round-106): the unbounded include returned months of
-			// per-call usage records in one payload. Ordered by period start.
-			include: { usageRecords: { take: 100, orderBy: { periodStart: "desc" } } },
-		});
-
-		if (!sub) {
-			return success(res, {
-				usage: [],
-				plan: "free",
-				limits: getPlanLimits("free"),
-			});
-		}
-
-		success(res, {
-			usage: sub.usageRecords,
-			plan: sub.plan,
-			limits: getPlanLimits(sub.plan),
-		});
-	}),
-);
+// GET /api/billing/usage was REMOVED (round-112): nothing ever wrote
+// usageRecords (trackUsage had zero production callers — quota scaffolding
+// from the pre-PRODUCT-SPEC era), so the endpoint always returned an empty
+// array, and no frontend code called it. The billing UI reads /plans and
+// /subscription, which remain.
 
 export { router as billingRouter };

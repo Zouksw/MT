@@ -12,7 +12,10 @@
 import nodemailer from "nodemailer";
 import { logger } from "@/lib";
 
-export type NotificationChannel = "email" | "slack" | "websocket";
+// "websocket" was removed from the channel union (round-112) together with
+// the zero-consumer Socket.IO server — it was a no-op case that always
+// returned true without delivering anything.
+export type NotificationChannel = "email" | "slack";
 
 export interface ChannelConfig {
 	email: {
@@ -197,10 +200,6 @@ export async function dispatchNotification(
 			case "slack":
 				results.slack = await sendSlack(payload);
 				break;
-			case "websocket":
-				// WebSocket dispatching is handled by alertNotifications.ts
-				results.websocket = true;
-				break;
 		}
 	});
 
@@ -213,7 +212,7 @@ export async function dispatchNotification(
  * Check which channels are configured
  */
 export function getConfiguredChannels(): NotificationChannel[] {
-	const channels: NotificationChannel[] = ["websocket"];
+	const channels: NotificationChannel[] = [];
 
 	if (getEmailTransport()) {
 		channels.push("email");

@@ -409,8 +409,7 @@ router.get(
 		});
 
 		// Check for forecast-direction changes and send notifications (non-blocking)
-		const io = req.app.get("io");
-		checkSignalChange(commodityId, forecast.direction, forecast.confidence, io).catch((err) =>
+		checkSignalChange(commodityId, forecast.direction, forecast.confidence).catch((err) =>
 			logger.warn("Signal change check failed:", err),
 		);
 

@@ -582,63 +582,11 @@ router.get(
 	}),
 );
 
-/**
- * @openapi
- * /api/auth/csrf-token:
- *   get:
- *     tags: [Authentication]
- *     summary: Get CSRF token
- *     description: Generates and returns a CSRF token. The token is also set as an HttpOnly cookie for double-submit pattern.
- *     responses:
- *       200:
- *         description: CSRF token generated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     csrfToken:
- *                       type: string
- *                     token:
- *                       type: string
- */
-// GET /api/auth/csrf-token — issues a double-submit CSRF token.
-//
-// HONESTY NOTE (round-105 audit): NOTHING verifies x-csrf-token today — no
-// middleware, no route. The token this issues is currently decorative, and
-// the cookie is httpOnly so it can't even complete a double-submit flow.
-// The API's actual CSRF posture comes from elsewhere: state-changing routes
-// authenticate via the Authorization Bearer header (custom headers can't be
-// set cross-site), and the cookie session is read-only (/verify, /auth/me)
-// plus logout. Recorded in docs/TECH-DEBT.md — wire real verification or
-// remove before relying on it.
-router.get(
-	"/csrf-token",
-	asyncHandler(async (_req: Request, res: Response) => {
-		// Generate a random CSRF token
-		const crypto = require("node:crypto");
-		const token = crypto.randomBytes(32).toString("hex");
-
-		// Set the token as an httpOnly cookie for additional security
-		res.cookie("csrf_token", token, {
-			httpOnly: true,
-			secure: config.server.nodeEnv === "production",
-			sameSite: "strict",
-			maxAge: 3600000, // 1 hour
-		});
-
-		// Also return the token in the response body for client-side use
-		return success(res, {
-			csrfToken: token,
-			token: token, // Frontend checks for both field names
-		});
-	}),
-);
+// GET /api/auth/csrf-token was REMOVED (round-112): it issued a double-submit
+// token that nothing ever verified (no x-csrf-token check point existed) and
+// the frontend never called it — security theater (round-105 audit finding).
+// The API's real CSRF posture is unchanged: state-changing routes require the
+// Authorization Bearer header (custom headers can't be set cross-site); the
+// cookie session only reaches read-only endpoints plus logout.
 
 export { router as authRouter };

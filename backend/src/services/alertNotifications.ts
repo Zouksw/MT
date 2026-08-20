@@ -6,11 +6,12 @@
  * 2. Trading signal changes (BUY→SELL, etc.)
  * 3. Forecast ready notifications
  *
- * Channels: WebSocket (real-time), Email (SMTP), Slack (webhook)
+ * Channels: Email (SMTP), Slack (webhook) + DB-persisted alerts.
+ * The WebSocket broadcast channel was removed with the zero-consumer
+ * Socket.IO server (round-112).
  */
 
 import type { Prisma } from "@prisma/client";
-import type { Server } from "socket.io";
 import { logger, prisma } from "@/lib";
 import { dispatchNotification, getConfiguredChannels } from "./notificationChannels";
 import type { Direction } from "./tradingSignals";
@@ -41,7 +42,6 @@ export async function checkSignalChange(
 	commodityId: string,
 	newDirection: Direction,
 	confidence: number,
-	io?: Server,
 ): Promise<void> {
 	const previous = lastDirections.get(commodityId);
 
@@ -60,25 +60,14 @@ export async function checkSignalChange(
 		timestamp: new Date().toISOString(),
 	};
 
-	await emitNotification(event, io);
+	await emitNotification(event);
 }
 
 /**
- * Emit notification via WebSocket + persist to alerts
+ * Persist notification as alerts + dispatch through email/Slack channels
  */
-async function emitNotification(event: NotificationEvent, io?: Server): Promise<void> {
-	// 1. WebSocket broadcast
-	if (io) {
-		try {
-			io.to(`commodity:${event.commodityId}`).emit("notification", event);
-			// Also broadcast to all authenticated admin users
-			io.emit(`alert:${event.type}`, event);
-		} catch (error) {
-			logger.warn(`WebSocket notification failed: ${error}`);
-		}
-	}
-
-	// 2. Create alert in database for persistence
+async function emitNotification(event: NotificationEvent): Promise<void> {
+	// 1. Create alert in database for persistence
 	try {
 		// Find the timeseries for this commodity
 		const timeseries = await prisma.timeseries.findFirst({
@@ -121,10 +110,10 @@ async function emitNotification(event: NotificationEvent, io?: Server): Promise<
 
 	logger.info(`Notification [${event.severity}]: ${event.message}`);
 
-	// 3. Dispatch through email/Slack channels (non-blocking for warning/info)
+	// 2. Dispatch through email/Slack channels (non-blocking for warning/info)
 	if (event.severity === "critical" || event.severity === "warning") {
 		try {
-			const channels = getConfiguredChannels().filter((c) => c !== "websocket");
+			const channels = getConfiguredChannels();
 
 			if (channels.length > 0) {
 				// Get admin emails for email channel

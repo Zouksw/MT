@@ -161,15 +161,4 @@ describe("Auth Routes (Integration)", () => {
 			expect(res.status).toBe(401);
 		});
 	});
-
-	describe("GET /api/auth/csrf-token", () => {
-		test("returns a CSRF token", async () => {
-			const res = await request(app).get("/api/auth/csrf-token");
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			// CSRF token should be present in the response or set as a cookie.
-			expect(res.body.data?.csrfToken || res.headers["set-cookie"]).toBeTruthy();
-		});
-	});
 });

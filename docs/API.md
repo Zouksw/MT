@@ -100,7 +100,6 @@ Manage keys via `POST/GET/DELETE /api/api-keys` (JWT-authenticated).
 | `/api/auth/verify` | GET | Verify authentication status |
 | `/api/auth/me` | GET | Get current user info |
 | `/api/auth/change-password` | PUT | Change password |
-| `/api/auth/csrf-token` | GET | Get CSRF token |
 
 ### Time Series Data
 

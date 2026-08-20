@@ -269,22 +269,10 @@ router.post(
 		// Batch insert forecasts
 		await createForecasts(forecasts);
 
-		// Emit WebSocket event
-		const io = req.app.get("io");
-		if (io) {
-			try {
-				io.to(`timeseries:${model.timeseriesId}`).emit("forecast:generated", {
-					modelId,
-					count: forecasts.length,
-				});
-			} catch (wsError) {
-				logger.warn("WebSocket emit failed for forecast:generated event", {
-					modelId,
-					timeseriesId: model.timeseriesId,
-					error: wsError instanceof Error ? wsError.message : "Unknown error",
-				});
-			}
-		}
+		// The WebSocket broadcast to timeseries rooms was removed with the
+		// zero-consumer Socket.IO server (round-112); forecasts are read back
+		// through the list endpoint.
+
 		return success(
 			res,
 			{
