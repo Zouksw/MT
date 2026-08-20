@@ -1,4 +1,4 @@
-import { logger, prisma } from "@/lib";
+import { prisma } from "@/lib";
 
 // Plan limits
 const PLAN_LIMITS: Record<string, Record<string, number>> = {

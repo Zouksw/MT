@@ -1,6 +1,5 @@
 import type { AnomalySeverity } from "@prisma/client";
 import { Router } from "express";
-import { logger } from "@/lib";
 import { paginated, success, successWithMessage } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";

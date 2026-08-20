@@ -3,7 +3,7 @@ import { prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError } from "@/middleware/errorHandler";
-import { getPlanLimits, getUserPlan } from "@/services/usageService";
+import { getUserPlan } from "@/services/usageService";
 
 const router = Router();
 

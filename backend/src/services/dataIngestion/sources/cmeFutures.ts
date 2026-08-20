@@ -17,7 +17,7 @@
 
 import { logger } from "@/lib";
 import { fetchFredCsvSeries } from "../fredCsv";
-import { ensureCommodity, formatDateYMD, upsertPrice } from "../helpers";
+import { ensureCommodity, upsertPrice } from "../helpers";
 import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 

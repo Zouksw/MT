@@ -1,4 +1,4 @@
-import { type ModelAlgorithm, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { logger, prisma } from "@/lib";
 import { paginated, success, successWithMessage } from "@/lib/response";
