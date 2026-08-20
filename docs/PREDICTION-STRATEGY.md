@@ -103,4 +103,18 @@
 - **联动实测（§3.1 前置）**：日收益率相关（3 年/10 年双窗口）——beef_carcass_us ↔ **aud_usd r=+0.129（10y，n=2487，t≈6.4）唯一稳健**；usd_cny 3y +0.04 / 10y -0.064 符号翻转不可用；brl_usd 0.016、原油/天然气 ≈-0.06 均无信号。结论：胴体↔澳元联动真实但弱（r²≈1.7%），"胴体锚"传导只能以胴体自身趋势为主、汇率作辅助。
 - **sarimax 门禁回测（§3.2）**：rolling-origin 60 起（500 天窗、H=10、同窗同horizon成对比较）——beef_carcass_us × aud_usd(fred)：ARIMA mean MAPE **8.10%** vs SARIMAX **8.34%**（SARIMAX 胜率 46.7%）；对照配对 crude × natgas 同样零提升（4.28% vs 4.28%）。**按门禁"增量不显著就不上"→ sarimax 外生接线暂缓**。根因分析：库内外生变量与胴体仅同期弱相关，future_exog 只能前向填充——同期变量天然无法转化为预测优势；要有增量需先找到**领先**指标（lagged exog，如 aud 领先胴体 N 天），列为后续实验方向而非接线方向。
 - 实验脚本已参数化（`python experiments/sarimax_vs_arima.py [target] [exog] [target_src] [exog_src]`），source 过滤支持（aud_usd 的 55 行 exchange_rate_api 脏数据已隔离）。
-- **统计基线复产（§四第 5 项部分，commit d00221b）**：新增每日基线批次 `generateBaselinePredictions`（4 基线模型 × 新鲜商品，同 ≥2/7d 门禁，绕过 subscribeCommodity 的 commodityId 键覆盖问题），行经 logPrediction 进入验证环 ~10 天后成熟为同代 verified 证据。live 首批 64 条全部落地。注：新鲜商品集含 ~12 个心跳僵尸商品（沿既有平台门禁行为），其行有界（每日 16×4）且会被 round-110 过期清扫在窗口到期后排空。**待 ~10 天后：accuracy 页将首次出现 chronos vs naive 同代对比。**
+- **统计基线复产（§四第 5 项部分，commit d00221b）**：新增每日基线批次 `generateBaselinePredictions`（4 基线模型 × 新鲜商品，同 ≥2/7d 门禁，绕过 subscribeCommodity 的 commodityId 键覆盖问题），行经 logPrediction 进入验证环 ~10 天后成熟为同代 verified 证据。live 首批 64 条全部落地。注：新鲜商品集含 ~12 个心跳僵尸商品（沿既有平台门禁行为），其行有界（每日 16×4）且会被 round-110 过期清扫在窗口到期后排空。**待 ~10 天后：accuracy 页将首次出现 chronos vs naive 同代对比。** 持续性已核实（2026-08-20）：08-18 / 08-19 / 08-20 每日批次照跑（16-19 商品 × 4 模型）；已知行为——每次后端重启会在 firstRunDelay 2min 后重触发本批次（08-17 多出 2 轮、08-20 06:11 CST 重启后 1 轮），同日重复行数值相同，对 MAPE/校准无偏，仅增行数，暂不处理（同代成熟窗口因此以 ~08-27 计）。
+
+### 淘汰制准入 + conformal 区间校准（08-17 深夜批次，commit 3c74878；08-20 复核）
+
+- **naive 门槛淘汰（§四第 5 项后半）**：`resolveModelWeights`（modelQuality.ts）新增淘汰判定——`MIN_VERIFIED_TO_ELIMINATE=20` 同时约束模型与 naive 双方的 verified 行数，模型 30d avgMAPE 严格劣于 naive → 权重 0（出局方向票与加权中位数）。实现语义核对：`getModelAccuracy` 按 **verifiedAt≥30d** 聚合。live 实证（2026-08-20，tsx 直跑生产库、含基线的投票集）：`[WEIGHTS] Eliminated: arima, holtwinters, exponential_smoothing`——30d 窗口 arima 3.70 / holtwinters 3.75 / exp_smoothing 3.55 均劣于 naive 3.47（各 ~3,247 verified，多为验证环修复后的补验存量）；权重落位 chronos×3=0.2796 / naive=0.1612 / 其余 0。**默认共识投票集是 ALL_MODELS（仅 chronos×3）且全部优于 naive，故默认信号路径不出现淘汰日志——线上 0 条 `[WEIGHTS] Eliminated` 是正确行为**，门槛在基线进入投票（`?models=`）或后续把基线纳入共识时生效。08-17 复产的同代基线行 ~08-27 成熟后，淘汰判定自动切换到同代证据复核。
+- **split-conformal 区间校准（§四第 5 项剩余）**：新服务 `intervalCalibration.ts`——per-model 从 verified prediction_logs（60d 回看、≥30 行）取归一化残差 r=|a−p|/|a|，取 ⌈(n+1)(1−α)⌉ 阶序统计量 q（α=0.1，名义 90% 覆盖），区间 ŷ·(1±q)；60s 内存缓存。两点如实标注的近似：时序可交换性只是近似；残差跨商品池化。接入两处：`runAndCachePrediction`（订阅刷新/基线批次落库前校准，try/catch 降级原生区间）与 `routes/inference.ts` 的 `calibrateBounds`（按需 /predict 与 /predict/batch——predictFromCache 绕过 runAndCachePrediction，必须独立挂钩）。测试含 held-out 实证覆盖率 ≈90%。live：`[CONFORMAL] Calibrated intervals for 10 models (26293 verified predictions, α=0.1, 60d lookback)` 每 30min 刷新稳定出现（残差池 24,319→26,293，验证环修复后持续补给）；按需 /predict chronos_mini 区间均匀 ŷ·(1±0.027)。附带观察：基线批次中 arima 对单商品 422（LU decomposition，inference 服务数值失败）被 per-model try/catch 隔离，批次继续——失败隔离按设计工作。
+- 测试：+5 淘汰判定（mock getAllModelAccuracy）+5 conformal（含覆盖率实证），backend 914→924 全绿；三服务 live 200。
+
+### §四第 6 项核实（08-20，无需开发）
+
+/beef 行情页预测卡片**已在此前实现**：`CutForecastCell` / `MarketForecastBoard` → `useBeefCutForecasts` → `GET /api/beef/forecasts?horizon=7`（beef.ts 路由 + beefCutSeries 新鲜度门禁 + generateBeefCutForecast）。端点当前诚实返回 0 行——根因是 beef_cut_prices 自 2026-04-30 冻结，等待 P0 数据回填（运营依赖，/beef/import CSV）后自然出数，非代码缺口。
+
+### round-110 收尾（2026-08-20）
+
+方案 §四 执行完毕：第 2 项（验证环饿死修复）✅、第 3/4 项（联动实测 + sarimax 门禁，接线按门禁暂缓）✅、第 5 项（基线复产 + 淘汰制 + conformal 区间）✅、第 6 项（核实为已实现，等数据）✅。遗留移交：P0 牛肉切块数据回填（运营依赖）、lagged-exog 领先指标实验（后续）、僵尸商品密度门禁（可选加固，KNOWN-ISSUES D2 已记）。
