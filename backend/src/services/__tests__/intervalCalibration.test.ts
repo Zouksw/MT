@@ -88,8 +88,19 @@ describe("getIntervalMultipliers", () => {
 	});
 
 	it("achieves ≈90% empirical coverage on held-out draws (the conformal point)", async () => {
-		// Calibration set + evaluation set from the same distribution.
-		const draw = () => Math.abs((Math.random() - 0.5) * 2) / 50; // uniform [0, 0.04]
+		// Seeded PRNG (mulberry32): the earlier Math.random version flaked near
+		// the 0.88 boundary (observed 0.879 on a full-suite run) — a stochastic
+		// tolerance is a flaky test, and a deterministic seed keeps the
+		// assertion meaningful (same distribution, reproducible draws).
+		const mulberry32 = (seed: number) => () => {
+			seed |= 0;
+			seed = (seed + 0x6d2b79f5) | 0;
+			let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+			t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+		const rng = mulberry32(20260820);
+		const draw = () => Math.abs((rng() - 0.5) * 2) / 50; // uniform [0, 0.04]
 		const calibration = Array.from({ length: 500 }, draw);
 		const heldOut = Array.from({ length: 5000 }, draw);
 		mocks.findMany.mockResolvedValue([verifiedRow("m", calibration)]);
@@ -99,8 +110,8 @@ describe("getIntervalMultipliers", () => {
 		let covered = 0;
 		for (const r of heldOut) if (r <= q) covered++;
 		const coverage = covered / heldOut.length;
-		// Finite-sample guarantee: ≥ 1−α. Uniform draws make the tolerance
-		// generous enough to be flake-free while still pinning the property.
+		// Finite-sample guarantee: ≥ 1−α. The seed pins the draw set, so these
+		// bounds hold deterministically while still pinning the property.
 		expect(coverage).toBeGreaterThanOrEqual(0.88);
 		expect(coverage).toBeLessThanOrEqual(0.97);
 	});
