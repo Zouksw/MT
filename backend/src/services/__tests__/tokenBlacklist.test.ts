@@ -7,15 +7,8 @@
 
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-	blacklistToken,
-	checkTokenBlacklist,
-	clearBlacklist,
-	getBlacklistStats,
-	isTokenBlacklisted,
-	removeFromBlacklist,
-} from "@/services/tokenBlacklist";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
 import {
 	createTestContext,
 	destroyTestContext,
@@ -45,13 +38,12 @@ describe("tokenBlacklist service (real Redis)", () => {
 	});
 
 	afterAll(async () => {
-		if (ctx?.available) {
-			await clearBlacklist();
-		}
+		// No explicit blacklist wipe: blacklisted keys carry the token's own
+		// TTL (≤1h in these fixtures) and unique jtis, so they cannot collide
+		// with other suites. The admin clear/stats helpers were removed as
+		// 0-caller dead code (round-112).
 		await destroyTestContext(ctx);
 	});
-
-	beforeEach(() => {});
 
 	describe("blacklistToken", () => {
 		it("should blacklist a valid token and verify via Redis", async () => {
@@ -91,66 +83,6 @@ describe("tokenBlacklist service (real Redis)", () => {
 			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
 			await blacklistToken(token, "logout");
 			expect(await isTokenBlacklisted(token)).toBe(true);
-		});
-	});
-
-	describe("removeFromBlacklist", () => {
-		it("should remove a blacklisted token", async () => {
-			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
-			await blacklistToken(token, "logout");
-			expect(await isTokenBlacklisted(token)).toBe(true);
-
-			const result = await removeFromBlacklist(token);
-			expect(result).toBe(true);
-			expect(await isTokenBlacklisted(token)).toBe(false);
-		});
-	});
-
-	describe("getBlacklistStats", () => {
-		it("should return stats counting blacklisted tokens", async () => {
-			// Clean slate for this test
-			await clearBlacklist();
-
-			const token1 = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
-			const token2 = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
-			await blacklistToken(token1, "test");
-			await blacklistToken(token2, "test");
-
-			const stats = await getBlacklistStats();
-			expect(stats.totalBlacklisted).toBeGreaterThanOrEqual(2);
-		});
-
-		it("should return 0 when blacklist is empty", async () => {
-			await clearBlacklist();
-			const stats = await getBlacklistStats();
-			expect(stats.totalBlacklisted).toBe(0);
-		});
-	});
-
-	describe("clearBlacklist", () => {
-		it("should clear all blacklisted tokens", async () => {
-			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
-			await blacklistToken(token, "test");
-
-			const result = await clearBlacklist();
-			expect(result).toBe(true);
-
-			const stats = await getBlacklistStats();
-			expect(stats.totalBlacklisted).toBe(0);
-		});
-	});
-
-	describe("checkTokenBlacklist", () => {
-		it("should throw for blacklisted token", async () => {
-			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
-			await blacklistToken(token, "logout");
-
-			await expect(checkTokenBlacklist(token)).rejects.toThrow("Token has been revoked");
-		});
-
-		it("should not throw for valid token", async () => {
-			const token = makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 });
-			await expect(checkTokenBlacklist(token)).resolves.toBeUndefined();
 		});
 	});
 });

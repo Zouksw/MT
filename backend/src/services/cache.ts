@@ -12,8 +12,6 @@ import type { RedisClientType } from "redis";
 import { logger } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
 
-const NULL_CACHE_PREFIX = "null:";
-
 async function getClient(): Promise<RedisClientType | null> {
 	try {
 		return await getRedisClient();
@@ -29,12 +27,10 @@ export async function get<T>(key: string): Promise<T | null> {
 
 	try {
 		const data = await redis.get(key);
-		if (!data) {
-			const nullKey = `${NULL_CACHE_PREFIX}${key}`;
-			const isNullCached = await redis.exists(nullKey);
-			if (isNullCached) return null;
-			return null;
-		}
+		// No null-cache sentinel handling: nothing ever writes "null:"-prefixed
+		// keys (set() below never did), so a miss is just a miss — checking a
+		// sentinel would be a wasted EXISTS round-trip on every miss.
+		if (!data) return null;
 		return JSON.parse(data) as T;
 	} catch (error) {
 		logger.error(`Cache get error for key ${key}: ${error}`);

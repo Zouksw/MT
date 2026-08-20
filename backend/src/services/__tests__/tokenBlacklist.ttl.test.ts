@@ -14,7 +14,7 @@
 import jwt from "jsonwebtoken";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { redis } from "@/lib/redis";
-import { blacklistToken, isTokenBlacklisted, removeFromBlacklist } from "@/services/tokenBlacklist";
+import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
 
 const BLACKLIST_SET = "token:blacklist:all";
 
@@ -33,17 +33,29 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let longToken = "";
 let shortToken = "";
 
+// Clean slate for the ids this suite owns (parallel suites share redis).
+// removeFromBlacklist was removed as 0-caller dead code (round-112), so this
+// deletes the same two structures directly: per-token key + set membership.
+async function cleanupOwnKeys() {
+	const client = await redis();
+	await client
+		.multi()
+		.del("token:blacklist:ttl-test-long")
+		.del("token:blacklist:ttl-test-short")
+		.sRem(BLACKLIST_SET, "ttl-test-long")
+		.sRem(BLACKLIST_SET, "ttl-test-short")
+		.exec()
+		.catch(() => {});
+}
+
 beforeAll(async () => {
 	longToken = tokenWithExpiry(7 * 24 * 3600, "ttl-test-long");
 	shortToken = tokenWithExpiry(3, "ttl-test-short");
-	// Clean slate for the ids this suite owns (parallel suites share redis).
-	await removeFromBlacklist(longToken).catch(() => {});
-	await removeFromBlacklist(shortToken).catch(() => {});
+	await cleanupOwnKeys();
 });
 
 afterAll(async () => {
-	await removeFromBlacklist(longToken).catch(() => {});
-	await removeFromBlacklist(shortToken).catch(() => {});
+	await cleanupOwnKeys();
 });
 
 describe("tokenBlacklist — per-token TTL (resurrection regression)", () => {
@@ -77,8 +89,8 @@ describe("tokenBlacklist — per-token TTL (resurrection regression)", () => {
 		expect(ttl).toBeLessThanOrEqual(7 * 24 * 3600);
 	});
 
-	it("removeFromBlacklist clears both structures", async () => {
-		expect(await removeFromBlacklist(longToken)).toBe(true);
+	it("cleanup helper clears both structures for this suite's ids", async () => {
+		await cleanupOwnKeys();
 		expect(await isTokenBlacklisted(longToken)).toBe(false);
 	});
 });

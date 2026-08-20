@@ -77,15 +77,43 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 	});
 
 	it("freshSourceCount counts only sources with rows in the window", async () => {
-		const snap = await getDataHealth(3);
-		// freshSourceCount must equal the number of sources whose row sum > 0.
-		const producers = snap.sources.filter(
-			(s) => s.commodityPriceRows + s.beefCutPriceRows > 0,
-		).length;
-		expect(snap.freshSourceCount).toBe(producers);
-		// The seeded FRED/exchange_rate_api history is within 3 days (live
-		// scrapers run hourly/daily), so at least one producer exists.
-		expect(snap.freshSourceCount).toBeGreaterThanOrEqual(1);
+		// Self-contained (round-112): the old assumption "seeded FRED history
+		// is within 3 days" only holds on a freshly-seeded DB (CI). On a local
+		// mt_test the seed ages past the window and this went red — the test
+		// depended on cross-run DB residue. Seed the window content ourselves.
+		const commodity = await ctx.prisma.commodity.findFirst({
+			where: { slug: "brl_usd" },
+			select: { id: true },
+		});
+		if (!commodity) return;
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const fakeSource = `test-fresh-${ctx.prefix}`;
+		await ctx.prisma.commodityPrice.create({
+			data: {
+				commodityId: commodity.id,
+				date: today,
+				interval: "daily",
+				source: fakeSource,
+				open: 1,
+				high: 1,
+				low: 1,
+				close: 1,
+			},
+		});
+		try {
+			const snap = await getDataHealth(3);
+			// freshSourceCount must equal the number of sources whose row sum > 0.
+			const producers = snap.sources.filter(
+				(s) => s.commodityPriceRows + s.beefCutPriceRows > 0,
+			).length;
+			expect(snap.freshSourceCount).toBe(producers);
+			expect(snap.freshSourceCount).toBeGreaterThanOrEqual(1);
+		} finally {
+			await ctx.prisma.commodityPrice.deleteMany({
+				where: { source: fakeSource },
+			});
+		}
 	});
 
 	it("registeredSourceCount matches the scraper manager's registered set", async () => {

@@ -15,12 +15,7 @@ import {
 	clearFailedLoginAttempts,
 	recordFailedLogin,
 } from "@/services/authLockout";
-import {
-	blacklistToken,
-	getBlacklistStats,
-	isTokenBlacklisted,
-	removeFromBlacklist,
-} from "@/services/tokenBlacklist";
+import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
 
 describe("Concurrent Operations Integration Tests", () => {
 	let app: Express;
@@ -156,17 +151,6 @@ describe("Concurrent Operations Integration Tests", () => {
 	});
 
 	describe("Concurrent Token Blacklist Operations", () => {
-		test("should handle blacklist stats operations", async () => {
-			// getBlacklistStats returns { totalBlacklisted: <sCard>, oldestToken,
-			// newestToken } (tokenBlacklist.ts:130). The set is shared across the
-			// suite, so the exact count is nondeterministic, but sCard always
-			// returns a non-negative integer — pin to that rather than just
-			// `typeof === "number"` (which would pass for NaN / negatives).
-			const initialStats = await getBlacklistStats();
-			expect(Number.isInteger(initialStats.totalBlacklisted)).toBe(true);
-			expect(initialStats.totalBlacklisted).toBeGreaterThanOrEqual(0);
-		});
-
 		test("should handle isTokenBlacklisted with various inputs", async () => {
 			// In dev/CI (NODE_ENV !== "production") with Redis reachable,
 			// isTokenBlacklisted returns sIsMember(BLACKLIST_SET, tokenId).
@@ -182,16 +166,6 @@ describe("Concurrent Operations Integration Tests", () => {
 
 			const randomResult = await isTokenBlacklisted("random-string-for-testing");
 			expect(randomResult).toBe(false);
-		});
-
-		test("should handle removeFromBlacklist gracefully", async () => {
-			// removeFromBlacklist returns true on the success path and only
-			// false when Redis throws (tokenBlacklist.ts:120). A non-existent
-			// token is a normal del/sRem that resolves to 0 — not an error —
-			// so the function returns true. The old `typeof === "boolean"`
-			// hid a regression where it started returning false.
-			const result = await removeFromBlacklist("non-existent-token");
-			expect(result).toBe(true);
 		});
 
 		test("should handle token blacklist operations concurrently", async () => {

@@ -51,12 +51,6 @@ const priceHistorySchema = z.object({
 	limit: z.coerce.number().min(1).max(10000).default(365),
 });
 
-const _importSchema = z.object({
-	commodityId: z.string().uuid(),
-	interval: z.enum(["daily", "weekly", "monthly"]).default("daily"),
-	delimiter: z.string().max(1).optional(),
-});
-
 router.get(
 	"/commodities",
 	authenticate,

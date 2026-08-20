@@ -96,25 +96,6 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
 			req.user = user;
 
-			// Update active session count (sampled to avoid performance impact)
-			if (Math.random() < 0.01) {
-				// 1% sampling
-				// Count active sessions in the last 15 minutes
-				const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-				prisma.user
-					.count({
-						where: {
-							lastLoginAt: {
-								gte: fifteenMinutesAgo,
-							},
-						},
-					})
-					.then((_count) => {})
-					.catch((err) => {
-						logger.error(`Failed to count active sessions: ${err}`);
-					});
-			}
-
 			next();
 		} catch (_error) {
 			return res.status(401).json({

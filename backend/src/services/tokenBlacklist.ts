@@ -119,75 +119,6 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
 }
 
 /**
- * Remove a token from the blacklist (for testing/admin use)
- *
- * @param token - JWT token to remove from blacklist
- */
-export async function removeFromBlacklist(token: string): Promise<boolean> {
-	try {
-		const tokenId = extractTokenId(token);
-		await (await redis()).del(`${BLACKLIST_PREFIX}${tokenId}`);
-		await (await redis()).sRem(BLACKLIST_SET, tokenId);
-
-		logger.info(`Token ${tokenId.slice(0, 20)}... removed from blacklist`);
-		return true;
-	} catch (error) {
-		logger.error(`Failed to remove token from blacklist: ${error}`);
-		return false;
-	}
-}
-
-/**
- * Get blacklist statistics
- */
-export async function getBlacklistStats(): Promise<{
-	totalBlacklisted: number;
-	oldestToken: Date | null;
-	newestToken: Date | null;
-}> {
-	try {
-		const totalBlacklisted = await (await redis()).sCard(BLACKLIST_SET);
-
-		if (totalBlacklisted === 0) {
-			return { totalBlacklisted, oldestToken: null, newestToken: null };
-		}
-
-		// For simplicity, just return the count without detailed timestamp analysis
-		// Timestamp analysis would require iterating through all tokens which is expensive
-		return { totalBlacklisted, oldestToken: null, newestToken: null };
-	} catch (error) {
-		logger.error(`Failed to get blacklist stats: ${error}`);
-		return { totalBlacklisted: 0, oldestToken: null, newestToken: null };
-	}
-}
-
-/**
- * Clear the entire blacklist (admin function)
- */
-export async function clearBlacklist(): Promise<boolean> {
-	try {
-		// Get all blacklisted tokens
-		const tokens = await (await redis()).sMembers(BLACKLIST_SET);
-
-		// Remove each token using multi for atomicity
-		const client = await redis();
-		const multi = client.multi();
-		for (const tokenId of tokens) {
-			multi.del(`${BLACKLIST_PREFIX}${tokenId}`);
-		}
-		multi.del(BLACKLIST_SET);
-
-		await multi.exec();
-
-		logger.info(`Cleared token blacklist (${tokens.length} tokens)`);
-		return true;
-	} catch (error) {
-		logger.error(`Failed to clear blacklist: ${error}`);
-		return false;
-	}
-}
-
-/**
  * Extract a unique identifier from a JWT token
  */
 function extractTokenId(token: string): string {
@@ -210,15 +141,5 @@ function extractTokenId(token: string): string {
 	} catch (error) {
 		logger.warn("[AUTH] Token ID extraction failed, using raw token prefix", error);
 		return token.slice(0, 32);
-	}
-}
-
-/**
- * Middleware to check if token is blacklisted
- */
-export async function checkTokenBlacklist(token: string): Promise<void> {
-	const blacklisted = await isTokenBlacklisted(token);
-	if (blacklisted) {
-		throw new Error("Token has been revoked");
 	}
 }

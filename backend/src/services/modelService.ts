@@ -70,43 +70,6 @@ export async function getModel(id: string) {
 	return model;
 }
 
-/**
- * Persist a freshly-trained model record and deactivate prior active models
- * for the same timeseries. Used by the train route after the inference
- * service returns; the route keeps the socket.io emit.
- */
-export async function createModelRecord(input: {
-	timeseriesId: string;
-	trainedById: string;
-	algorithm: ModelAlgorithm;
-	hyperparameters: Record<string, string | number | boolean>;
-	trainingSamples: number;
-}) {
-	// Deactivate existing models for this timeseries
-	await prisma.forecastingModel.updateMany({
-		where: { timeseriesId: input.timeseriesId, isActive: true },
-		data: { isActive: false },
-	});
-
-	return prisma.forecastingModel.create({
-		data: {
-			timeseriesId: input.timeseriesId,
-			trainedById: input.trainedById,
-			algorithm: input.algorithm,
-			hyperparameters: input.hyperparameters,
-			trainingMetrics: { trainingSamples: input.trainingSamples },
-			version: 1,
-			isActive: true,
-			trainedAt: new Date(),
-			deployedAt: new Date(),
-		},
-		include: {
-			timeseries: { select: { id: true, name: true, slug: true, unit: true } },
-			trainedBy: { select: { id: true, name: true, email: true } },
-		},
-	});
-}
-
 /** Batch-insert forecast records (used by the predict route). */
 export async function createForecasts(forecasts: Prisma.ForecastCreateManyInput[]): Promise<void> {
 	await prisma.forecast.createMany({ data: forecasts, skipDuplicates: true });
