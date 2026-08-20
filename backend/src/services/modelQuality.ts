@@ -75,9 +75,15 @@ export async function resolveModelWeights(
 
 		// Default weight for models with no empirical MAPE = the median of known
 		// MAPEs (neutral — neither rewarded nor penalized for being new).
+		// True median: average of the two middle values on even-length pools
+		// (round-113 review — the old upper-middle pick biased by pool parity).
 		const knownMapes = Array.from(mapeByModel.values()).sort((a, b) => a - b);
-		const defaultMape =
-			knownMapes.length > 0 ? knownMapes[Math.floor(knownMapes.length / 2)] : MAPE_FLOOR_PCT * 4; // 8% if nothing is known at all
+		let defaultMape = MAPE_FLOOR_PCT * 4; // 8% if nothing is known at all
+		if (knownMapes.length > 0) {
+			const mid = Math.floor(knownMapes.length / 2);
+			defaultMape =
+				knownMapes.length % 2 !== 0 ? knownMapes[mid] : (knownMapes[mid - 1] + knownMapes[mid]) / 2;
+		}
 
 		// Elimination bar: naive_forecaster's verified MAPE (when the evidence
 		// is thick enough to trust). A model strictly worse than this loses its

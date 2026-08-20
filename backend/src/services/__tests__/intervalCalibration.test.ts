@@ -39,6 +39,11 @@ function verifiedRow(modelId: string, residuals: number[]) {
 	};
 }
 
+/** One verified ROW per residual — the evidence bar counts rows (round-113). */
+function verifiedRows(modelId: string, residuals: number[]) {
+	return residuals.map((r) => verifiedRow(modelId, [r]));
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	resetCalibrationCacheForTests();
@@ -72,8 +77,8 @@ describe("getIntervalMultipliers", () => {
 		const thick = Array.from({ length: 100 }, (_, i) => (i + 1) / 1000); // 0.001..0.100
 		const thin = [0.01, 0.02, 0.03];
 		mocks.findMany.mockResolvedValue([
-			verifiedRow("thick_model", thick),
-			verifiedRow("thin_model", thin),
+			...verifiedRows("thick_model", thick),
+			...verifiedRows("thin_model", thin),
 		]);
 
 		const m = await getIntervalMultipliers();
@@ -85,6 +90,58 @@ describe("getIntervalMultipliers", () => {
 		const q = m.get("thick_model") as number;
 		expect(q).toBeGreaterThanOrEqual(0.09);
 		expect(q).toBeLessThanOrEqual(0.1);
+	});
+
+	it("counts verified ROWS, not per-step residuals, against the evidence bar", async () => {
+		// Three horizon-10 rows = 30 residuals — under the old residual-count
+		// bar this passed MIN_CALIBRATION_ROWS despite being 3 correlated
+		// predictions (round-113 review finding A1-3).
+		mocks.findMany.mockResolvedValue([
+			verifiedRow(
+				"padded_model",
+				Array.from({ length: 10 }, () => 0.05),
+			),
+			verifiedRow(
+				"padded_model",
+				Array.from({ length: 10 }, () => 0.05),
+			),
+			verifiedRow(
+				"padded_model",
+				Array.from({ length: 10 }, () => 0.05),
+			),
+		]);
+		const m = await getIntervalMultipliers();
+		expect(m.has("padded_model")).toBe(false);
+	});
+
+	it("rejects q ≥ 1 instead of serving negative lower bounds", async () => {
+		// A contaminated pool with 90th-percentile relative residual ≥ 1 must
+		// yield NO multiplier — ŷ·(1−q) would be negative (round-113, A1-2).
+		const poisoned = Array.from({ length: 40 }, (_, i) => 1.2 + i / 100);
+		mocks.findMany.mockResolvedValue(verifiedRows("poisoned_model", poisoned));
+		const m = await getIntervalMultipliers();
+		expect(m.has("poisoned_model")).toBe(false);
+	});
+
+	it("excludes leaked test-artifact rows from the calibration pool", async () => {
+		// Same verified-evidence definition as mapeTracking: a fixture row
+		// with a real modelId must not contribute residuals (round-113, A1-1).
+		const good = Array.from({ length: 40 }, (_, i) => 0.01 + i / 1000);
+		mocks.findMany.mockResolvedValue(verifiedRows("real_model", good));
+		await getIntervalMultipliers();
+		const where = mocks.findMany.mock.calls[0]?.[0]?.where as Record<string, unknown>;
+		expect(where.NOT).toBeDefined();
+	});
+
+	it("keys the 60s cache by `days` — a 7-day fetch must not serve a 60-day call", async () => {
+		// Round-113, A1-5: a single cache slot served any `days` within TTL.
+		const sixty = Array.from({ length: 40 }, (_, i) => 0.01 + i / 1000);
+		const seven = Array.from({ length: 40 }, () => 0.001);
+		mocks.findMany.mockResolvedValueOnce(verifiedRows("m", sixty));
+		await getIntervalMultipliers(60);
+		mocks.findMany.mockResolvedValueOnce(verifiedRows("m", seven));
+		const m7 = await getIntervalMultipliers(7); // within TTL, different key
+		expect(m7.get("m")).toBeLessThanOrEqual(0.002);
 	});
 
 	it("achieves ≈90% empirical coverage on held-out draws (the conformal point)", async () => {
@@ -103,7 +160,7 @@ describe("getIntervalMultipliers", () => {
 		const draw = () => Math.abs((rng() - 0.5) * 2) / 50; // uniform [0, 0.04]
 		const calibration = Array.from({ length: 500 }, draw);
 		const heldOut = Array.from({ length: 5000 }, draw);
-		mocks.findMany.mockResolvedValue([verifiedRow("m", calibration)]);
+		mocks.findMany.mockResolvedValue(verifiedRows("m", calibration));
 
 		const q = (await getIntervalMultipliers()).get("m") as number;
 

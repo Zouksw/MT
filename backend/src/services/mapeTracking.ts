@@ -793,8 +793,12 @@ export async function verifyDuePredictions(): Promise<number> {
  *
  * Returned as a spread-safe `{}`-shaped fragment so callers merge it into
  * their existing `where` without restructuring.
+ *
+ * Exported (round-113) so intervalCalibration applies the SAME definition of
+ * "verified evidence" — a leaked fixture row with a real modelId would
+ * otherwise contribute synthetic residuals to that model's conformal q.
  */
-const EXCLUDE_TEST_ARTIFACTS = {
+export const EXCLUDE_TEST_ARTIFACTS = {
 	// Case-insensitive: leaked fixtures use both "TESTCUT_..." (cut-series
 	// verification test) and "test-commodity-..." (logPrediction tests). Prisma
 	// only allows `mode: "insensitive"` on a top-level filter, so this uses the

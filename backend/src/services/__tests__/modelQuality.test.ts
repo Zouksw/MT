@@ -34,6 +34,24 @@ describe("resolveModelWeights — elimination bar (round-110)", () => {
 		vi.restoreAllMocks();
 	});
 
+	it("neutral default for unknown models is the TRUE median on even-length pools", async () => {
+		// Round-113 review: the old pick (upper of the two middles) biased a
+		// new model's neutral weight by pool parity — [4, 10] must yield 7,
+		// not 10. Verified count 0 = no empirical evidence → neutral default.
+		mocks.getAllModelAccuracy.mockResolvedValue([
+			acc("a", 4),
+			acc("b", 10),
+			acc("new_model", null),
+		]);
+
+		const w = await resolveModelWeights(["a", "b", "new_model"]);
+
+		// w = 1/max(mape, 2) normalized: a=1/4, b=1/10, new=1/7(median).
+		// Ratio new/a must reflect mape 7 (old bug: 10).
+		const ratio = (w.get("new_model") as number) / (w.get("a") as number);
+		expect(ratio).toBeCloseTo(1 / 7 / (1 / 4), 6);
+	});
+
 	it("gives weight 0 to a model strictly worse than naive with thick evidence", async () => {
 		// naive 3.0 with 50 verified rows = active bar; chronos_x at 5.0 with
 		// 50 rows is strictly worse → eliminated. chronos_y at 1.5 survives.

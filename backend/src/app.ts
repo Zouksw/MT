@@ -172,11 +172,13 @@ export function createApp(): AppInstance {
 
 	// Parse Cookie headers into req.cookies. Required by every cookie read in
 	// the app: /auth/verify and /auth/me's HttpOnly `auth_token` fallback (the
-	// SPA's refresh-survival session), logout's cookie revocation, and the
-	// csrf_token double-submit. Without this middleware req.cookies is
-	// undefined and all those paths silently see "no cookie" — observed live
-	// in round-105: login SETS cookies fine (res.cookie needs no parser) but
-	// every read was dead, so a page refresh always unauthenticated.
+	// SPA's refresh-survival session) and logout's cookie revocation. (The
+	// former csrf_token double-submit reader was removed with the dead
+	// /api/auth/csrf-token endpoint, round-112.) Without this middleware
+	// req.cookies is undefined and all those paths silently see "no cookie" —
+	// observed live in round-105: login SETS cookies fine (res.cookie needs
+	// no parser) but every read was dead, so a page refresh always
+	// unauthenticated.
 	app.use(cookieParser());
 
 	// Development request logging
