@@ -295,3 +295,53 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **小项：**
 - `/alerts/show` 页 Name 字段显示 "Unnamed Alert"（Alert 模型无 name；metadata.title 可用未映射）。
 - **前端零 WebSocket 消费**：后端 Socket.IO 服务（app.ts io + join-timeseries 房间）无任何前端调用（`socket.io-client` 零引用）——实时推送能力存在但从未接通。`.env.production` 的 `NEXT_PUBLIC_WS_URL=wss://api.your-domain.com` 亦为占位符（NEXT_PUBLIC_API_URL 同款教训：占位符会进产物）。
+
+---
+
+## 六、round-111 设置层冗余审计（2026-08-20，全部只读核实）
+
+> 本轮目标"探索项目设置、分析实现冗余"（与 round-108 的磁盘体积评估互补）。代码层冗余在上文各条已覆盖且大半 STALE/RESOLVED；本轮聚焦**设置/部署/工具链层**，全部条目 2026-08-20 实测（命令附于各条）。
+
+### 总体结论
+
+代码层不臃肿（路由挂载 20 前缀无重复、inference 298 行函数式实现干净、modelRegistry 单一事实来源）。**当前最大的冗余在设置层：4 套并行部署描述只有 1 套在用且互相漂移；根 package.json 有 5 处工具链残留；脚本层 2 处冗余 + 1 处"脚手架存在但未接线"。** 影响是维护误导与认知负担（新人/AI 会按 compose/helm 理解架构），不是运行时开销。
+
+### TD-15 — 部署描述四套并存，实际只有 PM2+SSH 一套在用
+
+**实测（2026-08-20）**：
+- **实际运行拓扑**：PM2 三进程（`pm2 jlist`：mt-backend/frontend/inference）+ **宿主机 systemd 的 PostgreSQL/Redis**（`systemctl is-active postgresql redis-server` = active；`docker ps -a` **零容器**；监听 127.0.0.1:5432/6379 为本机进程）。CI 部署 = `appleboy/ssh-action` SSH 上服务器跑 `scripts/deploy.sh`（PM2 路径）——`ci.yml` 与 `deploy.sh` 中 `helm|kubectl|docker` 引用数 = **0**。
+- **闲置且漂移**：
+  - `docker-compose.yml`：compose 建的 DB 用户是 `mt`，实际 `.env` 是 `mt_user`——该栈从未是本机运行时；镜像版本 `postgres:15-alpine`/`redis:7-alpine` 与宿主机实际（**PG 14.23 / Redis 6.0.16**，`psql --version`/`redis-server --version`）不符。
+  - `deploy/helm/`（11 文件：deployment/hpa/ingress/networkpolicy/backup-cronjob/secrets/configmap）：无任何流水线引用。
+  - `deploy/docker/` 2 个 Dockerfile：仅被 compose build 引用。
+  - `nginx/nginx.conf`：仅被 compose 的 nginx 服务挂载；宿主机 80 端口无 nginx。
+- **文档误导已存在**：AGENTS.md §四 技术栈行曾写"PostgreSQL 15、Redis 7（docker-compose.yml）"（本轮已修正为宿主机实际版本）。
+**处置建议（产品决策，未动）**：三选一——(a) 接受单机 PM2 为产品现实，归档 compose/helm/nginx 到 `deploy/attic/` 或删除；(b) 保留 helm 作为未来 k8s 规划但加"未启用"README 标注；(c) 真正容器化。现状（漂移共存）是最差选项。
+
+### TD-16 — 根 package.json / 工具链残留（5 项）
+
+**实测（2026-08-20）**：
+- `pnpm.overrides."minimatch@<3.1.4": ">=3.1.4"`：根 `pnpm-lock.yaml` 中 **0 个 minimatch**（根只装 biome/husky/lint-staged/tsx/supertest/pm2-logrotate）→ **no-op 残留**（pnpm store 损伤时期防御的遗留；round-54 移除的是另一处配错 override）。
+- 根 devDeps `supertest` + `@types/supertest`：根目录无测试、scripts/ 无引用（backend 自带同款）→ 可卸。
+- `onlyBuiltDependencies` 含 `msw`：frontend/backend package.json 均已无 msw（TD-10 已清）→ stale 条目。
+- `knip.json`：配置完整（backend/frontend 两 workspace），但 knip **未安装**（node_modules/.bin 无）、CI 0 引用 → 死工具配置；且其 `workspaces` 结构与本仓库"非 pnpm workspace"（AGENTS §五）矛盾，即使装了也需重写。
+- `pm2-logrotate`（唯一 root dependency）：`~/.pm2/modules` 有安装痕迹但 `pm2 list` 无此进程（inactive）；PM2 日志轮转实际由 `/etc/logrotate.d/trademind` 承担 → 双轮转机制一套闲置。
+**处置**：除 override/msw/supertest 可直接清（无副作用）外，knip 与 pm2-logrotate 需先决策"要不要这个能力"。均未动。
+
+### TD-17 — 脚本层：1 孤儿 + 1 漂移副本 + 1 未接线
+
+**实测（2026-08-20）**：
+- `scripts/pm2-start.sh`：**0 外部 caller**（package.json 脚本、AGENTS、docs、CI、deploy.sh 均指 `restart.sh`）——功能是 restart.sh 子集（无端口清理/僵尸清理）→ 孤儿脚本。
+- `scripts/logrotate.conf` vs `/etc/logrotate.d/trademind`：**内容已漂移**（repo 副本 `rotate 14` + postrotate `pm2 reloadLogs`；线上 `rotate 7` + `maxsize 50M` + `copytruncate`、无 postrotate）——repo 副本 stale，误导下次" reinstall"。
+- `scripts/mt.service`（systemd 单元，PM2 resurrect 开机复活）：**未安装**（`systemctl is-enabled mt` → No such file）→ 重启后 PM2 不会自动复活，脚手架存在但未接线（ops 缺口，非冗余）。
+- 非冗余确认：health-check.sh（CI verify）/ cron-healthcheck.sh（5min 自愈）/ watchdog-nextserver.sh（2min 杀重复 next-server）职责互斥；backup/restore/db-migrate/bootstrap-test-db/setup 为合法运维对。
+
+### TD-18 — 代码层新鲜抽查（对既有条目的 2026-08-20 复核）
+
+- **`ui/button.tsx` vs `Button/`、`ui/card.tsx` vs `Card/` 双实现仍在且双活**：小写版 4 importer（Modal + 3 个 trading 组件）vs Pascal 版 45 importer——真实重复，收敛属设计系统迁移（round-106 已记，未变）。
+- **`_importSchema`（`routes/marketData.ts:54`）死定义仍在**（round-106 已记；原审计写的 `services/marketData.ts` 路径已失效，实际在 routes/）。
+- **backend Socket.IO LIVE 但前端 0 消费**：`socket.io@4.8.3` 在 backend deps，frontend 无 `socket.io-client`（round-107 已记，未变）。
+- **`backend/.env.production`（mtime 2026-05-09）0 个 loader 消费**：PM2 路径 `dotenv/config` 只读 `.env`，Dockerfile 不 COPY env，compose 内联注入 → 死配置文件（含密钥占位符，建议按 SECRETS-MANAGEMENT 流程清除）。frontend 的 `.env.local` 与 `.env.production` 键 0 重叠（互补，非冲突；`.env.production` 为 Next 原生加载，LIVE）。
+- **裸 `fetch()` 39 处**（`grep -rn "await fetch(" frontend/src | grep -v __tests__`）——与 08-10 记录一致（TD-8 开放项）。
+- **路由挂载无重复**：`app.use` 20 个 API 前缀各 1 次；`/health` 双 use 是 limiter+router 链式（非重复）。
+- **无漂移确认**：modelRegistry.ts 注释与实现一致（stl 移除决策 08-15 记录在案）；sarimax 已实现未接线是 round-110 门禁决策（非冗余）；prediction_logs 中 sundial/timer_xl 幽灵行仅由 `routes/signals.ts:108` 注释性防御处理（数据幽灵，非代码）。

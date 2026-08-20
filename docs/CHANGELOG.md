@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-20 — round-111 设置层冗余审计（只读；TECH-DEBT §六 落档 TD-15~18）
+
+与 round-108（磁盘体积）互补，本轮审计**设置/部署/工具链层**的实现冗余，全部只读核实、零代码改动。核心发现：代码层不臃肿（路由挂载无重复、inference 实现干净），**最大冗余在部署描述——4 套并存 1 套在用且互相漂移**：实际拓扑 = PM2 三进程 + 宿主机 systemd PostgreSQL **14.23**/Redis **6.0.16** + CI SSH→deploy.sh（ci.yml/deploy.sh 中 helm/kubectl/docker 引用 0）；而 docker-compose.yml（DB 用户 mt vs 实际 mt_user，从未运行，`docker ps -a` 零容器）、deploy/helm（11 文件）、deploy/docker、nginx/ 全部闲置。据此修正 AGENTS.md §四 技术栈行（原文"PG15/Redis7（docker-compose.yml）"与实测不符）。其余：根 package.json 5 处残留（minimatch override 根 lock 0 命中=no-op、root supertest 0 用途、onlyBuiltDependencies 的 msw 条目 stale、knip.json 死配置且未安装、pm2-logrotate 装而未跑——日志轮转实际走 /etc/logrotate.d/trademind）；脚本层 pm2-start.sh 0 caller 孤儿、scripts/logrotate.conf 与线上 /etc/logrotate.d/trademind 内容漂移、mt.service 未安装（重启后 PM2 不复活，ops 缺口）；代码层复核 ui/button+card 双实现双活（4 vs 45 importer）、backend/.env.production 0 loader 消费（死文件）。处置建议均标注"产品决策/未动"（AGENTS §十.5）。
+
 ### 2026-08-17 — round-110 按预测策略方案开工：验证环僵尸饿死修复，chronos 实证到位
 
 按 PREDICTION-STRATEGY §四排序执行第 2 项时发现真根因并非"chronos 未纳入验证环"，而是**心跳僵尸商品饿死验证环**：live_cattle_cme 等 5 个 CME 商品功能上已死但偶发单行心跳价（3 个月 3 行、最新 08-13），同时骗过 verifyDue 的跳过不改状态与 markUnverifiable 的 `latestPrice<=predictedAt` 冻结判定，2.7 万永久跳过行占满 oldest-first take:5000 窗口 → 08-04 后所有验证批次 5000/5000 空转。修复（commit 54ada15）：新增 `expireWindowElapsedPredictions` 窗口过期清扫（anchor+horizon+7d 宽限 + actuals 守卫）+ `restoreVerifiablePredictions` 窗口感知重写（防乒乓）+ 接入 6h 验证任务。live 首跑清扫 26,691 行、随后一批 verified **1,536/2,262**——chronos 首批同代实证 avg MAPE **0.68-0.70**（usd_cny 0.35 / aud 0.47 / brl 0.40 / beef_carcass_us 1.43）。同步修正 PREDICTION-STRATEGY 初版"chronos 0 verified"错误声明（LIMIT 18 截断所致，实际历史已有 ~2,073/variant）并补 round-110 执行记录。backend 909→911 全绿（+2 新测试，2 个旧 restore 测试改窗口语义）。同日完成 §四 第 3、4 项实验：胴体↔驱动因子联动实测（aud_usd r=+0.129 唯一稳健，usd_cny 符号翻转不可用）；sarimax 门禁回测双双零提升（beef×aud 8.34% vs ARIMA 8.10%、对照 crude×natgas 4.28% vs 4.28%）→ 按门禁外生接线暂缓，领先指标（lagged exog）列为后续实验。遗留下一批：统计基线复产（07-26 停产，naive 门槛缺同代证据）。
