@@ -179,12 +179,12 @@
 | `removeFromBlacklist` / `getBlacklistStats` / `clearBlacklist` / `checkTokenBlacklist` | `services/tokenBlacklist.ts:113,130,154,206` | 仅 `blacklistToken`+`isTokenBlacklisted` 活 | **保留**（黑名单管理面 = revoke/audit/clear 是合法安全 surface；`checkTokenBlacklist` 是 `isTokenBlacklisted` 的 throw 版封装，留作中间件备选）|
 | **`cacheKeys` 5/6 成员** | `lib/cache.ts:67`（`query`/`timeseriesData`/`userSession`/`rateLimit`/`timeseriesList`）| 仅 `cacheKeys.prediction` 有 4 caller（predictionCache×2 + inference×2），其余 5 个 0 caller | 待决策（已预留 cache namespace，但当前 0 用；删 5 成员风险低，可下一轮）|
 
-### 前端孤岛页（2 项，未变）
+### 前端孤岛页（2 项）
 
 | 符号/文件 | 位置 | 性质 |
 |---|---|---|
-| `app/apikeys/show/[id]/page.tsx` | 0 入站链接 | 孤岛页（直接 URL 可达）|
-| `app/apikeys/edit/[id]/page.tsx` | 0 入站链接 | 孤岛页 |
+| `app/apikeys/show/[id]/page.tsx` | ~~0 入站链接~~ | **非孤岛（round-112 修正，2026-08-20）**：`apikeys/page.tsx:239` 有 `href={/apikeys/show/${id}}`，列表→show→edit 是接线完整的管理流——2026-08-01 的"0 入站链接"记录已过期，勿删 |
+| `app/apikeys/edit/[id]/page.tsx` | ~~0 入站链接~~ | 同上：show 页两处链接指向 edit |
 
 ### 处置原则（遵循 §五 code-simplification + AGENTS §十.5）
 - **leaf-level 死代码**（仅被自己的自测引用，无管理面/API surface 意图）→ 可删函数+其自测（删测试不算回退：测的是不存在的代码）。
@@ -252,6 +252,8 @@
 ### CSRF 死端点（round-105 审计标记，2026-08-16）
 
 `GET /api/auth/csrf-token`（auth.ts:611）发放 double-submit token（随机 hex + httpOnly cookie），但**全后端无任何 `x-csrf-token` 验证点**，前端也从未调用（frontend/src 零引用）。属安全剧场：端点存在暗示有 CSRF 防护，实际防护来自别处——状态变更路由走 Authorization Bearer 头（自定义头无法被跨站设置，天然免疫 CSRF），cookie 会话只用于只读端点（/verify、/auth/me）+ logout。已在端点 doc 注释中如实标注。处置二选一（未决）：为 logout 等 cookie 可达的变更端点接真实验证，或移除端点（遵循 AGENTS §十.5：非己所造死代码先标记，不径直删）。
+
+**已移除（round-112，2026-08-20，commit 7ea8105）**：按用户"清除没必要存在的代码"的明确指示执行了"移除端点"分支——删除路由 + 自测 + API.md 行；live 实测 `/api/auth/csrf-token` 现返回 404，Bearer 认证路径不受影响。本条 CLOSED。
 
 ### round-106 全项目审查遗留项（2026-08-16，均已核实、待决策/后续批次）
 
@@ -345,3 +347,21 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - **裸 `fetch()` 39 处**（`grep -rn "await fetch(" frontend/src | grep -v __tests__`）——与 08-10 记录一致（TD-8 开放项）。
 - **路由挂载无重复**：`app.use` 20 个 API 前缀各 1 次；`/health` 双 use 是 limiter+router 链式（非重复）。
 - **无漂移确认**：modelRegistry.ts 注释与实现一致（stl 移除决策 08-15 记录在案）；sarimax 已实现未接线是 round-110 门禁决策（非冗余）；prediction_logs 中 sundial/timer_xl 幽灵行仅由 `routes/signals.ts:108` 注释性防御处理（数据幽灵，非代码）。
+
+---
+
+## 七、round-112 清理执行记录（2026-08-20，用户授权"清除没必要存在的代码"）
+
+> 用户明确指示代码质量低、鸡肋功能与不必要代码应清除——本节记录按既有审计证据执行的删除（每项删除前重新 0-caller 核实）。四个提交：`1ae11b8`（设置层）、`8223df2`（backend 死代码）、`7ea8105`（Socket.IO + 死端点）、`4cca71e`（配额脚手架 + flaky 修复）。`git diff 1ae11b8^..4cca71e` = **31 文件，-1,210 / +182（净 -1,028 行）**。测试 924 → 909（-15 全部为被删代码/端点的自测，属 TECH-DEBT 既定豁免），每批 tsc + 全量绿 + build + pm2 restart + live 验证。
+
+**已清除**：
+1. 设置层：根 pkg minimatch no-op override / root supertest / msw onlyBuiltDependencies 条目 / knip.json / scripts/pm2-start.sh（0 caller）/ scripts/logrotate.conf 同步线上版 / backend/.env.production（未跟踪占位模板）。
+2. backend 死代码：`modelService.createModelRecord`、`tokenBlacklist` 的 removeFromBlacklist/getBlacklistStats/clearBlacklist/checkTokenBlacklist（保留 LIVE 的 blacklistToken/isTokenBlacklisted；round-104 TTL 回归套件保留、cleanup 改直连 redis 键）、auth.ts 1% 采样 session-count 丢弃查询、`_importSchema`（实际在 routes/marketData.ts:54）、cache.ts null-sentinel 读路径（每次 miss 白付一次 EXISTS）。
+3. Socket.IO 整体（零消费者）：app.ts io 装配（连接认证 + 房间授权 ~90 行）、signals/anomalies/models 三处 emit、alertNotifications io 参数（DB 持久化 + email/Slack 保留）、notificationChannels 的 "websocket" 通道类型、socket.io 依赖本身。round-107"前端零 WebSocket 消费"遗留项由此 CLOSED。
+4. 死端点：`GET /api/auth/csrf-token`（安全剧场，round-105 标记）、`GET /api/billing/usage`（usageRecords 从未写入、前端 0 调用；/plans //subscription 保留供 billing UI）。
+5. 配额脚手架：`usageService.checkLimit/trackUsage`（0 生产 caller，广告限额从未强制——PRODUCT-SPEC §九 无 paywall；PLAN_LIMITS/getUserPlan 保留为信息性限额）。round-106"套餐限额从未执行"遗留项由此 CLOSED。
+6. 质量修复（顺手，同批门禁）：dataHealth freshSourceCount 测试改自包含（原依赖跨运行 DB 残留，干净树上就红）；intervalCalibration 覆盖率测试加 mulberry32 种子（Math.random 版在 0.88 边界闪断 0.879）。
+
+**核实后未删（有证据保留）**：apikeys show/edit 页（列表→show→edit 接线完整，round-107 孤岛记录过期）；`unsubscribeCommodity`/`getSubscribedCommodities`（订阅 API 配对面）；watchlist/portfolios/datasets/timeseries 等整功能域（页面可达且工作，属产品面非死代码——下线需产品决策）。
+
+**仍开放（产品/运维决策，未动）**：TD-15 部署描述四套并存（compose/helm/docker/nginx 归档或启用）；TD-2 organizations 单租户脚手架（需 schema 迁移）；pm2-logrotate 装而未跑（轮转实际走系统 logrotate，可卸）；`ui/button.tsx`+`ui/card.tsx` 双实现双活（设计系统迁移）；裸 fetch 39 处收敛（TD-8）；mt.service 未安装（重启自愈缺口）。

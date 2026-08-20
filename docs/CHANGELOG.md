@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-20 — round-112 清除没必要存在的代码（4 提交，净 -1,000+ 行）
+
+用户明确判断"代码质量低、鸡肋功能多、存在没必要代码"，据此对既有审计标记（TECH-DEBT TD-15~18、round-105/106/107 遗留）逐项重新核实 0-caller 后执行删除，每批 tsc+全量测试绿+build+PM2 重启+live 验证+独立提交：
+- **1ae11b8 设置层**：根 package.json 三处残留（minimatch no-op override/root supertest/msw 条目）、knip.json 死工具配置、pm2-start.sh 孤儿脚本、logrotate.conf 与线上漂移同步、backend/.env.production 死模板。
+- **8223df2 backend 死代码**：createModelRecord、tokenBlacklist 4 个 0-caller 函数（LIVE 的 blacklistToken/isTokenBlacklisted 保留，round-104 TTL 回归套件保留）、auth 1% 采样丢弃查询、_importSchema、cache null-sentinel 白付 EXISTS。
+- **7ea8105 Socket.IO + 死端点**：零消费者实时栈整体摘除（app.ts 装配+三处 emit+websocket 通道类型+依赖）；`GET /api/auth/csrf-token`（安全剧场）与 `GET /api/billing/usage`（永远空数组、前端 0 调用）移除，live 404/401 验证。
+- **4cca71e 配额脚手架 + flaky 根治**：usageService checkLimit/trackUsage（广告限额从未强制）；dataHealth 测试改自包含（原依赖跨运行 DB 残留，干净树即红）；conformal 覆盖率测试种子化（0.879 边界闪断）。**取消** apikeys show/edit 删除——列表→show→edit 接线完整，round-107 孤岛记录过期。
+测试 924 → 909（-15 全为被删代码自测，TECH-DEBT 既定豁免口径）；85 文件全绿；`git diff` 31 文件净删 1,028 行。仍开放的产品级决策清单见 TECH-DEBT §七。
+
 ### 2026-08-20 — round-111 设置层冗余审计（只读；TECH-DEBT §六 落档 TD-15~18）
 
 与 round-108（磁盘体积）互补，本轮审计**设置/部署/工具链层**的实现冗余，全部只读核实、零代码改动。核心发现：代码层不臃肿（路由挂载无重复、inference 实现干净），**最大冗余在部署描述——4 套并存 1 套在用且互相漂移**：实际拓扑 = PM2 三进程 + 宿主机 systemd PostgreSQL **14.23**/Redis **6.0.16** + CI SSH→deploy.sh（ci.yml/deploy.sh 中 helm/kubectl/docker 引用 0）；而 docker-compose.yml（DB 用户 mt vs 实际 mt_user，从未运行，`docker ps -a` 零容器）、deploy/helm（11 文件）、deploy/docker、nginx/ 全部闲置。据此修正 AGENTS.md §四 技术栈行（原文"PG15/Redis7（docker-compose.yml）"与实测不符）。其余：根 package.json 5 处残留（minimatch override 根 lock 0 命中=no-op、root supertest 0 用途、onlyBuiltDependencies 的 msw 条目 stale、knip.json 死配置且未安装、pm2-logrotate 装而未跑——日志轮转实际走 /etc/logrotate.d/trademind）；脚本层 pm2-start.sh 0 caller 孤儿、scripts/logrotate.conf 与线上 /etc/logrotate.d/trademind 内容漂移、mt.service 未安装（重启后 PM2 不复活，ops 缺口）；代码层复核 ui/button+card 双实现双活（4 vs 45 importer）、backend/.env.production 0 loader 消费（死文件）。处置建议均标注"产品决策/未动"（AGENTS §十.5）。
