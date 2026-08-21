@@ -1,10 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-	getPagination,
-	limitSchema,
-	type PaginationParams,
-	paginationSchema,
-} from "@/schemas/common";
+import { getPagination, limitSchema, type PaginationParams, paginationSchema } from "@/schemas";
 
 describe("Common Schemas", () => {
 	describe("paginationSchema", () => {

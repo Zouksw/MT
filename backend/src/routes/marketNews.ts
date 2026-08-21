@@ -63,7 +63,7 @@ function requireEditorRole(req: AuthenticatedRequest) {
 }
 
 // GET /api/news — list (paginated, filterable). The frontend useList helper
-// sends `pageSize`; paginationSchema in @/schemas/common reads `limit`. Accept
+// sends `pageSize`; paginationSchema in @/schemas reads `limit`. Accept
 // both here so the existing convention doesn't silently cap at the default.
 router.get(
 	"/",

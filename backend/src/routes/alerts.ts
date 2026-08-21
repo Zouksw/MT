@@ -8,7 +8,7 @@ import { success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, NotFoundError, UnauthorizedError } from "@/middleware/errorHandler";
 import { validate } from "@/middleware/security";
-import { limitSchema } from "@/schemas/common";
+import { limitSchema } from "@/schemas";
 import {
 	alertSchemas,
 	createAlertRule,

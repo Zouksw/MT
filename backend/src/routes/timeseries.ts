@@ -5,7 +5,7 @@ import { prisma } from "@/lib";
 import { paginated, success } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
-import { getPagination, limitSchema, paginationSchema } from "@/schemas/common";
+import { getPagination, limitSchema, paginationSchema } from "@/schemas";
 import type { QueryConditions } from "@/types";
 
 const router = Router();

@@ -11,11 +11,7 @@ import type { AnomalySeverity, DetectionMethod, Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib";
 import { BadRequestError, NotFoundError } from "@/middleware/errorHandler";
-import type {
-	bulkResolveSchema,
-	detectAnomaliesSchema,
-	updateAnomalySchema,
-} from "@/schemas/anomalies";
+import type { bulkResolveSchema, detectAnomaliesSchema, updateAnomalySchema } from "@/schemas";
 
 export interface DetectedAnomaly {
 	timeseriesId: string;

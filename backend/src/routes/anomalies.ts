@@ -7,9 +7,9 @@ import {
 	anomaliesQuerySchema,
 	bulkResolveSchema,
 	detectAnomaliesSchema,
+	getPagination,
 	updateAnomalySchema,
-} from "@/schemas/anomalies";
-import { getPagination } from "@/schemas/common";
+} from "@/schemas";
 import {
 	bulkResolveAnomalies,
 	deleteAnomaly,

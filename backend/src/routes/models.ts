@@ -6,8 +6,7 @@ import { checkAIAccess } from "@/middleware/aiAccess";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { aiRateLimiter } from "@/middleware/rateLimiter";
-import { getPagination, limitSchema } from "@/schemas/common";
-import { modelsQuerySchema, predictSchema } from "@/schemas/models";
+import { getPagination, limitSchema, modelsQuerySchema, predictSchema } from "@/schemas";
 import {
 	createForecasts,
 	deleteForecasts,

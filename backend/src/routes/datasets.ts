@@ -4,11 +4,12 @@ import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate } from "@/middleware/auth";
 import { cacheRoute, invalidateCache } from "@/middleware/cacheDecorator";
 import { asyncHandler } from "@/middleware/errorHandler";
-import { getPagination, paginationSchema } from "@/schemas/common";
 import {
+	getPagination,
 	createDatasetSchema as newCreateDatasetSchema,
 	updateDatasetSchema as newUpdateDatasetSchema,
-} from "@/schemas/datasets";
+	paginationSchema,
+} from "@/schemas";
 import {
 	createDataset,
 	deleteDataset,
