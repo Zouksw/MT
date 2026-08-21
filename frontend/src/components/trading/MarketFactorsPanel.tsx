@@ -12,7 +12,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatSignedPercent } from "@/lib/format";
 
 interface FactorItem {

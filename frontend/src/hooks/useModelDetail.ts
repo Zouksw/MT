@@ -1,18 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiFetch";
 import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, PredictionLogResponse } from "@/types/accuracy";
-import { getAuthToken } from "@/utils/auth";
-
-async function apiFetch<T>(url: string): Promise<T> {
-	const token = getAuthToken();
-	const res = await fetch(url, {
-		headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-	});
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
-	return res.json();
-}
 
 export function useModelDetail(modelId: string) {
 	const [backtest, setBacktest] = useState<BacktestResponse | null>(null);

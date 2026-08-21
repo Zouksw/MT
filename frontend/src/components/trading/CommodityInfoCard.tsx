@@ -1,7 +1,7 @@
 "use client";
 
 import { Award, Database, Factory, Globe, Package, Tag as TagIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
 import FreshnessBadge from "./FreshnessBadge";
 

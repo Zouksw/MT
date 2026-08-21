@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart3, CheckCircle, Database, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import type { CommoditySourceInfo } from "@/lib/market-data";
 
 interface DataSourcePanelProps {

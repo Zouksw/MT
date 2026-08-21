@@ -1,19 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { apiFetch } from "@/lib/apiFetch";
 import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, ModelAccuracy, ModelWithBacktest } from "@/types/accuracy";
 import { MIN_VERIFIED_SAMPLE, MODEL_NAME_MAP } from "@/types/accuracy";
-import { getAuthToken } from "@/utils/auth";
-
-async function apiFetch<T>(url: string): Promise<T> {
-	const token = getAuthToken();
-	const res = await fetch(url, {
-		headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-	});
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
-	return res.json();
-}
 
 export function useAccuracyData() {
 	const [accuracy, setAccuracy] = useState<ModelAccuracy[]>([]);
