@@ -40,6 +40,8 @@
 
 **复核（2026-07-27）**：`organization_members` 已删（schema 无此 model，0 引用）。`organizations` 仍存在（`schema.prisma:307`），仅 1 生产引用：`datasetService.ts:103` `prisma.organizations.upsert`（default org）。删除需 schema 迁移，单列轮次。
 
+**已解决（round-114，2026-08-21，commit c6cba18）**：迁移 `20260821110000_drop_organizations`（**双库应用**：mt_db + mt_test）删 organizations 表 + `datasets.organization_id` 列/FK/组合唯一键，补 `UNIQUE(datasets.slug)`（service 层 slug 查重本就是全局的）。datasetService 删 default-org upsert（少 1 次查询）；5 个测试 fixture 去除 org 行；前端删死字段 `Dataset.organizationId` 与 profile 恒为 0 的 "Orgs" 计数（后端从未查询 `ownedOrganizations`）。删除前实测：organizations 仅 2 行（种子 + 运行时 default）、datasets 仅 1 行。
+
 ### TD-3 — API Key 系统：发得出、验不了
 **审计**：2026-07-06，§2.3
 **当时证据**：`apiKeys.ts:16` 生成 `iotd_` 前缀 key，`apiKeys.ts:123` 导出 `validateApiKey()`，但 `validateApiKey` caller = 0；`middleware/auth.ts:30` 只认 `Bearer ` JWT，无任何中间件读 API key header。路由能 create/list/revoke，但发出的 key 不能认证任何端点。
@@ -94,11 +96,15 @@
 
 **round-68 补充（2026-08-03，axios 单点根治）**：`lib/market-data.ts` 的 fetcher 从 axios 迁到原生 fetch（对齐 `utils/auth.ts:authFetch` 范式：`credentials:"include"` + bearer header + non-2xx throw 保持 SWR 错词语义）。`package.json` 删 axios 依赖 + `pnpm-lock.yaml` 同步（-axios + 2 transitive）。commit 12aca10。LoginForm.test.tsx 的 vestigial `jest.mock("axios")` 一并删（axios 不再在 module graph）。**axios 子条 RESOLVED**——node_modules + lockfile 0 引用，frontend tsc clean + 278 tests 不变，live 渲染 HTTP 200。裸 `fetch()` 收敛到 `useRetryableFetch` 仍开（46 处，跨文件大改动，单列）。
 
+**round-114 补充（2026-08-21）**：useModelDetail / useAccuracyData 两处**逐字相同**的私有 `apiFetch` 合并为单一 `lib/apiFetch.ts`（语义零变化）。剩余裸 `fetch()` 38 处（39 − 2 副本 + 1 新共享实现），其中约 9 处为 POST/PATCH mutation、多处刻意吞错——仍需逐站点评估，维持开放（低优先，不阻塞价值链）。
+
 ### TD-9 — 死 ui 组件 + shadcn 重复对
 **审计**：2026-07-06，§5
 **当时证据**：死 ui 组件（0 importer）：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx`、小写 `select.tsx`。shadcn 重复：`button.tsx`(1) vs `Button/`(41)、`card.tsx`(3) vs `Card/`(28)、`select.tsx`(0) vs `Select/`(15)。PascalCase 胜出，小写 shadcn 版是死重。
 
 **复核（2026-07-27，修正先前误判）**：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx` 已删除（4/5 清理）。**小写 `select.tsx` 不是死文件**——它是 PascalCase `Select/index.tsx` 的底层实现（`Select/index.tsx:11` `import { SelectContent, SelectItem, ... } from "../select"`）。12 个页面经 `@/components/ui/Select` → `Select/index.tsx` → `select.tsx` 间接依赖它。删除会破坏整个 Select 组件。先前"0 importer"判断只查了 `@/components/ui/select` 直接导入，漏了相对路径 `../select` 的内部 re-export。**本条 RESCINDED，select.tsx 必须保留。**
+
+**已解决（round-114，2026-08-21，commit 87cf1ec）**：`ui/button.tsx` + `ui/card.tsx` 双实现收敛——它们不是死文件（是 PascalCase 包装器的基座，同 select.tsx 教训），但**同时**被直接 import（Modal + 3 个 trading 组件），构成两套活实现。基座实现内联进 `Button/index.tsx` 与 `Card/index.tsx`（各留单一实现），4 个直接引用改走 PascalCase API（Modal 的 `render` 组合要求 children 放宽为可选），小写文件删除。Card 公开类型补上基座已有的 `size` prop。frontend tsc 0 错 + 297 tests + build ✓。
 
 ### TD-10 — MSW 全套白搭
 **审计**：2026-07-06，§5；**2026-08-01 复核**
@@ -320,6 +326,8 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - **文档误导已存在**：AGENTS.md §四 技术栈行曾写"PostgreSQL 15、Redis 7（docker-compose.yml）"（本轮已修正为宿主机实际版本）。
 **处置建议（产品决策，未动）**：三选一——(a) 接受单机 PM2 为产品现实，归档 compose/helm/nginx 到 `deploy/attic/` 或删除；(b) 保留 helm 作为未来 k8s 规划但加"未启用"README 标注；(c) 真正容器化。现状（漂移共存）是最差选项。
 
+**已处置（round-114，2026-08-21，commit 662adfb）**：按 (a) 归档——`docker-compose.yml`/`deploy/helm`/`deploy/docker`/`nginx/` git mv 至 `deploy/attic/` + README 记录实际拓扑、漂移证据与恢复方法。可逆（git mv 回原位）；未预断 (c) 容器化决策。活文档指针同步更新（AGENTS §四/§五、AUTOMATION-STATUS §八、SKILLS、DEPLOYMENT-CHECKLIST 备份清单）；CI/deploy.sh 引用复核为 0。
+
 ### TD-16 — 根 package.json / 工具链残留（5 项）
 
 **实测（2026-08-20）**：
@@ -329,18 +337,19 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - `knip.json`：配置完整（backend/frontend 两 workspace），但 knip **未安装**（node_modules/.bin 无）、CI 0 引用 → 死工具配置；且其 `workspaces` 结构与本仓库"非 pnpm workspace"（AGENTS §五）矛盾，即使装了也需重写。
 - `pm2-logrotate`（唯一 root dependency）：`~/.pm2/modules` 有安装痕迹但 `pm2 list` 无此进程（inactive）；PM2 日志轮转实际由 `/etc/logrotate.d/trademind` 承担 → 双轮转机制一套闲置。
 **处置**：除 override/msw/supertest 可直接清（无副作用）外，knip 与 pm2-logrotate 需先决策"要不要这个能力"。均未动。
+**已处置（round-114，2026-08-21）**：pm2-logrotate 模块卸载（`pm2 uninstall`）+ 根依赖删除（package.json + lockfile -892 行，7cb9a9c）——轮转唯一机制为系统 `/etc/logrotate.d/trademind`。knip.json 已在 round-112 删除；override/msw/supertest 亦已清。**TD-16 全部关闭。**
 
 ### TD-17 — 脚本层：1 孤儿 + 1 漂移副本 + 1 未接线
 
 **实测（2026-08-20）**：
 - `scripts/pm2-start.sh`：**0 外部 caller**（package.json 脚本、AGENTS、docs、CI、deploy.sh 均指 `restart.sh`）——功能是 restart.sh 子集（无端口清理/僵尸清理）→ 孤儿脚本。
 - `scripts/logrotate.conf` vs `/etc/logrotate.d/trademind`：**内容已漂移**（repo 副本 `rotate 14` + postrotate `pm2 reloadLogs`；线上 `rotate 7` + `maxsize 50M` + `copytruncate`、无 postrotate）——repo 副本 stale，误导下次" reinstall"。
-- `scripts/mt.service`（systemd 单元，PM2 resurrect 开机复活）：**未安装**（`systemctl is-enabled mt` → No such file）→ 重启后 PM2 不会自动复活，脚手架存在但未接线（ops 缺口，非冗余）。
+- `scripts/mt.service`（systemd 单元，PM2 resurrect 开机复活）：**未安装**（`systemctl is-enabled mt` → No such file）→ 重启后 PM2 不会自动复活，脚手架存在但未接线（ops 缺口，非冗余）。**已安装启用（round-114，2026-08-21，7cb9a9c）**：`/etc/systemd/system/mt.service` enabled；redis.service 别名实测解析到 redis-server.service（单元无需改）；`pm2 save` 后 `systemctl start` 复活验证零扰动（同 PID/重启计数）。
 - 非冗余确认：health-check.sh（CI verify）/ cron-healthcheck.sh（5min 自愈）/ watchdog-nextserver.sh（2min 杀重复 next-server）职责互斥；backup/restore/db-migrate/bootstrap-test-db/setup 为合法运维对。
 
 ### TD-18 — 代码层新鲜抽查（对既有条目的 2026-08-20 复核）
 
-- **`ui/button.tsx` vs `Button/`、`ui/card.tsx` vs `Card/` 双实现仍在且双活**：小写版 4 importer（Modal + 3 个 trading 组件）vs Pascal 版 45 importer——真实重复，收敛属设计系统迁移（round-106 已记，未变）。
+- **`ui/button.tsx` vs `Button/`、`ui/card.tsx` vs `Card/` 双实现仍在且双活**：小写版 4 importer（Modal + 3 个 trading 组件）vs Pascal 版 45 importer——真实重复，收敛属设计系统迁移（round-106 已记，未变）。**round-114 已收敛**（见 TD-9 补充，commit 87cf1ec）。
 - **`_importSchema`（`routes/marketData.ts:54`）死定义仍在**（round-106 已记；原审计写的 `services/marketData.ts` 路径已失效，实际在 routes/）。
 - **backend Socket.IO LIVE 但前端 0 消费**：`socket.io@4.8.3` 在 backend deps，frontend 无 `socket.io-client`（round-107 已记，未变）。
 - **`backend/.env.production`（mtime 2026-05-09）0 个 loader 消费**：PM2 路径 `dotenv/config` 只读 `.env`，Dockerfile 不 COPY env，compose 内联注入 → 死配置文件（含密钥占位符，建议按 SECRETS-MANAGEMENT 流程清除）。frontend 的 `.env.local` 与 `.env.production` 键 0 重叠（互补，非冲突；`.env.production` 为 Next 原生加载，LIVE）。
@@ -364,7 +373,7 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 
 **核实后未删（有证据保留）**：apikeys show/edit 页（列表→show→edit 接线完整，round-107 孤岛记录过期）；`unsubscribeCommodity`/`getSubscribedCommodities`（订阅 API 配对面）；watchlist/portfolios/datasets/timeseries 等整功能域（页面可达且工作，属产品面非死代码——下线需产品决策）。
 
-**仍开放（产品/运维决策，未动）**：TD-15 部署描述四套并存（compose/helm/docker/nginx 归档或启用）；TD-2 organizations 单租户脚手架（需 schema 迁移）；pm2-logrotate 装而未跑（轮转实际走系统 logrotate，可卸）；`ui/button.tsx`+`ui/card.tsx` 双实现双活（设计系统迁移）；裸 fetch 39 处收敛（TD-8）；mt.service 未安装（重启自愈缺口）。
+**仍开放（产品/运维决策，未动）**：~~TD-15 部署描述四套并存~~（round-114 已归档）；~~TD-2 organizations 单租户脚手架~~（round-114 已删）；~~pm2-logrotate 装而未跑~~（round-114 已卸）；~~ui/button+card 双实现~~（round-114 已收敛）；裸 fetch 38 处收敛（TD-8，round-114 已合并 2 处逐字重复 apiFetch，其余需逐站点评估）；~~mt.service 未安装~~（round-114 已启用）。
 
 ---
 
@@ -396,11 +405,46 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 
 **延后（记录理由，后续批次）**：
 - **A3-1/2/3/4（验证环 expire/restore/verifier 语义不一致族）**：① restore 是一次性任务（无 intervalMs，每次重启才跑）而 expire 每 6h——中途回填要等重启才被回收；② restore/expire 数 actuals 不按 authoritative-source 过滤而 verifier 按——组合可造出永久 completed 僵尸（本轮修的饿死模式的变体）；③ expire 窗口有上界而 verifier 取数无上界——迟复源会被 expire 排干但 verifier 本可验证（方向上哪个更诚实是设计决策：verifier 无上界取数本身可疑）。**四项互相纠缠，piecemeal 修会引入乒乓/僵尸循环，列为一个整体重设计项**。今日风险低：backlog 已排空、26k verified 池健康、restore 只在重启时跑一次。
+  → **已由 round-114 整体重设计关闭（commit 7443ba0，详见 §九）**：共享 `windowHasActualsBarSql()` 谓词（expire=NOT EXISTS / restore=EXISTS，authoritative-source 对齐 verifier）、restore 转 6h 常驻 + per-ROW 决策、verifier 取数加窗口上界。
 - **A1-4（Medium）findMany 全量拉取 60d verified 行进 Node**：round-104 已谴责的反模式重现；当前 26k 行×每 30min 一次实测可承受（无索引支撑是次要问题）。根治需 SQL 侧 percentile_cont 重写聚合，单列批次。
+  → **已由 round-114 关闭（commit dbeadb5）**：单条 $queryRaw 完成残差提取/行数门槛/顺序统计量，Node 仅剩 q∈(0,1) 闸门；生产实证 8 模型（26,666 行）不变。
 - **A1-6/A1-7/A2-2/A2-3/INT-1（Low/latent）**：无 stampede 守卫、不可达的 clamp、重复 modelId 求和、池化口径、Redis 双写者 shape/TTL 不一致——均为潜伏项，随上述重设计一并评估。
+  → **round-114 处置**：A1-6 已加 single-flight 守卫；INT-1 已统一（共享 TTL 常量 + 完整 shape）；A1-7 复核为**可达**（行计入门槛但残差全无效的退化场景）→ 保留为防御；A2-2 复核**无双重计数**（SQL 聚合单桶）；A2-3 池化口径维持文档化设计限制。
 - **A3-5（Low）horizon≤0 无 DB 约束**：现无写入方可达；若做验证环重设计则加 CHECK 约束。
+  → **已加（round-114 迁移，双库应用，0 违规行）**。
 - **A3-6（Low）raw SQL 未声明 UTC 假设**：PG 会话时区恰为 UTC 才正确；重设计时显式 `AT TIME ZONE 'utc'`。
+  → **已显式化（round-114：expire/restore 的 NOW() 全部改 `(now() AT TIME ZONE 'utc')`）**。
 
 ### round-113 提交清单
 
 `64be16e`（未用 import 清理）、`3bb737d`（conformal 加固 + 5 修复 + 5 测试）+ 本文档提交。backend 909 → 914 全绿（+5 全为新测试，无删减）。
+
+---
+
+## 九、round-114 待办清空轮（2026-08-21，"完成能独立完成的所有待办项"）
+
+> 用户指令：完成前几轮记录在案、无需用户决策即可独立完成的全部待办项。6 个提交（`7cb9a9c`→`87cf1ec`），51 文件，+883/−1492（净 −609）。每批独立门禁（tsc + 全量测试 + build + restart + live 验证）。
+
+### 完成清单（含生产实证）
+
+| 批 | 内容 | 提交 | 实证 |
+|---|---|---|---|
+| ops | mt.service 安装启用（重启自愈）；pm2-logrotate 卸载 + 根依赖删 | 7cb9a9c | systemctl enabled；resurrect 零扰动（同 PID/计数）；3 服务 online |
+| backend | TD-2 organizations 移除（迁移双库） | c6cba18 | organizations 表不存在；datasets 401 正常鉴权 |
+| backend | A1-4 conformal 聚合整体 SQL 化 + A1-6 single-flight + INT-1 双写者统一 | dbeadb5 | tsx 直跑生产库：8 模型（26,666 行）、q 0.027–0.299，与 JS 版模型集一致 |
+| backend | A3-1~4 验证环整体重设计 + A3-5 CHECK + A3-6 UTC + mape 溢出修复 | 7443ba0 | 部署日志：restore 复活 204/501（per-row 修正过度复活）；卡死行 5b9a4d7e 终于 verified（mape 9537.59，原 Decimal(5,2) 溢出死循环） |
+| repo | TD-15 部署描述归档 deploy/attic/ | 662adfb | CI/deploy.sh 引用复核 0；活文档指针更新 |
+| frontend | button/card 双实现收敛（内联基座）+ apiFetch 去重 | 87cf1ec | tsc 0 错、297 tests、build ✓、live 200 |
+
+### 过程中发现并修复的额外真 bug
+
+1. **mape Decimal(5,2) 溢出死循环**（生产日志 10:11 实证）：MAPE≥1000 的行每 6h 验证失败重试。迁移改 Decimal(8,2) + 写入 clamp 99,999.99，卡死行已 verified。
+2. **后端跑 dist 而非源码**（ecosystem `dist/server.js`）：前几批 restart 未带 build，旧代码仍在运行——本轮补 build 后全部上线。教训已写入本节（backend 批次门禁必须含 `pnpm build`）。
+3. **测试库与生产库分离**：vitest 连 mt_test（test-setup.ts 强制拒绝 mt_db），迁移必须双库应用——本轮两份迁移均已双库执行。
+
+### 明确不做/仍开放（不可独立完成）
+
+- **P0 beef_cut_prices 数据回填**：需用户提供 CSV（运营事项，/beef/import 已就绪）。
+- **lagged-exog 实验**：产品/研究决策。
+- **TD-8 剩余 38 处裸 fetch**：含 9 处 mutation 与刻意吞错站点，需逐站点评估（round-94 结论维持）。
+- **mt.service 文档行 `Documentation=` 占位 URL**：脚手架原样，非功能项。

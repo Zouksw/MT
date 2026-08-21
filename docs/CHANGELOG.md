@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-21 — round-114 待办清空轮（6 提交，净 -609 行，6 批全部带生产实证）
+
+用户指令"完成能独立完成的所有待办项"。按 TECH-DEBT §七/§八 记录逐项清空（详见 TECH-DEBT §九）：
+
+- **ops**（`7cb9a9c`）：mt.service systemd 单元安装启用（重启自愈缺口关闭，resurrect 验证零扰动）；pm2-logrotate 卸载 + 根依赖删除（轮转唯一机制 = 系统 logrotate）。TD-16 关闭、TD-17 接线。
+- **TD-2 organizations 移除**（`c6cba18`）：迁移双库（mt_db+mt_test）删表/列/FK/组合唯一键，补 UNIQUE(slug)；datasetService 少一次 upsert；5 测试 fixture 简化；前端死字段与恒 0 计数删除。
+- **conformal 聚合 SQL 化**（`dbeadb5`，A1-4/A1-6/INT-1）：残差提取/行数门槛/顺序统计量全部下推单条 $queryRaw（原每 60s 拉 ~26k 行进 Node）；single-flight 守卫；routes 与后台对 prediction:* 键族统一 TTL(2700s)+完整 shape。新增真实 DB 集成测试 5 例钉 SQL 语义。生产实证：8 模型（26,666 行）q 0.027–0.299 不变。
+- **验证环整体重设计**（`7443ba0`，A3-1~6）：共享 windowHasActualsBarSql 谓词使 expire/restore/verifier 三方窗口、authoritative-source 过滤、min(horizon,3) 门槛完全一致（expire=NOT EXISTS / restore=EXISTS，互为补集无乒乓）；restore 转 6h 常驻 + per-ROW 决策（生产实证：501 标记中仅 204 真可复活——旧整商品复活是过度）；verifier 取数加窗口上界（迟回填不再错配日期）；迁移加 CHECK(horizon>0)；raw SQL 显式 UTC。**顺手修复生产死循环**：mape Decimal(5,2) 溢出（MAPE≥1000 行每 6h 重试）→ Decimal(8,2)+clamp，卡死行已 verified（9537.59）。
+- **TD-15 部署描述归档**（`662adfb`）：compose/helm/docker/nginx → deploy/attic/ + README 记录实际拓扑与恢复方法；活文档指针同步。
+- **button/card 双实现收敛**（`87cf1ec`，TD-9/TD-18）：基座内联进 PascalCase 包装器（各留单一实现），Modal+3 trading 组件迁移，小写文件删除；apiFetch 逐字重复副本合一（TD-8 子集，余 38 处需逐站点评估维持开放）。
+
+测试：backend 914→920（+6：SQL 语义 5 + mape 溢出 1）、frontend 297 不变；全批 tsc/build/重启/live 200。**流程教训**：backend 跑 dist——本批起 backend 门禁必含 `pnpm build`；迁移必须双库（mt_test 拒绝 mt_db）。
+
 ### 2026-08-21 — round-113 多技能交叉审查（7 技能 + 对抗性子代理，2 修复提交）
 
 用户指令"利用尽可能多的 skills 审查前几个 goal 发现的事项"。对 round-108~112 的发现与改动交叉审查：code-review 五轴（round-112 全部 diff 语义等价性逐处验证）、security STRIDE（CSRF 移除无暴露——logout 要求 Bearer 头；Socket.IO 摘除缩小攻击面；diff 无泄密）、deprecation（已删端点前端/swagger/测试/文档 0 残留）、testing-patterns（4 项测试改造合规）、ops-check（三服务+后台任务全绿）。核心是 doubt-driven 的**全新上下文对抗性审查**（只给工件+契约）：round-110 三个统计工件返回 17 项发现，RECONCILE 后修复 5 项（commit 3bb737d）：conformal 池补测试工件过滤（A1-1）、证据门槛改按行数（A1-3）、q≥1 拒绝（A1-2，live q90 最大 0.29）、缓存按 days 分键（A1-5）、真中位数（A2-1）。**生产反向实证 A1-3 是真 bug**：修复后校准模型 10→8——幽灵模型 sundial/timer_xl 的 10 行×~10 步残差此前一直骗过"30 行"门槛、一直在接收校准区间。另清 6 处未用 import（64be16e，3 处 round-112 残留 + 3 处先前存在；inacScraper 墓碑保留）。延后项（验证环 expire/restore/verifier 语义不一致族 A3-1~4、findMany 全量拉取 A1-4 等低危潜伏项）连同理由落档 TECH-DEBT §八。backend 909 → 914 全绿（+5 新测试）。
