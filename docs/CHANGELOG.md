@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-21 — round-115 完整性复核 + 技术路线评估（只读；docs/PROJECT-ASSESSMENT §九）
+
+指令"评估开发完整性、寻找更合适的技术路线"。improve-codebase-architecture 全流程（2 并行 Explore agent + 交叉验证），全部数字当日实测：三服务 200、测试 919+297+60 全绿、备份 7 份实测有效。核心结论：**工程完整性 ~90%（产品级）、数据供给 ~35%（牛肉核心）**——调度机器 100% 活（每源 47-49 运行/7d）但仅 3 源有产出（world_bank 4,973/cme 97/commodity_prices 42），beef_cut_prices 冻结 04-30（bridge 近 30 天 0 产出，上游封锁）、market_news 生产 0 行。**技术路线逐层判定无需迁移**（K8s/TimescaleDB/合并 Next API/换基座全负 ROI），产出 6 个深化候选（HTML 报告 /tmp/architecture-review-20260821.html）：模型注册单一事实源（当前 backend 7 vs 推理 9 已漂移）、upsertPrice 量纲护栏 + accuracy 聚合改中位数等。**新发现用户可见错误**：/ai/accuracy 的 chronos 均值 46-59% 系 wheat_cme 6 行量纲混装（6.77/667.60 并存）产生的 20 条 MAPE≈9500 污染行所致——剔除后 chronos 各商品中位数 0.39-5.07 仍全面优于统计基线（beef_carcass_us 1.54，原油上 5.05 vs arima 13.72），预训练路线结论不变。顺带修正：AGENTS.md Prisma 模型数 31→30（round-114 删 organizations 后漂移）；记录 AUTOMATION-STATUS 3 处漂移与前端 4 组死链 404 待后续批次。
+
 ### 2026-08-21 — round-114 待办清空轮（6 提交，净 -609 行，6 批全部带生产实证）
 
 用户指令"完成能独立完成的所有待办项"。按 TECH-DEBT §七/§八 记录逐项清空（详见 TECH-DEBT §九）：

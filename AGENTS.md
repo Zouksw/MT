@@ -37,7 +37,7 @@
 | 项 | 数 | 计数方式 |
 |---|---|---|
 | 数据源爬虫 | **19** | `backend/src/services/dataIngestion/sources/*.ts`（排除 index/test） |
-| Prisma 模型 | **31** | `grep -c '^model ' backend/prisma/schema.prisma` |
+| Prisma 模型 | **30** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-21 复核；round-114 删 organizations 后为 30） |
 | 后端路由 | **20** | `backend/src/routes/*.ts`（排除 `*.test.ts`） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx` |
 | 推理模型 id | **9** | `inference_engine.py` 的 `MODEL_IDS`（6 统计 + 3 Chronos 变体） |
@@ -70,7 +70,7 @@ backend/            Express + TS + Prisma
   src/routes/       API 路由（20 个）
   src/services/     业务服务（含 dataIngestion/sources/ 19 爬虫）
   src/middleware/   认证、限流、安全、日志
-  prisma/           schema.prisma（31 模型）+ migrations
+  prisma/           schema.prisma（30 模型）+ migrations
 frontend/           Next.js 15 App Router（44 页）
   src/app/          页面
   src/components/   组件库
