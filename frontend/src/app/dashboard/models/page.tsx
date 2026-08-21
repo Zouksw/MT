@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { getMapeFillColor } from "@/lib/ai-utils";
-import { API_BASE } from "@/lib/config";
+import { apiFetch } from "@/lib/apiFetch";
 import { formatPercentValue } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 
@@ -60,28 +60,21 @@ export default function ModelsComparisonPage() {
 		async function loadAccuracy() {
 			setLoading(true);
 			try {
-				const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-				const headers: Record<string, string> = { "Content-Type": "application/json" };
-				if (token) headers.Authorization = `Bearer ${token}`;
-
-				const res = await fetch(`${API_BASE}/api/signals/models/accuracy?days=${days}`, {
-					headers,
-				});
-
-				if (res.ok) {
-					const data = await res.json();
-					if (data.success && data.data?.accuracy) {
-						// Display stat = median with mean fallback (round-115) —
-						// overrides avgMape at the entry point so all downstream
-						// comparisons read the robust stat.
-						setAccuracy(
-							(data.data.accuracy as ModelAccuracy[]).map((m) => ({
-								...m,
-								avgMape: m.medianMape ?? m.avgMape,
-							})),
-						);
-						return;
-					}
+				const data = await apiFetch<{
+					success: boolean;
+					data?: { accuracy: ModelAccuracy[] };
+				}>(`/api/signals/models/accuracy?days=${days}`);
+				if (data.success && data.data?.accuracy) {
+					// Display stat = median with mean fallback (round-115) —
+					// overrides avgMape at the entry point so all downstream
+					// comparisons read the robust stat.
+					setAccuracy(
+						data.data.accuracy.map((m) => ({
+							...m,
+							avgMape: m.medianMape ?? m.avgMape,
+						})),
+					);
+					return;
 				}
 				setAccuracy([]);
 				setIsDemoData(true);

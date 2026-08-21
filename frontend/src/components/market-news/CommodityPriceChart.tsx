@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
-import { tokenManager } from "@/lib/tokenManager";
+import { apiFetch } from "@/lib/apiFetch";
 
 /**
  * Embedded commodity price chart for the news detail page.
@@ -75,13 +75,9 @@ export function CommodityPriceChart({
 			setLoading(true);
 			setNoData(false);
 			try {
-				const token = tokenManager.getToken();
-				const res = await fetch(
+				const json = await apiFetch<PriceHistoryResponse>(
 					`/api/market/commodities/${encodeURIComponent(commoditySlug)}/price?interval=daily`,
-					{ headers: token ? { Authorization: `Bearer ${token}` } : {} },
 				);
-				if (!res.ok) throw new Error(`HTTP ${res.status}`);
-				const json = (await res.json()) as PriceHistoryResponse;
 				if (cancelled) return;
 				const raw = json.data?.prices ?? [];
 				// Take the last 90 points (90-day window) and normalize Decimal → number.

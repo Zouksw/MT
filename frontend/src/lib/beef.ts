@@ -1,21 +1,15 @@
 /**
- * Beef data fetcher — shared SWR fetcher for the beef pages.
- *
- * Cookie-only auth (credentials: "include"); the beef endpoints are public-by-
- * design on the backend, so no Bearer token is attached. SWR keys already carry
- * the /api/beef/... path, so API_BASE has no /api suffix.
- *
- * Consolidated from three byte-identical copies that lived inline in
- * app/beef/page.tsx, app/beef/factories/page.tsx, app/beef/cuts/[cutCode]/page.tsx.
+ * Beef data fetcher — SWR fetcher for the beef pages, now a thin delegate
+ * over the single API client (round-115, TD-8). Callers pass "/api/beef/..."
+ * paths; apiFetch (via authFetch) prefixes API_BASE — same-origin rewrite by
+ * default. The beef endpoints stay public-by-design on the backend; the
+ * Bearer header that apiFetch attaches when logged in is simply ignored by
+ * them. Previously this was a third hand-rolled cookie-only fetch.
  */
+import { apiFetch } from "@/lib/apiFetch";
 
-import { API_BASE } from "@/lib/config";
-
-export async function beefFetcher(url: string) {
-	const res = await fetch(`${API_BASE}${url}`, {
-		headers: { "Content-Type": "application/json" },
-		credentials: "include",
-	});
-	if (!res.ok) throw new Error(`${res.status}`);
-	return res.json();
+/** Default generic mirrors the historical untyped contract (Promise<any>)
+ * so the beef pages' untyped call sites keep their `.data` access. */
+export async function beefFetcher<T = any>(url: string): Promise<T> {
+	return apiFetch<T>(url);
 }

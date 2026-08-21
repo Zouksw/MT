@@ -6,6 +6,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Alert } from "@/components/ui/Alert";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { apiFetch } from "@/lib/apiFetch";
 
 /**
  * 产地对比 — Origin comparison (PRODUCT-SPEC §四 "分析 > 产地对比", M3).
@@ -68,9 +69,9 @@ export default function OriginComparisonPage() {
 			setError(null);
 			try {
 				// Public endpoint, no token needed.
-				const res = await fetch("/api/beef/by-country?cuts=5");
-				if (!res.ok) throw new Error(`HTTP ${res.status}`);
-				const json = (await res.json()) as { success: boolean; data?: ByCountryResponse };
+				const json = await apiFetch<{ success: boolean; data?: ByCountryResponse }>(
+					"/api/beef/by-country?cuts=5",
+				);
 				if (!cancelled && json.success && json.data) {
 					setData(json.data);
 				} else if (!cancelled) {

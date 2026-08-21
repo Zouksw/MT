@@ -5,9 +5,8 @@ import type React from "react";
 import { useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
-import { API_BASE } from "@/lib/config";
+import { apiFetch } from "@/lib/apiFetch";
 import { formatPrice, formatSignedPercent } from "@/lib/format";
-import { tokenManager } from "@/lib/tokenManager";
 
 /**
  * CutForecastSection — the per-cut AI forecast panel.
@@ -59,14 +58,10 @@ interface ApiResponse {
 	forecast?: Forecast;
 }
 
-/** Authenticated fetcher — the forecast endpoint requires login (non-public). */
+/** Authenticated fetcher — the forecast endpoint requires login (non-public).
+ * apiFetch (via authFetch) attaches the Bearer header + session cookie. */
 async function forecastFetcher(url: string): Promise<{ data: ApiResponse }> {
-	const token = tokenManager.getToken();
-	const headers: Record<string, string> = { "Content-Type": "application/json" };
-	if (token) headers.Authorization = `Bearer ${token}`;
-	const res = await fetch(`${API_BASE}${url}`, { headers, credentials: "include" });
-	if (!res.ok) throw new Error(`${res.status}`);
-	return res.json();
+	return apiFetch<{ data: ApiResponse }>(url);
 }
 
 const directionConfig: Record<

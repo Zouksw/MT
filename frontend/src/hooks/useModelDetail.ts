@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
-import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, PredictionLogResponse } from "@/types/accuracy";
 
 export function useModelDetail(modelId: string) {
@@ -19,10 +18,10 @@ export function useModelDetail(modelId: string) {
 			try {
 				const [backtestRes, predRes] = await Promise.allSettled([
 					apiFetch<{ success: boolean; data: BacktestResponse }>(
-						`${API_BASE}/api/signals/models/${modelId}/backtest`,
+						`/api/signals/models/${modelId}/backtest`,
 					),
 					apiFetch<{ success: boolean; data: PredictionLogResponse }>(
-						`${API_BASE}/api/signals/models/${modelId}/predictions?limit=20`,
+						`/api/signals/models/${modelId}/predictions?limit=20`,
 					),
 				]);
 

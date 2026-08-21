@@ -15,6 +15,7 @@ import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { deleteRecord, useList } from "@/lib/api";
+import { apiFetch } from "@/lib/apiFetch";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 // Row shape returned by /api/news list endpoint.
@@ -85,14 +86,9 @@ export default function MarketNewsList() {
 	// wasteful and laggy as the article count grows. The endpoint returns the
 	// 4 counts server-side in one small response.
 	const statsFetcher = async (url: string) => {
-		const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-		const res = await fetch(url, {
-			headers: token ? { Authorization: `Bearer ${token}` } : {},
-		});
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		const j = (await res.json()) as {
+		const j = await apiFetch<{
 			data?: { total: number; published: number; drafts: number; thisWeek: number };
-		};
+		}>(url);
 		return j.data ?? { total: 0, published: 0, drafts: 0, thisWeek: 0 };
 	};
 	const { data: stats } = useSWR("/api/news/stats", statsFetcher, {

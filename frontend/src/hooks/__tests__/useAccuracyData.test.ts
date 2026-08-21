@@ -1,9 +1,12 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { useAccuracyData } from "../useAccuracyData";
 
-// Mock auth utility — the hook reads a token via getAuthToken before fetch.
+// Mock auth utility. apiFetch (round-115) rides authFetch — which forwards
+// to the global fetch stub mockFetchWith installs — so it must be a
+// pass-through, not a fixed response. getAuthToken stays for any direct use.
 jest.mock("@/utils/auth", () => ({
 	getAuthToken: jest.fn(() => "mock-token"),
+	authFetch: jest.fn((url: string, init?: RequestInit) => fetch(url, init)),
 }));
 
 import { getAuthToken } from "@/utils/auth";

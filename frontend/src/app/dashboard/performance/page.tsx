@@ -13,9 +13,8 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
-import { API_BASE as API_ORIGIN } from "@/lib/config";
+import { apiFetch } from "@/lib/apiFetch";
 import { useIsMobile } from "@/lib/responsive-utils";
-import { getAuthToken } from "@/utils/auth";
 
 const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.LineChart })), {
 	loading: () => (
@@ -117,28 +116,15 @@ interface EndpointLatencyRow {
 	count: number;
 }
 
-const API_BASE = `${API_ORIGIN}/api`;
 const POLL_INTERVAL_MS = 30_000;
 const MAX_HISTORY_POINTS = 60;
 
-function authHeaders(): HeadersInit {
-	const token = getAuthToken();
-	const headers: HeadersInit = {};
-	if (token) headers.Authorization = `Bearer ${token}`;
-	return headers;
-}
-
 async function fetchServerMetrics(): Promise<ServerMetricsData> {
-	const response = await fetch(`${API_BASE}/metrics`, { headers: authHeaders() });
-	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-	return (await response.json()).data;
+	return (await apiFetch<{ data: ServerMetricsData }>("/api/metrics")).data;
 }
 async function fetchWebVitalsSummary(period: string): Promise<WebVitalsSummary> {
-	const response = await fetch(`${API_BASE}/metrics/web-vitals?period=${period}`, {
-		headers: authHeaders(),
-	});
-	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-	return (await response.json()).data;
+	return (await apiFetch<{ data: WebVitalsSummary }>(`/api/metrics/web-vitals?period=${period}`))
+		.data;
 }
 async function fetchWebVitalsHistory(
 	metric: string,
@@ -146,16 +132,11 @@ async function fetchWebVitalsHistory(
 	interval: string,
 ): Promise<HistoryPoint[]> {
 	const params = new URLSearchParams({ metric, period, interval });
-	const response = await fetch(`${API_BASE}/metrics/web-vitals/history?${params}`, {
-		headers: authHeaders(),
-	});
-	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-	return (await response.json()).data;
+	return (await apiFetch<{ data: HistoryPoint[] }>(`/api/metrics/web-vitals/history?${params}`))
+		.data;
 }
 async function fetchApiLatency(): Promise<ApiLatencyData> {
-	const response = await fetch(`${API_BASE}/metrics/api-latency`, { headers: authHeaders() });
-	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-	return (await response.json()).data;
+	return (await apiFetch<{ data: ApiLatencyData }>("/api/metrics/api-latency")).data;
 }
 
 function lcpColor(value: number): "success" | "warning" | "error" {

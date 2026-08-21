@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 
-import { API_BASE } from "@/lib/config";
+import { beefFetcher } from "@/lib/beef";
 
 interface BeefCut {
 	cutCode: string;
@@ -17,11 +17,7 @@ interface BeefCutSelectorProps {
 }
 
 export default function BeefCutSelector({ selected, onSelect }: BeefCutSelectorProps) {
-	const { data, error } = useSWR(`${API_BASE}/api/beef/cuts`, async (url: string) => {
-		const res = await fetch(url);
-		if (!res.ok) throw new Error(`${res.status}`);
-		return res.json();
-	});
+	const { data, error } = useSWR<{ data: { cuts: BeefCut[] } }>("/api/beef/cuts", beefFetcher);
 
 	const cuts: BeefCut[] = data?.data?.cuts ?? [];
 

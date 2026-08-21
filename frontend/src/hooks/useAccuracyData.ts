@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
-import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, ModelAccuracy, ModelWithBacktest } from "@/types/accuracy";
 import { headlineMape, MIN_VERIFIED_SAMPLE, MODEL_NAME_MAP } from "@/types/accuracy";
 
@@ -19,7 +18,7 @@ export function useAccuracyData() {
 			const res = await apiFetch<{
 				success: boolean;
 				data: { accuracy: ModelAccuracy[]; days: number };
-			}>(`${API_BASE}/api/signals/models/accuracy`);
+			}>("/api/signals/models/accuracy");
 			const accuracyData = res.data?.accuracy || res.data || [];
 			const list = Array.isArray(accuracyData) ? accuracyData : [];
 			// Display stat = median (round-115): override avgMape at the entry
@@ -33,7 +32,7 @@ export function useAccuracyData() {
 					apiFetch<{
 						success: boolean;
 						data: BacktestResponse;
-					}>(`${API_BASE}/api/signals/models/${m.modelId}/backtest`).then((r) => ({
+					}>(`/api/signals/models/${m.modelId}/backtest`).then((r) => ({
 						modelId: m.modelId,
 						data: r.data,
 					})),

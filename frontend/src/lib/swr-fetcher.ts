@@ -1,37 +1,13 @@
 /**
- * Shared SWR fetcher — the single API client for SWR hooks.
- *
- * Replaces the 3+ parallel fetcher implementations (lib/api.ts apiFetcher,
- * lib/market-data.ts fetcher, lib/beef.ts beefFetcher) that each
- * reimplemented the same auth + credentials + error-throw contract.
- *
- * Wraps authFetch (utils/auth.ts) which handles:
- *   - Bearer token from tokenManager
- *   - credentials:"include" for session cookie
- *   - 401 cleanup (clears stale token)
- *
- * Adds the SWR-specific contract:
- *   - throws on non-2xx (so SWR's error binding works)
- *   - returns parsed JSON (so consumers get data directly)
- *
- * Usage in SWR hooks:
- *   const { data } = useSWR("/api/commodities", swrFetcher);
- *   // or with a path prefix:
- *   const { data } = useSWR("/commodities", (url) => swrFetcher(`/api${url}`));
+ * SWR fetcher — thin delegate over the single API client (round-115, TD-8).
+ * The contract is unchanged: takes an "/api/..." path, throws on non-2xx
+ * (SWR error binding), returns parsed JSON. The historical `Promise<any>`
+ * return type is preserved so SWR's generic inference at the ~20 call sites
+ * (typed via useSWR<T>) keeps working — apiFetch additionally attaches the
+ * Bearer header when a token exists and clears it on 401.
  */
-
-import { authFetch } from "@/utils/auth";
+import { apiFetch } from "./apiFetch";
 
 export async function swrFetcher(url: string): Promise<any> {
-	const response = await authFetch(url, {
-		headers: { "Content-Type": "application/json" },
-	});
-
-	if (!response.ok) {
-		const error = new Error(`${response.status} ${response.statusText}`);
-		(error as { status?: number }).status = response.status;
-		throw error;
-	}
-
-	return response.json();
+	return apiFetch(url);
 }
