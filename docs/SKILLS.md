@@ -52,14 +52,14 @@
 | torch-CPU 内存 / 延迟 | **python-resource-management** + **python-performance-optimization** | 9 模型预加载，559M 常驻 |
 | 推理服务异步端点设计 | **async-python-patterns** | FastAPI async（但推理是同步 CPU-bound） |
 
-### 运维 / 部署（PM2 + docker-compose + nginx + GitHub Actions）
+### 运维 / 部署（PM2 + 宿主机 systemd + GitHub Actions）
 
 | 触发场景 | skill | 为什么 |
 |---|---|---|
 | 服务健康检查 / "为什么挂了" | **ops-check** | 3 fork 进程，health endpoint 真相 |
 | CI 流水线 / ci.yml | **ci-cd-and-automation** | 8 job（lint/typecheck/test/build/deploy/rollback） |
 | 部署 / 发布 | **shipping-and-launch** | DEPLOYMENT-CHECKLIST.md |
-| K8s/Helm（次要路径） | **helm-chart-scaffolding** + **k8s-manifest-generator** | deploy/helm/ 真实 chart（PM2 是主路径） |
+| K8s/Helm | **helm-chart-scaffolding** + **k8s-manifest-generator** | 仅当未来真上 k8s——`deploy/attic/helm` 已归档未启用（TD-15），PM2 是唯一现实路径 |
 | 安全加固 | **security-and-hardening** | helmet/rate-limit/JWT + SECURITY.md |
 
 ---
@@ -117,7 +117,7 @@
 | **python-configuration** | 配置面已冻结（pyproject 仅 ruff） |
 | **canvas-design** | 图表用 recharts/lightweight-charts（SVG），非 canvas 绘图 |
 | **docx / pdf / pptx** | 无文档生成功能；内部报告用 .md |
-| **gitops-workflow** | 部署是 docker-compose + GitHub Actions，非 ArgoCD/Flux |
+| **gitops-workflow** | 部署是 PM2/systemd + GitHub Actions（SSH→deploy.sh），非 ArgoCD/Flux；compose/helm 已归档（TD-15） |
 | **web-artifacts-builder / webapp-testing / web-gui-tester** | 与 frontend-ui-engineering/scaffold-component/Playwright 冗余 |
 
 ---

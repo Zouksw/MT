@@ -296,7 +296,6 @@ nc -z localhost 10810 && echo "AI Node OK" || echo "AI Node FAILED"
   tar -czf backup-config-$(date +%Y%m%d).tar.gz \
     backend/.env \
     frontend/.env.local \
-    nginx/nginx.conf \
     ecosystem.config.cjs
   ```
 

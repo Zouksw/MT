@@ -56,7 +56,7 @@
 |---|------|
 | 前端 | Next.js 15.5.20、React 19.1、Tailwind CSS 4.2、Jest 29.7、TypeScript 5.8 |
 | 后端 | Express 4.19、TypeScript 5.4、Prisma 5.x（@prisma/client 5.22）、Vitest 2 |
-| 数据库 / 缓存 | PostgreSQL 14.23、Redis 6.0.16（**宿主机 systemd 服务**，2026-08-20 实测；`docker-compose.yml` 的 PG15/Redis7 容器栈未启用，见 TECH-DEBT TD-15） |
+| 数据库 / 缓存 | PostgreSQL 14.23、Redis 6.0.16（**宿主机 systemd 服务**，2026-08-20 实测；compose 的 PG15/Redis7 容器栈从未运行，已归档至 `deploy/attic/`，见 TECH-DEBT TD-15） |
 | 推理服务 | Python 3.10、FastAPI、uvicorn、statsmodels、sktime、chronos-forecasting、torch（CPU build）、pydantic 2；lint 用 ruff |
 | 进程管理 | PM2（`ecosystem.config.cjs`） |
 | 代码风格 | biome（TS/JS，根 `biome.json`）、ruff（Python） |
@@ -80,9 +80,8 @@ inference-service/  Python FastAPI 推理服务
   routers/          predict / models / health
   venv/             本地虚拟环境（git 忽略）
 scripts/            运维脚本（restart / backup / healthcheck / cron-*）
-deploy/             Docker + Helm 部署配置
+deploy/attic/       归档的部署描述（compose/helm/docker/nginx，未启用，见 TECH-DEBT TD-15）
 docs/               文档（见下方导航）
-nginx/              nginx 反向代理配置（docker-compose 挂载为容器配置）
 .github/workflows/  CI（ci.yml：lint/typecheck/test/build/deploy/rollback）
 ```
 

@@ -352,7 +352,4 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 ## 八、部署产物（备选方案）
 
-当前生产用 PM2 直跑。另有完整备选：
-- `docker-compose.yml`（5 服务：postgres/redis/backend/frontend/nginx）
-- `deploy/docker/Dockerfile.{backend,frontend}`（两阶段构建）
-- `deploy/helm/`（k8s：Deployment + HPA + CronJob backup + Ingress + NetworkPolicy）
+当前生产用 PM2 直跑。曾经的"完整备选"已于 2026-08-21 归档至 `deploy/attic/`（TD-15：从未运行、与实际拓扑漂移——compose 声明的 DB 用户/镜像版本均与宿主机 systemd PG14.23/Redis6.0.16 不符）：docker-compose.yml、`attic/docker/Dockerfile.{backend,frontend}`、`attic/helm/`。实际部署 = CI SSH → `scripts/deploy.sh`（PM2）。
