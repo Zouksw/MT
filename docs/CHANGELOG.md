@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-21 — round-115 候选执行轮（推送 73 提交 + 6/6 深化候选落地，6 提交）
+
+指令"推送，然后完成候选项"。先行推送 round-98 以来 73 提交（`6f74ba0..9354996`），随后按评估 §9.7 逐候选执行（每批 tsc+全量测试+build+PM2 重启+live 验证+独立提交，明细见 TECH-DEBT §十）：
+
+- **cand-6 诚实性快修**（`c0bb2b6`）：4 组死链 404（timeseries/show×3、datasets/edit、/terms、/privacy）清除；假 "📡 WebSocket server ready" 启动日志删除；INFERENCE_TIMEOUT 死配置接线进 client.ts（原改 env 无效），REDIS_ENABLED/SCRAPE_INTERVAL_MINUTES 删除。**评估修正**：Badge/Tag"双实现"系勘察误报（状态胶囊 vs 计数角标，不同原语），不收敛。
+- **cand-1 模型注册单一事实源**（`6a9172f`）：backend 请求验证清单从推理服务 GET /models 派生（SEED 兜底冷启动），hourly model-registry-sync + drift 告警；已漂移的 VALID_MODELS 手工副本（7 vs 9）删除。live：+35s 日志 "9 ids, no drift"。
+- **cand-2 量纲护栏 + 聚合诚实化**（`78a3beb`）：upsertPrice 拒绝 >20× 序列中位数的错尺度写入（wheat_cme 实锤：cme 源 5 月 ¢/bu、8 月 $/bu 同序列混写 → 52 条 chronos 验证行 MAPE≈9500-11500，把 /ai/accuracy 均值拖到 46-59%）；getModelAccuracy 改单条 $queryRaw 同窗算均值+中位数（last7d/30d 改中位数），modelQuality 共识权重与 naive 淘汰线换 robust 统计；前端 4 个数据入口 headlineMape 归一。生产数据修复：2 条 ¢ 行 ÷100 归一 + 52 条污染行转 stale。修复后 chronos 均值 1.36-1.49 / 中位 0.82-0.86——"chronos 退化"证伪，预训练路线结论恢复成立。
+- **cand-3 主动告警**（`38090bf`）：dataDigest 每日任务——数据断流（24h 零写入）或摄取错误时经 SMTP 发摘要（复用既有传输），常态休眠不发信；OPS_ALERT_EMAIL 未配置则 no-op（live 实证该路径）。
+- **cand-4 部署单一入口**（`c8e9ad9`）：deploy.sh 补 prisma generate + migrate deploy（原缺失——round-114 双库教训的生产面）成为唯一部署实现，CI 内联副本删除改调它；顺带修 AUTOMATION-STATUS 3 处漂移（jobs 7→8、§八部署描述、§五测试数 2026-08-21 实测值）。
+- **cand-5 fetch 三层归一**（`bac0afd`）：apiFetch 重写为唯一 API 客户端（path 契约 + authFetch：Bearer/cookie/401 清理），swrFetcher/beefFetcher 变薄委托；8 处机械 GET 站点迁移（models/performance×4/market-news/origin/价格图/部位选择/预测区块）；login POST 等刻意保留站点记录在案。
+
+测试：backend 919→931 pass+1 skip（+14 新增、-2 死旋钮自测）、frontend 297 恒定、inference 60 未动；AGENTS.md 模型数 31→30 修正。未再推送（本轮 6 提交待"推送"指令）。
+
 ### 2026-08-21 — round-115 完整性复核 + 技术路线评估（只读；docs/PROJECT-ASSESSMENT §九）
 
 指令"评估开发完整性、寻找更合适的技术路线"。improve-codebase-architecture 全流程（2 并行 Explore agent + 交叉验证），全部数字当日实测：三服务 200、测试 919+297+60 全绿、备份 7 份实测有效。核心结论：**工程完整性 ~90%（产品级）、数据供给 ~35%（牛肉核心）**——调度机器 100% 活（每源 47-49 运行/7d）但仅 3 源有产出（world_bank 4,973/cme 97/commodity_prices 42），beef_cut_prices 冻结 04-30（bridge 近 30 天 0 产出，上游封锁）、market_news 生产 0 行。**技术路线逐层判定无需迁移**（K8s/TimescaleDB/合并 Next API/换基座全负 ROI），产出 6 个深化候选（HTML 报告 /tmp/architecture-review-20260821.html）：模型注册单一事实源（当前 backend 7 vs 推理 9 已漂移）、upsertPrice 量纲护栏 + accuracy 聚合改中位数等。**新发现用户可见错误**：/ai/accuracy 的 chronos 均值 46-59% 系 wheat_cme 6 行量纲混装（6.77/667.60 并存）产生的 20 条 MAPE≈9500 污染行所致——剔除后 chronos 各商品中位数 0.39-5.07 仍全面优于统计基线（beef_carcass_us 1.54，原油上 5.05 vs arima 13.72），预训练路线结论不变。顺带修正：AGENTS.md Prisma 模型数 31→30（round-114 删 organizations 后漂移）；记录 AUTOMATION-STATUS 3 处漂移与前端 4 组死链 404 待后续批次。

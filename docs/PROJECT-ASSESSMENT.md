@@ -374,6 +374,8 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 | 5 | 前端 fetch 三层归一——apiFetch 吸收 swrFetcher cookie 能力，裸 fetch 逐页迁移（TD-8 主力） | Worth exploring |
 | 6 | 诚实性快修包——死链 4 组、假日志行、3 个死配置、Badge 收敛（每项 ≤30 分钟） | Strong |
 
+> **执行状态（同日 round-115 候选执行轮）**：6/6 已全部落地（提交 c0bb2b6 / 6a9172f / 78a3beb / 38090bf / c8e9ad9 / bac0afd，含 wheat_cme 生产数据修复与 chronos 聚合恢复 1.36-1.49）——明细见 TECH-DEBT §十。唯一修正：候选 6 的 Badge/Tag 收敛经实读证伪（不同原语），未执行。
+
 ### 9.8 技能应用记录
 
 improve-codebase-architecture（Explore×2 并行勘察 → HTML 报告）；ops-check 手法内化于 §9.1（pm2/systemd/crontab/curl 全实测）；数字纪律全程执行（每条数字附来源命令，两个 agent 的 3 处误报已仲裁修正）。

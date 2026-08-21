@@ -448,3 +448,26 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - **lagged-exog 实验**：产品/研究决策。
 - **TD-8 剩余 38 处裸 fetch**：含 9 处 mutation 与刻意吞错站点，需逐站点评估（round-94 结论维持）。
 - **mt.service 文档行 `Documentation=` 占位 URL**：脚手架原样，非功能项。
+
+---
+
+## 十、round-115 候选执行轮（2026-08-21，"推送，然后完成候选项"）
+
+指令链：round-115 评估（PROJECT-ASSESSMENT §九）产出 6 个深化候选 → 用户指令执行全部候选 + 推送（73 提交先行上远端）。6/6 完成，各批 tsc + 全量测试 + build + PM2 重启 + live 验证 + 独立提交：
+
+| # | 候选 | 提交 | 生产实证 |
+|---|---|---|---|
+| 6 | 诚实性快修包：4 组死链 404 清除、假 "WebSocket server ready" 日志删除、INFERENCE_TIMEOUT 接线（原为死配置）、REDIS_ENABLED/SCRAPE_INTERVAL_MINUTES 删除（含各自 2 个死旋钮自测） | `c0bb2b6` | — |
+| 1 | 模型注册单一事实源：/models(model_ids) 派生 backend 验证清单，SEED 兜底冷启动，hourly sync + drift/curatedMissing 告警；VALID_MODELS 手工副本（7 vs 9 已漂移）删除 | `6a9172f` | 启动 +35s 日志 `🔁 Model registry synced: 9 ids, no drift` |
+| 2 | upsertPrice 量纲护栏（>20× 近 30 点中位数拒绝，<5 点豁免）+ getModelAccuracy 单条 $queryRaw 均值+中位数双算（last7d/30d 改中位数）+ modelQuality 权重/淘汰线改 robust 统计 + 前端 4 入口归一 headlineMape | `78a3beb` | wheat 修复后 chronos 均值 1.36-1.49 / 中位 0.82-0.86（原 46-59） |
+| 3 | 主动告警：dataDigest 每日纯函数决策（数据断流或 24h 摄取错误才发信；常态休眠不扰）+ sendOpsEmail 复用 SMTP + OPS_ALERT_EMAIL 未配置则 no-op | `38090bf` | +60s 日志 `[data-digest] OPS_ALERT_EMAIL not set — ops digest disabled (no-op)` |
+| 4 | 部署单一入口：deploy.sh 补 prisma generate + **migrate deploy**（原缺失，round-114 教训）成为唯一实现，CI 内联副本删除改调它；AUTOMATION-STATUS 3 处漂移修正（7→8 jobs、§八部署描述、§五测试数） | `c8e9ad9` | bash -n + YAML parse（全量执行留给下次真实部署触发） |
+| 5 | fetch 三层归一：apiFetch 重写为唯一客户端（path 契约 + authFetch 核心：Bearer/cookie/401 清理），swrFetcher/beefFetcher 变薄委托；8 处机械 GET 站点迁移；刻意保留清单见提交说明 | `bac0afd` | tsc/build 过 + 重启后全页 200/307-login 无 5xx |
+
+**生产数据操作（随候选 2，已记入提交说明，2AM 备份可回滚）**：wheat_cme 2026-05 两条 ¢/bu 行除以 100 归一（6.645/6.633，与 8 月 $/bu 序列 6.68-6.92 无缝衔接，metadata 记 unitNormalized）；52 条污染 verified 行转 stale（沿用 round-41 invalidatePolluted 语义）。取证结论：**cme 源 5 月按 ¢/bu 写、8-13 起改按 $/bu 写**——同源中途换量纲，护栏已防复发。
+
+**评估修正（诚实记录）**：round-115 评估 §9.6 第 5 条 "Badge/Tag 双实现" 系 agent 误报——Tag 是状态胶囊（23 使用方）、Badge 是通知计数角标（1 使用方），语义不同，**不做收敛**；agent 报前端 43 页系漏数（实测 44）。
+
+**测试基线**：backend 919→931 pass +1 skip（新增 14：registry 同步 6 + 量纲护栏 3 + 中位数回归 1 + digest 4；删除 2：REDIS_ENABLED 死旋钮自测）、frontend 297 恒定、inference 60 未动。AGENTS.md Prisma 模型数 31→30 已修（round-114 删 organizations 后漂移）。
+
+**仍开放（不可独立完成/产品决策）**：P0 beef_cut_prices 回填（等用户 CSV）；lagged-exog 实验；TD-8 刻意保留站点（login/register POST 等逐站点语义）；资讯 RSS 接入（M3）。
