@@ -13,8 +13,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { isConditionMet } from "../alert-rules";
-import type { AlertCondition } from "../alert-types";
+import type { AlertCondition } from "../alerts";
+import { isConditionMet } from "../alerts";
 
 describe("alert rule condition matching", () => {
 	describe("threshold > operator", () => {
