@@ -20,7 +20,7 @@ interface UserProfile {
 	avatarUrl?: string;
 	createdAt: string;
 	lastLoginAt: string;
-	_count: { datasets: number; models: number; ownedOrganizations: number };
+	_count: { datasets: number; models: number };
 }
 
 export default function ProfileSettingsPage() {
@@ -175,12 +175,6 @@ export default function ProfileSettingsPage() {
 									{user?._count.models || 0}
 								</div>
 								<div className="text-xs text-gray-500">Models</div>
-							</div>
-							<div>
-								<div className="text-xl font-semibold text-info">
-									{user?._count.ownedOrganizations || 0}
-								</div>
-								<div className="text-xs text-gray-500">Orgs</div>
 							</div>
 						</div>
 					</div>

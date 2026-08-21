@@ -28,7 +28,6 @@ model User {
   auditLogs           AuditLog[]
   datasets            Dataset[]
   models              ForecastingModel[]
-  organizations       organizations[]
   securityAuditLogs   SecurityAuditLog[] @relation("SecurityAuditLogs")
   sessions            Session[]
   watchlists          Watchlist[]
@@ -43,7 +42,6 @@ model User {
 
 model Dataset {
   id              String        @id @default(uuid())
-  organization_id String
   ownerId         String        @map("owner_id")
   name            String
   slug            String
@@ -59,11 +57,10 @@ model Dataset {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime?     @updatedAt @map("updated_at")
   lastAccessedAt  DateTime?     @map("last_accessed_at")
-  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
   owner           User          @relation(fields: [ownerId], references: [id])
   timeseries      Timeseries[]
 
-  @@unique([organization_id, slug])
+  @@unique([slug])
   @@index([ownerId])
   @@index([createdAt(sort: Desc)])
   @@index([lastAccessedAt(sort: Desc)])
@@ -302,25 +299,6 @@ model SecurityAuditLog {
   @@index([severity, timestamp])
   @@index([timestamp])
   @@map("security_audit_logs")
-}
-
-model organizations {
-  id          String    @id
-  owner_id    String
-  name        String
-  slug        String    @unique
-  description String?
-  logo_url    String?
-  settings    Json?
-  is_archived Boolean   @default(false)
-  created_at  DateTime  @default(now())
-  updated_at  DateTime?
-  datasets    Dataset[]
-  users       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-
-  @@index([created_at(sort: Desc)])
-  @@index([owner_id])
-  @@index([slug])
 }
 
 model PredictionLog {

@@ -117,7 +117,6 @@ describe("PATCH /api/models/:id — ownership", () => {
 	let tokenOutsider = "";
 	let modelId = "";
 	let siblingId = "";
-	let orgId = "";
 	const userIds: string[] = [];
 
 	beforeAll(async () => {
@@ -141,22 +140,12 @@ describe("PATCH /api/models/:id — ownership", () => {
 		tokenTrainer = jwtUtils.generateToken(trainer.id);
 		tokenOutsider = jwtUtils.generateToken(outsider.id);
 
-		const org = await prisma.organizations.create({
-			data: {
-				id: `model-org-${stamp}`,
-				owner_id: trainer.id,
-				name: `Model ownership org ${stamp}`,
-				slug: `model-org-${stamp}`,
-			},
-		});
-		orgId = org.id;
 		const dataset = await prisma.dataset.create({
 			data: {
 				name: "Model ownership dataset",
 				slug: `model-ds-${stamp}`,
 				storageFormat: "CSV",
 				ownerId: trainer.id,
-				organization_id: org.id,
 			},
 		});
 		const series = await prisma.timeseries.create({
@@ -185,9 +174,8 @@ describe("PATCH /api/models/:id — ownership", () => {
 	});
 
 	afterAll(async () => {
-		// Dataset cascades timeseries → forecasting models; then org → users.
-		await prisma.dataset.deleteMany({ where: { organization_id: orgId } }).catch(() => {});
-		await prisma.organizations.deleteMany({ where: { id: orgId } }).catch(() => {});
+		// Dataset cascades timeseries → forecasting models; then users.
+		await prisma.dataset.deleteMany({ where: { ownerId: { in: userIds } } }).catch(() => {});
 		await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
 	});
 

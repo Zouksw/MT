@@ -26,7 +26,6 @@ export interface Dataset {
 	storageFormat: "TIMESERIES" | "INFLUXDB" | "CSV";
 	isPublic: boolean;
 	isImported: boolean;
-	organizationId?: string;
 	createdAt: string;
 	updatedAt: string;
 	_count?: {

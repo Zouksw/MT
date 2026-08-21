@@ -94,7 +94,6 @@ describe("Timeseries ownership (cross-user)", () => {
 	let tokenB = "";
 	let seriesA = { id: "" };
 	let seriesForDelete = { id: "" };
-	let orgId = "";
 	const userIds: string[] = [];
 
 	beforeAll(async () => {
@@ -118,23 +117,12 @@ describe("Timeseries ownership (cross-user)", () => {
 		tokenA = jwtUtils.generateToken(userA.id);
 		tokenB = jwtUtils.generateToken(userB.id);
 
-		const org = await prisma.organizations.create({
-			data: {
-				id: `ts-org-${stamp}`,
-				owner_id: userA.id,
-				name: `TS ownership org ${stamp}`,
-				slug: `ts-org-${stamp}`,
-			},
-		});
-		orgId = org.id;
-
 		const dataset = await prisma.dataset.create({
 			data: {
 				name: "TS ownership dataset",
 				slug: `ts-ds-${stamp}`,
 				storageFormat: "CSV",
 				ownerId: userA.id,
-				organization_id: org.id,
 			},
 		});
 		seriesA = await prisma.timeseries.create({
@@ -146,9 +134,8 @@ describe("Timeseries ownership (cross-user)", () => {
 	});
 
 	afterAll(async () => {
-		// FK-safe order: datasets cascade timeseries/datapoints → orgs → users.
-		await prisma.dataset.deleteMany({ where: { organization_id: orgId } }).catch(() => {});
-		await prisma.organizations.deleteMany({ where: { id: orgId } }).catch(() => {});
+		// FK-safe order: datasets cascade timeseries/datapoints → users.
+		await prisma.dataset.deleteMany({ where: { ownerId: { in: userIds } } }).catch(() => {});
 		await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
 	});
 

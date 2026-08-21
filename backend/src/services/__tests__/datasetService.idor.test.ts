@@ -44,33 +44,20 @@ let userB: { id: string };
 let datasetId: string;
 const createdUserIds: string[] = [];
 const createdDatasetIds: string[] = [];
-const createdOrgIds: string[] = [];
 
 beforeEach(async () => {
 	userA = await createUser(`idor-a-${Date.now()}-${counter}@test`);
 	userB = await createUser(`idor-b-${Date.now()}-${counter}@test`);
 	createdUserIds.push(userA.id, userB.id);
 
-	// Create the dataset directly via Prisma (bypassing createDataset, which
-	// upserts a global "default-org-id" org and would couple tests to shared
-	// state). We only want to exercise getDataset — the function under test.
-	const org = await prisma.organizations.create({
-		data: {
-			id: `idor-org-${Date.now()}-${counter}`,
-			owner_id: userA.id,
-			name: `IDOR test org ${counter}`,
-			slug: `idor-org-${Date.now()}-${counter}`,
-		},
-	});
-	createdOrgIds.push(org.id);
-
+	// Create the dataset directly via Prisma (bypassing createDataset) — we
+	// only want to exercise getDataset, the function under test.
 	const ds = await prisma.dataset.create({
 		data: {
 			name: "A's private dataset",
 			slug: uniqueSlug(),
 			storageFormat: "CSV",
 			ownerId: userA.id,
-			organization_id: org.id,
 		},
 	});
 	datasetId = ds.id;
@@ -78,13 +65,11 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-	// Delete in FK-safe order: datasets → orgs → users.
+	// Delete in FK-safe order: datasets cascade timeseries → users.
 	await prisma.dataset.deleteMany({ where: { id: { in: createdDatasetIds } } }).catch(() => {});
-	await prisma.organizations.deleteMany({ where: { id: { in: createdOrgIds } } }).catch(() => {});
 	await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } }).catch(() => {});
 	createdUserIds.length = 0;
 	createdDatasetIds.length = 0;
-	createdOrgIds.length = 0;
 });
 
 // Tests -----------------------------------------------------------------

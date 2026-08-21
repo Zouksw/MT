@@ -120,14 +120,6 @@ export async function createDataset(
 	});
 	if (existing) throw new BadRequestError("Slug already exists");
 
-	// Get or create default organization for the user
-	const defaultOrgId = "default-org-id";
-	const organization = await prisma.organizations.upsert({
-		where: { id: defaultOrgId },
-		update: {},
-		create: { id: defaultOrgId, owner_id: userId, name: "Default", slug: "default" },
-	});
-
 	const dataset = await prisma.dataset.create({
 		data: {
 			name: input.name,
@@ -135,7 +127,6 @@ export async function createDataset(
 			description: input.description,
 			storageFormat: input.storageFormat,
 			ownerId: userId,
-			organization_id: organization.id,
 		},
 		include: { owner: { select: { id: true, name: true, email: true } } },
 	});

@@ -61,21 +61,12 @@ describe("Cross-user ownership guards (IDOR)", () => {
 		tokenA = jwtUtils.generateToken(userA.id);
 		tokenB = jwtUtils.generateToken(userB.id);
 
-		const org = await prisma.organizations.create({
-			data: {
-				id: `idor-org-${suffix}`,
-				owner_id: userA.id,
-				name: `idor-org-${suffix}`,
-				slug: `idor-org-${suffix}`,
-			},
-		});
 		const dataset = await prisma.dataset.create({
 			data: {
 				name: `idor-ds-${suffix}`,
 				slug: `idor-ds-${suffix}`,
 				ownerId: userA.id,
 				storageFormat: "TIMESERIES",
-				organization_id: org.id,
 			},
 		});
 		const timeseries = await prisma.timeseries.create({

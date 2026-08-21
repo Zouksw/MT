@@ -33,7 +33,6 @@ vi.mock("@/lib", () => ({
 			update: vi.fn(),
 			delete: vi.fn(),
 		},
-		organizations: { findFirst: vi.fn(), create: vi.fn() },
 		$transaction: vi.fn((cb: (p: unknown) => unknown) => cb({})),
 	},
 	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
