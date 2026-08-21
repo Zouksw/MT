@@ -15,6 +15,7 @@ import { bridgeBeefPrices } from "@/services/beefPriceBridge";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
+import { listRemoteModelIds } from "@/services/inference/client";
 import {
 	expireWindowElapsedPredictions,
 	invalidatePollutedPredictions,
@@ -23,6 +24,7 @@ import {
 	restoreVerifiablePredictions,
 	verifyDuePredictions,
 } from "@/services/mapeTracking";
+import { syncModelsFromRemote } from "@/services/modelRegistry";
 import {
 	generateBaselinePredictions,
 	scheduleBeefCutPredictions,
@@ -99,7 +101,8 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
  * The startup delays are load-bearing ordering, not cosmetic: scrapers run
  * first (runAll at boot), then prediction scheduling (5s), verification
  * catch-up (15s), pollution invalidation (20s) → mark-unverifiable (25s,
- * after stale-marking settles), alerts (30s), beef bridge (45s, after
+ * after stale-marking settles), alerts (30s), model-registry sync (35s),
+ * beef bridge (45s, after
  * scrapers + alerts settle).
  */
 function backgroundJobs(): ScheduledJob[] {
@@ -308,6 +311,36 @@ function backgroundJobs(): ScheduledJob[] {
 			run: async () => {
 				const n = await evaluateAlertRules();
 				if (n > 0) logger.info(`🔔 Alert rules: ${n} triggered this cycle`);
+			},
+		},
+
+		// Model registry sync (round-115): GET /models is the single source of
+		// truth for callable model ids — the backend's request-validation list
+		// derives from it (the static seed only covers cold boot / outages;
+		// this was previously a hand-copied list that drifted 7 vs 9). Warn on
+		// any drift so a silent divergence is visible in logs; the job's errors
+		// are contained by the scheduler (inference cold start ≈ 90s > 35s
+		// first-run delay, so the first attempt may fail and retry hourly).
+		{
+			name: "model-registry-sync",
+			firstRunDelayMs: 35000,
+			intervalMs: MS_PER_HOUR,
+			run: async () => {
+				const ids = await listRemoteModelIds();
+				const r = syncModelsFromRemote(ids);
+				if (r.added.length > 0 || r.removed.length > 0) {
+					logger.warn(
+						`🔁 Model registry drift: +[${r.added.join(", ")}] -[${r.removed.join(", ")}] ` +
+							`(now ${r.valid.length} ids)`,
+					);
+				} else {
+					logger.info(`🔁 Model registry synced: ${r.valid.length} ids, no drift`);
+				}
+				if (r.curatedMissing.length > 0) {
+					// Curated ensemble/baseline ids the inference service no longer
+					// lists — scheduled prediction batches for them would fail.
+					logger.warn(`🔁 Curated models missing upstream: [${r.curatedMissing.join(", ")}]`);
+				}
 			},
 		},
 

@@ -9,6 +9,7 @@ import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
 import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inference";
 import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 import { applyConformalInterval, getIntervalMultipliers } from "@/services/intervalCalibration";
+import { getValidModels, isValidModel } from "@/services/modelRegistry";
 import { PREDICTION_TTL_SECONDS } from "@/services/predictionCache";
 
 /**
@@ -95,24 +96,13 @@ async function resolveCommodity(input: string): Promise<{ id: string; slug: stri
 	return commodity;
 }
 
-// All callable models: 3 chronos variants (primary) + 6 statistical (baseline).
-// The /ai predict page lets users call ANY of these for comparison.
-const VALID_MODELS = [
-	"chronos_tiny",
-	"chronos_mini",
-	"chronos_base",
-	"arima",
-	"sarimax",
-	"holtwinters",
-	"exponential_smoothing",
-	"naive_forecaster",
-	"stl_forecaster",
-] as const;
+// Callable model ids come from the model registry (round-115): seeded for
+// cold boot, reconciled hourly from inference-service GET /models — the
+// single source of truth. The /ai predict page lets users call ANY callable
+// model for comparison.
 
 // Default model when none specified — the smallest chronos variant (fast + zero-shot).
 const DEFAULT_MODEL = "chronos_tiny";
-
-type ModelId = (typeof VALID_MODELS)[number];
 
 // === Status ===
 
@@ -151,7 +141,7 @@ router.post(
 		// because CommodityPrice.commodityId only matches UUIDs.
 		const uuid = await resolveCommodityId(commodityId);
 
-		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : DEFAULT_MODEL;
+		const modelId = isValidModel(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 
@@ -217,7 +207,7 @@ router.post(
 				continue;
 			}
 
-			const modelId: ModelId = VALID_MODELS.includes(r.algorithm) ? r.algorithm : DEFAULT_MODEL;
+			const modelId = isValidModel(r.algorithm) ? r.algorithm : DEFAULT_MODEL;
 			const h = Math.min(Math.max(Number(r.horizon) || 10, 1), 100);
 			const cl = Number(r.confidenceLevel) || 0.95;
 
@@ -304,7 +294,7 @@ router.post(
 		const commodity = await resolveCommodity(commodityId);
 		const uuid = commodity.id;
 
-		const modelId: ModelId = VALID_MODELS.includes(algorithm) ? algorithm : DEFAULT_MODEL;
+		const modelId = isValidModel(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
 		const cl = Number(confidenceLevel) || 0.95;
 		// Clamp like `h` (round-06): an unclamped historyPoints reached Prisma
@@ -531,7 +521,7 @@ router.get(
 		// status (round-106 honesty fix; the /train endpoint was retired for
 		// exactly this class of fabrication).
 		res.json({
-			models: VALID_MODELS.map((id) => ({ id, status: "unknown" })),
+			models: getValidModels().map((id) => ({ id, status: "unknown" })),
 		});
 	}),
 );
@@ -541,8 +531,8 @@ router.get(
 	authenticate,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { id } = req.params;
-		if (!VALID_MODELS.includes(id as ModelId)) {
-			throw new BadRequestError(`Unknown model: ${id}. Available: ${VALID_MODELS.join(", ")}`);
+		if (!isValidModel(id)) {
+			throw new BadRequestError(`Unknown model: ${id}. Available: ${getValidModels().join(", ")}`);
 		}
 
 		// The inference service exposes one /models listing (no per-model

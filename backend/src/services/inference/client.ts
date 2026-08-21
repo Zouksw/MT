@@ -133,6 +133,27 @@ export async function checkReadiness(): Promise<InferenceReadiness> {
 	}
 }
 
+/**
+ * GET /models → the authoritative model id list (round-115). The backend's
+ * request-validation list derives from this instead of a hand-copied id
+ * array that had drifted from the inference service. Empty responses are
+ * refused: syncing an empty list would reject every model id.
+ */
+export async function listRemoteModelIds(): Promise<string[]> {
+	const res = await fetchWithTimeout(`${INFERENCE_URL}/models`, {}, CONNECT_TIMEOUT);
+	if (!res.ok) {
+		throw new ApiError(res.status >= 500 ? 502 : res.status, `Inference /models ${res.status}`);
+	}
+	const data = (await res.json()) as { model_ids?: unknown; models?: Array<{ id?: unknown }> };
+	const ids = Array.isArray(data.model_ids)
+		? data.model_ids.filter((id): id is string => typeof id === "string")
+		: (data.models ?? []).map((m) => m.id).filter((id): id is string => typeof id === "string");
+	if (ids.length === 0) {
+		throw new ApiError(502, "Inference /models returned no model ids");
+	}
+	return ids;
+}
+
 export async function predict(request: InferencePredictRequest): Promise<InferencePredictResponse> {
 	const url = `${INFERENCE_URL}/predict`;
 	let lastError: Error | null = null;
