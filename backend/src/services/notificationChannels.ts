@@ -178,6 +178,36 @@ async function sendSlack(payload: NotificationPayload): Promise<boolean> {
 }
 
 /**
+ * Ops email (round-115): plain operational mail (data digest) to the
+ * address(es) in OPS_ALERT_EMAIL. Reuses the user-alert transport; returns
+ * false when SMTP or the recipient env is not configured — the daily digest
+ * job treats that as a no-op, never an error.
+ */
+export async function sendOpsEmail(subject: string, text: string): Promise<boolean> {
+	const transport = getEmailTransport();
+	const to = (process.env.OPS_ALERT_EMAIL ?? "")
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+	if (!transport || to.length === 0) return false;
+
+	const fromAddress = process.env.SMTP_FROM || "noreply@mt.local";
+	try {
+		await transport.sendMail({
+			from: `"MT Ops" <${fromAddress}>`,
+			to: to.join(", "),
+			subject,
+			text,
+		});
+		logger.info(`Ops email sent to ${to.length} recipient(s): ${subject}`);
+		return true;
+	} catch (err) {
+		logger.warn(`Ops email failed: ${err instanceof Error ? err.message : String(err)}`);
+		return false;
+	}
+}
+
+/**
  * Dispatch notification through all configured channels
  *
  * @param payload - The notification event

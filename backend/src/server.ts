@@ -12,6 +12,7 @@ import { logger, prisma } from "@/lib";
 import { MS_PER_HOUR, MS_PER_MINUTE } from "@/lib/constants";
 import { evaluateAlertRules } from "@/services/alert-rules";
 import { bridgeBeefPrices } from "@/services/beefPriceBridge";
+import { runDataDigest } from "@/services/dataDigest";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import type { ScraperResult } from "@/services/dataIngestion/scraperManager";
@@ -102,7 +103,7 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
  * first (runAll at boot), then prediction scheduling (5s), verification
  * catch-up (15s), pollution invalidation (20s) → mark-unverifiable (25s,
  * after stale-marking settles), alerts (30s), model-registry sync (35s),
- * beef bridge (45s, after
+ * data digest (60s), beef bridge (45s, after
  * scrapers + alerts settle).
  */
 function backgroundJobs(): ScheduledJob[] {
@@ -341,6 +342,20 @@ function backgroundJobs(): ScheduledJob[] {
 					// lists — scheduled prediction batches for them would fail.
 					logger.warn(`🔁 Curated models missing upstream: [${r.curatedMissing.join(", ")}]`);
 				}
+			},
+		},
+
+		// Ops data digest (round-115): turns dataHealth's passive visibility
+		// into a push signal — at most one mail per day, only when actionable
+		// (no source wrote in 24h, or ingestion errors). No-op unless
+		// OPS_ALERT_EMAIL + SMTP are configured.
+		{
+			name: "data-digest",
+			firstRunDelayMs: 60000,
+			intervalMs: 24 * MS_PER_HOUR,
+			run: async () => {
+				const outcome = await runDataDigest();
+				if (outcome === "sent") logger.info("📬 Ops data digest sent");
 			},
 		},
 
