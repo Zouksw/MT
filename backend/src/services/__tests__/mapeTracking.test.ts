@@ -216,8 +216,39 @@ describe("MAPE Tracking (real DB)", () => {
 			expect(accuracy).toBeDefined();
 			expect(accuracy.modelId).toBe(model);
 			expect(accuracy).toHaveProperty("avgMape");
+			expect(accuracy).toHaveProperty("medianMape");
 			expect(accuracy).toHaveProperty("predictionCount");
 			expect(accuracy).toHaveProperty("verifiedCount");
+		});
+
+		// REGRESSION (round-115): wheat_cme mixed $/bu with ¢/bu closes and 20
+		// verified rows at MAPE≈9500 dragged chronos MEANS to 46-59% on
+		// /ai/accuracy while every per-commodity median stayed sane. The
+		// median must resist that outlier class; the mean stays honest about
+		// being poisoned (compat field, kept for anyone comparing stats).
+		it("medianMape resists unit-mismatch outliers that poison avgMape", async () => {
+			const { model, commodity } = fx();
+			const cases = [
+				{ predicted: [100], actual: [101] }, // ≈1%
+				{ predicted: [100], actual: [98] }, // ≈2%
+				{ predicted: [960000], actual: [100] }, // ≈959900% (the wheat shape)
+			];
+			for (const c of cases) {
+				const id = await logPrediction({
+					modelId: model,
+					commodityId: commodity,
+					timeseriesPath: "root.fx.median-outlier",
+					horizon: 1,
+					predictedValues: c.predicted,
+				});
+				await verifyPrediction(id, c.actual);
+			}
+
+			const accuracy = await getModelAccuracy(model);
+			expect(accuracy.verifiedCount).toBeGreaterThanOrEqual(3);
+			expect(accuracy.medianMape).not.toBeNull();
+			expect((accuracy.medianMape as number) < 5).toBe(true);
+			expect((accuracy.avgMape as number) > 3000).toBe(true);
 		});
 
 		// REGRESSION: lastVerifiedAt is the freshness signal the accuracy

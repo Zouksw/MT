@@ -1,6 +1,14 @@
 export interface ModelAccuracy {
 	modelId: string;
 	avgMape: number | null;
+	/**
+	 * Median MAPE over the window (round-115) — the robust headline stat. A
+	 * single unit-mismatched series (wheat_cme mixing $/bu with ¢/bu closes)
+	 * produced verified rows at MAPE≈9500 that dragged the mean to 46-59%
+	 * while every median stayed sane. Optional: older API responses / mocks
+	 * without it fall back to avgMape via headlineMape().
+	 */
+	medianMape?: number | null;
 	predictionCount: number;
 	verifiedCount: number;
 	/**
@@ -38,6 +46,18 @@ export interface ModelAccuracy {
  * bestModel aggregation) so both gates stay in lockstep.
  */
 export const MIN_VERIFIED_SAMPLE = 5;
+
+/**
+ * The MAPE a user should be shown: the median when the API provides it,
+ * the mean otherwise. UI aggregation/sorting/display should read through
+ * this so a unit-mismatch outlier can't poison what users see (round-115).
+ */
+export function headlineMape(m: {
+	medianMape?: number | null;
+	avgMape?: number | null;
+}): number | null {
+	return m.medianMape ?? m.avgMape ?? null;
+}
 
 /**
  * Classify a modelId as part of the primary chronos consensus vs a statistical

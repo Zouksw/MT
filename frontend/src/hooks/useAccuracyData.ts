@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
 import { API_BASE } from "@/lib/config";
 import type { BacktestResponse, ModelAccuracy, ModelWithBacktest } from "@/types/accuracy";
-import { MIN_VERIFIED_SAMPLE, MODEL_NAME_MAP } from "@/types/accuracy";
+import { headlineMape, MIN_VERIFIED_SAMPLE, MODEL_NAME_MAP } from "@/types/accuracy";
 
 export function useAccuracyData() {
 	const [accuracy, setAccuracy] = useState<ModelAccuracy[]>([]);
@@ -22,7 +22,10 @@ export function useAccuracyData() {
 			}>(`${API_BASE}/api/signals/models/accuracy`);
 			const accuracyData = res.data?.accuracy || res.data || [];
 			const list = Array.isArray(accuracyData) ? accuracyData : [];
-			setAccuracy(list);
+			// Display stat = median (round-115): override avgMape at the entry
+			// point so every downstream consumer (sorting, averages, badges,
+			// charts) reads the robust stat without per-site edits.
+			setAccuracy(list.map((m) => ({ ...m, avgMape: headlineMape(m) })));
 
 			const backtestMap = new Map<string, BacktestResponse>();
 			const results = await Promise.allSettled(

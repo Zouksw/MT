@@ -49,7 +49,8 @@ export interface ModelWeight {
 
 /**
  * Resolve per-model quality weights for a set of voting model IDs.
- * Fetches the 30-day avg MAPE per model and normalizes to sum=1.
+ * Fetches the 30-day MAPE per model (median, mean fallback — round-115) and
+ * normalizes to sum=1.
  *
  * Failures (e.g. DB unreachable) degrade gracefully to equal weights — quality
  * weighting is an enhancement, not a hard dependency. The caller always gets a
@@ -66,10 +67,16 @@ export async function resolveModelWeights(
 	try {
 		const accuracies = await getAllModelAccuracy(undefined, days);
 		const accByModel = new Map(accuracies.map((a) => [a.modelId, a]));
+		// Robust stat (round-115): prefer the median, fall back to the mean.
+		// The mean was polluted by unit-mismatch outliers (wheat_cme rows at
+		// MAPE≈9500), which would both mis-weight and wrongly eliminate models.
+		const statOf = (a?: { medianMape?: number | null; avgMape?: number | null }): number | null =>
+			a?.medianMape ?? a?.avgMape ?? null;
 		const mapeByModel = new Map<string, number>();
 		for (const a of accuracies) {
-			if (a.avgMape != null && a.avgMape > 0) {
-				mapeByModel.set(a.modelId, a.avgMape);
+			const stat = statOf(a);
+			if (stat != null && stat > 0) {
+				mapeByModel.set(a.modelId, stat);
 			}
 		}
 
@@ -89,20 +96,22 @@ export async function resolveModelWeights(
 		// is thick enough to trust). A model strictly worse than this loses its
 		// vote entirely; naive itself and thin-evidence models are exempt.
 		const naiveBar = accByModel.get("naive_forecaster");
+		const naiveBarStat = statOf(naiveBar);
 		const barActive =
-			naiveBar?.avgMape != null && naiveBar.verifiedCount >= MIN_VERIFIED_TO_ELIMINATE;
+			naiveBarStat != null && (naiveBar?.verifiedCount ?? 0) >= MIN_VERIFIED_TO_ELIMINATE;
 
 		// Raw weight = 1 / max(mape, floor); eliminated models get 0.
 		const raw: Array<{ id: string; w: number; eliminated: boolean }> = [];
 		for (const id of modelIds) {
 			const acc = accByModel.get(id);
-			const mape = acc?.avgMape ?? defaultMape;
+			const stat = statOf(acc);
+			const mape = stat ?? defaultMape;
 			const eliminated =
 				barActive &&
 				id !== "naive_forecaster" &&
-				acc?.avgMape != null &&
-				acc.verifiedCount >= MIN_VERIFIED_TO_ELIMINATE &&
-				acc.avgMape > (naiveBar?.avgMape as number);
+				stat != null &&
+				(acc?.verifiedCount ?? 0) >= MIN_VERIFIED_TO_ELIMINATE &&
+				stat > (naiveBarStat as number);
 			raw.push({ id, w: eliminated ? 0 : 1 / Math.max(mape, MAPE_FLOOR_PCT), eliminated });
 		}
 

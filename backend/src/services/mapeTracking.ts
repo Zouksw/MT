@@ -826,6 +826,9 @@ export async function getModelAccuracy(
 ): Promise<{
 	modelId: string;
 	avgMape: number | null;
+	/** Median MAPE over the window — the recommended headline stat (robust to
+	 * unit-mismatch outliers); avgMape kept for compatibility. */
+	medianMape: number | null;
 	predictionCount: number;
 	verifiedCount: number;
 	last7dMape: number | null;
@@ -858,34 +861,54 @@ export async function getModelAccuracy(
 		},
 	});
 
-	// SQL-side aggregation (round-104): the previous implementation pulled
-	// every verified row in the window into Node to average in JS — unbounded
-	// memory/time on a 100k+ row table, re-fetched per model (×9) on every
-	// accuracy page load.
+	// SQL-side aggregation (round-104 → round-115): one $queryRaw computes the
+	// mean AND the median per window instead of pulling rows into Node (the
+	// round-104 fix) or trusting the mean alone. The mean stays for API
+	// compatibility, but the MEDIAN is the honest headline stat: a single
+	// unit-mismatched series (wheat_cme mixed $/bu closes ~6.8 with ¢/bu ~667;
+	// 20 verified rows at MAPE≈9500) dragged chronos means from ~1-5% to
+	// 46-59% on /ai/accuracy while every per-commodity median stayed sane.
+	// last7d/last30d are medians too (they feed the trend chart). NULL mapes
+	// are ignored by both AVG and PERCENTILE_CONT; the row count does not
+	// filter on mape, matching the previous _count._all semantics.
+	// NOT ILIKE '%test%' mirrors EXCLUDE_TEST_ARTIFACTS for raw SQL (same
+	// translation precedent as intervalCalibration, round-114).
 	const last7d = new Date(Date.now() - 7 * 86400000);
 	const last30d = new Date(Date.now() - 30 * 86400000);
 	const round2 = (v: number | null | undefined) => (v == null ? null : Math.round(v * 100) / 100);
 
-	const [mainAgg, last7dAgg, last30dAgg, lastVerifiedRow] = await Promise.all([
-		prisma.predictionLog.aggregate({
-			where: verifiedWhere(since),
-			_avg: { mape: true },
-			_count: { _all: true },
-		}),
-		prisma.predictionLog.aggregate({
-			where: verifiedWhere(last7d),
-			_avg: { mape: true },
-		}),
-		prisma.predictionLog.aggregate({
-			where: verifiedWhere(last30d),
-			_avg: { mape: true },
-		}),
+	const [statsRows, lastVerifiedRow] = await Promise.all([
+		prisma.$queryRaw<
+			Array<{
+				n_main: number;
+				avg_main: number | null;
+				med_main: number | null;
+				med_7d: number | null;
+				med_30d: number | null;
+			}>
+		>(Prisma.sql`
+			SELECT
+				COUNT(*) FILTER (WHERE pl.verified_at >= ${since})::int AS n_main,
+				AVG(pl.mape) FILTER (WHERE pl.verified_at >= ${since})::float8 AS avg_main,
+				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pl.mape::float8)
+					FILTER (WHERE pl.verified_at >= ${since}) AS med_main,
+				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pl.mape::float8)
+					FILTER (WHERE pl.verified_at >= ${last7d}) AS med_7d,
+				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pl.mape::float8)
+					FILTER (WHERE pl.verified_at >= ${last30d}) AS med_30d
+			FROM prediction_logs AS pl
+			WHERE pl.model_id = ${modelId}
+				AND pl.status = 'verified'
+				AND pl.commodity_id NOT ILIKE '%test%'
+				${commodityId ? Prisma.sql`AND pl.commodity_id = ${commodityId}` : Prisma.empty}
+		`),
 		prisma.predictionLog.findFirst({
 			where: verifiedWhere(new Date(0)),
 			select: { verifiedAt: true },
 			orderBy: { verifiedAt: "desc" },
 		}),
 	]);
+	const stats = statsRows[0];
 
 	// Most-recent verification timestamp — surfaced as a freshness signal so
 	// the accuracy comparison page can show when a model's MAPE was last
@@ -895,11 +918,12 @@ export async function getModelAccuracy(
 
 	return {
 		modelId,
-		avgMape: round2(mainAgg._avg.mape?.toNumber()),
+		avgMape: round2(stats?.avg_main),
+		medianMape: round2(stats?.med_main),
 		predictionCount,
-		verifiedCount: mainAgg._count._all,
-		last7dMape: round2(last7dAgg._avg.mape?.toNumber()),
-		last30dMape: round2(last30dAgg._avg.mape?.toNumber()),
+		verifiedCount: stats?.n_main ?? 0,
+		last7dMape: round2(stats?.med_7d),
+		last30dMape: round2(stats?.med_30d),
 		lastVerifiedAt,
 	};
 }
@@ -939,6 +963,7 @@ async function computeAllModelAccuracy(commodityId: string | undefined, days: nu
 			return {
 				modelId,
 				avgMape: accuracy.avgMape,
+				medianMape: accuracy.medianMape,
 				predictionCount: accuracy.predictionCount,
 				verifiedCount: accuracy.verifiedCount,
 				// Forwarded from getModelAccuracy — previously dropped at this
@@ -965,6 +990,7 @@ export async function getAllModelAccuracy(
 	Array<{
 		modelId: string;
 		avgMape: number | null;
+		medianMape: number | null;
 		predictionCount: number;
 		verifiedCount: number;
 		last7dMape: number | null;

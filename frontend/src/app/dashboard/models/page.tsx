@@ -16,6 +16,8 @@ import { MODEL_NAME_MAP } from "@/types/accuracy";
 interface ModelAccuracy {
 	modelId: string;
 	avgMape: number | null;
+	/** Median MAPE (round-115) — robust stat; overrides avgMape at the entry point. */
+	medianMape?: number | null;
 	predictionCount: number;
 	verifiedCount: number;
 }
@@ -69,7 +71,15 @@ export default function ModelsComparisonPage() {
 				if (res.ok) {
 					const data = await res.json();
 					if (data.success && data.data?.accuracy) {
-						setAccuracy(data.data.accuracy);
+						// Display stat = median with mean fallback (round-115) —
+						// overrides avgMape at the entry point so all downstream
+						// comparisons read the robust stat.
+						setAccuracy(
+							(data.data.accuracy as ModelAccuracy[]).map((m) => ({
+								...m,
+								avgMape: m.medianMape ?? m.avgMape,
+							})),
+						);
 						return;
 					}
 				}

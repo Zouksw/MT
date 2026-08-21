@@ -235,11 +235,18 @@ export function useTradingData() {
 				if (accRes.status === "fulfilled" && accRes.value.ok) {
 					const accData = await accRes.value.json();
 					if (accData.success && accData.data?.accuracy) {
-						const valid = accData.data.accuracy.filter(
-							(m: { avgMape: number | null }) => m.avgMape !== null,
-						);
+						const rows = accData.data.accuracy as Array<{
+							modelId: string;
+							avgMape: number | null;
+							medianMape?: number | null;
+						}>;
+						// Robust stat (round-115): median with mean fallback — the
+						// mean alone is poisoned by unit-mismatch outliers.
+						const stat = (m: { avgMape: number | null; medianMape?: number | null }) =>
+							m.medianMape ?? m.avgMape ?? null;
+						const valid = rows.filter((m) => stat(m) !== null);
 						if (valid.length > 0) {
-							valid.sort((a: { avgMape: number }, b: { avgMape: number }) => a.avgMape - b.avgMape);
+							valid.sort((a, b) => (stat(a) ?? Infinity) - (stat(b) ?? Infinity));
 							setBestModelId(valid[0].modelId);
 						} else {
 							setBestModelId(undefined);

@@ -102,3 +102,38 @@ describe("upsertPrice — count accuracy", () => {
 		expect(r).toEqual({ inserted: 0, updated: 0 });
 	});
 });
+
+describe("upsertPrice — scale guard (round-115)", () => {
+	// The wheat_cme regression: one series mixed $/bu closes (~6.8) with ¢/bu
+	// (~667) and the bad scale flowed into verified predictions at MAPE≈9500.
+	// A close >20× the series' recent median must now be rejected at the
+	// single write path every source shares.
+	const seedDays = (closes: number[]) =>
+		Promise.all(
+			closes.map((close, i) =>
+				upsertPrice({ ...BASE, date: new Date(Date.UTC(2026, 5, 1 + i)), close }),
+			),
+		);
+
+	it("rejects a close >20× the series median and stores nothing", async () => {
+		await seedDays([100, 101, 102, 103, 104]); // median 102
+		const r = await upsertPrice({ ...BASE, date: new Date(Date.UTC(2026, 5, 10)), close: 10000 });
+		expect(r).toEqual({ inserted: 0, updated: 0, scaleGuarded: true });
+		const stored = await prisma.commodityPrice.findFirst({
+			where: { commodityId, date: new Date(Date.UTC(2026, 5, 10)) },
+		});
+		expect(stored).toBeNull();
+	});
+
+	it("allows a close within the 20× factor", async () => {
+		await seedDays([100, 101, 102, 103, 104]);
+		const r = await upsertPrice({ ...BASE, date: new Date(Date.UTC(2026, 5, 10)), close: 1900 });
+		expect(r).toEqual({ inserted: 1, updated: 0 });
+	});
+
+	it("does not guard a young series (<5 points — no reliable median yet)", async () => {
+		await seedDays([100, 101, 102, 103]);
+		const r = await upsertPrice({ ...BASE, date: new Date(Date.UTC(2026, 5, 10)), close: 5000 });
+		expect(r).toEqual({ inserted: 1, updated: 0 });
+	});
+});

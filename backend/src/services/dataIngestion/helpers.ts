@@ -5,7 +5,7 @@
  */
 
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib";
+import { logger, prisma } from "@/lib";
 import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 import type { ScraperResult } from "./scraperManager";
 
@@ -151,6 +151,39 @@ export async function upsertPrice(data: {
 				: Number(existed.volume) === (data.volume ?? null));
 		if (samePrice) {
 			return { inserted: 0, updated: 0 };
+		}
+	}
+
+	// Scale guard (round-115): a close more than 20× the series' recent
+	// median is a unit mismatch, not a market move — wheat_cme mixed $/bu
+	// closes (~6.8) with ¢/bu (~667) and the bad scale flowed all the way
+	// into verified predictions at MAPE≈9500. Reject the write; the run then
+	// reports 0 rows and classifyIngestionStatus marks it "warning" so the
+	// freshness board surfaces the anomaly instead of silently storing it.
+	// Skipped when the series has <5 points (a new series' first values have
+	// no median to compare against) and on the samePrice no-op path above.
+	const SCALE_GUARD_FACTOR = 20;
+	const SCALE_GUARD_MIN_HISTORY = 5;
+	const recent = await prisma.commodityPrice.findMany({
+		where: { commodityId: data.commodityId, interval },
+		orderBy: { date: "desc" },
+		take: 30,
+		select: { close: true },
+	});
+	const recentCloses = recent
+		.map((r) => Number(r.close))
+		.filter((v) => Number.isFinite(v) && v !== 0)
+		.sort((a, b) => a - b);
+	if (recentCloses.length >= SCALE_GUARD_MIN_HISTORY) {
+		const median =
+			recentCloses.length % 2 !== 0
+				? recentCloses[Math.floor(recentCloses.length / 2)]
+				: (recentCloses[recentCloses.length / 2 - 1] + recentCloses[recentCloses.length / 2]) / 2;
+		if (Math.abs(data.close) > Math.abs(median) * SCALE_GUARD_FACTOR) {
+			logger.warn(
+				`[scale-guard] rejected ${data.source} price for ${data.commodityId} @ ${data.date.toISOString().slice(0, 10)}: close=${data.close} vs series median ${median.toFixed(4)} (>20× — likely unit mismatch)`,
+			);
+			return { inserted: 0, updated: 0, scaleGuarded: true };
 		}
 	}
 

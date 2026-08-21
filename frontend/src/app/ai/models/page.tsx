@@ -23,6 +23,8 @@ import { formatPercentValue } from "@/lib/format";
 interface ModelAccuracy {
 	modelId: string;
 	avgMape: number | null;
+	/** Median MAPE (round-115) — robust stat; overrides avgMape at the entry point. */
+	medianMape?: number | null;
 	predictionCount: number;
 	verifiedCount: number;
 }
@@ -95,6 +97,10 @@ export default function AIModelsPage() {
 				const accuracyList: ModelAccuracy[] = accData.success
 					? (accData.data?.accuracy ?? accData.data ?? [])
 					: [];
+				// Display stat = median with mean fallback (round-115) — override
+				// avgMape at the entry point so all downstream consumers (sort,
+				// avg line, bar widths, badges) read the robust stat.
+				for (const m of accuracyList) m.avgMape = m.medianMape ?? m.avgMape;
 
 				const backtestMap = new Map<string, BacktestData>();
 				await Promise.allSettled(
