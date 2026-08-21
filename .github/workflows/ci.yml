@@ -373,6 +373,13 @@ jobs:
         # Without DEPLOY_* secrets the ssh-action dies with "missing server
         # host" and paints the pipeline red for a config gap, not a code
         # fault — so skip explicitly and say why.
+        #
+        # The deploy itself is a single call to scripts/deploy.sh — the ONE
+        # implementation (round-115): it adds pre-deploy backup tags,
+        # prisma generate + migrate deploy, health-gated rollback, and the
+        # pm2 save the inline copy had. Keeping a second inline copy here
+        # is how the paths drift (they had already: this copy had no
+        # rollback and no backup tag).
         if: env.DEPLOY_CONFIGURED == 'true'
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -387,31 +394,9 @@ jobs:
             # Navigate to project directory
             cd ${{ secrets.PROJECT_PATH || '/root' }}
 
-            # Pull latest changes
-            git pull origin main
-
-            # Install dependencies
-            cd backend && pnpm install --frozen-lockfile
-            cd ../frontend && pnpm install --frozen-lockfile
-
-            # Build backend (generate first: warm pnpm store skips the
-            # @prisma/client postinstall, see test jobs)
-            cd ../backend && npx prisma generate && pnpm run build
-
-            # Build frontend
-            cd ../frontend && pnpm run build
-
-            # Run database migrations
-            cd ../backend
-            npx prisma migrate deploy
-
-            # Restart services with PM2 (zero-downtime reload)
-            cd ${{ secrets.PROJECT_PATH || '/root' }}
-            pm2 reload ecosystem.config.cjs --env production
-            pm2 save
-
-            # Run health checks
-            ./scripts/health-check.sh
+            # Single deploy entry point (pull → install → generate → build →
+            # migrate → pm2 reload → health check, with backup tag + rollback).
+            ./scripts/deploy.sh
 
             echo "Deployment completed successfully!"
 

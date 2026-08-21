@@ -1,6 +1,11 @@
 #!/bin/bash
 # ============================================================================
-# MT - Production Deployment Script
+# MT - Production Deployment Script — the SINGLE deploy entry point.
+#
+# Both CI (ci.yml "Deploy to server" step) and humans invoke this script;
+# there is deliberately no parallel inline copy of these steps (round-115:
+# three divergent deploy paths were how a "PM2 restart ≠ deploy" (stale
+# dist/) incident class happened, round-105).
 #
 # Usage:
 #   ./scripts/deploy.sh              # Normal deploy
@@ -167,10 +172,13 @@ deploy() {
     pnpm install --frozen-lockfile 2>/dev/null || pnpm install
     cd "$PROJECT_ROOT"
 
-    # Build backend
+    # Build backend — prisma generate first: a warm pnpm store skips the
+    # @prisma/client postinstall, so schema changes wouldn't reach the
+    # compiled client without this (same reasoning as the CI test jobs).
     log_info "Building backend..."
-    log_cmd "cd ${BACKEND_DIR} && pnpm run build"
+    log_cmd "cd ${BACKEND_DIR} && npx prisma generate && pnpm run build"
     cd "$BACKEND_DIR"
+    npx prisma generate
     pnpm run build
     cd "$PROJECT_ROOT"
 
@@ -179,6 +187,17 @@ deploy() {
     log_cmd "cd ${FRONTEND_DIR} && pnpm run build"
     cd "$FRONTEND_DIR"
     pnpm run build
+    cd "$PROJECT_ROOT"
+
+    # Run database migrations BEFORE reloading services — the compiled
+    # backend runs dist/server.js against the migrated schema (round-114:
+    # a restart without build+migrate deploys nothing and mismatches the
+    # Prisma client). Applies to the production DB resolved by backend/.env;
+    # the vitest mt_test twin is migrated by CI's test jobs, not here.
+    log_info "Running database migrations..."
+    log_cmd "cd ${BACKEND_DIR} && npx prisma migrate deploy"
+    cd "$BACKEND_DIR"
+    npx prisma migrate deploy
     cd "$PROJECT_ROOT"
 
     log_info "Build complete"

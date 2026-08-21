@@ -10,7 +10,7 @@
 
 **触发**：push 到 main/develop（忽略 md/docs）、PR 到 main/develop、手动 workflow_dispatch。
 
-**Job 链路**（7 个，按依赖顺序）：
+**Job 链路**（8 个，按依赖顺序；round-115 复核修正：此前误记 7 个，rollback 是独立第 8 个）：
 
 | Job | 作用 | 失败阻断部署？ |
 |---|---|---|
@@ -167,12 +167,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 59 | **658 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 24 | **278 pass** |
-| inference | pytest 8 | conftest.py | 3 | **47 pass** |
+| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 88（2026-08-21） | **931 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 30（2026-08-21） | **297 pass** |
+| inference | pytest 8 | conftest.py | 4（2026-08-21） | **60 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **983 全绿**（658 + 278 + 47，截至 2026-08-07 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1288 全绿**（931 + 297 + 60，截至 2026-08-21 round-115 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
@@ -352,4 +352,4 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 ## 八、部署产物（备选方案）
 
-当前生产用 PM2 直跑。曾经的"完整备选"已于 2026-08-21 归档至 `deploy/attic/`（TD-15：从未运行、与实际拓扑漂移——compose 声明的 DB 用户/镜像版本均与宿主机 systemd PG14.23/Redis6.0.16 不符）：docker-compose.yml、`attic/docker/Dockerfile.{backend,frontend}`、`attic/helm/`。实际部署 = CI SSH → `scripts/deploy.sh`（PM2）。
+当前生产用 PM2 直跑。曾经的"完整备选"已于 2026-08-21 归档至 `deploy/attic/`（TD-15：从未运行、与实际拓扑漂移——compose 声明的 DB 用户/镜像版本均与宿主机 systemd PG14.23/Redis6.0.16 不符）：docker-compose.yml、`attic/docker/Dockerfile.{backend,frontend}`、`attic/helm/`。**部署单一入口（round-115 cand-4）**：CI "Deploy to server" 步骤与人工都调 `scripts/deploy.sh`（pull → install → prisma generate → build → **migrate deploy** → pm2 reload → health check，含备份 tag 与健康失败的自动回滚）；此前 CI 用内联命令且 deploy.sh 缺 migrate 步骤，两路已合并，不再有平行副本。
