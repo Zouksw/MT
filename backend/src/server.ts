@@ -220,6 +220,15 @@ function backgroundJobs(): ScheduledJob[] {
 				const expired = await expireWindowElapsedPredictions();
 				if (expired > 0)
 					logger.info(`📊 Expired ${expired} window-elapsed predictions (zombie-source drain)`);
+				// Recurring backfill revival (round-114, A3-1): restore is the
+				// exact inverse of the expire sweep above and used to run only
+				// at process boot — a mid-day FRED backfill left its rows
+				// `unverifiable` until the next restart. Revived rows re-enter
+				// `completed` and the verify pass below consumes them in the
+				// same sweep.
+				const restored = await restoreVerifiablePredictions();
+				if (restored > 0)
+					logger.info(`📊 Restored ${restored} backfilled predictions unverifiable → completed`);
 				const n = await verifyDuePredictions();
 				logger.info(`📊 Auto-verified ${n} due predictions (MAPE accuracy update)`);
 			},
@@ -258,24 +267,26 @@ function backgroundJobs(): ScheduledJob[] {
 		// candidates. Runs AFTER pollution invalidation (20s) so the
 		// stale-marking settles first. See markUnverifiablePredictions docs
 		// for the batch detection logic. Idempotent.
+		//
+		// Restore of revived sources no longer runs here — it moved to the
+		// recurring 6h prediction-verification job (round-114): this startup
+		// pass only marks rows whose sources show NO post-prediction data, and
+		// the recurring restore's window predicate can't revive those anyway.
 		{
 			name: "mark-unverifiable",
 			firstRunDelayMs: 25000,
 			run: async () => {
 				const n = await markUnverifiablePredictions();
 				if (n > 0) logger.info(`📊 Marked ${n} frozen-commodity predictions as unverifiable`);
-
-				// Reclaim falsely-unverifiable rows: markUnverifiable is
-				// point-in-time and irreversible, so a commodity whose source
-				// later revives (e.g. beef_carcass_us during a transient FRED
-				// lag) leaves legitimately-verifiable predictions stranded.
-				// Runs right after marking so the mark pass settles
-				// genuinely-frozen rows first; this pass then restores rows
-				// whose commodity now has post-prediction actuals. Idempotent.
+				// The freeze heuristic overshoots (live 2026-08-21: it marked
+				// 501 rows whose windows DO hold actuals). Reconcile immediately
+				// with the authoritative window predicate — same restore as the
+				// recurring 6h sweep, so boot-time stranding lasts seconds, not
+				// until the next sweep (round-114).
 				const restored = await restoreVerifiablePredictions();
 				if (restored > 0)
 					logger.info(
-						`📊 Restored ${restored} revived-source predictions from unverifiable → completed`,
+						`📊 Restored ${restored} revived-source predictions unverifiable → completed`,
 					);
 			},
 		},

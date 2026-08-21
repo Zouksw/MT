@@ -312,7 +312,7 @@ model PredictionLog {
   lowerBounds     Json?     @map("lower_bounds")
   upperBounds     Json?     @map("upper_bounds")
   confidence      Decimal?  @db.Decimal(3, 2)
-  mape            Decimal?  @db.Decimal(5, 2)
+  mape            Decimal?  @db.Decimal(8, 2)
   status          String    @default("pending")
   predictedAt     DateTime  @default(now()) @map("predicted_at")
   verifiedAt      DateTime? @map("verified_at")

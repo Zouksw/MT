@@ -7,13 +7,24 @@
  * MAPE = (1/n) * Σ(|actual - predicted| / |actual|) * 100
  */
 
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
-import { getAuthoritativeSource } from "@/services/inference/authoritativeSources";
+import {
+	getAuthoritativeSource,
+	getConflictSlugs,
+} from "@/services/inference/authoritativeSources";
 import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
 import { STALE_WINDOW_DAYS } from "./beefFreshness";
 import type { PredictionStatusValue } from "./predictionLifecycle";
 import { canVerify, PredictionStatus as PS } from "./predictionLifecycle";
+
+/** Longest horizon any writer emits — the verify/expire pre-filter cutoff.
+ * Single source for the JS cutoffs and the expire SQL (round-114: this file
+ * previously carried three divergent copies). */
+const MAX_HORIZON_DAYS = 10;
+/** Actuals bar: a window needs ≥ min(horizon, 3) in-window actuals before the
+ * verifier can verify — verify, expire and restore must all agree on it. */
+const minActualsBar = (horizon: number) => Math.min(horizon, 3);
 
 export interface LogPredictionParams {
 	modelId: string;
@@ -96,6 +107,11 @@ export async function verifyPrediction(
 	if (validCount === 0) return null;
 
 	const mape = (sumAbsPctError / validCount) * 100;
+	// Clamp at the column's ceiling (Decimal(8,2), round-114): a near-zero
+	// actual can drive MAPE past any fixed precision — the live 2026-08-21
+	// incident had a row stuck re-failing every 6h on numeric field overflow.
+	// Above ~1000% (10× error) the exact magnitude carries no ranking signal.
+	const mapeClamped = Math.min(Math.round(mape * 10000) / 10000, 99_999.99);
 
 	// Atomic transition: updateMany with a status predicate in the WHERE so the
 	// check-then-write is race-free. If a concurrent mark pass flipped this row
@@ -106,7 +122,7 @@ export async function verifyPrediction(
 		where: { id: logId, status: { in: [PS.COMPLETED, PS.VERIFIED] } },
 		data: {
 			actualValues: actualValues,
-			mape: Math.round(mape * 10000) / 10000,
+			mape: mapeClamped,
 			status: PS.VERIFIED,
 			verifiedAt: new Date(),
 		},
@@ -114,7 +130,7 @@ export async function verifyPrediction(
 
 	if (result.count === 0) return null;
 
-	return { mape: Math.round(mape * 100) / 100 };
+	return { mape: Math.round(mapeClamped * 100) / 100 };
 }
 
 /**
@@ -255,7 +271,6 @@ export async function restorePostFixConflictPredictions(fixedAt: Date): Promise<
  * @returns number of predictions marked unverifiable this run
  */
 export async function markUnverifiablePredictions(): Promise<number> {
-	const MAX_HORIZON_DAYS = 10;
 	const cutoff = new Date(Date.now() - MAX_HORIZON_DAYS * 86400000);
 	const now = Date.now();
 	let markedTotal = 0;
@@ -442,10 +457,10 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
  * Invariant: a past window can only gain actuals via late backfill (the FRED
  * lag pattern). Once window-end + STALE_WINDOW_DAYS grace has passed with
  * fewer actuals than the verifier's bar (min(horizon, 3)), the row can never
- * verify → mark it `unverifiable`. The NOT EXISTS guard counts actuals the
- * way the verifier does (from anchor-day midnight, source-unfiltered —
- * stricter source filters only ever shrink that count, so unfiltered ≥ bar
- * is a safe "don't expire" direction).
+ * verify → mark it `unverifiable`. The NOT EXISTS guard counts actuals
+ * EXACTLY as the verifier reads them, authoritative source included
+ * (round-114, A3-2): the old source-unfiltered count kept junk-source-only
+ * conflict rows alive as permanent never-verifiable zombies.
  *
  * Complements (does not replace) markUnverifiablePredictions: that pass
  * catches sources dead since before the prediction; this pass catches
@@ -461,105 +476,94 @@ export async function expireWindowElapsedPredictions(): Promise<number> {
 	// Grace = the platform-wide stale window: sources that lag (FRED once
 	// published 2-day-late rows) get one recency-standard's worth of time to
 	// backfill a past window before it is declared permanently unverifiable.
+	// (now() AT TIME ZONE 'utc') is explicit UTC (round-114, A3-6): the
+	// columns store naive UTC wall-clock, so a bare NOW() would compare
+	// through the session timezone and shift every cutoff.
 	const result = await prisma.$executeRaw`
 		UPDATE prediction_logs AS pl
 		SET status = 'unverifiable'
 		WHERE pl.status = 'completed'
 			AND pl.commodity_id NOT LIKE 'cut:%'
 			-- Same candidate pre-filter as verifyDuePredictions (MAX_HORIZON_DAYS).
-			AND pl.predicted_at <= NOW() - INTERVAL '10 days'
+			AND pl.predicted_at <= (now() AT TIME ZONE 'utc') - make_interval(days => ${MAX_HORIZON_DAYS}::int)
 			-- Window long elapsed: anchor + horizon + grace is still in the past.
 			AND (
 				COALESCE(pl.forecast_start_at, pl.predicted_at)
 				+ make_interval(days => pl.horizon::int)
 				+ make_interval(days => ${STALE_WINDOW_DAYS}::int)
-			) < NOW()
+			) < (now() AT TIME ZONE 'utc')
 			-- Guard: the window can never reach the verifier's actuals bar.
-			AND NOT EXISTS (
-				SELECT cp.commodity_id
-				FROM commodity_prices AS cp
-				WHERE cp.commodity_id = pl.commodity_id
-					AND cp.interval = 'daily'
-					AND cp.date >= date_trunc('day', COALESCE(pl.forecast_start_at, pl.predicted_at))
-					AND cp.date < COALESCE(pl.forecast_start_at, pl.predicted_at)
-						+ make_interval(days => pl.horizon::int + 1)
-				GROUP BY cp.commodity_id
-				HAVING COUNT(*) >= LEAST(pl.horizon, 3)
-			)
+			AND NOT EXISTS (${windowHasActualsBarSql()})
 	`;
 	return result;
 }
 
 /**
+ * The shared "this row's window can reach the verifier's actuals bar"
+ * predicate (round-114): actuals in [anchor-day midnight, anchor + horizon + 1
+ * days), counted with the SAME authoritative-source filter the verifier reads
+ * with, bar min(horizon, 3). expire asserts NOT EXISTS, restore asserts
+ * EXISTS — one definition, two uses, so the two sweeps are exact set
+ * complements and cannot ping-pong.
+ *
+ * References the outer query's alias `pl`.
+ */
+function windowHasActualsBarSql(): Prisma.Sql {
+	const conflictSlugs = getConflictSlugs();
+	// Prisma 5 has no Prisma.sql.join — fold the WHEN…THEN clauses into one
+	// fragment starting from Prisma.empty.
+	const authoritativeCases = conflictSlugs.reduce<Prisma.Sql>(
+		(acc, slug) => Prisma.sql`${acc} WHEN ${slug} THEN ${getAuthoritativeSource(slug) as string}`,
+		Prisma.empty,
+	);
+	return Prisma.sql`
+		SELECT cp.commodity_id
+		FROM commodity_prices AS cp
+		JOIN commodities AS c ON c.id = cp.commodity_id
+		WHERE cp.commodity_id = pl.commodity_id
+			AND cp.interval = 'daily'
+			AND cp.date >= date_trunc('day', COALESCE(pl.forecast_start_at, pl.predicted_at))
+			AND cp.date < COALESCE(pl.forecast_start_at, pl.predicted_at)
+				+ make_interval(days => pl.horizon::int + 1)
+			AND (
+				c.slug NOT IN (${Prisma.join(conflictSlugs)})
+				OR cp.source = CASE c.slug ${authoritativeCases} END
+			)
+		GROUP BY cp.commodity_id
+		HAVING COUNT(*) >= LEAST(pl.horizon, 3)
+	`;
+}
+
+/**
  * Restore `unverifiable` predictions whose verification window has since been
- * backfilled with actuals — the symmetric inverse of the expiry/freeze passes.
+ * backfilled with actuals — the exact inverse of expireWindowElapsedPredictions
+ * (same window, same source filter, same bar, EXISTS instead of NOT EXISTS).
  *
- * Window-aware (round-110): the revive test is "the earliest stranded row's
- * window now holds enough actuals", NOT "any price newer than the prediction
- * exists". The old test revived heartbeat zombies on every run — after
- * expireWindowElapsedPredictions drains them to `unverifiable`, a
- * latest-price-based test would flip them back to `completed` in the same
- * cycle (ping-pong on ~27k rows every 6h). Actuals inside the past window
- * mean genuine backfill (the FRED lag case); a newer price outside the
- * window means nothing for verification.
+ * Per-ROW decision (round-114, A3-4): the old implementation revived every
+ * stranded row of a commodity as soon as the EARLIEST row's window gained
+ * actuals — flipping rows whose own windows were still empty. One UPDATE now
+ * decides per row, so a row is `completed` exactly when its window can reach
+ * the verifier's bar; running expire + restore + verify in the same 6h sweep
+ * (server.ts) converges without oscillation.
  *
- * Per-commodity granularity: if the earliest stranded row's window gained
- * actuals, the commodity is revived as a whole and the verifier processes
- * each row individually. Rows among them whose own windows are still empty
- * are skipped by the verifier and re-expired by the next sweep — one
- * bounded transient, not a loop.
+ * Recurring (round-114, A3-1): backfilled windows used to wait for the next
+ * process boot because restore only ran in a startup one-shot — a mid-day
+ * FRED backfill left its rows `unverifiable` for up to an entire uptime.
+ *
+ * Window-aware since round-110: a newer price OUTSIDE the window means
+ * nothing for verification (the old heartbeat test ping-ponged ~27k rows).
  *
  * @returns number of predictions restored to `completed`
  */
 export async function restoreVerifiablePredictions(): Promise<number> {
-	// Earliest-anchor stranded row per commodity (DISTINCT ON picks the first
-	// row per commodity_id under the ORDER BY).
-	const earliest = await prisma.$queryRaw<
-		Array<{ commodity_id: string; anchor: Date; horizon: number }>
-	>`
-		SELECT DISTINCT ON (commodity_id)
-			commodity_id,
-			COALESCE(forecast_start_at, predicted_at) AS anchor,
-			horizon
-		FROM prediction_logs
-		WHERE status = 'unverifiable'
-			AND commodity_id NOT LIKE 'cut:%'
-		ORDER BY commodity_id, COALESCE(forecast_start_at, predicted_at) ASC
+	const result = await prisma.$executeRaw`
+		UPDATE prediction_logs AS pl
+		SET status = 'completed'
+		WHERE pl.status = 'unverifiable'
+			AND pl.commodity_id NOT LIKE 'cut:%'
+			AND EXISTS (${windowHasActualsBarSql()})
 	`;
-
-	if (earliest.length === 0) return 0;
-
-	const revivedCommodityIds: string[] = [];
-	for (const row of earliest) {
-		// Mirror the verifier's window: actuals from anchor-day midnight up to
-		// anchor + horizon (+1 for the take(horizon+1) fetch), bar min(horizon,3).
-		const anchor = new Date(row.anchor);
-		const anchorDay = Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate());
-		const windowEnd = new Date(anchor.getTime() + (row.horizon + 1) * 86400000);
-		const actualCount = await prisma.commodityPrice.count({
-			where: {
-				commodityId: row.commodity_id,
-				interval: "daily",
-				date: { gte: new Date(anchorDay), lt: windowEnd },
-			},
-		});
-		if (actualCount >= Math.min(row.horizon, 3)) {
-			revivedCommodityIds.push(row.commodity_id);
-		}
-	}
-
-	if (revivedCommodityIds.length === 0) return 0;
-
-	const result = await prisma.predictionLog.updateMany({
-		where: {
-			status: PS.UNVERIFIABLE,
-			commodityId: { in: revivedCommodityIds },
-			NOT: { commodityId: { startsWith: "cut:" } },
-		},
-		data: { status: PS.COMPLETED },
-	});
-
-	return result.count;
+	return result;
 }
 
 /**
@@ -596,7 +600,6 @@ export async function verifyDuePredictions(): Promise<number> {
 	// filter — it may include rows whose horizon hasn't elapsed, but those are
 	// skipped in-loop. Using the max horizon (not a hardcoded 7d) ensures we
 	// don't miss horizon=10 rows that became eligible at day 10.
-	const MAX_HORIZON_DAYS = 10;
 	const cutoff = new Date(Date.now() - MAX_HORIZON_DAYS * 86400000);
 	const now = Date.now();
 	const due = await prisma.predictionLog.findMany({
@@ -669,6 +672,13 @@ export async function verifyDuePredictions(): Promise<number> {
 			// half a day before the anchor day, then drop leading rows whose
 			// UTC day precedes it so index-pairing starts at forecast day-1.
 			const fetchFrom = new Date(anchorDay - 12 * 3600 * 1000);
+			// Window upper bound (round-114, A3-3): expire/restore only ever
+			// consider actuals inside [anchor-day, anchor + horizon + 1). The
+			// verifier used to fetch the first horizon+1 rows after the anchor
+			// regardless of arrival date — late backfilled data would pair
+			// forecast day-1 with an actual weeks later and inflate MAPE with
+			// misaligned pairs. Same window as the SQL sweeps now.
+			const windowEnd = new Date(anchorDay + (log.horizon + 1) * 86400000);
 			const alignToAnchorDay = <T extends { date: Date }>(rows: T[]): T[] =>
 				rows.filter((r) => r.date.getTime() >= anchorDay);
 
@@ -697,7 +707,7 @@ export async function verifyDuePredictions(): Promise<number> {
 					where: {
 						factoryId: parsed.factoryId,
 						cutCode: parsed.cutCode,
-						date: { gte: fetchFrom },
+						date: { gte: fetchFrom, lt: windowEnd },
 						source: { not: { startsWith: "bridge:" } },
 					},
 					orderBy: { date: "asc" },
@@ -705,7 +715,7 @@ export async function verifyDuePredictions(): Promise<number> {
 					select: { price: true, date: true },
 				});
 				const aligned = alignToAnchorDay(cutActuals).slice(0, log.horizon);
-				if (aligned.length < Math.min(log.horizon, 3)) {
+				if (aligned.length < minActualsBar(log.horizon)) {
 					skippedNoActuals++;
 					noActualsByCommodity.set(
 						log.commodityId,
@@ -728,7 +738,7 @@ export async function verifyDuePredictions(): Promise<number> {
 					where: {
 						commodityId: log.commodityId,
 						interval: "daily",
-						date: { gte: fetchFrom },
+						date: { gte: fetchFrom, lt: windowEnd },
 						...(authoritativeSource ? { source: authoritativeSource } : {}),
 					},
 					orderBy: { date: "asc" },
@@ -736,7 +746,7 @@ export async function verifyDuePredictions(): Promise<number> {
 					select: { close: true, date: true },
 				});
 				const aligned = alignToAnchorDay(actualPrices).slice(0, log.horizon);
-				if (aligned.length < Math.min(log.horizon, 3)) {
+				if (aligned.length < minActualsBar(log.horizon)) {
 					skippedNoActuals++;
 					noActualsByCommodity.set(
 						log.commodityId,

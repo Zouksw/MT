@@ -1173,6 +1173,168 @@ describe("MAPE Tracking (real DB)", () => {
 					await cleanupRestore([{ commodityId: commodity.id, predictionId: prediction.id }]);
 				}
 			});
+
+			it("decides per ROW, not per commodity (round-114, A3-4)", async () => {
+				// Two stranded rows on ONE commodity with disjoint windows; only
+				// the backfilled window's row may revive. The old implementation
+				// keyed on the earliest stranded row and flipped the whole
+				// commodity — rows whose own windows were still empty got
+				// revived into a verify-skip-reexpire loop.
+				const backfilledAt = new Date(Date.now() - 30 * 86400000);
+				const emptyWindowAt = new Date(Date.now() - 15 * 86400000);
+				const { commodity, prediction: backfilled } = await makeUnverifiableWithPrice({
+					slug: "per-row-backfilled",
+					predictedAt: backfilledAt,
+					latestPriceDate: new Date(Date.now() - 5 * 86400000),
+				});
+				const emptyWindow = await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: "test-restore",
+						commodityId: commodity.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3],
+						status: "unverifiable",
+						predictedAt: emptyWindowAt,
+					},
+				});
+				for (let i = 1; i <= 3; i++) {
+					await ctx.prisma.commodityPrice.create({
+						data: {
+							commodityId: commodity.id,
+							date: new Date(backfilledAt.getTime() + i * 86400000),
+							interval: "daily",
+							close: 1,
+							source: "test",
+						},
+					});
+				}
+
+				try {
+					const n = await restoreVerifiablePredictions();
+					expect(n).toBeGreaterThanOrEqual(1);
+					const statuses = await ctx.prisma.predictionLog.findMany({
+						where: { id: { in: [backfilled.id, emptyWindow.id] } },
+						select: { id: true, status: true },
+					});
+					const byId = new Map(statuses.map((s) => [s.id, s.status]));
+					expect(byId.get(backfilled.id)).toBe("completed");
+					// Own window (now-15d → now-5d) has no actuals → stays put.
+					expect(byId.get(emptyWindow.id)).toBe("unverifiable");
+				} finally {
+					await cleanupRestore([
+						{ commodityId: commodity.id, predictionId: backfilled.id },
+						{ predictionId: emptyWindow.id },
+					]);
+				}
+			});
+
+			it("counts actuals with the verifier's authoritative-source filter (round-114, A3-2)", async () => {
+				// brl_usd is a declared conflict slug (authoritative: fred).
+				// Junk-source-only rows in the window must NOT revive the row;
+				// fred rows in the same window must. The old source-unfiltered
+				// count kept junk-only rows flipping to completed, where the
+				// verifier (source-filtered) skipped them forever — a zombie.
+				//
+				// The window sits 60 days in the FUTURE: seeded brl_usd history
+				// already covers every past window with real fred rows (they
+				// would legitimately satisfy the bar and break the junk-only
+				// phase), so the fixture needs a window only it can populate.
+				// restore has no elapsed-time precondition — rows are created
+				// directly as `unverifiable`.
+				const predictedAt = new Date(Date.now() + 60 * 86400000);
+				let commodity = await ctx.prisma.commodity.findUnique({ where: { slug: "brl_usd" } });
+				let createdCommodity = false;
+				if (!commodity) {
+					commodity = await ctx.prisma.commodity.create({
+						data: { slug: "brl_usd", name: "BRL/USD", category: "forex", unit: "USD" },
+					});
+					createdCommodity = true;
+				}
+				const prediction = await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: "test-restore",
+						commodityId: commodity.id,
+						horizon: 3,
+						predictedValues: [1, 2, 3],
+						status: "unverifiable",
+						predictedAt,
+					},
+				});
+				const inWindow = (source: string) =>
+					[1, 2, 3].map(
+						(i) =>
+							({
+								commodityId: commodity.id,
+								date: new Date(predictedAt.getTime() + i * 86400000),
+								interval: "daily",
+								close: 4242.42,
+								source,
+							}) as const,
+					);
+				const windowStart = predictedAt;
+				const windowEnd = new Date(predictedAt.getTime() + 4 * 86400000);
+				const priceCleanup = {
+					commodityId: commodity.id,
+					date: { gte: windowStart, lt: windowEnd },
+				};
+
+				try {
+					await ctx.prisma.commodityPrice.createMany({ data: inWindow("exchange_rate_api") });
+					await restoreVerifiablePredictions();
+					let after = await ctx.prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					// Non-authoritative-only window: the bar is not met.
+					expect(after?.status).toBe("unverifiable");
+
+					await ctx.prisma.commodityPrice.createMany({ data: inWindow("fred") });
+					await restoreVerifiablePredictions();
+					after = await ctx.prisma.predictionLog.findUnique({
+						where: { id: prediction.id },
+						select: { status: true },
+					});
+					expect(after?.status).toBe("completed");
+				} finally {
+					await ctx.prisma.predictionLog.deleteMany({ where: { id: prediction.id } });
+					await ctx.prisma.commodityPrice.deleteMany({
+						where: { ...priceCleanup, close: 4242.42 },
+					});
+					if (createdCommodity)
+						await ctx.prisma.commodity.deleteMany({ where: { id: commodity.id } });
+				}
+			});
+		});
+
+		describe("verifyPrediction — mape storage bounds (round-114)", () => {
+			it("stores MAPE ≥ 1000 without numeric overflow (Decimal(8,2) + clamp)", async () => {
+				// Live incident 2026-08-21: a row whose computed MAPE crossed the
+				// old Decimal(5,2) ceiling (999.99) re-failed every 6h verify
+				// sweep with "numeric field overflow" — permanently stuck.
+				const log = await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: `${ctx.prefix}-overflow`,
+						commodityId: `${ctx.prefix}-overflow-commodity`,
+						horizon: 3,
+						predictedValues: [100, 100, 100],
+						status: "completed",
+						predictedAt: new Date(Date.now() - 20 * 86400000),
+					},
+				});
+				try {
+					// |100 − 2| / 2 × 100 = 4900% — over the old ceiling.
+					const r = await verifyPrediction(log.id, [2, 2, 2]);
+					expect(r?.mape).toBe(4900);
+					const row = await ctx.prisma.predictionLog.findUnique({
+						where: { id: log.id },
+						select: { status: true, mape: true },
+					});
+					expect(row?.status).toBe("verified");
+					expect(Number(row?.mape)).toBeCloseTo(4900, 2);
+				} finally {
+					await ctx.prisma.predictionLog.deleteMany({ where: { id: log.id } });
+				}
+			});
 		});
 	});
 	// ─── round-104 / audit: MAPE verification-loop correctness ────────────────
