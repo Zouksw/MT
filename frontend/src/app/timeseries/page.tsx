@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -188,14 +188,6 @@ export default function TimeseriesList() {
 					const r = asRow(record);
 					return (
 						<div className="flex items-center gap-1">
-							<Button
-								variant="ghost"
-								size="sm"
-								aria-label="View"
-								onClick={() => router.push(`/timeseries/show/${r.id}`)}
-							>
-								<Eye className="size-3.5" />
-							</Button>
 							<Button
 								variant="ghost"
 								size="sm"

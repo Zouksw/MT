@@ -3,9 +3,9 @@
  *
  * This module assembles the app via `createApp()` (from app.ts, which has no
  * process-level side effects) and starts the HTTP listener plus background
- * jobs (data scrapers, prediction queue, tiered refresh crons). Everything
- * with side effects lives inside functions so importing this module alone does
- * not start servers or timers.
+ * jobs (data scrapers, prediction cache refresh + MAPE verification, tiered
+ * refresh crons). Everything with side effects lives inside functions so
+ * importing this module alone does not start servers or timers.
  */
 
 import { logger, prisma } from "@/lib";
@@ -32,7 +32,7 @@ import { type ScheduledJob, scheduleJobs } from "@/services/scheduler";
 import { createApp } from "./app";
 import { config } from "./lib";
 
-// Assemble the Express app + HTTP server + Socket.IO (no side effects here).
+// Assemble the Express app + HTTP server (no side effects here).
 const { httpServer } = createApp();
 
 // ─── Background jobs ──────────────────────────────────────────────────────
@@ -336,7 +336,6 @@ function backgroundJobs(): ScheduledJob[] {
 function start(): void {
 	httpServer.listen(config.server.port, () => {
 		logger.info(`🚀 Server running on http://localhost:${config.server.port}`);
-		logger.info(`📡 WebSocket server ready`);
 		logger.info(`🌍 Environment: ${config.server.nodeEnv}`);
 
 		// Initialize data scrapers
@@ -392,7 +391,7 @@ function start(): void {
 // ─── Global error handlers ────────────────────────────────────────────────
 // Without these, a single floating promise rejection (e.g. a fire-and-forget
 // async call missing .catch()) crashes the entire process — taking down the
-// HTTP server, all WebSocket connections, and every background cron (scrapers,
+// HTTP server and every background cron (scrapers,
 // MAPE verification, alert evaluation, beef bridge). Node's default since v15
 // is to terminate on unhandled rejections. These handlers log the cause with
 // a full stack trace so operators can diagnose the root cause, then exit

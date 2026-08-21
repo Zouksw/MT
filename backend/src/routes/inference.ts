@@ -1,5 +1,5 @@
 import { type Request, type Response, Router } from "express";
-import { logger, prisma } from "@/lib";
+import { config, logger, prisma } from "@/lib";
 import { success } from "@/lib/response";
 import { checkAIAccess } from "@/middleware/aiAccess";
 import { authenticate } from "@/middleware/auth";
@@ -509,7 +509,7 @@ router.get(
 	"/models",
 	authenticate,
 	asyncHandler(async (_req: Request, res: Response) => {
-		const inferenceUrl = process.env.INFERENCE_URL || "http://localhost:10810";
+		const inferenceUrl = config.inference.url;
 		try {
 			const response = await fetch(`${inferenceUrl}/models`, {
 				signal: AbortSignal.timeout(5000),
@@ -547,7 +547,7 @@ router.get(
 
 		// The inference service exposes one /models listing (no per-model
 		// route); probe it and surface the entry for this id. Never guess.
-		const inferenceUrl = process.env.INFERENCE_URL || "http://localhost:10810";
+		const inferenceUrl = config.inference.url;
 		try {
 			const response = await fetch(`${inferenceUrl}/models`, {
 				signal: AbortSignal.timeout(5000),

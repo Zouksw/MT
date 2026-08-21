@@ -87,9 +87,11 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 
 		setSaving(true);
 		try {
-			const result = await updateRecord("timeseries", id, form);
+			await updateRecord("timeseries", id, form);
 			toast.showSuccess("Time series updated");
-			router.push(`/timeseries/show/${(result as Record<string, unknown>).id}`);
+			// No /timeseries/show/[id] page exists — return to the list, where
+			// the updated row is visible (same reasoning as the create page).
+			router.push("/timeseries");
 		} catch (err) {
 			toast.showError(err instanceof Error ? err.message : "Failed to update time series");
 		} finally {

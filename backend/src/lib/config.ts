@@ -68,7 +68,6 @@ export const config = {
 
 	redis: {
 		url: process.env.REDIS_URL || "redis://localhost:6379",
-		enabled: process.env.REDIS_ENABLED !== "false",
 	},
 
 	email: {
@@ -82,7 +81,6 @@ export const config = {
 	dataIngestion: {
 		exchangeRateApiUrl:
 			process.env.EXCHANGE_RATE_API_URL || "https://open.er-api.com/v6/latest/USD",
-		scrapeIntervalMinutes: parseInt(process.env.SCRAPE_INTERVAL_MINUTES || "60", 10),
 		importMaxFileSize: parseInt(process.env.IMPORT_MAX_FILE_SIZE || "10485760", 10),
 	},
 } as const;
@@ -99,7 +97,5 @@ logger.info("Configuration loaded", {
 		url: config.inference.url,
 		timeout: config.inference.timeout,
 	},
-	redis: { enabled: config.redis.enabled },
 	email: { configured: !!config.email.smtpHost },
-	dataIngestion: { scrapeInterval: config.dataIngestion.scrapeIntervalMinutes },
 });

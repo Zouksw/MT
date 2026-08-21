@@ -45,9 +45,7 @@ describe("Config Module", () => {
 
 			await expect(async () => {
 				await import("../config");
-			}).rejects.toThrow(
-				"SECURITY ERROR: JWT_SECRET must be at least 32 characters long",
-			);
+			}).rejects.toThrow("SECURITY ERROR: JWT_SECRET must be at least 32 characters long");
 		});
 
 		test("should accept valid JWT_SECRET", async () => {
@@ -73,8 +71,7 @@ describe("Config Module", () => {
 
 		test("should throw error when SESSION_SECRET is default value", async () => {
 			process.env.JWT_SECRET = "a".repeat(32);
-			process.env.SESSION_SECRET =
-				"CHANGE_THIS_TO_A_SECURE_BASE64_ENCODED_32_BYTE_SECRET";
+			process.env.SESSION_SECRET = "CHANGE_THIS_TO_A_SECURE_BASE64_ENCODED_32_BYTE_SECRET";
 
 			await expect(async () => {
 				await import("../config");
@@ -166,9 +163,7 @@ describe("Config Module", () => {
 
 			const config = await import("../config");
 
-			expect(config.config.inference.url).toBe(
-				"http://inference.example.com:8080",
-			);
+			expect(config.config.inference.url).toBe("http://inference.example.com:8080");
 		});
 
 		test("should use custom inference timeout when INFERENCE_TIMEOUT is set", async () => {
@@ -191,26 +186,6 @@ describe("Config Module", () => {
 			const config = await import("../config");
 
 			expect(config.config.redis.url).toBe("redis://localhost:6379");
-		});
-
-		test("should be enabled by default", async () => {
-			process.env.JWT_SECRET = "a".repeat(32);
-			process.env.SESSION_SECRET = "b".repeat(32);
-			delete process.env.REDIS_ENABLED;
-
-			const config = await import("../config");
-
-			expect(config.config.redis.enabled).toBe(true);
-		});
-
-		test("should be disabled when REDIS_ENABLED is false", async () => {
-			process.env.JWT_SECRET = "a".repeat(32);
-			process.env.SESSION_SECRET = "b".repeat(32);
-			process.env.REDIS_ENABLED = "false";
-
-			const config = await import("../config");
-
-			expect(config.config.redis.enabled).toBe(false);
 		});
 	});
 

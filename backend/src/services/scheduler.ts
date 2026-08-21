@@ -59,8 +59,8 @@ async function executeOnce(t: TrackedJob): Promise<void> {
 	try {
 		await t.job.run();
 	} catch (err) {
-		// A failed job must never take down the process: the HTTP server, the
-		// websocket, and every OTHER job keep running. Warn-level (matching the
+		// A failed job must never take down the process: the HTTP server and
+		// every OTHER job keep running. Warn-level (matching the
 		// pre-refactor per-job catch blocks) — a single failed cron cycle is an
 		// operational event, not a process fault.
 		logger.warn(`[job:${t.job.name}] failed: ${err instanceof Error ? err.message : String(err)}`);

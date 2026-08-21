@@ -1,3 +1,4 @@
+import { config } from "@/lib";
 import { ApiError } from "@/middleware/errorHandler";
 
 export interface InferencePredictRequest {
@@ -56,9 +57,11 @@ export interface InferenceReadiness {
 	detail?: InferenceReadyState;
 }
 
-const INFERENCE_URL = process.env.INFERENCE_URL || "http://localhost:10810";
+// INFERENCE_URL / INFERENCE_TIMEOUT come from lib/config — the single place
+// those env vars are read (they were previously a hard-coded duplicate here).
+const INFERENCE_URL = config.inference.url;
 const CONNECT_TIMEOUT = 5000;
-const REQUEST_TIMEOUT = 120_000;
+const REQUEST_TIMEOUT = config.inference.timeout;
 
 async function fetchWithTimeout(
 	url: string,

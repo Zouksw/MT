@@ -339,7 +339,9 @@ export default function DatasetDetailPage({ params }: { params: Promise<{ id: st
 									dataSource={timeseries}
 									rowKey={(record: TimeSeries) => record.id}
 									onRow={(record: TimeSeries) => ({
-										onClick: () => router.push(`/timeseries/show/${record.id}`),
+										// No /timeseries/show/[id] page exists — edit is the
+										// only per-series destination.
+										onClick: () => router.push(`/timeseries/edit/${record.id}`),
 										className: "cursor-pointer",
 									})}
 								/>

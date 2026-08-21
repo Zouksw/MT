@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -173,14 +173,6 @@ export default function DatasetsList() {
 								onClick={() => router.push(`/datasets/show/${r.id}`)}
 							>
 								<Eye className="size-3.5" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								aria-label="Edit"
-								onClick={() => router.push(`/datasets/edit/${r.id}`)}
-							>
-								<Pencil className="size-3.5" />
 							</Button>
 							<Button
 								variant="ghost"
