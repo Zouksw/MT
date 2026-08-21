@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-21 — round-117 代码组织深化轮（架构评审被认可后执行，4 提交，397→385 文件）
+
+用户认可文件数量评审结论（文件数是错误目标，深模块/locality 才是），按 Top recommendation 执行 4 批（每批 tsc+全量测试+build+PM2 重启+live 验证+独立提交，明细见 TECH-DEBT §十一）：
+
+- **死文件清理**（`f131707`）：ForecastTrendChart（round-106 起仅存于注释）、backfillFred（全仓零引用）、前端 types 死 barrel（0 引用）——−390 行，deletion test 直接通过。
+- **schemas 4→1**（`8b8ff00`）：zod 四微文件合并为单 schemas.ts，导出不变，9 个消费文件 import 改写。
+- **alerts 三件套合一**（`792d1c1`）：alert-types + alert-rules 并入 services/alerts.ts，顺带消灭半 barrel。
+- **beef 6→2**（`25eb6a4`）：写入侧 beefIngest（import+bridge）/ 读取侧 beefQueries（aggregation+cutSeries+trends+freshness）——改 beef 域从跨 6 文件变 2 文件。
+- 量化：前后端文件 397→385（−3.0%），净 −535 行；测试零回退（931+1 skip / 297 / 60）。否决清单（不合并爬虫/测试文件/路由的理由）记录在 TECH-DEBT §十一防重提。
+
 ### 2026-08-21 — round-116 开发文档维护轮（documentation-and-adrs，只读实测 + 漂移修复，纯文档 0 代码改动）
 
 指令"维护项目的开发文档"。全部数字当日只读实测（计数命令 / DB 查询 / live curl），核对 AGENTS.md / README / CLAUDE.md / INDEX / KNOWN-ISSUES / TECH-DEBT / AUTOMATION-STATUS / PRODUCT-SPEC 全集后修复 4 份文档 15 处漂移（另刷新本文件 front-matter 日期）：

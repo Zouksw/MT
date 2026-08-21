@@ -471,3 +471,22 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **测试基线**：backend 919→931 pass +1 skip（新增 14：registry 同步 6 + 量纲护栏 3 + 中位数回归 1 + digest 4；删除 2：REDIS_ENABLED 死旋钮自测）、frontend 297 恒定、inference 60 未动。AGENTS.md Prisma 模型数 31→30 已修（round-114 删 organizations 后漂移）。
 
 **仍开放（不可独立完成/产品决策）**：P0 beef_cut_prices 回填（等用户 CSV）；lagged-exog 实验；TD-8 刻意保留站点（login/register POST 等逐站点语义）；资讯 RSS 接入（M3）。
+
+---
+
+## 十一、round-117 代码组织深化轮（2026-08-21，"认可"架构评审后执行）
+
+**背景**：用户问"大幅降低文件数量是否有利"。improve-codebase-architecture 评审（HTML 报告 `/tmp/architecture-review-20260821-filecount.html`）结论：文件数是错误目标（397 文件中 47% 是框架约定/测试并行/爬虫隔离的结构产物，可动池 <5%），正确目标是**深模块/locality**。用户认可后按 Top recommendation 顺序执行 4 批，每批 tsc+全量测试+build+PM2 重启+live 验证+独立提交：
+
+| # | 改动 | commit | 验证 |
+|---|---|---|---|
+| 1 | 删 3 个实测死文件：ForecastTrendChart（round-106 起仅存于注释）、backfillFred（package.json/ecosystem/CI/scripts 零引用）、frontend types/index.ts 死 barrel（0 处 `from "@/types"`）——−390 行 | `f131707` | 双端 tsc/jest/vitest/build 全绿；重启后 /health 200 |
+| 2 | zod schemas 4→1：schemas/{common,datasets,models,anomalies}.ts 合并为单文件 schemas.ts（131 行，导出不变，注释保留 round-106 horizon cap 说明）；测试移 src/__tests__/schemas.test.ts；9 个消费文件 import 改写 | `8b8ff00` | 931+1 skip；重启后 /api/beef/by-country（公开 schema 消费链）200 |
+| 3 | alerts 三件套合一：alert-types(92)+alert-rules(339) 并入 services/alerts.ts(677)，消除半 barrel（原 alerts.ts 头部 re-export 行）；server.ts/测试 import 改写 | `792d1c1` | 931+1 skip；重启后 /api/alerts 401（模块链加载）+ 日志无错 |
+| 4 | beef services 6→2：写入侧 beefIngest.ts(import+bridge, 395 行)、读取侧 beefQueries.ts(aggregation+cutSeries+trends+freshness, 409 行)；消费方 routes/beef、server.ts、tradingSignals、predictionCache、mapeTracking + 5 测试改写，重复 import 语句合并 | `25eb6a4` | 931+1 skip；/api/beef/by-country 200、/api/market/commodities 401（链路活） |
+
+**量化结果**：前后端 TS/TSX 文件 397→385（backend 202→192、frontend 195→193，−3.0%）；整轮 37 文件 +1161/−1696（净 −535 行，主要来自 3 个死文件）。**测试基线零回退**：backend 931 pass+1 skip、frontend 297 恒定（batch 1 验证后无前端改动）、inference 60 未动。
+
+**明确不做（评审否决清单，防后续重提）**：合并 19 爬虫（失去单源故障隔离）；合并 118 个测试文件（vitest/jest 按文件并行，文件数=并行度）；合并 20 路由（AI 代理上下文加载单元劣化）；page.tsx 无法合并（App Router 约定）。beef.ts(790)/mapeTracking(1027) 等 ≥600 行大文件是反向问题，本轮未碰。
+
+**未做（观感收益为主，评审列为 Worth exploring 不单开轮次）**：~10 个单函数微文件（auth-types、animations、ErrorBoundaryWrapper、usageService 等）归并；seam 类薄委托（lib/beef.ts 19 处引用、swr-fetcher）刻意保留。
