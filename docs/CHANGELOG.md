@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-07-27"
+last_updated: "2026-08-21"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-08-21 — round-116 开发文档维护轮（documentation-and-adrs，只读实测 + 漂移修复，纯文档 0 代码改动）
+
+指令"维护项目的开发文档"。全部数字当日只读实测（计数命令 / DB 查询 / live curl），核对 AGENTS.md / README / CLAUDE.md / INDEX / KNOWN-ISSUES / TECH-DEBT / AUTOMATION-STATUS / PRODUCT-SPEC 全集后修复 4 份文档 15 处漂移（另刷新本文件 front-matter 日期）：
+
+- **AGENTS.md（7 处）**：核实日期 2026-07-27→2026-08-21（§三 19/30/20/44/9 当日全部复测吻合，live /models 返回 9 id）；"Vitest 2"→"Vitest 4（4.1.10）"——round-90 升级后漂移近 11 天，KNOWN-ISSUES T2 早已实证过期但一直未修；§九 数字纪律示例 31→30；§八 补 PREDICTION-STRATEGY.md / SKILLS.md 两行（前者 INDEX 已收、后者 §十.1 引用，导航表均缺）；端口表 5001 标注"仅 dev 模式监听"（PM2 prod 下实测未监听）；宿主机 PG/Redis 复测日期刷新。
+- **README.md（8 处，诚实性修正为主）**："85+ 牛肉切割部位价格"→实测 74 部位分类、其中 16 部位有实价（taxonomy 74 行 / price DISTINCT cutCode=16，psql 实测）——历史夸大数字；"2,400+ 价格"补注"2026-04 种子快照，见 KNOWN-ISSUES D1"（实测 date range 04-01~04-30）；Prisma 模型 31→30（×3 处，round-114 删 organizations 后漂移）；技术栈/前置条件 "PostgreSQL 15 / Redis 7"→"14+ / 6+（生产实测 14.23 / 6.0.16）"——README 版本与宿主机 systemd 实况矛盾近一月；规模数字注行日期刷新。
+- **KNOWN-ISSUES.md（1 处）**：R2 单位冲突类补 round-115 wheat_cme 复发记录（同类第 4 例、单源内部变纲，三层修复 + chronos 结论反转），按本文件"追加不删除"约定登记，与 TECH-DEBT §十互链。
+- **PRODUCT-SPEC.md（1 处）**：§六 阶段 0 决策 "85+ 牛肉部位（用 landing 现有数字）" 补 2026-08-21 核正——前端已无 "85+" 文案（grep 实测），DB 实测 74 分类/16 实价，防止后续文案再引用夸大数字。
+- CLAUDE.md / INDEX.md / TECH-DEBT / AUTOMATION-STATUS 复核无漂移（INDEX 已收录全部活文档；AUTOMATION-STATUS 测试数系 round-115 刚更新）。
 
 ### 2026-08-21 — round-115 候选执行轮（推送 73 提交 + 6/6 深化候选落地，6 提交）
 

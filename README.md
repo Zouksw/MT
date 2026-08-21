@@ -26,7 +26,7 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 
 ### 一句话概括
 
-> 85+ 牛肉切割部位价格，跨 5 个进口来源国（US/BR/AUS/URY/ARG），AI 模型预测 7 天价格走势，市场资讯每日更新。
+> 16 个牛肉切割部位实价（74 个部位分类），跨 5 个进口来源国（US/BR/AUS/URY/ARG）+ 国产，AI 模型预测 7 天价格走势，附市场资讯 feed。
 
 ---
 
@@ -56,9 +56,9 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 
 ### 数据覆盖
 
-- **85+ 牛肉切割部位** — 进口（US/BR/AUS/URY/ARG）+ 国产
+- **74 个牛肉切割部位分类** — `beef_cut_taxonomy`（进口 US/BR/AUS/URY/ARG + 国产），当前 16 个部位有实价数据
 - **21 个工厂** — 工厂级别价格溯源
-- **2,400+ 牛肉切割价格** — 按部位 × 工厂 × 来源
+- **2,400+ 牛肉切割价格行** — 按部位 × 工厂 × 来源（2026-04 种子快照，上游源恢复中，见 [KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) D1）
 - **19 个数据源** — USDA、CEPEA、MLA、INAC、ABARES、World Bank、FRED、CME、DCE 等（实现在 `backend/src/services/dataIngestion/sources/`）
 
 ---
@@ -75,7 +75,7 @@ MT
 │   ├── services/      业务服务（含 dataIngestion/sources/ 19 个数据采集源）
 │   └── middleware/     认证、限流、安全、日志
 ├── inference-service/ Python FastAPI 推理服务（6 统计模型 + 3 Chronos 变体）
-├── prisma/            数据库 Schema（31 个模型）
+├── prisma/            数据库 Schema（30 个模型）
 ├── scripts/           运维脚本
 ├── deploy/            Docker + Helm 部署配置
 └── docs/              文档
@@ -88,12 +88,12 @@ MT
 | 前端 | Next.js 15, React 19, Tailwind CSS, Recharts, SWR, TypeScript 5.8, Jest |
 | 后端 | Express, TypeScript 5.4, Prisma ORM, Vitest |
 | 推理 | Python 3.10, FastAPI, statsmodels, sktime, chronos-forecasting, torch (CPU), pytest |
-| 数据库 | PostgreSQL 15 |
-| 缓存 | Redis 7 |
+| 数据库 | PostgreSQL 14+（生产实测 14.23） |
+| 缓存 | Redis 6+（生产实测 6.0.16） |
 | 进程管理 | PM2 |
 | 安全 | JWT, bcrypt, CSRF, Helmet, rate limiting |
 
-> 上述规模数字（44 页面 / 20 路由 / 19 源 / 31 模型 / 9 model id）为 2026-07-27 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
+> 上述规模数字（44 页面 / 20 路由 / 19 源 / 30 模型 / 9 model id）为 2026-08-21 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
 
 ---
 
@@ -103,8 +103,8 @@ MT
 
 - Node.js >= 20
 - pnpm 9+
-- PostgreSQL 15
-- Redis 7
+- PostgreSQL 14+
+- Redis 6+
 
 ### 安装
 
@@ -259,7 +259,7 @@ backend/
 │   │   └── ...
 │   └── middleware/          # 认证、安全、限流
 ├── prisma/
-│   └── schema.prisma        # 31 个数据模型
+│   └── schema.prisma        # 30 个数据模型
 └── vitest.config.ts
 
 frontend/

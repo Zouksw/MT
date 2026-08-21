@@ -1,7 +1,7 @@
 # AGENTS.md
 
 > 本文件是 AI 代理（含 ZCode / Claude / Codex 等）在本仓库工作的**首要入口**。
-> 所有事实均经只读命令核实（2026-07-27）。改动数字类陈述前请重新核实。
+> 所有事实均经只读命令核实（2026-08-21）。改动数字类陈述前请重新核实。
 
 ---
 
@@ -32,7 +32,7 @@
 
 ---
 
-## 三、规模事实（2026-07-27 实测，计数方式附后）
+## 三、规模事实（2026-08-21 实测，计数方式附后）
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
@@ -55,8 +55,8 @@
 | 层 | 技术 |
 |---|------|
 | 前端 | Next.js 15.5.20、React 19.1、Tailwind CSS 4.2、Jest 29.7、TypeScript 5.8 |
-| 后端 | Express 4.19、TypeScript 5.4、Prisma 5.x（@prisma/client 5.22）、Vitest 2 |
-| 数据库 / 缓存 | PostgreSQL 14.23、Redis 6.0.16（**宿主机 systemd 服务**，2026-08-20 实测；compose 的 PG15/Redis7 容器栈从未运行，已归档至 `deploy/attic/`，见 TECH-DEBT TD-15） |
+| 后端 | Express 4.19、TypeScript 5.4、Prisma 5.x（@prisma/client 5.22）、Vitest 4（4.1.10，round-90 自 3 升级） |
+| 数据库 / 缓存 | PostgreSQL 14.23、Redis 6.0.16（**宿主机 systemd 服务**，2026-08-21 实测；compose 的 PG15/Redis7 容器栈从未运行，已归档至 `deploy/attic/`，见 TECH-DEBT TD-15） |
 | 推理服务 | Python 3.10、FastAPI、uvicorn、statsmodels、sktime、chronos-forecasting、torch（CPU build）、pydantic 2；lint 用 ruff |
 | 进程管理 | PM2（`ecosystem.config.cjs`） |
 | 代码风格 | biome（TS/JS，根 `biome.json`）、ruff（Python） |
@@ -122,7 +122,7 @@ cd backend && npx prisma db seed          # 种子数据
 |------|------|
 | 前端 | 3000 |
 | 后端 API | 8000 |
-| 前端 devtools | 5001 |
+| 前端 devtools（仅 dev 模式监听） | 5001 |
 | 推理服务 | 10810 |
 
 ---
@@ -149,6 +149,8 @@ cd backend && npx prisma db seed          # 种子数据
 | [`docs/API.md`](docs/API.md) | REST API 参考 |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | UI/UX 设计规范 |
 | [`docs/DESIGN-SYSTEM-AUDIT.md`](docs/DESIGN-SYSTEM-AUDIT.md) | 前端设计系统深度审计（token 漂移、a11y、组件深度，2026-08-07） |
+| [`docs/PREDICTION-STRATEGY.md`](docs/PREDICTION-STRATEGY.md) | 牛肉价格预测策略评估（数据/模型现状、缺口、方案，2026-08-16） |
+| [`docs/SKILLS.md`](docs/SKILLS.md) | AI 代理 skill 使用规划（技术栈→skill 映射、触发场景、不适用清单，§十.1 引用） |
 | [`docs/PROJECT-ASSESSMENT.md`](docs/PROJECT-ASSESSMENT.md) | 项目整体评估（运维/价值链/架构/规划对齐，2026-08-08） |
 | [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | 版本历史 |
 | [`docs/INDEX.md`](docs/INDEX.md) | 文档总索引 |
@@ -161,7 +163,7 @@ cd backend && npx prisma db seed          # 种子数据
 
 ## 九、编写文档的严谨性要求
 
-- **数字必须实测**：不沿用历史 README / round 报告里已被发现矛盾的数字（例：旧文档写"18 数据源 / 36 模型 / 5 统计模型"，实测为 19 / 31 / 6）。
+- **数字必须实测**：不沿用历史 README / round 报告里已被发现矛盾的数字（例：旧文档写"18 数据源 / 36 模型 / 5 统计模型"，2026-08-21 实测为 19 / 30 / 6）。
 - **测试数不写死**：各文档历史测试数互相矛盾（431/433/573/307/277/21…），只写"运行 `pnpm test` 获取当前数"。
 - **未验证的不写成定论**：标注"待确认 / 待复核"，附证据来源（文件:行 或 命令）与日期。
 

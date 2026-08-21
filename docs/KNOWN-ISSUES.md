@@ -211,6 +211,12 @@
 - **corn_cme 权威源维持 usda_ams**：cme 新历史自 08-14 起每日 1 bar 尚短；`authoritativeSources.ts` 注释已同步，cme 积累足够 post-fix 行后回切。
 - **测试**：round-56 与 round-100(D3) 两套重叠套件合并至 `sources/__tests__/cmeFutures.test.ts`（17 用例：cents/livestock/native-USD 三组 + corn 量纲 + Yahoo ticker 格式 + slug 唯一）。
 
+**round-115 补充（2026-08-21，wheat_cme——同类冲突第 4 例，单源内部变纲，已根治）**：wheat_cme 在 round-56 priceFactor 之前的 2026-05 stooq 行按 ¢/bu 写入（~667），round-100 起 Yahoo 原生 $/bu 写入（~7.0）——**同一序列两种量纲**，未被权威源机制覆盖（cme 是唯一源）。52 条 verified chronos 行 MAPE≈9500-11500，把 chronos 聚合 avg 拉到 46-59%。三层修复（commit 78a3beb）：
+- **入口护栏**：`upsertPrice` 加 scale guard——`close` 超近 30 点中位数 20× 拒绝写入（<5 点新序列豁免），写侧结构性拦截同类冲突（含未来新源）。
+- **聚合诚实化**：`getModelAccuracy` 增 `medianMape`（PERCENTILE_CONT 单查询），前端 4 个数据入口 `avgMape = medianMape ?? avgMape`——残余离群不再污染页面展示。
+- **数据修复（backup 可回滚）**：wheat_cme 2026-06-01 前 2 行 OHLC ÷100 + metadata `unitNormalized`；52 条污染 verified→stale。
+- live 验证：修复后 chronos avg 1.36-1.49 / **median 0.82-0.86**（%），预训练基座路线被数据问题冤枉的结论反转。完整取证链见 TECH-DEBT §十。
+
 ---
 
 ### R3 — 历史幽灵模型 timer_xl / sundial 残留预测行（低优先级，数据完整性）
