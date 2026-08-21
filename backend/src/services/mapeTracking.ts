@@ -13,8 +13,7 @@ import {
 	getAuthoritativeSource,
 	getConflictSlugs,
 } from "@/services/inference/authoritativeSources";
-import { isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
-import { STALE_WINDOW_DAYS } from "./beefFreshness";
+import { isCutSeriesKey, parseCutSeriesKey, STALE_WINDOW_DAYS } from "./beefQueries";
 import type { PredictionStatusValue } from "./predictionLifecycle";
 import { canVerify, PredictionStatus as PS } from "./predictionLifecycle";
 

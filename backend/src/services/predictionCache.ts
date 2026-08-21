@@ -11,8 +11,12 @@
 
 import { logger, prisma } from "@/lib";
 import { getRedisClient } from "@/lib/redis";
-import { getBeefCutSeries, isCutSeriesKey, parseCutSeriesKey } from "./beefCutSeries";
-import { STALE_WINDOW_DAYS } from "./beefFreshness";
+import {
+	getBeefCutSeries,
+	isCutSeriesKey,
+	parseCutSeriesKey,
+	STALE_WINDOW_DAYS,
+} from "./beefQueries";
 import { cacheKeys } from "./cache";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";

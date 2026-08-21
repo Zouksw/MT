@@ -11,7 +11,7 @@
 import { logger, prisma } from "@/lib";
 import { MS_PER_HOUR, MS_PER_MINUTE } from "@/lib/constants";
 import { evaluateAlertRules } from "@/services/alerts";
-import { bridgeBeefPrices } from "@/services/beefPriceBridge";
+import { bridgeBeefPrices } from "@/services/beefIngest";
 import { runDataDigest } from "@/services/dataDigest";
 import { registerAllScrapers, scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";

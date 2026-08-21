@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cutSeriesKey, isCutSeriesKey, parseCutSeriesKey } from "../beefCutSeries";
+import { cutSeriesKey, isCutSeriesKey, parseCutSeriesKey } from "../beefQueries";
 
 describe("cutSeriesKey", () => {
 	it("produces the cut:{factoryId}:{cutCode} format", () => {

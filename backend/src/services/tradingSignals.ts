@@ -18,8 +18,7 @@
  */
 
 import { logger, prisma } from "../lib";
-import { cutSeriesKey, getBeefCutSeries } from "./beefCutSeries";
-import { STALE_WINDOW_DAYS } from "./beefFreshness";
+import { cutSeriesKey, getBeefCutSeries, STALE_WINDOW_DAYS } from "./beefQueries";
 import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
 import { ALL_MODELS, BASELINE_MODELS, getAllModels } from "./modelRegistry";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";

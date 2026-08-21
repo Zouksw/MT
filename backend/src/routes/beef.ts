@@ -7,10 +7,13 @@ import { authenticate, authorize } from "@/middleware/auth";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { aiRateLimiter } from "@/middleware/rateLimiter";
 import { getPagination } from "@/schemas";
-import { aggregateBeefByCountry } from "@/services/beefAggregation";
-import { pageFreshnessSummary, withFreshness } from "@/services/beefFreshness";
-import { importBeefPrices, parseBeefCSV } from "@/services/beefImport";
-import { computeBeefTrend } from "@/services/beefTrends";
+import { importBeefPrices, parseBeefCSV } from "@/services/beefIngest";
+import {
+	aggregateBeefByCountry,
+	computeBeefTrend,
+	pageFreshnessSummary,
+	withFreshness,
+} from "@/services/beefQueries";
 import { findForecastableFactoryForCut, generateBeefCutForecast } from "@/services/tradingSignals";
 
 const router = Router();

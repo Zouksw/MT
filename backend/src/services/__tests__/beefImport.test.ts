@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBeefCSV } from "../beefImport";
+import { parseBeefCSV } from "../beefIngest";
 
 describe("parseBeefCSV", () => {
 	it("parses a well-formed CSV with header row", () => {

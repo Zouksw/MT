@@ -29,7 +29,7 @@ vi.mock("@/lib", () => ({
 	logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { bridgeBeefPrices, ISO3_TO_ISO2, SLUG_TO_CUTCODE } from "@/services/beefPriceBridge";
+import { bridgeBeefPrices, ISO3_TO_ISO2, SLUG_TO_CUTCODE } from "@/services/beefIngest";
 
 /** A Prisma-Decimal-like stub (close is Decimal in the schema). */
 function dec(n: number) {

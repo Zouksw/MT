@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { computeBeefTrend } from "@/services/beefTrends";
+import { computeBeefTrend } from "@/services/beefQueries";
 
 const LATEST = new Date("2026-07-31T00:00:00Z");
 const PREV = new Date("2026-07-24T00:00:00Z");

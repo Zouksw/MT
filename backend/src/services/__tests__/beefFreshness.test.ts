@@ -5,7 +5,7 @@ import {
 	pageFreshnessSummary,
 	STALE_WINDOW_DAYS,
 	withFreshness,
-} from "../beefFreshness";
+} from "../beefQueries";
 
 // Fixed "now" so age calculations are deterministic. 2026-07-26T00:00:00Z.
 const NOW = new Date("2026-07-26T00:00:00.000Z");
