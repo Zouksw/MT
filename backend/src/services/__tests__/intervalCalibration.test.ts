@@ -1,15 +1,15 @@
 /**
- * intervalCalibration — split-conformal calibration unit tests.
+ * intervalCalibration — unit tests (Node-side contract).
  *
- * Pins the core guarantees:
- *  - applyConformalInterval replaces bounds multiplicatively, guards
- *    non-positive/non-finite series and missing multipliers (native kept);
- *  - the multiplier derivation achieves ≈1−α empirical coverage on
- *    held-out draws (the entire point of conformal);
- *  - thin evidence (below MIN_CALIBRATION_ROWS) produces no multiplier.
- *
- * The DB-backed getIntervalMultipliers path is exercised through the
- * runAndCache pipeline in integration; here prisma is mocked.
+ * Since round-114 the multiplier derivation (residual extraction, row-count
+ * evidence bar, split-conformal order statistic, test-artifact exclusion)
+ * runs entirely in SQL; its semantics are pinned against the real test DB in
+ * intervalCalibration.integration.test.ts. Here prisma.$queryRaw is mocked;
+ * these tests pin:
+ *  - applyConformalInterval bounds replacement + guards (unchanged);
+ *  - SQL-row → multiplier mapping and the q∈(0,1) gate;
+ *  - the test-artifact exclusion reaching SQL;
+ *  - days-keyed caching and the single-flight (stampede) guard.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,28 +21,13 @@ import {
 
 const mocks = vi.hoisted(() => ({
 	logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-	findMany: vi.fn(),
+	queryRaw: vi.fn(),
 }));
 
 vi.mock("@/lib", () => ({
 	logger: mocks.logger,
-	prisma: { predictionLog: { findMany: (...a: unknown[]) => mocks.findMany(...a) } },
+	prisma: { $queryRaw: (...a: unknown[]) => mocks.queryRaw(...a) },
 }));
-
-function verifiedRow(modelId: string, residuals: number[]) {
-	// Reconstruct predicted/actual arrays producing the given relative
-	// residuals: actual = 100, predicted = 100 * (1 ± r).
-	return {
-		modelId,
-		predictedValues: residuals.map((r, i) => 100 * (1 + (i % 2 === 0 ? r : -r))),
-		actualValues: residuals.map(() => 100),
-	};
-}
-
-/** One verified ROW per residual — the evidence bar counts rows (round-113). */
-function verifiedRows(modelId: string, residuals: number[]) {
-	return residuals.map((r) => verifiedRow(modelId, [r]));
-}
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -73,103 +58,60 @@ describe("applyConformalInterval", () => {
 });
 
 describe("getIntervalMultipliers", () => {
-	it("derives a multiplier with adequate evidence, omits thin models", async () => {
-		const thick = Array.from({ length: 100 }, (_, i) => (i + 1) / 1000); // 0.001..0.100
-		const thin = [0.01, 0.02, 0.03];
-		mocks.findMany.mockResolvedValue([
-			...verifiedRows("thick_model", thick),
-			...verifiedRows("thin_model", thin),
-		]);
-
-		const m = await getIntervalMultipliers();
-
-		expect(m.has("thick_model")).toBe(true);
-		expect(m.has("thin_model")).toBe(false);
-		// ~90th percentile of 0.001..0.100 ≈ 0.09 (finite-sample correction
-		// pushes it slightly above the plain 90th percentile, 0.090).
-		const q = m.get("thick_model") as number;
-		expect(q).toBeGreaterThanOrEqual(0.09);
-		expect(q).toBeLessThanOrEqual(0.1);
-	});
-
-	it("counts verified ROWS, not per-step residuals, against the evidence bar", async () => {
-		// Three horizon-10 rows = 30 residuals — under the old residual-count
-		// bar this passed MIN_CALIBRATION_ROWS despite being 3 correlated
-		// predictions (round-113 review finding A1-3).
-		mocks.findMany.mockResolvedValue([
-			verifiedRow(
-				"padded_model",
-				Array.from({ length: 10 }, () => 0.05),
-			),
-			verifiedRow(
-				"padded_model",
-				Array.from({ length: 10 }, () => 0.05),
-			),
-			verifiedRow(
-				"padded_model",
-				Array.from({ length: 10 }, () => 0.05),
-			),
+	it("maps SQL rows to multipliers and rejects q outside (0,1)", async () => {
+		// q ≥ 1 would make ŷ·(1−q) negative; q = 0 is no calibration at all.
+		mocks.queryRaw.mockResolvedValue([
+			{ model_id: "healthy_model", q: 0.29, n_rows: 26446 },
+			{ model_id: "poisoned_model", q: 1.4, n_rows: 100 },
+			{ model_id: "zero_model", q: 0, n_rows: 100 },
 		]);
 		const m = await getIntervalMultipliers();
-		expect(m.has("padded_model")).toBe(false);
-	});
-
-	it("rejects q ≥ 1 instead of serving negative lower bounds", async () => {
-		// A contaminated pool with 90th-percentile relative residual ≥ 1 must
-		// yield NO multiplier — ŷ·(1−q) would be negative (round-113, A1-2).
-		const poisoned = Array.from({ length: 40 }, (_, i) => 1.2 + i / 100);
-		mocks.findMany.mockResolvedValue(verifiedRows("poisoned_model", poisoned));
-		const m = await getIntervalMultipliers();
+		expect(m.get("healthy_model")).toBe(0.29);
 		expect(m.has("poisoned_model")).toBe(false);
+		expect(m.has("zero_model")).toBe(false);
 	});
 
-	it("excludes leaked test-artifact rows from the calibration pool", async () => {
-		// Same verified-evidence definition as mapeTracking: a fixture row
-		// with a real modelId must not contribute residuals (round-113, A1-1).
-		const good = Array.from({ length: 40 }, (_, i) => 0.01 + i / 1000);
-		mocks.findMany.mockResolvedValue(verifiedRows("real_model", good));
+	it("sends the verified-status + test-artifact exclusion to SQL", async () => {
+		// Mirrors mapeTracking's EXCLUDE_TEST_ARTIFACTS (round-113, A1-1) —
+		// the clause must live in the SQL text, not just in a JS where-object.
+		mocks.queryRaw.mockResolvedValue([]);
 		await getIntervalMultipliers();
-		const where = mocks.findMany.mock.calls[0]?.[0]?.where as Record<string, unknown>;
-		expect(where.NOT).toBeDefined();
+		const sql = String(mocks.queryRaw.mock.calls[0]?.[0]?.join?.(" ") ?? "");
+		expect(sql).toContain("status = 'verified'");
+		expect(sql).toContain("NOT ILIKE '%test%'");
 	});
 
 	it("keys the 60s cache by `days` — a 7-day fetch must not serve a 60-day call", async () => {
 		// Round-113, A1-5: a single cache slot served any `days` within TTL.
-		const sixty = Array.from({ length: 40 }, (_, i) => 0.01 + i / 1000);
-		const seven = Array.from({ length: 40 }, () => 0.001);
-		mocks.findMany.mockResolvedValueOnce(verifiedRows("m", sixty));
+		mocks.queryRaw.mockResolvedValueOnce([{ model_id: "m", q: 0.2, n_rows: 50 }]);
 		await getIntervalMultipliers(60);
-		mocks.findMany.mockResolvedValueOnce(verifiedRows("m", seven));
+		mocks.queryRaw.mockResolvedValueOnce([{ model_id: "m", q: 0.4, n_rows: 70 }]);
 		const m7 = await getIntervalMultipliers(7); // within TTL, different key
-		expect(m7.get("m")).toBeLessThanOrEqual(0.002);
+		expect(m7.get("m")).toBe(0.4);
+		expect(mocks.queryRaw).toHaveBeenCalledTimes(2);
+		await getIntervalMultipliers(7); // cache hit — no third query
+		expect(mocks.queryRaw).toHaveBeenCalledTimes(2);
 	});
 
-	it("achieves ≈90% empirical coverage on held-out draws (the conformal point)", async () => {
-		// Seeded PRNG (mulberry32): the earlier Math.random version flaked near
-		// the 0.88 boundary (observed 0.879 on a full-suite run) — a stochastic
-		// tolerance is a flaky test, and a deterministic seed keeps the
-		// assertion meaningful (same distribution, reproducible draws).
-		const mulberry32 = (seed: number) => () => {
-			seed |= 0;
-			seed = (seed + 0x6d2b79f5) | 0;
-			let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-			t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-		};
-		const rng = mulberry32(20260820);
-		const draw = () => Math.abs((rng() - 0.5) * 2) / 50; // uniform [0, 0.04]
-		const calibration = Array.from({ length: 500 }, draw);
-		const heldOut = Array.from({ length: 5000 }, draw);
-		mocks.findMany.mockResolvedValue(verifiedRows("m", calibration));
+	it("shares one rebuild between concurrent callers after TTL expiry (stampede guard)", async () => {
+		// Round-114, A1-6: at expiry the 3-model background refresh and
+		// per-request route calls can overlap — they must fire ONE query.
+		let release: (v: unknown) => void = () => {};
+		const gate = new Promise((resolve) => {
+			release = resolve;
+		});
+		mocks.queryRaw.mockImplementation(() =>
+			gate.then(() => [{ model_id: "m", q: 0.1, n_rows: 40 }]),
+		);
 
-		const q = (await getIntervalMultipliers()).get("m") as number;
-
-		let covered = 0;
-		for (const r of heldOut) if (r <= q) covered++;
-		const coverage = covered / heldOut.length;
-		// Finite-sample guarantee: ≥ 1−α. The seed pins the draw set, so these
-		// bounds hold deterministically while still pinning the property.
-		expect(coverage).toBeGreaterThanOrEqual(0.88);
-		expect(coverage).toBeLessThanOrEqual(0.97);
+		const p1 = getIntervalMultipliers();
+		const p2 = getIntervalMultipliers();
+		// Both calls entered before the query resolved, yet only one query.
+		expect(mocks.queryRaw).toHaveBeenCalledTimes(1);
+		release(null);
+		const [a, b] = await Promise.all([p1, p2]);
+		expect(a.get("m")).toBe(0.1);
+		expect(b.get("m")).toBe(0.1);
+		expect(mocks.queryRaw).toHaveBeenCalledTimes(1);
 	});
 });

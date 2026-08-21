@@ -9,6 +9,7 @@ import { get as cacheGet, cacheKeys, set as cacheSet } from "@/services/cache";
 import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inference";
 import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 import { applyConformalInterval, getIntervalMultipliers } from "@/services/intervalCalibration";
+import { PREDICTION_TTL_SECONDS } from "@/services/predictionCache";
 
 /**
  * Conformal-calibrate a raw inference result's interval (round-110). The
@@ -178,7 +179,13 @@ router.post(
 			algorithm: modelId,
 		};
 
-		await cacheSet(cacheKey, response, 900);
+		// Same key family as the background refresh — write the full
+		// CachedPrediction shape with the shared TTL (round-114, INT-1).
+		await cacheSet(
+			cacheKey,
+			{ ...response, cachedAt: Date.now(), commodityId: uuid, horizon: h },
+			PREDICTION_TTL_SECONDS,
+		);
 		success(res, { ...response, commodityId, cached: false });
 	}),
 );
@@ -255,7 +262,13 @@ router.post(
 					algorithm: modelId,
 				};
 
-				await cacheSet(cacheKey, response, 900);
+				// Same key family as the background refresh — write the full
+				// CachedPrediction shape with the shared TTL (round-114, INT-1).
+				await cacheSet(
+					cacheKey,
+					{ ...response, cachedAt: Date.now(), commodityId: uuid, horizon: h },
+					PREDICTION_TTL_SECONDS,
+				);
 				results.push({ ...response, cached: false, commodityId });
 				computed++;
 			} catch (error) {

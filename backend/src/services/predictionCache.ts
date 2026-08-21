@@ -19,7 +19,11 @@ import { getCommodityPriceValues } from "./inference/data-fetcher";
 import { applyConformalInterval, getIntervalMultipliers } from "./intervalCalibration";
 import { BASELINE_MODELS, getAllModels } from "./modelRegistry";
 
-const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
+/** Shared by the on-demand routes (inference.ts) — every writer of the
+ * prediction:{ts}:{model}:{horizon} key family must use the same TTL and
+ * CachedPrediction shape, otherwise a route write silently shortens a
+ * background entry's life and readers see two shapes (round-114, INT-1). */
+export const PREDICTION_TTL_SECONDS = 45 * 60; // 45 minutes
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 interface CachedPrediction {
