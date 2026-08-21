@@ -30,8 +30,5 @@
 		"*.{ts,tsx,js,jsx}": [
 			"biome check --write"
 		]
-	},
-	"dependencies": {
-		"pm2-logrotate": "^3.0.0"
 	}
 }
