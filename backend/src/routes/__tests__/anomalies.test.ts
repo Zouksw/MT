@@ -17,7 +17,8 @@
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
+import { jwtUtils } from "@/lib";
+import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
 let adminToken: string;
@@ -91,13 +92,14 @@ describe("Anomalies Routes", () => {
 	});
 
 	describe("GET /api/anomalies/stats/timeseries/:timeseriesId", () => {
-		test("returns anomaly statistics shape", async () => {
+		test("returns 404 for a non-existent timeseries (round-119)", async () => {
 			const res = await request(app)
 				.get("/api/anomalies/stats/timeseries/00000000-0000-0000-0000-000000000000")
 				.set(authHeaders());
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data).toBeDefined();
+			// round-119: stats previously returned an empty-200 for ANY id,
+			// disclosing existence + value distribution of private series.
+			// Missing and not-owned now both 404, like the timeseries reads.
+			expect(res.status).toBe(404);
 		});
 
 		test("requires authentication", async () => {
@@ -141,6 +143,125 @@ describe("Anomalies Routes", () => {
 				.patch("/api/anomalies/00000000-0000-0000-0000-000000000000")
 				.send({ isResolved: true });
 			expect(res.status).toBe(401);
+		});
+	});
+
+	describe("cross-user ownership (round-119 IDOR regression)", () => {
+		// Before round-119 the list/detail/stats/detect endpoints had NO user
+		// scope: any authenticated user could enumerate every other user's
+		// anomalies (including context values from private series), read stats
+		// for arbitrary series, and run detection (writes!) on them. These pin
+		// the owner-scoping: same 404 for missing and not-owned, list filtered.
+		const prisma = getPrisma();
+		const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+		let ownerToken = "";
+		let otherToken = "";
+		let anomalyId = "";
+		let timeseriesId = "";
+		let datasetId = "";
+		let ownerId = "";
+		let otherId = "";
+
+		beforeAll(async () => {
+			const owner = await prisma.user.create({
+				data: {
+					email: `anom-owner-${suffix}@test.local`,
+					passwordHash: "x",
+					name: "Anom Owner",
+					role: "VIEWER",
+				},
+			});
+			const other = await prisma.user.create({
+				data: {
+					email: `anom-other-${suffix}@test.local`,
+					passwordHash: "x",
+					name: "Anom Other",
+					role: "VIEWER",
+				},
+			});
+			ownerId = owner.id;
+			otherId = other.id;
+			ownerToken = jwtUtils.generateToken(ownerId);
+			otherToken = jwtUtils.generateToken(otherId);
+
+			const dataset = await prisma.dataset.create({
+				data: {
+					ownerId: ownerId,
+					name: `anom-ds-${suffix}`,
+					slug: `anom-ds-${suffix}`,
+					storageFormat: "CSV",
+				},
+			});
+			datasetId = dataset.id;
+			const ts = await prisma.timeseries.create({
+				data: { datasetId, name: `anom-ts-${suffix}`, slug: `anom-ts-${suffix}` },
+			});
+			timeseriesId = ts.id;
+			const anomaly = await prisma.anomaly.create({
+				data: {
+					timeseriesId,
+					severity: "HIGH",
+					detectionMethod: "STATISTICAL",
+					score: 4.5,
+					context: { value: 123.45 },
+				},
+			});
+			anomalyId = anomaly.id;
+		});
+
+		afterAll(async () => {
+			// Dataset cascade removes timeseries + anomalies; users removed last.
+			await prisma.dataset.deleteMany({ where: { id: datasetId } });
+			await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherId] } } });
+		});
+
+		test("list excludes another user's anomalies but shows the owner's", async () => {
+			const otherRes = await request(app)
+				.get("/api/anomalies?limit=100")
+				.set({ Authorization: `Bearer ${otherToken}` });
+			expect(otherRes.status).toBe(200);
+			expect(otherRes.body.data.some((a: { id: string }) => a.id === anomalyId)).toBe(false);
+
+			const ownerRes = await request(app)
+				.get("/api/anomalies?limit=100")
+				.set({ Authorization: `Bearer ${ownerToken}` });
+			expect(ownerRes.status).toBe(200);
+			expect(ownerRes.body.data.some((a: { id: string }) => a.id === anomalyId)).toBe(true);
+		});
+
+		test("detail returns 404 for another user's anomaly", async () => {
+			const res = await request(app)
+				.get(`/api/anomalies/${anomalyId}`)
+				.set({ Authorization: `Bearer ${otherToken}` });
+			expect(res.status).toBe(404);
+		});
+
+		test("stats return 404 for another user's timeseries", async () => {
+			const res = await request(app)
+				.get(`/api/anomalies/stats/timeseries/${timeseriesId}`)
+				.set({ Authorization: `Bearer ${otherToken}` });
+			expect(res.status).toBe(404);
+		});
+
+		test("detect returns 404 for another user's timeseries (no writes)", async () => {
+			const res = await request(app)
+				.post("/api/anomalies/detect")
+				.set({ Authorization: `Bearer ${otherToken}` })
+				.send({ timeseriesId, method: "STATISTICAL", windowSize: 5 });
+			expect(res.status).toBe(404);
+			const unchanged = await prisma.timeseries.findUnique({
+				where: { id: timeseriesId },
+				select: { isAnomalyDetectionEnabled: true },
+			});
+			expect(unchanged?.isAnomalyDetectionEnabled).toBe(false);
+		});
+
+		test("owner can still read their own anomaly detail", async () => {
+			const res = await request(app)
+				.get(`/api/anomalies/${anomalyId}`)
+				.set({ Authorization: `Bearer ${ownerToken}` });
+			expect(res.status).toBe(200);
+			expect(res.body.data.anomaly.id).toBe(anomalyId);
 		});
 	});
 });

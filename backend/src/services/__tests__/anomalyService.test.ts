@@ -67,7 +67,9 @@ function datapoints(values: number[]) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mocks.tsFindUnique.mockResolvedValue({ id: TS_ID });
+	// round-119: detectAnomalies now resolves dataset ownership — the default
+	// fixture series belongs to "user-1", matching the caller id used below.
+	mocks.tsFindUnique.mockResolvedValue({ id: TS_ID, dataset: { ownerId: "user-1" } });
 	mocks.anomalyCreateMany.mockResolvedValue({ count: 0 });
 	mocks.tsUpdate.mockResolvedValue({});
 	mocks.alertCreateMany.mockResolvedValue({ count: 0 });
@@ -78,6 +80,24 @@ describe("detectAnomalies — guards", () => {
 		mocks.tsFindUnique.mockResolvedValueOnce(null);
 		await expect(detectAnomalies(input(), "user-1")).rejects.toBeInstanceOf(NotFoundError);
 		expect(mocks.datapointFindMany).not.toHaveBeenCalled();
+	});
+
+	it("throws NotFoundError when the timeseries belongs to another user (round-119 IDOR)", async () => {
+		mocks.tsFindUnique.mockResolvedValueOnce({ id: TS_ID, dataset: { ownerId: "owner-A" } });
+		await expect(detectAnomalies(input(), "user-1", undefined)).rejects.toBeInstanceOf(
+			NotFoundError,
+		);
+		// Must fail before reading data or writing anything.
+		expect(mocks.datapointFindMany).not.toHaveBeenCalled();
+		expect(mocks.anomalyCreateMany).not.toHaveBeenCalled();
+		expect(mocks.tsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("lets ADMIN bypass the ownership check", async () => {
+		mocks.tsFindUnique.mockResolvedValueOnce({ id: TS_ID, dataset: { ownerId: "owner-A" } });
+		mocks.datapointFindMany.mockResolvedValueOnce(datapoints([1, 2, 3]));
+		const result = await detectAnomalies(input({ windowSize: 3 }), "user-1", "ADMIN");
+		expect(result.meta.dataPointsAnalyzed).toBe(3);
 	});
 
 	it("throws BadRequestError when there are fewer points than windowSize", async () => {
@@ -139,6 +159,9 @@ describe("detectAnomalies — STATISTICAL (z-score)", () => {
 
 	it("creates alerts for HIGH/CRITICAL anomalies only", async () => {
 		// Same large-spike setup as above → CRITICAL → alert.createMany fires.
+		// round-119: the series must belong to the caller ("user-9") — the
+		// ownership guard now runs before the data fetch.
+		mocks.tsFindUnique.mockResolvedValueOnce({ id: TS_ID, dataset: { ownerId: "user-9" } });
 		const cluster = Array(30).fill(100);
 		mocks.datapointFindMany.mockResolvedValueOnce(datapoints([...cluster, 1000]));
 		await detectAnomalies(input({ method: "STATISTICAL", windowSize: 5 }), "user-9");

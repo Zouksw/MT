@@ -30,15 +30,28 @@ export interface DetectionMeta {
 	anomaliesCreated: number;
 }
 
-/** List anomalies with optional filters + pagination. */
-export async function listAnomalies(options: {
-	timeseriesId?: string;
-	severity?: AnomalySeverity;
-	isResolved?: boolean;
-	skip: number;
-	take: number;
-}) {
+/** List anomalies with optional filters + pagination.
+ *
+ * Ownership (round-119): non-admins only see anomalies on their own datasets'
+ * timeseries. Previously the list had no user scope at all — any authenticated
+ * user could enumerate every other user's anomalies, including context values
+ * (real data points) from private timeseries.
+ */
+export async function listAnomalies(
+	options: {
+		timeseriesId?: string;
+		severity?: AnomalySeverity;
+		isResolved?: boolean;
+		skip: number;
+		take: number;
+	},
+	userId: string,
+	role: string | undefined,
+) {
 	const where: Prisma.AnomalyWhereInput = {};
+	if (role !== "ADMIN") {
+		where.timeseries = { dataset: { ownerId: userId } };
+	}
 	if (options.timeseriesId) where.timeseriesId = options.timeseriesId;
 	if (options.severity) where.severity = options.severity;
 	if (options.isResolved !== undefined) where.isResolved = options.isResolved;
@@ -61,19 +74,25 @@ export async function listAnomalies(options: {
 	return { anomalies, total };
 }
 
-/** Get a single anomaly with its timeseries + dataset. */
-export async function getAnomaly(id: string) {
+/** Get a single anomaly with its timeseries + dataset.
+ *
+ * Ownership (round-119): same owner-or-ADMIN rule as updateAnomaly — "missing"
+ * and "not owned" both return 404 so existence isn't disclosed cross-user.
+ */
+export async function getAnomaly(id: string, userId: string, role: string | undefined) {
 	const anomaly = await prisma.anomaly.findUnique({
 		where: { id },
 		include: {
 			timeseries: {
 				include: {
-					dataset: { select: { id: true, name: true, slug: true } },
+					dataset: { select: { id: true, name: true, slug: true, ownerId: true } },
 				},
 			},
 		},
 	});
-	if (!anomaly) throw new NotFoundError("Anomaly");
+	if (!anomaly || (anomaly.timeseries.dataset.ownerId !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Anomaly");
+	}
 	return anomaly;
 }
 
@@ -87,11 +106,21 @@ export async function getAnomaly(id: string) {
 export async function detectAnomalies(
 	validatedData: z.infer<typeof detectAnomaliesSchema>,
 	userId: string,
+	role: string | undefined,
 ): Promise<{ anomalies: DetectedAnomaly[]; meta: DetectionMeta }> {
 	const timeseries = await prisma.timeseries.findUnique({
 		where: { id: validatedData.timeseriesId },
+		include: { dataset: { select: { ownerId: true } } },
 	});
 	if (!timeseries) throw new NotFoundError("Timeseries");
+
+	// Ownership (round-119): detect writes anomalies + flips the detection
+	// flag on the timeseries and returns real data-point values in context —
+	// it must be scoped to the dataset owner (ADMIN bypasses), like every
+	// other anomaly mutation. "Missing" and "not owned" both 404.
+	if (timeseries.dataset.ownerId !== userId && role !== "ADMIN") {
+		throw new NotFoundError("Timeseries");
+	}
 
 	const dataPoints = await prisma.datapoint.findMany({
 		where: {
@@ -313,11 +342,25 @@ export async function deleteAnomaly(
 	await prisma.anomaly.delete({ where: { id } });
 }
 
-/** Anomaly statistics for a timeseries (counts, severity breakdown, resolution rate). */
+/** Anomaly statistics for a timeseries (counts, severity breakdown, resolution rate).
+ *
+ * Ownership (round-119): the timeseries must belong to the caller's dataset
+ * (ADMIN bypasses) — stats disclose existence and value distribution of
+ * otherwise-private series.
+ */
 export async function getAnomalyStats(
 	timeseriesId: string,
-	range?: { start?: string; end?: string },
+	range: { start?: string; end?: string } | undefined,
+	userId: string,
+	role: string | undefined,
 ) {
+	const timeseries = await prisma.timeseries.findUnique({
+		where: { id: timeseriesId },
+		select: { dataset: { select: { ownerId: true } } },
+	});
+	if (!timeseries || (timeseries.dataset.ownerId !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Timeseries");
+	}
 	const where: Prisma.AnomalyWhereInput = { timeseriesId };
 	if (range?.start || range?.end) {
 		where.createdAt = {};

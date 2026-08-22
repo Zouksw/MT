@@ -216,3 +216,103 @@ describe("PATCH /api/models/:id — ownership", () => {
 		expect(res.status).toBe(404);
 	});
 });
+
+describe("GET read paths — ownership (round-119 IDOR regression)", () => {
+	// Before round-119 list/get/forecasts had NO user scope: any authenticated
+	// user could page through every user's models (trainer name+email in each
+	// row) and read another user's model detail + forecast rows. Non-admins now
+	// only see their own; "missing" and "not owned" both 404.
+	const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+	let app: Express;
+	let tokenTrainer = "";
+	let tokenOutsider = "";
+	let modelId = "";
+	const userIds: string[] = [];
+
+	beforeAll(async () => {
+		app = createTestApp();
+		await requireDb("models read ownership");
+		const trainer = await prisma.user.create({
+			data: {
+				email: `read-trainer-${stamp}@test`,
+				name: "Read Trainer",
+				passwordHash: "test-hash-not-real",
+				role: "EDITOR",
+			},
+		});
+		const outsider = await prisma.user.create({
+			data: {
+				email: `read-outsider-${stamp}@test`,
+				name: "Read Outsider",
+				passwordHash: "test-hash-not-real",
+				role: "EDITOR",
+			},
+		});
+		userIds.push(trainer.id, outsider.id);
+		tokenTrainer = jwtUtils.generateToken(trainer.id);
+		tokenOutsider = jwtUtils.generateToken(outsider.id);
+
+		const dataset = await prisma.dataset.create({
+			data: {
+				name: "Read ownership dataset",
+				slug: `read-ds-${stamp}`,
+				storageFormat: "CSV",
+				ownerId: trainer.id,
+			},
+		});
+		const series = await prisma.timeseries.create({
+			data: { datasetId: dataset.id, name: "Read series", slug: `read-series-${stamp}` },
+		});
+		const model = await prisma.forecastingModel.create({
+			data: {
+				timeseriesId: series.id,
+				algorithm: "ARIMA",
+				hyperparameters: {},
+				trainedById: trainer.id,
+			},
+		});
+		modelId = model.id;
+	});
+
+	afterAll(async () => {
+		await prisma.dataset.deleteMany({ where: { ownerId: { in: userIds } } }).catch(() => {});
+		await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
+	});
+
+	it("list excludes another user's models but shows the trainer's", async () => {
+		const outsiderRes = await request(app)
+			.get("/api/models?limit=100")
+			.set(authHeaders(tokenOutsider));
+		expect(outsiderRes.status).toBe(200);
+		expect(outsiderRes.body.data.some((m: { id: string }) => m.id === modelId)).toBe(false);
+
+		const trainerRes = await request(app)
+			.get("/api/models?limit=100")
+			.set(authHeaders(tokenTrainer));
+		expect(trainerRes.status).toBe(200);
+		expect(trainerRes.body.data.some((m: { id: string }) => m.id === modelId)).toBe(true);
+	});
+
+	it("detail returns 404 for another user's model", async () => {
+		const res = await request(app).get(`/api/models/${modelId}`).set(authHeaders(tokenOutsider));
+		expect(res.status).toBe(404);
+	});
+
+	it("forecasts return 404 for another user's model", async () => {
+		const res = await request(app)
+			.get(`/api/models/${modelId}/forecasts`)
+			.set(authHeaders(tokenOutsider));
+		expect(res.status).toBe(404);
+	});
+
+	it("trainer still reads their own model + forecasts", async () => {
+		const detail = await request(app).get(`/api/models/${modelId}`).set(authHeaders(tokenTrainer));
+		expect(detail.status).toBe(200);
+		expect(detail.body.data.model.id).toBe(modelId);
+
+		const forecasts = await request(app)
+			.get(`/api/models/${modelId}/forecasts`)
+			.set(authHeaders(tokenTrainer));
+		expect(forecasts.status).toBe(200);
+	});
+});

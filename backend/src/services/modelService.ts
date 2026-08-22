@@ -19,9 +19,22 @@ export interface ListModelsParams {
 	take: number;
 }
 
-/** List forecasting models with optional filters + pagination. */
-export async function listModels(params: ListModelsParams) {
+/** List forecasting models with optional filters + pagination.
+ *
+ * Ownership (round-119): non-admins only see models they trained — mirrors
+ * the datasets/timeseries list scoping. Previously any authenticated user
+ * could page through every user's models, with the trainer's name AND email
+ * included in each row.
+ */
+export async function listModels(
+	params: ListModelsParams,
+	userId: string,
+	role: string | undefined,
+) {
 	const where: Prisma.ForecastingModelWhereInput = {};
+	if (role !== "ADMIN") {
+		where.trainedById = userId;
+	}
 	if (params.timeseriesId) where.timeseriesId = params.timeseriesId;
 	if (params.isActive !== undefined) where.isActive = params.isActive;
 	if (params.algorithm) {
@@ -47,8 +60,13 @@ export async function listModels(params: ListModelsParams) {
 	return { models, total };
 }
 
-/** Get a single model with timeseries, trainer, and recent forecasts. */
-export async function getModel(id: string) {
+/** Get a single model with timeseries, trainer, and recent forecasts.
+ *
+ * Ownership (round-119): trainer-or-ADMIN, the same rule the sibling
+ * mutations (setModelActive / deleteForecasts) already enforce — "missing"
+ * and "not owned" both 404.
+ */
+export async function getModel(id: string, userId: string, role: string | undefined) {
 	const model = await prisma.forecastingModel.findUnique({
 		where: { id },
 		include: {
@@ -66,7 +84,9 @@ export async function getModel(id: string) {
 			_count: { select: { forecasts: true } },
 		},
 	});
-	if (!model) throw new NotFoundError("Model");
+	if (!model || (model.trainedById !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Model");
+	}
 	return model;
 }
 
@@ -75,12 +95,25 @@ export async function createForecasts(forecasts: Prisma.ForecastCreateManyInput[
 	await prisma.forecast.createMany({ data: forecasts, skipDuplicates: true });
 }
 
-/** List forecasts for a model with optional time-range filter + limit. */
+/** List forecasts for a model with optional time-range filter + limit.
+ *
+ * Ownership (round-119): the model must belong to the caller (trainer-or-
+ * ADMIN) — forecast rows expose another user's model output.
+ */
 export async function listForecasts(
 	modelId: string,
-	range?: { start?: string; end?: string },
-	limit = 100,
+	range: { start?: string; end?: string } | undefined,
+	limit: number,
+	userId: string,
+	role: string | undefined,
 ) {
+	const model = await prisma.forecastingModel.findUnique({
+		where: { id: modelId },
+		select: { trainedById: true },
+	});
+	if (!model || (model.trainedById !== userId && role !== "ADMIN")) {
+		throw new NotFoundError("Model");
+	}
 	const where: Prisma.ForecastWhereInput = { modelId };
 	if (range?.start || range?.end) {
 		where.timestamp = {};

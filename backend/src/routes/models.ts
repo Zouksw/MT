@@ -53,18 +53,22 @@ const router = Router();
 router.get(
 	"/",
 	authenticate,
-	asyncHandler(async (req, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { timeseriesId, algorithm } = req.query;
 		const { skip, take } = getPagination(req.query);
 		const params = modelsQuerySchema.parse(req.query);
 
-		const { models, total } = await listModels({
-			timeseriesId: timeseriesId as string | undefined,
-			isActive: params.isActive,
-			algorithm: algorithm as string | undefined,
-			skip,
-			take,
-		});
+		const { models, total } = await listModels(
+			{
+				timeseriesId: timeseriesId as string | undefined,
+				isActive: params.isActive,
+				algorithm: algorithm as string | undefined,
+				skip,
+				take,
+			},
+			req.userId as string,
+			req.user?.role,
+		);
 		return paginated(res, models, {
 			page: params.page,
 			limit: params.limit,
@@ -97,8 +101,8 @@ router.get(
 router.get(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req, res) => {
-		const model = await getModel(req.params.id);
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const model = await getModel(req.params.id, req.userId as string, req.user?.role);
 		return success(res, { model });
 	}),
 );
@@ -212,6 +216,12 @@ router.post(
 			throw new NotFoundError("Model");
 		}
 
+		// Ownership (round-119): predict writes Forecast rows onto this model —
+		// same trainer-or-ADMIN rule as setModelActive / deleteForecasts.
+		if (model.trainedById !== req.userId && req.user?.role !== "ADMIN") {
+			throw new NotFoundError("Model");
+		}
+
 		if (!model.isActive) {
 			throw new BadRequestError("Model is not active");
 		}
@@ -320,7 +330,7 @@ router.post(
 router.get(
 	"/:modelId/forecasts",
 	authenticate,
-	asyncHandler(async (req, res) => {
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
 		const { start, end } = req.query;
 		const params = limitSchema.parse(req.query);
 		const forecasts = await listForecasts(
@@ -330,6 +340,8 @@ router.get(
 				end: end as string | undefined,
 			},
 			params.limit,
+			req.userId as string,
+			req.user?.role,
 		);
 		return success(res, { forecasts });
 	}),

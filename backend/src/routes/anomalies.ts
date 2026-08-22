@@ -3,6 +3,7 @@ import { Router } from "express";
 import { paginated, success, successWithMessage } from "@/lib/response";
 import { type AuthRequest, authenticate } from "@/middleware/auth";
 import { asyncHandler } from "@/middleware/errorHandler";
+import { aiRateLimiter } from "@/middleware/rateLimiter";
 import {
 	anomaliesQuerySchema,
 	bulkResolveSchema,
@@ -81,13 +82,17 @@ router.get(
 		const { skip, take } = getPagination(req.query);
 		const params = anomaliesQuerySchema.parse(req.query);
 
-		const { anomalies, total } = await listAnomalies({
-			timeseriesId: timeseriesId as string | undefined,
-			severity: severity as AnomalySeverity | undefined,
-			isResolved: params.isResolved,
-			skip,
-			take,
-		});
+		const { anomalies, total } = await listAnomalies(
+			{
+				timeseriesId: timeseriesId as string | undefined,
+				severity: severity as AnomalySeverity | undefined,
+				isResolved: params.isResolved,
+				skip,
+				take,
+			},
+			getUser(req),
+			req.user?.role,
+		);
 
 		return paginated(res, anomalies, {
 			page: params.page,
@@ -120,8 +125,8 @@ router.get(
 router.get(
 	"/:id",
 	authenticate,
-	asyncHandler(async (req, res) => {
-		const anomaly = await getAnomaly(req.params.id);
+	asyncHandler(async (req: AuthRequest, res) => {
+		const anomaly = await getAnomaly(req.params.id, getUser(req), req.user?.role);
 		return success(res, { anomaly });
 	}),
 );
@@ -199,14 +204,18 @@ router.get(
  *         description: Time series not found
  */
 // POST /api/anomalies/detect - Run anomaly detection (requires authentication)
+// aiRateLimiter (round-119): one detect run scans up to 100k datapoints and
+// writes anomaly/alert rows — it needs the same per-IP cost cap the inference
+// AI endpoints already have, independent of the ownership fix above.
 router.post(
 	"/detect",
 	authenticate,
+	aiRateLimiter,
 	asyncHandler(async (req: AuthRequest, res) => {
 		const validatedData = detectAnomaliesSchema.parse(req.body);
 		const userId = getUser(req);
 
-		const { anomalies, meta } = await detectAnomalies(validatedData, userId);
+		const { anomalies, meta } = await detectAnomalies(validatedData, userId, req.user?.role);
 
 		// The WebSocket broadcast to timeseries rooms was removed with the
 		// zero-consumer Socket.IO server (round-112); anomalies persist via
@@ -340,13 +349,18 @@ router.delete(
 router.get(
 	"/stats/timeseries/:timeseriesId",
 	authenticate,
-	asyncHandler(async (req, res) => {
+	asyncHandler(async (req: AuthRequest, res) => {
 		const { timeseriesId } = req.params;
 		const { start, end } = req.query;
-		const stats = await getAnomalyStats(timeseriesId, {
-			start: start as string | undefined,
-			end: end as string | undefined,
-		});
+		const stats = await getAnomalyStats(
+			timeseriesId,
+			{
+				start: start as string | undefined,
+				end: end as string | undefined,
+			},
+			getUser(req),
+			req.user?.role,
+		);
 		return success(res, { stats });
 	}),
 );
