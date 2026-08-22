@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-08-21"
+last_updated: "2026-08-22"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-08-22 — round-118 规划执行轮（探查→规划→落地，5 提交，测试 1288→1320）
+
+全项目探查 + 状态分析 + 开发规划后，按规划执行全部可工程化批次（Phase 0 决策采用规划建议的默认值）：
+
+- **TD-8 mutation 全收敛**（`2c6def7`）：9 处 POST/PATCH 裸 fetch（useBeefImport multipart 上传、login/register、data-sources refresh×2、ai/predict + ai/anomalies visualize、apikeys GET+PATCH、WebVitals beacon）全部迁入唯一 API client。配套扩展：ApiFetchError 携带 status + 错误 body（覆盖 `{error:{message}}` / `{message}` / `{error}` 三种后端错误形状的消息提取，迁移站点错误文案逐字保留）；authFetch 对 FormData 跳过默认 Content-Type（浏览器设 multipart boundary）。+7 测试。
+- **M3 资讯 RSS 接入**（`0d758d0`）：PRODUCT-SPEC M3 点名的唯一缺口（"model/route/service/页已建，缺外部数据抓取源"）补全——`services/newsRssIngest.ts` + 调度作业 `news-rss-ingest`（6h）；Beef Central + USDA Federal Register 两个实测可达 feed 经共享 scraperFetch 拉取入 market_news；sourceUrl 去重、per-feed/per-item 故障隔离、HTML 剥离、maxItems 洪水护栏、ADMIN 归属 authorId；唯一新依赖 fast-xml-parser 5.11。live 验证：首跑 +15 篇（10+5，2026-08-21 新鲜内容），重启复跑 +0（幂等实证）。+8 测试。
+- **核心 hook 测试**（`e978192`）：useTradingData（装配/自动选择/图表映射/currentPrice/信号/中位最优模型/异常/overlay 聚合/actualValues-only 历史 + beef 模式 DESC 升序/顺序无关 latestPrice/双源分组 + 信号错误暴露）与 useBeefCutForecasts（成功映射 + 失败诚实 null）。+5 测试。
+- **Tier1 爬虫源级测试**（`887a906`）：commodityPrices（货币对推导/USD 单位反转/平烛诚实/部分跳过/API 宕机兜底）、fredData（空 key 门控钉死当前生产行为/12 条观测上限/'.' 过滤/seriesKey 消歧/global region/单源隔离）、dceFutures（前月结算解析/'-' OHLC 平烛回退 + null volume/坏行跳过/双交易所单符号隔离）——源级覆盖 3/19→6/19。+12 测试。
+- **品牌诚实化**（`afe2a55`）：site-stats dataSources 7→19（2026-08-22 实测口径，3 产数的拆分写入头注释）；about "Pretrained models" 卡改为 Chronos 主力口径（原只列统计基线与实际引擎不符）；清除 3 个死按钮（about Contact Us、pricing Contact Sales/View Documentation → 可用的 Create Free Account 链接）。
+
+**数据层实测（2026-08-22，证据入 KNOWN-ISSUES D1）**：网络经 mihomo 出口实际可用（beefcentral/fred/mla/federalregister 200），但 MLA/USDA_MARS/OPENWEATHER 三把 key 在 .env 中为**空串**、FRED_API_KEY 缺失——源复活卡在 key 获取（用户动作），代码侧端到端就绪；真产数源仍为 3（cme_futures/commodity_prices/world_bank）。RSS 资讯成为当前唯一自动新增的外部内容通道。
+
+**测试基线**：backend 931+1 → **951 pass + 1 skip**（92 文件）、frontend 297 → **309**（33 套件）、inference 60 未动；合计 **1320 全绿**，零回退。
 
 ### 2026-08-21 — round-117 代码组织深化轮（架构评审被认可后执行，4 提交，397→385 文件）
 

@@ -137,11 +137,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 | 启动即跑 | `scraperManager.runAll()`（全部 19 个采集器） | server.ts:109 |
 | 1h | commodity_prices, china_wholesale | server.ts |
 | 6h | cme_futures, dce_futures, fred, fao, baltic_dry, shipping_index, weather | server.ts |
-| 24h | world_bank, usda_psd, mla_nlrs, cepea, inac, abares, china_customs_stats, secex, usda_ams | server.ts |
+| 24h | world_bank, usda_psd, mla_nlrs, cepea, abares, china_customs_stats, secex, usda_ams | server.ts |
+| 启动后 90s + **6h** | `news-rss-ingest`（RSS 资讯拉取入 market_news：Beef Central + USDA Federal Register；sourceUrl 去重幂等、per-feed 故障隔离；round-118/M3，live 验证首跑 +15 篇、复跑 +0） | server.ts |
 
 **写后缓存失效（round-45）**：`upsertPrice`（helpers.ts）在真实写入（非 samePrice no-op）后 fire-and-forget 调 `invalidateCommodityCache(commodityId)`，SCAN-by-prefix 失效该 commodity 所有 model/horizon 的 cached prediction。对称 round-30 的 cut-series 失效。
 
-**采集器状态**：MLA + USDA-AMS 因 `MLA_API_KEY`/`USDA_MARS_API_KEY` 缺省处于 dormant（scraperManager 跳过不报错）。其他源可配 key 的（FRED、OPENWEATHER）同理。
+**采集器状态（2026-08-22 实查）**：`.env` 中 `MLA_API_KEY`/`USDA_MARS_API_KEY`/`OPENWEATHER_API_KEY` 为**空串**、`FRED_API_KEY` 整行缺失——MLA/USDA-AMS dormant（scraperManager 跳过不报错），fred/weather 每 6h 报 "Missing KEY" error。真产数源 3 个（cme_futures/commodity_prices/world_bank）。
 
 ## 四、PM2（生产进程管理）
 
@@ -167,12 +168,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
 |---|---|---|---|---|
-| backend | vitest 3（round-53 从 2 升级） | vitest.config.ts | 88（2026-08-21） | **931 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 30（2026-08-21） | **297 pass** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 92（2026-08-22） | **951 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 33（2026-08-22） | **309 pass** |
 | inference | pytest 8 | conftest.py | 4（2026-08-21） | **60 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **1288 全绿**（931 + 297 + 60，截至 2026-08-21 round-115 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1320 全绿**（951 + 309 + 60，截至 2026-08-22 round-118 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 

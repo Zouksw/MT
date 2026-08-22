@@ -29,6 +29,12 @@
 - **CEPEA**：需 headless 浏览器（Playwright）过 Cloudflare。脆弱、有 ToS 风险——除非优先级提升否则搁置。
 - **INAC**：确认 URL 是否仍有效；若地域封锁，考虑代理或下线该源。
 
+**2026-08-22 实测补充（round-118 探针，更新对根因的判断）**：
+- **网络层已非硬阻塞**：经 mihomo（127.0.0.1:7890）出站，beefcentral.com / fred.stlouisfed.org / www.mla.com.au / federalregister.gov 均 HTTP 200；无 key 源 USDA-PSD（根路径 404）/ Comexstat（应用层 403）/ CEPEA（301）连接层全部可达；唯 agriculture.gov.au（ABARES）直连+代理均 000（源站不可达，与 inac 同类）。
+- **当前真产数源仍为 3**（ingestion_logs 近 3 天 SQL 实测）：cme_futures（+42/259）、commodity_prices（+18/302）、world_bank（+1/524）；其余源的 success 行均为 0 行空跑。
+- **key 现状（.env 实查）**：`MLA_API_KEY` / `USDA_MARS_API_KEY` / `OPENWEATHER_API_KEY` 为**空串**（占位名存在、值为空），`FRED_API_KEY` 整行缺失——fred/weather 每 6h 的 "Missing KEY" error 行即此因。**源复活仍是 key 获取问题（用户动作），代码侧端到端就绪，优先级不变**。
+- **旁路通道已开**：资讯侧 RSS（Beef Central + USDA Federal Register）自 2026-08-22 起每 6h 注入 market_news（M3，round-118），是当前唯一自动新增的外部内容通道。
+
 **桥接兜底（已上线）**：`beefPriceBridge.ts` 把 5 个 STRONG 映射的 CommodityPrice slug 复制到 BeefCutPrice，但只有 `aus_cube_roll_m9` 有上游行（180 行，最新 2026-04-29）。
 
 **round-63 全量 scraper 审计（2026-08-02 live 实测，19 源逐项核实）**：每个 scraper 都"成功"返回 0 行（scraperManager 计 succeeded），但实际状态分 5 类：

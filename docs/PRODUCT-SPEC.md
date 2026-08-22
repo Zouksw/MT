@@ -208,9 +208,9 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 - 数据层: 激活牛肉数据源 ⚠️（受阻于 D1 网络封锁，CSV 手动导入已验证可用）
 - **里程碑达成**: 每个牛肉部位价格旁有 AI 预测（`beef/page.tsx` 7d Forecast 列）
 
-### M3 — 完整的资讯+分析平台 (待做)
-- 资讯模块 RSS 源接入（后端 model/route/service/页已建，缺外部数据抓取源）
-- 阶段 4: 品牌完整 (about 清理 + 社交证明 + signature)
+### M3 — 完整的资讯+分析平台 (进行中)
+- 资讯模块 RSS 源接入 ✅（2026-08-22 round-118：Beef Central + USDA Federal Register 每 6h 拉取入 market_news，sourceUrl 去重幂等，live 首跑 +15 篇）
+- 阶段 4: 品牌完整 (about 清理 + 社交证明 + signature) ◐（2026-08-22：about 方法论口径修正为 Chronos 主力、site-stats 实测数字刷新（19 源）、死按钮清除；社交证明保持"官方数据源可信度"口径，无用户基数前不虚构证言）
 - 产地对比/相关性独立页 ✅ 已存在（`/dashboard/analysis/origin` + `/dashboard/analysis`）
 - **里程碑**: 类牧集的完整 数据+分析+资讯+AI预测 平台
 

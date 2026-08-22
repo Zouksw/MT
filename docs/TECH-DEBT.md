@@ -98,6 +98,8 @@
 
 **round-114 补充（2026-08-21）**：useModelDetail / useAccuracyData 两处**逐字相同**的私有 `apiFetch` 合并为单一 `lib/apiFetch.ts`（语义零变化）。剩余裸 `fetch()` 38 处（39 − 2 副本 + 1 新共享实现），其中约 9 处为 POST/PATCH mutation、多处刻意吞错——仍需逐站点评估，维持开放（低优先，不阻塞价值链）。
 
+**round-118 补充（2026-08-22，mutation 侧全收敛）**：9 处 POST/PATCH 裸 fetch 全部迁入唯一客户端（useBeefImport multipart / login / register / data-sources refresh×2 / ai×2 visualize / apikeys GET+PATCH / WebVitals beacon，commit `2c6def7`）。为此扩展 ApiFetchError 携带 status + 解析后错误 body（三种后端错误形状的消息提取），authFetch 对 FormData 跳过默认 Content-Type。**剩余 ~29 处裸 fetch 全部为 GET 读取**（hook 内 SWR fetcher、useSWR 内联 fetcher、publicFetcher、刻意吞错的刷新点）——维持开放（低优先，不阻塞价值链）。
+
 ### TD-9 — 死 ui 组件 + shadcn 重复对
 **审计**：2026-07-06，§5
 **当时证据**：死 ui 组件（0 importer）：`MobileStatsCard.tsx`、`separator.tsx`、`switch.tsx`、`tooltip.tsx`、小写 `select.tsx`。shadcn 重复：`button.tsx`(1) vs `Button/`(41)、`card.tsx`(3) vs `Card/`(28)、`select.tsx`(0) vs `Select/`(15)。PascalCase 胜出，小写 shadcn 版是死重。
@@ -490,3 +492,23 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **明确不做（评审否决清单，防后续重提）**：合并 19 爬虫（失去单源故障隔离）；合并 118 个测试文件（vitest/jest 按文件并行，文件数=并行度）；合并 20 路由（AI 代理上下文加载单元劣化）；page.tsx 无法合并（App Router 约定）。beef.ts(790)/mapeTracking(1027) 等 ≥600 行大文件是反向问题，本轮未碰。
 
 **未做（观感收益为主，评审列为 Worth exploring 不单开轮次）**：~10 个单函数微文件（auth-types、animations、ErrorBoundaryWrapper、usageService 等）归并；seam 类薄委托（lib/beef.ts 19 处引用、swr-fetcher）刻意保留。
+
+---
+
+## 十二、round-118 规划执行轮（2026-08-22，探查→规划→落地）
+
+**背景**：全项目探查 + 状态分析 + 后续开发规划（同日早些时候）。Phase 0 四项决策按规划建议默认值执行（数据策略 CSV+代理并行、datasets/timeseries 簇冻结不新增功能、自动部署暂缓、M3 范围=RSS 接入+品牌诚实化）。可工程化批次共 5 个，每批 tsc + 全量测试 + build + PM2 重启 + live 验证 + 独立提交：
+
+| # | 改动 | commit | 验证 |
+|---|---|---|---|
+| 1 | TD-8 mutation 收敛：9 处 POST/PATCH 裸 fetch 迁入唯一客户端；ApiFetchError 扩展（status + 错误 body + 三种错误形状消息提取）；authFetch FormData 跳过默认 Content-Type | `2c6def7` | jest 30→31 套件 / 297→304；tsc/build 清洁；live /login /register /apikeys 200 |
+| 2 | M3 RSS 资讯接入：services/newsRssIngest.ts + news-rss-ingest 调度作业（6h）；fast-xml-parser 5.11（唯一新依赖） | `0d758d0` | vitest +8（939+1 skip）；live 首跑 +15 篇、重启复跑 +0（sourceUrl 去重幂等实证） |
+| 3 | 核心 hook 测试：useTradingData（3 场景：装配/beef 模式/信号错误）+ useBeefCutForecasts（2 场景） | `e978192` | jest +5（33 套件 309） |
+| 4 | Tier1 爬虫源级测试：commodityPrices / fredData / dceFutures 各 4 场景（源级覆盖 3/19→6/19） | `887a906` | vitest +12（92 文件 951+1 skip） |
+| 5 | 品牌诚实化：site-stats dataSources 7→19（实测口径）；about Chronos 主力口径修正；3 个死按钮清除（Contact Us / Contact Sales / View Documentation） | `afe2a55` | build 清洁 + live 渲染断言（Contact Us 0 匹配、19+ 上页、Create Free Account 在） |
+
+**Phase 1（数据供给）实测结论（证据全文入 KNOWN-ISSUES D1）**：网络经 mihomo 出口实际可用（beefcentral/fred/mla/federalregister 200），与 D1 历史根因"网络出口封锁"已部分脱节；但 `.env` 中 MLA/USDA_MARS/OPENWEATHER 三把 key 为空串、FRED_API_KEY 缺失——**源复活卡在 key 获取（用户动作），代码侧端到端就绪**。无 key 国际源连接层通（USDA-PSD 404 / Comexstat 403 / CEPEA 301 均为应用层响应），空转归因于解析/数据语义；ABARES 源站不可达（直连+代理均 000）。逐源深挖 ROI 低且属运营决策，本轮仅记录证据。
+
+**测试基线**：backend 92 文件 **951 pass + 1 skip**、frontend 33 套件 **309 pass**、inference 4 文件 **60 pass**——合计 **1320 全绿**（round-117 基线 1288），零回退。
+
+**仍开放（不可独立完成/待用户动作）**：P0 beef_cut_prices 历史回填（等 CSV 数据）；MLA/USDA-MARS/FRED/OPENWEATHER key 获取（fred 缺整行，其余空串）；lagged-exog 实验；TD-8 剩余 ~29 处 GET 裸 fetch（低优先）；社交证明的完整形态（等用户基数）。
