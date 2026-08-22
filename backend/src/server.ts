@@ -26,6 +26,7 @@ import {
 	verifyDuePredictions,
 } from "@/services/mapeTracking";
 import { syncModelsFromRemote } from "@/services/modelRegistry";
+import { ingestNewsFromRss } from "@/services/newsRssIngest";
 import {
 	generateBaselinePredictions,
 	scheduleBeefCutPredictions,
@@ -372,6 +373,22 @@ function backgroundJobs(): ScheduledJob[] {
 			run: async () => {
 				const { copied, skipped } = await bridgeBeefPrices();
 				logger.info(`🥩 Beef price bridge: ${copied} copied, ${skipped} skipped`);
+			},
+		},
+
+		// M3 news ingestion (PRODUCT-SPEC §八): pull the registered RSS feeds
+		// into market_news. 6h cadence matches a news cycle without hammering
+		// hosts; sourceUrl dedupe makes re-runs free. Never throws — per-feed
+		// isolation lives in services/newsRssIngest.ts.
+		{
+			name: "news-rss-ingest",
+			firstRunDelayMs: 90000,
+			intervalMs: 6 * MS_PER_HOUR,
+			run: async () => {
+				const results = await ingestNewsFromRss();
+				const total = results.reduce((sum, r) => sum + r.inserted, 0);
+				const detail = results.map((r) => `${r.key}: +${r.inserted}/${r.fetched}`).join(", ");
+				logger.info(`📰 RSS news ingest: +${total} articles (${detail})`);
 			},
 		},
 	];
