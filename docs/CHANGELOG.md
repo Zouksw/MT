@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-22 — round-119 缺陷深挖 + 修复轮（探查 ~40 项新缺陷，修复 4 批）
+
+全仓四路审查（后端正确性 / 安全 IDOR / 前端 / 推理服务，4 只读子代理）+ 运行时日志 + 生产库审计，在既有台账外确认约 40 项新缺陷（9 高 / 14 中 / 17 低），全部高严重度经直接取证复核（推理侧 2 项由子代理 TestClient 复现）。按 4 批修复（每批 tsc + 全量测试 + build + PM2 重启 + live 验证 + 独立提交，明细见 TECH-DEBT §十三）：
+
+- **安全批**（`3890eb1`）：anomalies/models 域读+写路径属主化（跨用户枚举私有异常记录与 context 数值、泄漏 trainer 邮箱、向他人模型写 Forecast——round-106 漏网端点）；/api/anomalies/detect 加 aiRateLimiter（单次可扫 10 万行）。
+- **稳定性批**（`6274464`）：predictionCache 四处 Redis 故障容错（getRedisClient 失败是 throw 而非 null，旧 `if (!client)` 判空为死代码——Redis 宕机/30s cooldown 曾致 signals 路由 500、共识全模型 unavailable、prediction_logs 停写）；getPriceHistory 改 desc+take+reverse（旧 asc+take 返回最旧 N 行，前端图表画 2020 年价格）；前端 errorHandler 按 ApiFetchError.status 分类（4xx 曾被当 NETWORK_ERROR 重试 3 次）；useTradingData 商品切换清理 effect deps=[] 修复（round-106 修复从未生效）。
+- **数据批**（`d109af4`）：CME Yahoo 日线曾整体回溯一天（+08 服务器本地 `setHours` 把 session D 存成 D-1 16:00Z——周日有 bar/周五缺失）→ `setUTCHours` + OHLC 占位值 guard（cotton 曾落库 open=0.0、close>high）；生产数据同事务修正（100 行日期 +8h、3 行 OHLC，备份 `backups/round119/cme_rows_pre_fix.csv`），boot runAll 复核 0 周末 bar / 0 OHLC 违例。**beef_cut_prices「960 组三重重复行」复核为误报撤销**——按 (cut,date,source) 分组漏了 factoryId 维度，实为 AU-847/239/1260 多工厂合法同价报价，未删任何行。
+- **加固批**（`a6d810c`，20 文件）：推理服务输出侧有限性 guard（ARIMA 非收敛 NaN 区间曾以 null 穿透 200 → Redis/prediction_logs/信号置信度=1.0；`/predict/batch` 曾因单项 NaN 整批 500）+ LinAlgError 不再误报 422；日志三参调用序列化修复（SLOW_REQUEST 行曾是 `{"0":"R","1":"e"...}` 字符索引对象）；boot ingestion 日志走 classifyIngestionStatus；预测订阅调度 6h 重跑（原仅启动一次，运行中复活的源不进后台刷新/MAPE 环）；RSS slug 冲突确定性 hash8 兜底（周期性重复标题曾永久无法摄取）；beefIngest 事务回滚计数器重置；前端 9 项（401 登录提示死码/dashboard 静默归零/data-sources 全失败空白页/告警颜色旧枚举/beef 页误导空态/删除双击/双请求/NaN overlay 等）。
+
+**测试基线**：backend 951+1 skip → **971 pass + 1 skip**（94 文件）、frontend 309 → **314**（33 套件）、inference 60 → **64**——合计 1320 → **1349 全绿**，零回退。
+
+**仍开放（未修，登记 TECH-DEBT §十三）**：注册默认 EDITOR 架空 AI 付费分层与资讯发布权（产品决策）；runAndCachePrediction 并发去重；推理客户端 240s 超时重试放大/无负缓存；datasets import 列数上界；alerts rules timeseriesId 归属校验；/api/market/sources 错误串对 VIEWER 可见；useDashboardStats alerts 双请求；beefIngest MM/DD/YYYY 本地时区解析。
+
 ### 2026-08-22 — round-118 规划执行轮（探查→规划→落地，5 提交，测试 1288→1320）
 
 全项目探查 + 状态分析 + 开发规划后，按规划执行全部可工程化批次（Phase 0 决策采用规划建议的默认值）：

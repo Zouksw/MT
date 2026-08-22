@@ -129,7 +129,7 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 频率 | 任务 | 入口 |
 |---|---|---|
-| 启动后 5s | `schedulePredictionsFromPostgreSQL` + `scheduleBeefCutPredictions` | server.ts:147 |
+| 启动后 5s + **6h** | `schedulePredictionsFromPostgreSQL` + `scheduleBeefCutPredictions`（round-119 起每 6h 重跑订阅——原仅启动一次，运行中复活的源/新导入的 cut 到下次重启前不进后台刷新与 MAPE 环；subscribeCommodity 幂等） | server.ts |
 | 30 min | 订阅制预测刷新（遍历所有 commodity + cut 订阅，跑 inference） | predictionCache.ts:197 |
 | 启动后 15s + **6h** | `verifyDuePredictions`（MAPE 验证，扫描到期预测；round-46 从 24h 提频、批次 2000→5000） | server.ts |
 | 启动后 20s（一次性） | `invalidatePollutedPredictions`（round-46：作废 brl_usd/corn_cme/natural_gas_cme 的 pre-fix 污染预测，标 stale） | server.ts |
@@ -168,12 +168,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 92（2026-08-22） | **951 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 33（2026-08-22） | **309 pass** |
-| inference | pytest 8 | conftest.py | 4（2026-08-21） | **60 pass** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 94（2026-08-22） | **971 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 33（2026-08-22） | **314 pass** |
+| inference | pytest 8 | conftest.py | 4（2026-08-22） | **64 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
 
-> 三者合计 **1320 全绿**（951 + 309 + 60，截至 2026-08-22 round-118 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1349 全绿**（971 + 314 + 64，截至 2026-08-22 round-119 实测）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
