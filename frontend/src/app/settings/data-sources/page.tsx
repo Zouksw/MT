@@ -48,7 +48,9 @@ interface SourceInfo {
 	 */
 	status: "healthy" | "empty" | "skipped_no_key" | "error" | "pending";
 	lastRun: string | null;
-	error: string | null;
+	// round-119: the backend no longer returns the raw scraper error string
+	// (shared user cache + infra-info leak); the status enum above is the
+	// failure signal. Full errors live in the PM2 logs.
 	lastResult: { inserted: number; updated: number } | null;
 }
 
@@ -574,11 +576,6 @@ export default function DataSourcesPage() {
 
 										{isExpanded && (
 											<div className="px-4 py-3 bg-muted/30 border-t border-border">
-												{source.error && (
-													<div className="mb-2 p-2 rounded bg-red-50 dark:bg-red-900/20 text-xs text-red-700 dark:text-red-400">
-														{source.error}
-													</div>
-												)}
 												{historyLogs.length > 0 ? (
 													<table className="w-full text-xs">
 														<thead>

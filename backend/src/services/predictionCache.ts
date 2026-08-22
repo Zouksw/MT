@@ -113,6 +113,18 @@ export async function getAllCachedPredictions(
 	return results;
 }
 
+// In-flight dedup (round-119): concurrent cache misses for the same
+// (commodityId, modelId, horizon) — e.g. two on-demand requests racing a
+// background refresh — each ran the full predict + logPrediction pipeline.
+// logPrediction is an unconditional create, so duplicates wrote duplicate
+// prediction_logs rows and inflated the MAPE denominator. Callers now share
+// ONE in-flight promise per cache key. The key matches the Redis cache key,
+// which (like the cache itself) ignores confidenceLevel — concurrent
+// requests with different confidence levels intentionally share one result.
+// Failures are NOT memoized: the entry is deleted when the promise settles,
+// so the next caller retries (deliberately no negative caching).
+const inFlightPredictions = new Map<string, Promise<CachedPrediction>>();
+
 /**
  * Run a prediction and cache the result
  */
@@ -123,7 +135,29 @@ export async function runAndCachePrediction(
 	confidenceLevel: number = 0.95,
 ): Promise<CachedPrediction> {
 	const key = cacheKeys.prediction(commodityId, modelId, horizon);
+	const inFlight = inFlightPredictions.get(key);
+	if (inFlight) return inFlight;
 
+	const run = computeAndCachePrediction(
+		commodityId,
+		modelId,
+		horizon,
+		key,
+		confidenceLevel,
+	).finally(() => {
+		inFlightPredictions.delete(key);
+	});
+	inFlightPredictions.set(key, run);
+	return run;
+}
+
+async function computeAndCachePrediction(
+	commodityId: string,
+	modelId: string,
+	horizon: number,
+	key: string,
+	confidenceLevel: number,
+): Promise<CachedPrediction> {
 	try {
 		// Dual-backend: if commodityId is a virtual cut-series key
 		// (cut:{factoryId}:{cutCode}), extract the series from BeefCutPrice

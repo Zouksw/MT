@@ -185,11 +185,10 @@ export const useDashboardStats = () => {
 		retryOpts,
 	);
 
-	const { data: recentAlertsData } = useRetryableFetch(
-		() => (isAuth ? `${API_BASE}/alerts?limit=5` : null),
-		authFetcher,
-		retryOpts,
-	);
+	// round-119: the recent-alerts strip used to fire a SECOND request
+	// (`/api/alerts?limit=5`) for data the limit=100 call above already
+	// returns — same endpoint, same newest-first ordering, first page. Slice
+	// from the one response instead (alertsList is parsed below).
 
 	const { data: recentForecastsData } = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/models?limit=5` : null),
@@ -452,9 +451,7 @@ export const useDashboardStats = () => {
 					},
 					aiSummary,
 					recentNews,
-					recentAlerts: Array.isArray(recentAlertsData?.data)
-						? recentAlertsData.data
-						: recentAlertsData?.data?.alerts || recentAlertsData?.items || [],
+					recentAlerts: alertsList.slice(0, 5),
 					recentForecasts: Array.isArray(recentForecastsData?.data)
 						? recentForecastsData.data
 						: recentForecastsData?.data?.models || recentForecastsData?.items || [],

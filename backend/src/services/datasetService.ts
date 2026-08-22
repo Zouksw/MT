@@ -215,6 +215,16 @@ export async function importDatasetData(
 
 	if (parsedData.length === 0) throw new BadRequestError("No data found");
 
+	// round-119: valueColumns was unbounded — a CSV with thousands of columns
+	// would fan out into that many timeseries upserts. Real imports carry a
+	// handful of value columns; reject pathological ones early.
+	const MAX_VALUE_COLUMNS = 50;
+	if (valueColumns.length > MAX_VALUE_COLUMNS) {
+		throw new BadRequestError(
+			`Import supports at most ${MAX_VALUE_COLUMNS} value columns (got ${valueColumns.length})`,
+		);
+	}
+
 	// Create timeseries for each value column
 	const timeseries = await Promise.all(
 		valueColumns.map(async (column) => {

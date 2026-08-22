@@ -187,6 +187,18 @@ export async function createAlertRule(params: {
 
 	assertConditionEvaluable(condition);
 
+	// round-119: creation used to accept ANY timeseriesId — a rule could be
+	// attached to another user's series (or a nonexistent id that silently
+	// never evaluates). Enforce owner-scoping with the same 404 for
+	// not-found and not-owned, matching the anomalies/models convention.
+	const timeseries = await prisma.timeseries.findUnique({
+		where: { id: timeseriesId },
+		select: { dataset: { select: { ownerId: true } } },
+	});
+	if (!timeseries || timeseries.dataset.ownerId !== userId) {
+		throw new NotFoundError("Timeseries");
+	}
+
 	const rule = await prisma.alertRule.create({
 		data: {
 			userId,

@@ -306,7 +306,12 @@ router.get(
 				...info,
 				status,
 				lastRun: h?.lastRun ?? null,
-				error: h?.error ?? null,
+				// round-119: the raw scraper error string is no longer exposed —
+				// this route's cacheRoute is shared across ALL users (varyByUser
+				// defaults to false), so role-gating the field is not coherent,
+				// and the message can carry internal hostnames/URLs. The status
+				// enum above already tells the board a source failed; diagnosis
+				// lives in the PM2 logs where the full error is recorded.
 				lastResult: h?.lastResult ?? null,
 			};
 		});

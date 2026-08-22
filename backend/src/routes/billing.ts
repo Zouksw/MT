@@ -14,7 +14,11 @@ const PLANS = [
 		price: 0,
 		features: [
 			"5 watchlist items",
-			"3 AI prediction models",
+			// round-119: AI tier gating is dormant (AI_TIER_ENFORCED, default
+			// off) — every registered user can currently run all 9 model ids.
+			// Listing "3 AI prediction models" here claimed a restriction that
+			// does not exist; paid tiers will differentiate when they launch.
+			"All 9 AI prediction models (open phase)",
 			"10 signals/day",
 			"7-day price history",
 			"Basic alerts",
@@ -26,7 +30,9 @@ const PLANS = [
 		price: 49,
 		features: [
 			"50 watchlist items",
-			"All 7 AI models",
+			// round-119: 7 was a stale count (registry has 9 model ids); the
+			// free/pro split on model access is not enforced today.
+			"All 9 AI models, priority inference (planned)",
 			"Unlimited signals",
 			"1-year price history",
 			"Backtest reports",

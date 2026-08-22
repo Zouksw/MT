@@ -156,4 +156,27 @@ describe("Market Data Routes", () => {
 			expect(res.status).toBe(401);
 		});
 	});
+
+	describe("GET /api/market/sources", () => {
+		// round-119: the raw scraper error string is no longer exposed (this
+		// route's cacheRoute is shared across users; the status enum is the
+		// failure signal). Pin that `error` never re-enters the response.
+		test("returns the source board WITHOUT raw error strings", async () => {
+			const res = await request(app).get("/api/market/sources").set(authHeaders());
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			const sources = res.body.data.sources;
+			expect(Array.isArray(sources)).toBe(true);
+			expect(sources.length).toBeGreaterThan(0);
+			for (const s of sources) {
+				expect(s).toHaveProperty("status");
+				expect(s).not.toHaveProperty("error");
+			}
+		});
+
+		test("requires authentication", async () => {
+			const res = await request(app).get("/api/market/sources");
+			expect(res.status).toBe(401);
+		});
+	});
 });

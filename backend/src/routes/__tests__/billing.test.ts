@@ -31,6 +31,26 @@ describe("Billing Routes (Integration)", () => {
 			expect(res.body.data.plans[0]).toHaveProperty("price");
 			expect(res.body.data.plans[0]).toHaveProperty("features");
 		});
+
+		it("plan copy matches the open-phase reality (round-119)", async () => {
+			// AI tier gating is dormant (AI_TIER_ENFORCED, default off): every
+			// registered user can currently run all 9 model ids. The free tier
+			// must not claim a 3-model restriction that does not exist, and the
+			// pro tier must not carry the stale "7 models" count.
+			const res = await request(app)
+				.get("/api/billing/plans")
+				.set({ Authorization: `Bearer ${token}` });
+
+			const [free, pro] = res.body.data.plans;
+			expect(free.features.some((f: string) => f.includes("All 9 AI prediction models"))).toBe(
+				true,
+			);
+			expect(pro.features.some((f: string) => f.includes("All 9 AI models"))).toBe(true);
+			const allFeatures = res.body.data.plans.flatMap((p: { features: string[] }) => p.features);
+			for (const f of allFeatures) {
+				expect(f).not.toMatch(/7 AI|3 AI prediction/);
+			}
+		});
 	});
 
 	describe("GET /api/billing/subscription", () => {

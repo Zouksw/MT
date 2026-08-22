@@ -46,7 +46,10 @@ export default function BillingPage() {
 		<PageContainer>
 			<PageHeader
 				title="AI Plan"
-				description="Choose the right AI features for your analysis needs"
+				// round-119 honesty: AI tier gating is dormant (AI_TIER_ENFORCED,
+				// default off) — all registered users can currently run every
+				// model. Say so instead of implying the tiers below are enforced.
+				description="AI forecasting is currently open to all registered users — plan tiers are informational and will apply when paid plans launch"
 			/>
 			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6">
 				{plans.map((plan) => {

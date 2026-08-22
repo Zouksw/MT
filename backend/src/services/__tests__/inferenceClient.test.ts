@@ -148,3 +148,52 @@ describe("inference client — checkReadiness()", () => {
 		expect(result.detail).toBeUndefined();
 	});
 });
+
+describe("inference client — predict() retry policy (round-119)", () => {
+	const originalFetch = global.fetch;
+
+	afterEach(() => {
+		global.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it("does NOT retry a timeout — one attempt, then 503", async () => {
+		// A timeout means the service accepted the connection but is too
+		// saturated to answer within REQUEST_TIMEOUT. Retrying doubles the
+		// caller's wait (2×timeout) and piles load onto a service already
+		// behind. Before round-119 the AbortError fell into the generic
+		// retry branch: 2 attempts, ~240s worst case.
+		let calls = 0;
+		global.fetch = vi.fn(async () => {
+			calls++;
+			const err = new Error("The operation was aborted");
+			err.name = "AbortError"; // how fetchWithTimeout's abort surfaces
+			throw err;
+		}) as unknown as typeof global.fetch;
+
+		const { predict } = await import("@/services/inference/client");
+		await expect(
+			predict({ values: [1, 2], timestamps: [1, 2], model_id: "arima", horizon: 3 }),
+		).rejects.toThrow(/Prediction failed after retries/);
+
+		expect(calls).toBe(1);
+	});
+
+	it("still retries a fast network failure once (ECONNREFUSED)", async () => {
+		// Connection-refused fails in milliseconds — the single retry is cheap
+		// and covers transient blips. Only the expensive timeout case is
+		// exempted from retrying.
+		let calls = 0;
+		global.fetch = vi.fn(async () => {
+			calls++;
+			throw new Error("connect ECONNREFUSED 127.0.0.1:10810");
+		}) as unknown as typeof global.fetch;
+
+		const { predict } = await import("@/services/inference/client");
+		await expect(
+			predict({ values: [1, 2], timestamps: [1, 2], model_id: "arima", horizon: 3 }),
+		).rejects.toThrow();
+
+		expect(calls).toBe(2);
+	});
+});

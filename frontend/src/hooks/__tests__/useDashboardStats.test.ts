@@ -212,18 +212,32 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats?.alerts.bySeverity.info).toBe(3);
 	});
 
-	it("should handle responses with items instead of data", async () => {
-		// Key-indexed mock so the recentAlerts/recentForecasts payloads land
-		// regardless of call order (was: callCount 5/6, fragile to reordering).
+	it("recentAlerts are sliced from the single /alerts response (round-119 dedup)", async () => {
+		// The hook used to fire a SECOND /api/alerts?limit=5 request for data
+		// the limit=100 call already returns. It must slice the first 5 from
+		// the one response instead — one alerts request per dashboard load.
+		// Key-indexed mock so payloads land regardless of call order.
 		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
 		mockUseRetryableFetch.mockImplementation((key: any) => {
 			const url = String(key ?? "");
-			if (url.includes("/alerts?limit=5")) {
-				// recentAlerts — uses items[] shape
-				return makeFetchResult({ data: { items: [{ id: 1, name: "Alert 1" }] } });
+			if (url.includes("/alerts?page=1&limit=100")) {
+				return makeFetchResult({
+					data: {
+						total: 7,
+						data: [
+							{ id: "1" },
+							{ id: "2" },
+							{ id: "3" },
+							{ id: "4" },
+							{ id: "5" },
+							{ id: "6" },
+							{ id: "7" },
+						],
+					},
+				});
 			}
 			if (url.includes("/models?limit=5")) {
-				// recentForecasts — uses items[] shape
+				// recentForecasts — still its own call, uses items[] shape
 				return makeFetchResult({ data: { items: [{ id: 1, name: "Forecast 1" }] } });
 			}
 			return makeFetchResult({ data: { total: 0, data: [] } });
@@ -235,8 +249,23 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		expect(result.current.stats?.recentAlerts).toEqual([{ id: 1, name: "Alert 1" }]);
+		// The 5 newest from the one response, newest-first order preserved.
+		expect(result.current.stats?.recentAlerts).toHaveLength(5);
+		expect(result.current.stats?.recentAlerts.map((a: { id: string }) => a.id)).toEqual([
+			"1",
+			"2",
+			"3",
+			"4",
+			"5",
+		]);
 		expect(result.current.stats?.recentForecasts).toEqual([{ id: 1, name: "Forecast 1" }]);
+
+		// Exactly ONE alerts request is issued (authed keys are thunks; their
+		// source contains the URL, so match on the stringified key).
+		const alertsCalls = mockUseRetryableFetch.mock.calls.filter((c) =>
+			String(c[0]).includes("/alerts"),
+		);
+		expect(alertsCalls).toHaveLength(1);
 	});
 
 	it("should use default values when totals are missing", async () => {

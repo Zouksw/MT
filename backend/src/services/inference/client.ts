@@ -200,11 +200,17 @@ export async function predict(request: InferencePredictRequest): Promise<Inferen
 				// as-is (its real status), don't re-wrap it as a 503 below.
 				throw err;
 			}
-			if (attempt === 0) {
-				await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
-			} else {
-				break; // 4xx or second attempt — stop retrying
+			// round-119: timeouts are NOT retried. A timeout means the service
+			// accepted the connection but didn't answer within REQUEST_TIMEOUT —
+			// it is saturated, and an identical retry doubles the caller's wait
+			// (2×timeout) while piling load onto a service already behind.
+			// Fast network failures (ECONNREFUSED etc.) keep their single
+			// retry — they cost milliseconds, not minutes.
+			const isTimeout = err instanceof Error && err.name === "AbortError";
+			if (isTimeout || attempt > 0) {
+				break;
 			}
+			await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
 		}
 	}
 

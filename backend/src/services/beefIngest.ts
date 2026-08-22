@@ -39,6 +39,38 @@ function normalizeHeader(h: string): string {
 	return h.trim().toLowerCase().replace(/\s+/g, "");
 }
 
+/**
+ * Parse a date cell from a manual import CSV into a Date, or null when
+ * unparseable.
+ *
+ * ISO strings ("2026-07-26") are UTC-safe in new Date(). Slash dates
+ * ("MM/DD/YYYY", US-format CSVs) are NOT: they parse in the server's local
+ * timezone, so on a UTC+8 host "08/21/2026" lands at 2026-08-20T16:00Z and
+ * a subsequent UTC-midnight truncation pins the PREVIOUS day. Slash
+ * components are therefore built as UTC explicitly (round-119).
+ */
+export function parseImportDate(dateStr: string): Date | null {
+	const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dateStr);
+	if (slash) {
+		const month = Number(slash[1]);
+		const day = Number(slash[2]);
+		const year = Number(slash[3]);
+		const date = new Date(Date.UTC(year, month - 1, day));
+		// Reject rollover: "13/45/2026" or "02/31/2026" must not silently
+		// become a different valid date.
+		if (
+			date.getUTCFullYear() !== year ||
+			date.getUTCMonth() !== month - 1 ||
+			date.getUTCDate() !== day
+		) {
+			return null;
+		}
+		return date;
+	}
+	const iso = new Date(dateStr);
+	return Number.isNaN(iso.getTime()) ? null : iso;
+}
+
 /** Parse a CSV buffer into row objects (header row required). Minimal, robust. */
 export function parseBeefCSV(buffer: Buffer, delimiter = ","): Array<Record<string, string>> {
 	const text = buffer.toString("utf-8").replace(/^\uFEFF/, ""); // strip BOM
@@ -121,8 +153,13 @@ export async function importBeefPrices(
 			continue;
 		}
 
-		const date = new Date(dateStr);
-		if (Number.isNaN(date.getTime())) {
+		// Slash dates ("MM/DD/YYYY" in US-format manual CSVs) are parsed in
+		// the SERVER's local timezone — on a UTC+8 host "08/21/2026" lands at
+		// 2026-08-20T16:00Z and the setUTCHours below then pins it to the
+		// previous day. parseImportDate builds slash-separated components as
+		// UTC explicitly; ISO date strings are already UTC-safe.
+		const date = parseImportDate(dateStr);
+		if (!date) {
 			errors.push({ row: rowNum, message: `Invalid date: ${dateStr}` });
 			skipped++;
 			continue;

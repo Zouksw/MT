@@ -22,7 +22,10 @@ export default function PricingPage() {
 				"5 watchlist items",
 				"Basic charts & OHLCV data",
 				"7-day price history",
-				"Upgrade to Pro for AI forecasting",
+				// round-119 honesty: AI tier gating is dormant — every registered
+				// user can run all models today, so the old "Upgrade to Pro for AI
+				// forecasting" upsell claimed a restriction that does not exist.
+				"AI forecasting — free for all registered users (open phase)",
 			],
 			cta: "Get Started Free",
 			highlighted: false,
@@ -88,8 +91,9 @@ export default function PricingPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.1}>
 						<p className="text-body-lg text-muted-foreground mb-10">
-							Free tier includes all {SITE_STATS.beefCuts} beef cut prices. Paid tiers unlock AI
-							signals and advanced analytics.
+							Free tier includes all {SITE_STATS.beefCuts} beef cut prices. AI forecasting is
+							currently open to every registered user — paid tiers, when they launch, add extended
+							history and advanced analytics.
 						</p>
 					</MotionReveal>
 
@@ -274,7 +278,7 @@ export default function PricingPage() {
 							},
 							{
 								q: "Is the free plan really free?",
-								a: `No time limit. All ${SITE_STATS.beefCuts} beef cut prices with OHLCV charts and 7-day history, permanently free. Upgrade for AI signals and extended history.`,
+								a: `No time limit. All ${SITE_STATS.beefCuts} beef cut prices with OHLCV charts and 7-day history, permanently free. AI signals are currently free for registered users; paid tiers will add extended history.`,
 							},
 							{
 								q: "What payment methods do you accept?",

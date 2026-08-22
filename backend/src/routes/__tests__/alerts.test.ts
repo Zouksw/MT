@@ -79,9 +79,14 @@ describe("Alerts Routes (Integration)", () => {
 		let ownerId = "";
 		let otherId = "";
 		let ruleId = "";
+		// round-119: createAlertRule now validates that the referenced timeseries
+		// exists AND belongs to the requesting user — the fixture must be a real
+		// owned series, not a bare UUID.
+		let ownedSeriesId = "";
+		let foreignSeriesId = "";
 
 		const ruleBody = {
-			timeseriesId: "11111111-1111-4111-8111-111111111111",
+			timeseriesId: "filled-in-by-beforeAll",
 			name: `crud-rule-${suffix}`,
 			type: "ANOMALY",
 			condition: { type: "threshold", operator: ">", value: 100 },
@@ -112,6 +117,33 @@ describe("Alerts Routes (Integration)", () => {
 			ownerToken = jwtUtils.generateToken(ownerId);
 			otherToken = jwtUtils.generateToken(otherId);
 
+			const ownedDataset = await prisma.dataset.create({
+				data: {
+					name: `rules-ds-${suffix}`,
+					slug: `rules-ds-${suffix}`,
+					ownerId,
+					storageFormat: "CSV",
+				},
+			});
+			const ownedSeries = await prisma.timeseries.create({
+				data: { datasetId: ownedDataset.id, name: "owned", slug: "owned" },
+			});
+			ownedSeriesId = ownedSeries.id;
+			ruleBody.timeseriesId = ownedSeriesId;
+
+			const foreignDataset = await prisma.dataset.create({
+				data: {
+					name: `rules-fk-ds-${suffix}`,
+					slug: `rules-fk-ds-${suffix}`,
+					ownerId: otherId,
+					storageFormat: "CSV",
+				},
+			});
+			const foreignSeries = await prisma.timeseries.create({
+				data: { datasetId: foreignDataset.id, name: "foreign", slug: "foreign" },
+			});
+			foreignSeriesId = foreignSeries.id;
+
 			const res = await request(app)
 				.post("/api/alerts/rules")
 				.set({ Authorization: `Bearer ${ownerToken}` })
@@ -121,7 +153,11 @@ describe("Alerts Routes (Integration)", () => {
 		});
 
 		afterAll(async () => {
-			// User cascade removes their rules.
+			// Dataset cascade removes its timeseries; user cascade removes rules
+			// and the remaining datasets.
+			await prisma.dataset.deleteMany({
+				where: { ownerId: { in: [ownerId, otherId] } },
+			});
 			await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherId] } } });
 		});
 
@@ -133,6 +169,34 @@ describe("Alerts Routes (Integration)", () => {
 
 			expect(res.status).toBe(400);
 			expect(res.body.error.message).toContain("no evaluator");
+		});
+
+		// round-119: creation used to accept ANY timeseriesId — a rule could be
+		// pinned to another user's series (or a nonexistent id that silently
+		// never evaluates). Both must 404, per the owner-scoping convention.
+		it("POST /rules with another user's timeseriesId is a 404, not a leak", async () => {
+			const res = await request(app)
+				.post("/api/alerts/rules")
+				.set({ Authorization: `Bearer ${ownerToken}` })
+				.send({ ...ruleBody, name: `foreign-ts-${suffix}`, timeseriesId: foreignSeriesId });
+
+			expect(res.status).toBe(404);
+		});
+
+		it("POST /rules with a nonexistent timeseriesId is a 404", async () => {
+			// Valid uuid SHAPE but no such row — reaches the service's
+			// ownership lookup, which must 404 (a malformed id would be
+			// rejected as 400 by route validation before this).
+			const res = await request(app)
+				.post("/api/alerts/rules")
+				.set({ Authorization: `Bearer ${ownerToken}` })
+				.send({
+					...ruleBody,
+					name: `ghost-ts-${suffix}`,
+					timeseriesId: "11111111-1111-4111-8111-111111111111",
+				});
+
+			expect(res.status).toBe(404);
 		});
 
 		it("GET /rules returns the created rule in the frontend shape", async () => {
