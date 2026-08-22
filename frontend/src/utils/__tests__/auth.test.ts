@@ -223,6 +223,24 @@ describe("auth utilities", () => {
 				}),
 			);
 		});
+
+		it("should not set a default Content-Type for FormData bodies", async () => {
+			// Multipart uploads need the browser-generated boundary header —
+			// a forced "application/json" corrupts the request.
+			tokenManager.getToken.mockReturnValue("test-token");
+			(global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+
+			const formData = new FormData();
+			formData.append("file", new File(["a"], "prices.csv", { type: "text/csv" }));
+			await authFetch("/api/test", { method: "POST", body: formData });
+
+			const headers = (global.fetch as jest.Mock).mock.calls[0][1].headers as Record<
+				string,
+				string
+			>;
+			expect(headers["Content-Type"]).toBeUndefined();
+			expect(headers.Authorization).toBe("Bearer test-token");
+		});
 	});
 
 	describe("verifyAuthentication", () => {

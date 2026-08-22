@@ -36,8 +36,11 @@ export const getAuthHeader = (): { Authorization: string } | undefined => {
 export const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
 	const token = tokenManager.getToken();
 
+	// FormData bodies must leave Content-Type unset — the browser sets the
+	// multipart boundary. Anything else defaults to JSON.
+	const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
 	const headers: HeadersInit = {
-		"Content-Type": "application/json",
+		...(isFormData ? {} : { "Content-Type": "application/json" }),
 		...options.headers,
 	};
 

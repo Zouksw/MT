@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { API_BASE } from "@/lib/config";
 import { formatDecimal } from "@/lib/format";
+import { authFetch } from "@/utils/auth";
 import { type DataHealth, DataHealthCard } from "./DataHealthCard";
 
 interface SourceInfo {
@@ -289,16 +290,10 @@ export default function DataSourcesPage() {
 	const refreshSource = async (sourceId: string) => {
 		setRefreshing(sourceId);
 		try {
-			const token = await getToken();
-			const headers: Record<string, string> = { "Content-Type": "application/json" };
-			if (token) headers.Authorization = `Bearer ${token}`;
-
-			const res = await fetch(`${API_BASE}/api/market/sources/${sourceId}/refresh`, {
+			const res = await authFetch(`/api/market/sources/${sourceId}/refresh`, {
 				method: "POST",
-				headers,
 			});
-			const data = await res.json();
-			if (data.success) {
+			if (res.ok) {
 				await fetchData();
 			}
 		} catch {
@@ -311,13 +306,8 @@ export default function DataSourcesPage() {
 	const refreshAll = async () => {
 		setRefreshing("__all__");
 		try {
-			const token = await getToken();
-			const headers: Record<string, string> = { "Content-Type": "application/json" };
-			if (token) headers.Authorization = `Bearer ${token}`;
-
-			await fetch(`${API_BASE}/api/market/sources/refresh-all`, {
+			await authFetch("/api/market/sources/refresh-all", {
 				method: "POST",
-				headers,
 			});
 			await fetchData();
 		} catch {

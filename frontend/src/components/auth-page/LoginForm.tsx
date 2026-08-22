@@ -7,11 +7,23 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { apiFetch } from "@/lib/apiFetch";
 import { errorHandler } from "@/lib/errorHandler";
 import { sanitizer } from "@/lib/sanitizer";
 import { tokenManager } from "@/lib/tokenManager";
 import { required, validationRules } from "@/lib/validation";
 import { setCachedUser } from "@/utils/auth";
+
+export interface AuthPayload {
+	user: {
+		id: string;
+		email: string;
+		name?: string | null;
+		avatar?: string;
+		roles?: string[];
+	};
+	token: string;
+}
 
 export function LoginForm() {
 	const [loading, setLoading] = useState(false);
@@ -44,21 +56,13 @@ export function LoginForm() {
 				return;
 			}
 
-			const res = await fetch(`/api/auth/login`, {
+			// apiFetch throws ApiFetchError carrying the backend's message
+			// ({message} shape on auth routes) — same toast path as before.
+			const data = await apiFetch<{ data?: AuthPayload } & AuthPayload>("/api/auth/login", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
 				body: JSON.stringify({ email: sanitizedEmail, password, remember }),
 			});
 
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.message || `${res.status} ${res.statusText}`);
-			}
-
-			const data = await res.json();
 			const { user, token: authToken } = data.data || data;
 
 			tokenManager.setToken(authToken, remember);

@@ -12,6 +12,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { Select } from "@/components/ui/Select";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
+import { ApiFetchError, apiFetch } from "@/lib/apiFetch";
 import { useIsMobile } from "@/lib/responsive-utils";
 
 // Dynamic import for heavy chart component
@@ -142,42 +143,32 @@ export default function AIPredictPage() {
 		setApiError(null);
 
 		try {
-			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-			const response = await fetch("/api/inference/predict/visualize", {
-				method: "POST",
-				credentials: "include",
-				headers: {
-					"Content-Type": "application/json",
-					...(token ? { Authorization: `Bearer ${token}` } : {}),
+			const data = await apiFetch<{ data?: VisualizationResult }>(
+				"/api/inference/predict/visualize",
+				{
+					method: "POST",
+					body: JSON.stringify({
+						commodityId: formTimeseries,
+						algorithm: formModel,
+						horizon: parseInt(formHorizon, 10) || 10,
+						...(formStartTime ? { startTime: parseInt(formStartTime, 10) } : {}),
+						historyPoints: parseInt(formHistoryPoints, 10) || 50,
+					}),
 				},
-				body: JSON.stringify({
-					commodityId: formTimeseries,
-					algorithm: formModel,
-					horizon: parseInt(formHorizon, 10) || 10,
-					...(formStartTime ? { startTime: parseInt(formStartTime, 10) } : {}),
-					historyPoints: parseInt(formHistoryPoints, 10) || 50,
-				}),
-			});
+			);
 
-			if (!response.ok) {
-				const error = await response.json();
-				if (response.status === 403 || response.status === 503) {
-					setPermissionError(
-						error.error?.message || "AI features are restricted to administrators",
-					);
-					throw new Error(error.error?.message || "Prediction failed");
-				}
-				throw new Error(error.error?.message || "Prediction failed");
-			}
-
-			const data = await response.json();
-			setResult(data.data);
+			setResult(data.data ?? null);
 			setApiError(null);
 			toast.showSuccess(
 				`Prediction completed! Generated ${data.data?.prediction?.values?.length || 0} data points.`,
 			);
 		} catch (error: unknown) {
-			const msg = error instanceof Error ? error.message : "Prediction failed";
+			const msg = error instanceof Error && error.message ? error.message : "Prediction failed";
+			// 403/503 are access-gate rejections (tier gate / inference down) —
+			// show them in the dedicated permission banner, not just the toast.
+			if (error instanceof ApiFetchError && (error.status === 403 || error.status === 503)) {
+				setPermissionError(msg);
+			}
 			setApiError(error instanceof Error ? error : new Error(msg));
 			if (!permissionError) {
 				toast.showError(`Prediction failed: ${msg}`);

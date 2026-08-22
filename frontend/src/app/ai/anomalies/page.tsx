@@ -11,6 +11,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
+import { apiFetch } from "@/lib/apiFetch";
 import { formatDecimal } from "@/lib/format";
 
 // Dynamic import for heavy chart component
@@ -90,34 +91,25 @@ export default function AIAnomaliesPage() {
 		setApiError(null);
 
 		try {
-			const token = (await import("@/lib/tokenManager")).tokenManager.getToken();
-			const response = await fetch("/api/inference/anomalies/visualize", {
-				method: "POST",
-				credentials: "include",
-				headers: {
-					"Content-Type": "application/json",
-					...(token ? { Authorization: `Bearer ${token}` } : {}),
+			const data = await apiFetch<{ data?: VisualizationResult }>(
+				"/api/inference/anomalies/visualize",
+				{
+					method: "POST",
+					body: JSON.stringify({
+						commodityId: formTimeseries,
+						threshold: parseFloat(formThreshold),
+						method: formMethod || "statistical",
+						historyPoints: parseInt(formHistoryPoints, 10) || 100,
+					}),
 				},
-				body: JSON.stringify({
-					commodityId: formTimeseries,
-					threshold: parseFloat(formThreshold),
-					method: formMethod || "statistical",
-					historyPoints: parseInt(formHistoryPoints, 10) || 100,
-				}),
-			});
+			);
 
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error?.message || "Detection failed");
-			}
-
-			const data = await response.json();
-			setResult(data.data);
+			setResult(data.data ?? null);
 			toast.showSuccess(
 				`Detection completed! Found ${data.data?.statistics?.total || 0} anomalies.`,
 			);
 		} catch (error: unknown) {
-			const msg = error instanceof Error ? error.message : "Detection failed";
+			const msg = error instanceof Error && error.message ? error.message : "Detection failed";
 			setApiError(msg);
 			toast.showError(`Detection failed: ${msg}`);
 		} finally {

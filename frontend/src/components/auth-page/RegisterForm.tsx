@@ -7,10 +7,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { apiFetch } from "@/lib/apiFetch";
 import { errorHandler } from "@/lib/errorHandler";
 import { sanitizer } from "@/lib/sanitizer";
 import { tokenManager } from "@/lib/tokenManager";
 import { required, validationRules } from "@/lib/validation";
+
+interface RegisterPayload {
+	user: {
+		id: string;
+		email: string;
+		avatar?: string;
+		roles?: string[];
+	};
+	token: string;
+}
 
 export function RegisterForm() {
 	const [loading, setLoading] = useState(false);
@@ -70,25 +81,20 @@ export function RegisterForm() {
 				return;
 			}
 
-			const res = await fetch(`/api/auth/register`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
+			// apiFetch throws ApiFetchError carrying the backend's message
+			// ({message} shape on auth routes) — same toast path as before.
+			const data = await apiFetch<{ data?: RegisterPayload } & RegisterPayload>(
+				"/api/auth/register",
+				{
+					method: "POST",
+					body: JSON.stringify({
+						email: sanitizedEmail,
+						password,
+						name: sanitizedName,
+					}),
 				},
-				credentials: "include",
-				body: JSON.stringify({
-					email: sanitizedEmail,
-					password,
-					name: sanitizedName,
-				}),
-			});
+			);
 
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.message || `${res.status} ${res.statusText}`);
-			}
-
-			const data = await res.json();
 			const { user, token: authToken } = data.data || data;
 
 			tokenManager.setToken(authToken);

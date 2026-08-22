@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { API_BASE } from "@/lib/config";
-import { tokenManager } from "@/lib/tokenManager";
+import { ApiFetchError, apiFetch } from "@/lib/apiFetch";
 
 /**
  * useBeefImport — wraps the admin beef-price CSV upload (POST /api/beef/import).
@@ -31,8 +30,6 @@ export interface BeefImportResult {
 
 export type UploadStatus = "idle" | "uploading" | "success" | "error";
 
-const API_URL = `${API_BASE}/api`;
-
 export function useBeefImport() {
 	const [status, setStatus] = useState<UploadStatus>("idle");
 	const [result, setResult] = useState<BeefImportResult | null>(null);
@@ -44,42 +41,30 @@ export function useBeefImport() {
 		setResult(null);
 
 		try {
-			const token = tokenManager.getToken();
 			const formData = new FormData();
 			formData.append("file", file);
 
-			const res = await fetch(`${API_URL}/beef/import`, {
-				method: "POST",
-				credentials: "include",
-				headers: {
-					// Let the browser set the multipart boundary — do NOT set
-					// Content-Type manually for FormData.
-					...(token ? { Authorization: `Bearer ${token}` } : {}),
-				},
-				body: formData,
-			});
-
-			const json = await res.json();
-
-			if (!res.ok) {
-				// For permission errors, surface the admin-specific guidance
-				// rather than whatever opaque message the backend sent — the
-				// caller needs to know it's a role issue, not a data issue.
-				const msg =
-					res.status === 403
-						? "Only administrators can import beef prices."
-						: json?.error?.message || `Upload failed (HTTP ${res.status})`;
-				setStatus("error");
-				setError(msg);
-				return;
-			}
+			// apiFetch → authFetch attaches bearer/cookie and leaves Content-Type
+			// unset for FormData so the browser sets the multipart boundary.
+			const json = await apiFetch<{ data?: BeefImportResult } & BeefImportResult>(
+				"/api/beef/import",
+				{ method: "POST", body: formData },
+			);
 
 			// success(res, result, 201) → { success: true, data: result }
-			const data: BeefImportResult = json?.data ?? json;
+			const data: BeefImportResult = json.data ?? json;
 			setResult(data);
 			setStatus("success");
 		} catch (err) {
-			const msg = err instanceof Error ? err.message : "Network error during upload";
+			// For permission errors, surface the admin-specific guidance rather
+			// than whatever opaque message the backend sent — the caller needs to
+			// know it's a role issue, not a data issue.
+			const msg =
+				err instanceof ApiFetchError && err.status === 403
+					? "Only administrators can import beef prices."
+					: err instanceof Error && err.message
+						? err.message
+						: "Network error during upload";
 			setStatus("error");
 			setError(msg);
 		}
