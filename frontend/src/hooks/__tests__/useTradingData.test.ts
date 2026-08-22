@@ -243,4 +243,36 @@ describe("useTradingData", () => {
 		});
 		expect(result.current.signal).toBeNull();
 	});
+
+	it("switching commodity clears the previous commodity's AI state (round-119)", async () => {
+		// The round-106 cleanup effect had an empty deps array — it ran once on
+		// mount and never on a switch, so switching to a commodity whose loaders
+		// all early-return (no price data) left the OLD signal/anomalies on
+		// screen, attributed to the new selection.
+		mockFetchRoute(happyRoutes());
+
+		const { result } = renderHook(() => useTradingData());
+
+		await waitFor(() => {
+			expect(result.current.signal).toEqual({ direction: "BUY", confidence: 0.8 });
+		});
+		expect(result.current.anomalies.length).toBeGreaterThan(0);
+
+		// Switch to a second commodity with NO price data (loaders early-return).
+		md.commodities = [
+			{ id: "c1", slug: "beef_carcass_us", name: "Beef Carcass (US)" },
+			{ id: "c2", slug: "corn_cme", name: "Corn" },
+		];
+		md.prices = [];
+		act(() => {
+			result.current.setSelectedSlug("corn_cme");
+		});
+
+		// The stale state must be gone — not still showing beef's signal.
+		await waitFor(() => {
+			expect(result.current.signal).toBeNull();
+		});
+		expect(result.current.anomalies).toEqual([]);
+		expect(result.current.predictionHistory).toEqual([]);
+	});
 });

@@ -36,6 +36,7 @@ vi.mock("@/lib", async () => {
 });
 
 import { prisma } from "@/lib";
+import { getRedisClient } from "@/lib/redis";
 import {
 	getAllCachedPredictions,
 	getCachedPrediction,
@@ -119,6 +120,18 @@ describe("Prediction Cache — getCachedPrediction", () => {
 		const result = await getCachedPrediction("c1", "arima", 10);
 		// Must degrade to null — a throw here would 500 the dashboard endpoint.
 		expect(result).toBeNull();
+	});
+
+	it("returns null (not throws) when Redis is unreachable (round-119)", async () => {
+		// getRedisClient REJECTS while Redis is down or in its 30s reconnect
+		// cooldown. This used to throw past the dead `if (!client)` check,
+		// 500-ing GET /api/signals/:id/predictions and marking every model
+		// "unavailable" in the consensus. A cache read must degrade to a miss.
+		vi.mocked(getRedisClient).mockRejectedValueOnce(
+			new Error("Redis is temporarily unreachable (connection cooldown)"),
+		);
+
+		await expect(getCachedPrediction("c1", "arima", 10)).resolves.toBeNull();
 	});
 });
 
@@ -210,6 +223,18 @@ describe("Prediction Cache — invalidateCutSeriesCache", () => {
 		const deleted = await invalidateCutSeriesCache("F4", "OFFLINE");
 		expect(deleted).toBe(0);
 		expect(mockRedis.scan).not.toHaveBeenCalled();
+	});
+
+	it("returns 0 when getRedisClient REJECTS (round-119: Redis down throws)", async () => {
+		// getRedisClient's real contract is reject-on-outage (cooldown window),
+		// never return-null — the rejection must not propagate to the scraper
+		// write path; the 45min TTL is the documented backstop.
+		vi.mocked(getRedisClient)
+			.mockRejectedValueOnce(new Error("connection cooldown"))
+			.mockRejectedValueOnce(new Error("connection cooldown"));
+
+		await expect(invalidateCutSeriesCache("F5", "REJECT")).resolves.toBe(0);
+		await expect(invalidateCommodityCache("commodity-reject")).resolves.toBe(0);
 	});
 });
 

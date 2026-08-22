@@ -117,11 +117,17 @@ export async function getPriceHistory(slug: string, params: PriceHistoryParams) 
 		};
 	}
 
+	// Order desc + take so the window is the NEWEST `limit` rows, then reverse
+	// to restore chronological order (round-119). `ascending + take` returned
+	// the OLDEST rows instead — the exact bug getPricesBySource below fixed in
+	// round-106; a rangeless request (frontend CommodityPriceChart) rendered
+	// 2005-era prices for FRED series with 7000+ points.
 	const prices = await prisma.commodityPrice.findMany({
 		where,
-		orderBy: { date: "asc" },
+		orderBy: { date: "desc" },
 		take: params.limit,
 	});
+	prices.reverse();
 
 	return { commodity, prices };
 }

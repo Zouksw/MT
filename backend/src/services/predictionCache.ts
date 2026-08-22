@@ -66,8 +66,18 @@ export async function getCachedPrediction(
 	horizon: number,
 ): Promise<CachedPrediction | null> {
 	const key = cacheKeys.prediction(commodityId, modelId, horizon);
-	const client = await getRedisClient();
-
+	// Redis is an accelerator, never a hard dependency (round-119):
+	// getRedisClient() REJECTS when Redis is down (or in its 30s reconnect
+	// cooldown) — it never returns null. The old `if (!client)` check below
+	// was dead code, so a Redis outage made this throw instead of degrading
+	// to a cache miss, 500-ing the signals read path and marking every model
+	// "unavailable" in the consensus despite a healthy inference service.
+	let client: Awaited<ReturnType<typeof getRedisClient>> | null;
+	try {
+		client = await getRedisClient();
+	} catch {
+		return null;
+	}
 	if (!client) return null;
 
 	try {
@@ -172,9 +182,16 @@ export async function runAndCachePrediction(
 			horizon,
 		};
 
-		const client = await getRedisClient();
-		if (client) {
+		// Cache write is best-effort (round-119): a Redis outage (or its 30s
+		// reconnect cooldown) must NOT discard an already-computed prediction
+		// or skip logPrediction below — inference cost is already paid, and the
+		// MAPE verification loop depends on the DB row. TTL is the only
+		// casualty; the next request recomputes.
+		try {
+			const client = await getRedisClient();
 			await client.setEx(key, PREDICTION_TTL_SECONDS, JSON.stringify(cached));
+		} catch (error) {
+			logger.warn(`Prediction cache write skipped (Redis unavailable): ${error}`);
 		}
 
 		// Log prediction for MAPE accuracy tracking.
@@ -316,7 +333,15 @@ export function getSubscribedCommodities(): string[] {
  * Match:       prediction:{commodityId}:*
  */
 export async function invalidateCommodityCache(commodityId: string): Promise<number> {
-	const client = await getRedisClient();
+	// Best-effort (round-119): getRedisClient() rejects (never returns null)
+	// while Redis is down — an outage must not propagate to the scraper write
+	// path. The TTL (45min) is the documented backstop for a skipped eviction.
+	let client: Awaited<ReturnType<typeof getRedisClient>> | null;
+	try {
+		client = await getRedisClient();
+	} catch {
+		return 0;
+	}
 	if (!client) return 0;
 
 	const pattern = `prediction:${commodityId}:*`;
@@ -355,7 +380,13 @@ export async function invalidateCutSeriesCache(
 	factoryId: string,
 	cutCode: string,
 ): Promise<number> {
-	const client = await getRedisClient();
+	// Best-effort (round-119), same as invalidateCommodityCache above.
+	let client: Awaited<ReturnType<typeof getRedisClient>> | null;
+	try {
+		client = await getRedisClient();
+	} catch {
+		return 0;
+	}
 	if (!client) return 0;
 
 	// Match prediction:cut:{factoryId}:{cutCode}:* — the trailing wildcard

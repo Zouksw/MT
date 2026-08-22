@@ -57,6 +57,7 @@ vi.mock("@/services/mapeTracking", () => ({
 
 // --- subject ------------------------------------------------------------
 
+import { getRedisClient } from "@/lib/redis";
 import { runAndCachePrediction } from "@/services/predictionCache";
 
 // --- helpers ------------------------------------------------------------
@@ -140,5 +141,29 @@ describe("runAndCachePrediction — happy path", () => {
 		});
 		// No error logged on the happy path.
 		expect(mocks.logger.error).not.toHaveBeenCalled();
+	});
+});
+
+describe("runAndCachePrediction — Redis outage degradation (round-119)", () => {
+	// getRedisClient() REJECTS while Redis is down (it never returns null —
+	// the old `if (!client)` checks were dead code). An already-computed
+	// prediction must not be discarded and logPrediction must still run:
+	// inference cost is paid and the MAPE loop depends on the DB row.
+	it("returns the prediction and still logs when the cache write fails", async () => {
+		mocks.logPrediction.mockResolvedValue("log-id-456");
+		setupHappyPath();
+		vi.mocked(getRedisClient).mockRejectedValueOnce(
+			new Error("Redis is temporarily unreachable (connection cooldown)"),
+		);
+
+		const result = await runAndCachePrediction("c1", "arima", 10);
+
+		expect(result.algorithm).toBe("arima");
+		expect(result.values).toEqual([103, 104, 105]);
+		await vi.waitFor(() => {
+			expect(mocks.logPrediction).toHaveBeenCalledTimes(1);
+		});
+		// Degrades loudly but not fatally.
+		expect(mocks.logger.warn).toHaveBeenCalled();
 	});
 });

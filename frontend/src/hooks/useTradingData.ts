@@ -181,6 +181,14 @@ export function useTradingData() {
 	// selection — wrong data on the core trading page. Clear all
 	// commodity-scoped AI state whenever the selection changes; the
 	// loaders below repopulate whatever succeeds.
+	//
+	// Deps (round-119 fix): keyed on selectedSlug, NOT [] — the empty deps
+	// array made this run once on mount, so the round-106 fix never actually
+	// fired on a switch and stale state survived (e.g. switching to a
+	// commodity with no price data kept the previous commodity's signal
+	// on screen indefinitely). selectedSlug (not the memoized `selected`
+	// object) so a commodities revalidate can't spuriously wipe live state.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the body only calls setState setters; selectedSlug is the deliberate trigger — run-on-selection-change, not run-on-mount
 	useEffect(() => {
 		setSignal(null);
 		setPreviousDirection(null);
@@ -188,7 +196,7 @@ export function useTradingData() {
 		setPredictionHistory([]);
 		setAnomalies([]);
 		setPredictionOverlays([]);
-	}, []);
+	}, [selectedSlug]);
 
 	// Fetch AI signal when commodity changes
 	const loadSignal = useCallback(

@@ -84,6 +84,51 @@ describe("errorHandler", () => {
 		});
 	});
 
+	describe("createSafeError — ApiFetchError shape (round-119)", () => {
+		// lib/apiFetch's ApiFetchError has status + parsed body but NO axios
+		// `response`. It used to classify as NETWORK_ERROR → retried by
+		// useRetryableFetch even for permanent 401/403/404.
+		it("classifies a 404 ApiFetchError as NOT_FOUND (non-recoverable)", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: constructing error shape
+			const error: any = Object.assign(new Error("Authentication required"), {
+				status: 404,
+				body: { error: { message: "Not found", code: "NOT_FOUND" } },
+			});
+
+			const safeError = errorHandler.createSafeError(error);
+
+			expect(safeError.code).toBe("NOT_FOUND");
+			expect(safeError.statusCode).toBe(404);
+			expect(errorHandler.isRecoverable(safeError)).toBe(false);
+		});
+
+		it("classifies a 503 ApiFetchError as SERVICE_UNAVAILABLE (recoverable)", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: constructing error shape
+			const error: any = Object.assign(new Error("Inference unavailable"), {
+				status: 503,
+				body: { message: "Inference service unavailable" },
+			});
+
+			const safeError = errorHandler.createSafeError(error);
+
+			expect(safeError.code).toBe("SERVICE_UNAVAILABLE");
+			expect(safeError.statusCode).toBe(503);
+			expect(errorHandler.isRecoverable(safeError)).toBe(true);
+		});
+
+		it("extracts the backend message from the parsed body", () => {
+			// biome-ignore lint/suspicious/noExplicitAny: constructing error shape
+			const error: any = Object.assign(new Error("HTTP 422"), {
+				status: 422,
+				body: { error: { message: "horizon must be between 1 and 100", code: "VAL" } },
+			});
+
+			const safeError = errorHandler.createSafeError(error);
+			expect(safeError.statusCode).toBe(422);
+			expect(errorHandler.isRecoverable(safeError)).toBe(false);
+		});
+	});
+
 	describe("sanitizeMessage", () => {
 		it("should filter out password mentions", () => {
 			const message = "Your password is incorrect";

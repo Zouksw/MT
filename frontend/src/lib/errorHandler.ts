@@ -25,6 +25,13 @@ interface ApiError {
 	code?: string;
 }
 
+/** Shape of lib/apiFetch's ApiFetchError (status + parsed body, no `response`). */
+interface ApiFetchErrorLike {
+	status: number;
+	body?: unknown;
+	message?: string;
+}
+
 const SENSITIVE_PATTERNS = [
 	/password/i,
 	/token/i,
@@ -227,6 +234,34 @@ class SecurityErrorHandler {
 	}
 
 	createSafeError(error: unknown): SafeError {
+		// round-119: ApiFetchError (lib/apiFetch — the app's API client) carries
+		// `status` + a parsed `body` but no axios-style `response`. Falling into
+		// handleApiError's "no response" branch classified EVERY ApiFetchError
+		// as NETWORK_ERROR, so useRetryableFetch retried permanent 4xx
+		// (401/403/404) three times. Classify by the HTTP status first.
+		if (
+			error !== null &&
+			typeof error === "object" &&
+			typeof (error as ApiFetchErrorLike).status === "number"
+		) {
+			const fetchError = error as ApiFetchErrorLike;
+			const body = fetchError.body;
+			let errorCode: string | undefined;
+			let rawMessage = fetchError.message || "An error occurred";
+			if (body && typeof body === "object") {
+				const data = body as NonNullable<ApiError["response"]>["data"];
+				if (data?.error && typeof data.error === "object") {
+					errorCode = data.error.code;
+					rawMessage = data.error.message || rawMessage;
+				} else if (typeof data?.error === "string") {
+					rawMessage = data.error;
+				} else {
+					errorCode = data?.code;
+					rawMessage = data?.message || rawMessage;
+				}
+			}
+			return this.handleStatusCode(fetchError.status, rawMessage, errorCode);
+		}
 		if (this.isApiError(error)) {
 			return this.handleApiError(error);
 		} else if (error instanceof Error) {
