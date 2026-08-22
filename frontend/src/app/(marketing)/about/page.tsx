@@ -243,12 +243,14 @@ export default function AboutPage() {
 						<StaggerChild>
 							<div className="bg-white dark:bg-background rounded-2xl p-8 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full">
 								<h3 className="text-h4 font-display font-semibold text-foreground mb-3">
-									Pretrained models, not black-box AI
+									Pretrained foundation models, not black-box AI
 								</h3>
 								<p className="text-body text-muted-foreground leading-relaxed">
-									Predictions use interpretable statistical models (ARIMA, Holt-Winters, Exponential
-									Smoothing, STL, Naive baseline). Every forecast ships with a 95% confidence
-									interval and is auto-verified against actuals via MAPE once the horizon elapses.
+									Predictions are led by pretrained Chronos foundation models (zero-shot, no
+									per-request training) with interpretable statistical baselines alongside — ARIMA,
+									Holt-Winters, Exponential Smoothing, STL, and a naive bar to beat. Every forecast
+									ships with a calibrated confidence interval and is auto-verified against actuals
+									via MAPE once the horizon elapses.
 								</p>
 							</div>
 						</StaggerChild>
@@ -295,13 +297,6 @@ export default function AboutPage() {
 									Get Started Free
 								</Button>
 							</Link>
-							<Button
-								variant="ghost"
-								size="lg"
-								className="!text-white !border-white/30 hover:!bg-white/10 rounded-full"
-							>
-								Contact Us
-							</Button>
 						</div>
 					</MotionReveal>
 				</div>

@@ -321,15 +321,14 @@ export default function PricingPage() {
 					</MotionReveal>
 					<MotionReveal delay={0.15}>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
-							<Button
-								size="lg"
-								className="min-w-[160px] rounded-full bg-primary text-white hover:bg-primary-hover border-0"
-							>
-								Contact Sales
-							</Button>
-							<Button variant="ghost" size="lg" className="min-w-[160px] rounded-full">
-								View Documentation
-							</Button>
+							<Link href="/register">
+								<Button
+									size="lg"
+									className="min-w-[160px] rounded-full bg-primary text-white hover:bg-primary-hover border-0"
+								>
+									Create Free Account
+								</Button>
+							</Link>
 						</div>
 					</MotionReveal>
 				</div>
