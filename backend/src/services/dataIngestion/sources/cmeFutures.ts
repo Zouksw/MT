@@ -300,18 +300,30 @@ async function fetchYahooBar(symbol: string): Promise<{
 	const quote = result?.indicators?.quote?.[0];
 	if (!timestamps || !quote?.close) return null;
 
+	// Yahoo placeholders 0 / null on open/high/low for unfinished bars —
+	// only a finite positive value is real (round-119: a cotton bar with
+	// open=0.0 and close>high reached production unchallenged).
+	const real = (v: number | null | undefined): number | null =>
+		v != null && Number.isFinite(v) && v > 0 ? v : null;
+
 	for (let i = timestamps.length - 1; i >= 0; i--) {
-		const close = quote.close[i];
+		const close = real(quote.close[i]);
 		if (close == null) continue;
 
-		return {
-			date: new Date(timestamps[i] * 1000),
-			open: quote.open?.[i] ?? close,
-			high: quote.high?.[i] ?? close,
-			low: quote.low?.[i] ?? close,
-			close,
-			volume: quote.volume?.[i] ?? null,
-		};
+		const open = real(quote.open?.[i]) ?? close;
+		const high = Math.max(real(quote.high?.[i]) ?? close, close, open);
+		const low = Math.min(real(quote.low?.[i]) ?? close, close);
+
+		// Bar date in UTC. Yahoo daily timestamps are the session open
+		// (13:30Z during EDT); truncating in server-local time backdated
+		// every bar one calendar day — session D landed as D-1 16:00Z on a
+		// +08 server (round-119: production had Sunday-dated bars and
+		// missing Fridays). setUTCHours matches the FRED path's date-only
+		// convention (D 00:00Z).
+		const date = new Date(timestamps[i] * 1000);
+		date.setUTCHours(0, 0, 0, 0);
+
+		return { date, open, high, low, close, volume: quote.volume?.[i] ?? null };
 	}
 	return null;
 }
@@ -347,7 +359,8 @@ async function fetchCMEFutures(): Promise<ScraperResult> {
 				continue;
 			}
 
-			bar.date.setHours(0, 0, 0, 0);
+			// bar.date is already UTC-midnight of the session day (see
+			// fetchYahooBar) — no local-time truncation here (round-119).
 			const commodity = await ensureCommodity({
 				slug: cfg.slug,
 				name: cfg.name,
