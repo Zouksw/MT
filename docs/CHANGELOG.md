@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **测试基线**：backend 951+1 skip → **971 pass + 1 skip**（94 文件）、frontend 309 → **314**（33 套件）、inference 60 → **64**——合计 1320 → **1349 全绿**，零回退。
 
-**仍开放（未修，登记 TECH-DEBT §十三）**：注册默认 EDITOR 架空 AI 付费分层与资讯发布权（产品决策）；runAndCachePrediction 并发去重；推理客户端 240s 超时重试放大/无负缓存；datasets import 列数上界；alerts rules timeseriesId 归属校验；/api/market/sources 错误串对 VIEWER 可见；useDashboardStats alerts 双请求；beefIngest MM/DD/YYYY 本地时区解析。
+**仍开放（未修，登记 TECH-DEBT §十三）**：~~注册默认 EDITOR 架空 AI 付费分层与资讯发布权~~（**已处置 `1073acc`**：注册默认 VIEWER + AI 分层改 `AI_TIER_ENFORCED` env 门控默认关；清理 1796 个测试残留用户，备份可回滚）；runAndCachePrediction 并发去重；推理客户端 240s 超时重试放大/无负缓存；datasets import 列数上界；alerts rules timeseriesId 归属校验；/api/market/sources 错误串对 VIEWER 可见；useDashboardStats alerts 双请求；beefIngest MM/DD/YYYY 本地时区解析。
 
 ### 2026-08-22 — round-118 规划执行轮（探查→规划→落地，5 提交，测试 1288→1320）
 

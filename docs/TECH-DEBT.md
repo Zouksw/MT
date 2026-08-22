@@ -526,11 +526,11 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 | 3 数据 | cmeFutures Yahoo bar `setUTCHours`（曾本地时区截断→session D 存成 D-1，周日 bar/周五缺失）+ OHLC 占位 guard；生产修正 100 行 +8h + 3 行 cotton OHLC（备份 `backups/round119/`） | `d109af4` | boot runAll 0 inserted/10 updated 按正确键命中；SQL 复核 0 周末 bar、0 OHLC 违例 |
 | 4 加固 | 推理输出有限性 guard（NaN 区间 null 穿透 + batch 整批 500 + 置信度=1.0）+ LinAlgError→503；winston 三参日志序列化；boot ingestion 分类器；订阅调度 6h 重跑；RSS slug hash8 兜底；beefIngest 回滚计数；前端 9 项 | `a6d810c` | inference 60→64；三服务 online；/ready 200 |
 
-**测试基线**：backend 951+1→**971+1**（94 文件）、frontend 309→**314**（33 套件）、inference 60→**64**——合计 **1349 全绿**，零回退。
+**测试基线**：backend 951+1→**974+1**（94 文件，含决策执行批 +3）、frontend 309→**314**（33 套件）、inference 60→**64**——合计 **1352 全绿**，零回退。
 
 **误报复核记录（防重蹈）**：探查轮报「beef_cut_prices 960 组重复/1440 多余行」——修复前预检发现按 (cutCode,date,source) 分组漏了 **factoryId 维度**：三行分属 AU-847/239/1260 三个工厂的合法同价报价（seed 生成器同组同价），按 (cut,date,source,factory) 分组重复数为 **0**、无价格冲突组。**撤销该项，未删任何行**。教训：去重判断必须先穷举行的全部业务维度。
 
 **仍开放（round-119 已登记未修，按处置类型）**：
-- **产品决策**：注册默认 `role:"EDITOR"`（authService.ts:121）使 aiAccess 的 Pro-tier 门与 marketNews requireEditorRole 对任意自注册者敞开——billing 页在卖的 Pro 档无法强制执行（诚实性），且人人可发全站资讯。改 VIEWER 或明示接受，需用户拍板。
+- ~~**产品决策**：注册默认 `role:"EDITOR"`~~ **已处置（round-119 决策执行，commit `1073acc`，2026-08-22）**：注册默认改 **VIEWER**（EDITOR 的资讯发布权不再随注册发放，编辑角色由管理员指派）；AI 分层闸改 **env 门控 `AI_TIER_ENFORCED`（默认关）**——PRODUCT-SPEC §九 明确付费墙/AI 分层"留待用户基数到"，且当前无任何升级通道，默认强制会把每个新注册者锁死在核心价值链外；闸结构保留、真实付费层落地时一个环境变量即可武装。同批清理生产库 **1796 个集成测试残留用户**（concurrent-N@example.com / idor-*.x.com，0 真实注册者）+ 1798 sessions + 1 残留 dataset（备份 `backups/round119/test_residue_*`），用户表回归 seed 三人组。live 实证：注册→VIEWER、AI 端点对 VIEWER 200、POST /api/news 403。+3 测试（974+1 skip）。
 - **设计权衡（单列轮次）**：runAndCachePrediction 无并发去重（按需 miss 并发时同 (model,commodity,horizon) 双写 prediction_logs，污染 MAPE 分母——文件注释只防了 timer-vs-timer）；推理客户端 120s×2 超时重试在服务饱和时放大负载 + 失败无负缓存穿透。
 - **低优先加固**：datasets import valueColumns 无上界（自伤式 DoS 面）；alerts rules 的 timeseriesId 不验归属/存在（当前无数值外泄）；`GET /api/market/sources` 向 VIEWER 回传 scraper 原始错误串（基础设施信息级）；useDashboardStats 对 /api/alerts 双请求（page=1&limit=100 与 limit=5）；beefIngest `MM/DD/YYYY` 斜杠日期按服务器本地时区解析（ISO 无害，TZ=+08 会退一天）。
