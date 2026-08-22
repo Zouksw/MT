@@ -6,6 +6,7 @@
  * not re-implemented in the test.
  */
 
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -125,6 +126,35 @@ describe("ingestNewsFromRss", () => {
 		const results = await ingestNewsFromRss();
 
 		expect(results[0]).toEqual({ key: "beefcentral", fetched: 3, inserted: 0, skipped: 3 });
+	});
+
+	it("recovers a P2002 slug collision with a deterministic suffixed slug (round-119)", async () => {
+		// Dedupe key is sourceUrl but the UNIQUE constraint is on slug: two
+		// different articles with slug-equal titles (weekly roundups) used to
+		// be dropped on every 6h cycle — permanently, since the sourceUrl row
+		// never landed. The retry appends hash8(sourceUrl) so repeated titles
+		// still ingest, idempotently across runs.
+		const p2002 = () =>
+			new Prisma.PrismaClientKnownRequestError("Unique constraint failed on slug", {
+				code: "P2002",
+				clientVersion: "test",
+			});
+		mocks.newsCreate.mockImplementation(async (args: { data: { slug: string } }) => {
+			if (!/[0-9a-f]{8}$/.test(args.data.slug)) throw p2002();
+			return {};
+		});
+
+		const results = await ingestNewsFromRss();
+
+		// Both link-bearing items recover via the suffixed retry.
+		expect(results[0]).toEqual({ key: "beefcentral", fetched: 3, inserted: 2, skipped: 1 });
+		expect(mocks.newsCreate).toHaveBeenCalledTimes(4);
+		const retrySlugs = mocks.newsCreate.mock.calls
+			.map((c) => (c[0] as { data: { slug: string } }).data.slug)
+			.filter((s) => /[0-9a-f]{8}$/.test(s));
+		expect(retrySlugs.length).toBe(2);
+		// Deterministic: sha1("https://example.com/news/1")[:8] suffix.
+		expect(retrySlugs[0].startsWith("cattle-prices-rise-on-strong-export-demand-")).toBe(true);
 	});
 
 	it("returns [] without touching market_news when no ADMIN user exists", async () => {

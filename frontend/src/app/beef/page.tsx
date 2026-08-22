@@ -128,8 +128,17 @@ export default function BeefOverview() {
 	// flashing the "No Beef Price Data Available" empty state while the slow
 	// endpoints were still loading, round-106).
 	const isLoading = pricesLoading || killLoading || storageLoading || cutsLoading;
+	// round-119: a fetch FAILURE must not render the "requires API key
+	// configuration" empty state — that message is only honest when the
+	// backend answered and truly has no rows. With the backend down it blamed
+	// source configuration for a network error.
+	const pricesFailed = Boolean(pricesErr);
 	const hasNoData =
-		!isLoading && latestPrices.length === 0 && weeklyKills.length === 0 && coldStorage.length === 0;
+		!isLoading &&
+		!pricesFailed &&
+		latestPrices.length === 0 &&
+		weeklyKills.length === 0 &&
+		coldStorage.length === 0;
 
 	if (isLoading) {
 		return (
@@ -147,6 +156,22 @@ export default function BeefOverview() {
 					<div className="lg:col-span-2 h-64 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
 					<div className="h-48 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
 				</div>
+			</PageContainer>
+		);
+	}
+
+	if (pricesFailed && !isLoading) {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Beef Market Intelligence"
+					description="Factory-level and cut-level beef trading data across global markets"
+				/>
+				<EmptyState
+					type="errors"
+					title="Unable to load beef data"
+					description="The beef price service is unreachable right now. Please try again later."
+				/>
 			</PageContainer>
 		);
 	}

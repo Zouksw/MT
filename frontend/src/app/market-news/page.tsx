@@ -62,6 +62,9 @@ export default function MarketNewsList() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<Record<string, unknown> | null>(null);
+	// round-119: double-click protection — the second DELETE used to 404 and
+	// overwrite the success toast with a failure one.
+	const [deleting, setDeleting] = useState(false);
 
 	// Debounce the search input so we don't refetch the list on every keystroke.
 	useEffect(() => {
@@ -102,7 +105,8 @@ export default function MarketNewsList() {
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
 	const handleDelete = async () => {
-		if (!deleteTarget) return;
+		if (!deleteTarget || deleting) return;
+		setDeleting(true);
 		try {
 			await deleteRecord("news", String(deleteTarget.id));
 			toast.showSuccess("Article deleted");
@@ -110,6 +114,8 @@ export default function MarketNewsList() {
 			setDeleteTarget(null);
 		} catch {
 			toast.showError("Failed to delete article");
+		} finally {
+			setDeleting(false);
 		}
 	};
 
@@ -342,7 +348,7 @@ export default function MarketNewsList() {
 						<Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>
 							Cancel
 						</Button>
-						<Button variant="danger" size="sm" onClick={handleDelete}>
+						<Button variant="danger" size="sm" isLoading={deleting} onClick={handleDelete}>
 							Delete
 						</Button>
 					</>

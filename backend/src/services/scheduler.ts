@@ -62,8 +62,12 @@ async function executeOnce(t: TrackedJob): Promise<void> {
 		// A failed job must never take down the process: the HTTP server and
 		// every OTHER job keep running. Warn-level (matching the
 		// pre-refactor per-job catch blocks) — a single failed cron cycle is an
-		// operational event, not a process fault.
-		logger.warn(`[job:${t.job.name}] failed: ${err instanceof Error ? err.message : String(err)}`);
+		// operational event, not a process fault. Stack included: a bare
+		// message loses the where for Prisma/ApiError failures (round-119).
+		const stack = err instanceof Error && err.stack ? `\n${err.stack}` : "";
+		logger.warn(
+			`[job:${t.job.name}] failed: ${err instanceof Error ? err.message : String(err)}${stack}`,
+		);
 	} finally {
 		t.running = false;
 	}

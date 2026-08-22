@@ -221,7 +221,15 @@ export async function importBeefPrices(
 		} catch (err) {
 			// The whole transaction rolled back — report it against every
 			// pending row so the operator knows which rows were affected.
+			// round-119: the per-row counters incremented inside the
+			// transaction callback describe writes that no longer exist —
+			// reset them, or the response says "imported 5" while also
+			// reporting every row rolled back (and affectedCuts would evict
+			// caches for data that was never written).
 			const msg = err instanceof Error ? err.message : String(err);
+			imported = 0;
+			updated = 0;
+			touchedCuts.clear();
 			for (const p of pending) {
 				errors.push({ row: p.rowNum, message: `DB error (batch rolled back): ${msg}` });
 				skipped++;

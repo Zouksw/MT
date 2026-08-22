@@ -2,6 +2,7 @@ import gc
 import math
 from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -131,6 +132,12 @@ def predict_handler(req: PredictRequest):
             exog=req.exog,
             future_exog=req.future_exog,
         )
+    except np.linalg.LinAlgError as e:
+        # LinAlgError subclasses ValueError, so it used to land in the 422
+        # "invalid input" branch — a server-side numerical failure (e.g. LU
+        # decomposition error on a degenerate series) misreported as the
+        # client's fault (round-119). It is a model-side failure: 503.
+        raise HTTPException(503, f"Model numerical failure: {e}") from e
     except ValueError as e:
         # ValueError from the engine signals a bad-input condition (e.g.
         # SARIMAX exog-length mismatch, unknown model) — a client error, not
@@ -142,6 +149,28 @@ def predict_handler(req: PredictRequest):
         raise HTTPException(503, f"Model unavailable: {e}") from e
     except Exception as e:
         raise HTTPException(500, f"Prediction failed: {e}") from e
+
+    # Output-side finite guard (round-119): statsmodels can emit NaN
+    # confidence bounds on non-converged fits (reproduced with a noiseless
+    # period-7 series of length 30). pydantic v2 serializes non-finite floats
+    # as JSON null, so a 200 with "lower_bound": [null, ...] reached the
+    # backend and was stored in Redis/prediction_logs, and the trading-signal
+    # confidence math turned it into a perfect 1.0 score. Non-finite VALUES
+    # are a hard model failure (503); non-finite BOUNDS downgrade to "no
+    # bounds" rather than poisoning the client with nulls. This guard also
+    # protects /predict/batch, whose stdlib json.dumps(allow_nan=False)
+    # would otherwise 500 the WHOLE batch after the handler returned.
+    if not all(math.isfinite(v) for v in result["values"]):
+        raise HTTPException(
+            503,
+            f"Model {req.model_id} produced non-finite forecast values for this input",
+        )
+    lower = result.get("lower_bound")
+    upper = result.get("upper_bound")
+    if lower is not None and not all(math.isfinite(v) for v in lower):
+        lower = None
+    if upper is not None and not all(math.isfinite(v) for v in upper):
+        upper = None
 
     future_ts = [last_ts + (i + 1) * step for i in range(req.horizon)]
 
@@ -156,8 +185,8 @@ def predict_handler(req: PredictRequest):
     return PredictResponse(
         timestamps=future_ts,
         values=result["values"],
-        lower_bound=result.get("lower_bound"),
-        upper_bound=result.get("upper_bound"),
+        lower_bound=lower,
+        upper_bound=upper,
         model_id=req.model_id,
     )
 

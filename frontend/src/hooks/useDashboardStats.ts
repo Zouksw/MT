@@ -175,7 +175,11 @@ export const useDashboardStats = () => {
 		retryOpts,
 	);
 
-	const { data: alertsData, isLoading: alertsLoading } = useRetryableFetch(
+	const {
+		data: alertsData,
+		error: alertsError,
+		isLoading: alertsLoading,
+	} = useRetryableFetch(
 		() => (isAuth ? `${API_BASE}/alerts?page=1&limit=100` : null),
 		authFetcher,
 		retryOpts,
@@ -215,7 +219,11 @@ export const useDashboardStats = () => {
 		? false
 		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
 
-	const errors = [datasetsError, timeseriesError, forecastsError].filter(Boolean);
+	// round-119: alertsError joins the pool — an alerts-endpoint failure used
+	// to leave `stats` null with `error` null too (alerts gate stats but its
+	// error was never consumed), so the dashboard silently rendered all-zero
+	// cards with no banner.
+	const errors = [datasetsError, timeseriesError, forecastsError, alertsError].filter(Boolean);
 	// Signed-out visitors are a NORMAL state for /dashboard (the page renders
 	// a sign-in CTA) — reporting it as an error drew a red banner + toast on
 	// top of that CTA. Only authenticated-session fetch failures are errors

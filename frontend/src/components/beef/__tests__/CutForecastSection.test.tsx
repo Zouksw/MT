@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
+import { ApiFetchError } from "@/lib/apiFetch";
 import CutForecastSection from "../CutForecastSection";
 
 // Mock the hook so the component doesn't hit the network.
@@ -36,10 +37,10 @@ function setLoading() {
 	} as ReturnType<typeof useRetryableFetch>);
 }
 
-function setError(message: string) {
+function setError(errorValue: Error) {
 	mocked.mockReturnValue({
 		data: null,
-		error: new Error(message),
+		error: errorValue,
 		isLoading: false,
 		isValidating: false,
 		isRetrying: false,
@@ -74,9 +75,20 @@ describe("CutForecastSection", () => {
 	});
 
 	it("renders login prompt on 401", () => {
-		setError("401");
+		// round-119: the check is now `error instanceof ApiFetchError &&
+		// error.status === 401` (the old String(error).includes("401") never
+		// matched the real backend message, so the card silently vanished).
+		setError(
+			new ApiFetchError(401, "Unauthorized", { error: { message: "Authentication required" } }),
+		);
 		render(<CutForecastSection cutCode="BRISKET_NAVEL" />);
 		expect(screen.getByText(/Log in/i)).toBeInTheDocument();
+	});
+
+	it("renders nothing on non-401 errors (e.g. 503)", () => {
+		setError(new ApiFetchError(503, "Service Unavailable", undefined));
+		const { container } = render(<CutForecastSection cutCode="BRISKET_NAVEL" />);
+		expect(container.firstChild).toBeNull();
 	});
 
 	it("renders full consensus forecast when forecastable:true", () => {
@@ -112,7 +124,7 @@ describe("CutForecastSection", () => {
 	});
 
 	it("renders nothing on non-401 error (silent fail — forecast is enhancement)", () => {
-		setError("500");
+		setError(new Error("500"));
 		const { container } = render(<CutForecastSection cutCode="UNKNOWN" />);
 		expect(container.firstChild).toBeNull();
 	});

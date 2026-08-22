@@ -143,7 +143,9 @@ router.post(
 
 		const modelId = isValidModel(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
-		const cl = Number(confidenceLevel) || 0.95;
+		// Clamp like horizon (round-119): out-of-range values used to pass
+		// through and bounce off the inference service's pydantic 422.
+		const cl = Math.min(Math.max(Number(confidenceLevel) || 0.95, 0.8), 0.99);
 
 		const cacheKey = cacheKeys.prediction(uuid, modelId, h);
 		const cachedResult = await cacheGet(cacheKey);
@@ -209,7 +211,7 @@ router.post(
 
 			const modelId = isValidModel(r.algorithm) ? r.algorithm : DEFAULT_MODEL;
 			const h = Math.min(Math.max(Number(r.horizon) || 10, 1), 100);
-			const cl = Number(r.confidenceLevel) || 0.95;
+			const cl = Math.min(Math.max(Number(r.confidenceLevel) || 0.95, 0.8), 0.99);
 
 			// Resolve slug→UUID inside the try so an unknown id is reported per-row
 			// (matching the existing per-row error contract) rather than failing
@@ -296,7 +298,9 @@ router.post(
 
 		const modelId = isValidModel(algorithm) ? algorithm : DEFAULT_MODEL;
 		const h = Math.min(Math.max(Number(horizon) || 10, 1), 100);
-		const cl = Number(confidenceLevel) || 0.95;
+		// Clamp like horizon (round-119): out-of-range values used to pass
+		// through and bounce off the inference service's pydantic 422.
+		const cl = Math.min(Math.max(Number(confidenceLevel) || 0.95, 0.8), 0.99);
 		// Clamp like `h` (round-06): an unclamped historyPoints reached Prisma
 		// take directly — ?historyPoints=5000000 pulled 5M rows into Node.
 		const limit = Math.min(Math.max(Number(historyPoints) || 50, 1), 1000);

@@ -50,8 +50,10 @@ export default function NewsDetailPage() {
 
 	const { data: article, loading, error, mutate } = useOne<NewsArticle>("news", id);
 
+	const [deleting, setDeleting] = useState(false);
 	const handleDelete = async () => {
-		if (!article) return;
+		if (!article || deleting) return;
+		setDeleting(true);
 		try {
 			const { deleteRecord } = await import("@/lib/api");
 			await deleteRecord("news", article.id);
@@ -59,6 +61,8 @@ export default function NewsDetailPage() {
 			router.push("/market-news");
 		} catch {
 			toast.showError("Failed to delete article");
+		} finally {
+			setDeleting(false);
 		}
 	};
 
@@ -220,7 +224,7 @@ export default function NewsDetailPage() {
 						<Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
 							Cancel
 						</Button>
-						<Button variant="danger" size="sm" onClick={handleDelete}>
+						<Button variant="danger" size="sm" isLoading={deleting} onClick={handleDelete}>
 							Delete
 						</Button>
 					</>

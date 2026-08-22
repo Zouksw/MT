@@ -148,13 +148,20 @@ function backgroundJobs(): ScheduledJob[] {
 	const ROUND41_FIX_TS = new Date("2026-07-27T11:26:00Z");
 
 	return [
-		// One-shot: subscribe commodities + cuts to the 30-min prediction
-		// refresh (the refresh timer itself lives in predictionCache.ts).
-		// Two separate jobs so a commodity-side failure can't skip the cut side
-		// (the pre-refactor code had independent try/catch per call).
+		// One-shot at boot + 6h repeat: (re)subscribe commodities + cuts to the
+		// 30-min prediction refresh (the refresh timer itself lives in
+		// predictionCache.ts). Two separate jobs so a commodity-side failure
+		// can't skip the cut side (the pre-refactor code had independent
+		// try/catch per call). The 6h re-run (round-119) closes the gap where
+		// a source revived mid-uptime (or an operator imported a new cut
+		// series) never entered background refresh until the next restart —
+		// its predictions only existed on-demand and never reached the MAPE
+		// verification loop. subscribeCommodity is idempotent (Map keyed by
+		// commodity), so re-running is a no-op for already-subscribed series.
 		{
 			name: "prediction-scheduling",
 			firstRunDelayMs: 5000,
+			intervalMs: 6 * MS_PER_HOUR,
 			run: async () => {
 				const count = await schedulePredictionsFromPostgreSQL();
 				logger.info(`🤖 Scheduled predictions for ${count} commodities (every 30 min)`);
@@ -163,6 +170,7 @@ function backgroundJobs(): ScheduledJob[] {
 		{
 			name: "cut-prediction-scheduling",
 			firstRunDelayMs: 5000,
+			intervalMs: 6 * MS_PER_HOUR,
 			run: async () => {
 				const cutCount = await scheduleBeefCutPredictions();
 				logger.info(`🥩 Scheduled cut predictions for ${cutCount} beef cut series`);
@@ -419,7 +427,11 @@ function start(): void {
 					.join("; ");
 				logger.info(`📊 Initial data fetch: ${summary}`);
 
-				// Log to IngestionLog
+				// Log to IngestionLog — through classifyIngestionStatus (round-119):
+				// the boot path used to hardcode "success" for every non-thrown
+				// result, so key-gated skips and 0-row runs inflated the 7-day
+				// successRate on every restart while every other writer path
+				// (scheduled / manual refresh) used the shared classifier.
 				for (const [source, result] of Object.entries(results)) {
 					try {
 						if ("error" in result) {
@@ -427,10 +439,12 @@ function start(): void {
 								data: { source, status: "error", errorMessage: result.error },
 							});
 						} else {
+							const { status, errorMessage } = classifyIngestionStatus(result);
 							await prisma.ingestionLog.create({
 								data: {
 									source,
-									status: "success",
+									status,
+									errorMessage,
 									inserted: result.inserted,
 									updated: result.updated,
 								},

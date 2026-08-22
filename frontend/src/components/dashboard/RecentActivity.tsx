@@ -13,12 +13,15 @@ interface RecentActivityProps {
 }
 
 function getSeverityVariant(severity: string): "error" | "warning" | "primary" | "default" {
+	// round-119: the backend AlertSeverity enum is INFO | WARNING | ERROR —
+	// the old critical/high/medium cases never matched, so every ERROR alert
+	// rendered with the neutral "default" color.
 	switch (severity?.toLowerCase()) {
-		case "critical":
+		case "error":
 			return "error";
-		case "high":
+		case "warning":
 			return "warning";
-		case "medium":
+		case "info":
 			return "primary";
 		default:
 			return "default";

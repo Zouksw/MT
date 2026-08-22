@@ -5,7 +5,7 @@ import type React from "react";
 import { useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
-import { apiFetch } from "@/lib/apiFetch";
+import { ApiFetchError, apiFetch } from "@/lib/apiFetch";
 import { formatPrice, formatSignedPercent } from "@/lib/format";
 
 /**
@@ -119,7 +119,10 @@ export const CutForecastSection: React.FC<CutForecastSectionProps> = ({ cutCode,
 	}
 
 	// 401 (not logged in) — render a soft prompt rather than an error.
-	if (error && String(error).includes("401")) {
+	// round-119: the old `String(error).includes("401")` never matched —
+	// ApiFetchError.message carries the backend body ("Authentication
+	// required"), so the card silently vanished instead of prompting login.
+	if (error instanceof ApiFetchError && error.status === 401) {
 		return (
 			<Card className="mb-4">
 				<CardHeader>

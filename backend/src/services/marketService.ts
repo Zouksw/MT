@@ -188,14 +188,21 @@ export async function getFundamentals(slug: string) {
 	if (commodity.currency === "BRL" || commodity.category === "beef_cuts")
 		relevantRegions.push("BRL/USD");
 
-	const factors = await prisma.marketFactor.findMany({
-		where: {
-			date: { gte: thirtyDaysAgo },
-			...(relevantRegions.length > 0 ? { region: { in: relevantRegions } } : {}),
-		},
-		orderBy: { date: "desc" },
-		take: 200,
-	});
+	// round-119: "no relevant regions" means NO factors are relevant to this
+	// commodity (e.g. USD-denominated wheat/gold). The old conditional spread
+	// dropped the region filter entirely in that case, serving the last 30
+	// days of EVERY region's factors as this commodity's "fundamentals".
+	const factors =
+		relevantRegions.length > 0
+			? await prisma.marketFactor.findMany({
+					where: {
+						date: { gte: thirtyDaysAgo },
+						region: { in: relevantRegions },
+					},
+					orderBy: { date: "desc" },
+					take: 200,
+				})
+			: [];
 
 	return {
 		commodity: { id: commodity.id, slug: commodity.slug, category: commodity.category },

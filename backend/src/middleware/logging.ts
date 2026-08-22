@@ -58,7 +58,11 @@ export const errorLoggingMiddleware = (
 ) => {
 	const duration = req.startTime ? Date.now() - req.startTime : 0;
 
-	logger.error("MIDDLEWARE_ERROR", err.message, {
+	// Single message + meta object: winston merges extra positional string
+	// args into the meta as a char-indexed object ({"0":"R","1":"e"...}),
+	// corrupting the log line (round-119 — SLOW_REQUEST lines were
+	// unreadable in production).
+	logger.error(`MIDDLEWARE_ERROR: ${err.message}`, {
 		correlationId: req.correlationId,
 		method: req.method,
 		url: req.url,
@@ -76,7 +80,8 @@ export const detailedRequestLogger = (req: Request, res: Response, next: NextFun
 	if (process.env.LOG_LEVEL === "debug") {
 		const originalSend = res.send;
 		res.send = function (data) {
-			logger.debug("RESPONSE_BODY", "Response data", {
+			// See MIDDLEWARE_ERROR note: message folded into arg 1.
+			logger.debug("RESPONSE_BODY: Response data", {
 				correlationId: req.correlationId,
 				method: req.method,
 				url: req.url,
@@ -96,14 +101,18 @@ export const slowQueryLogger = (threshold: number = 1000) => {
 		res.on("finish", () => {
 			const duration = Date.now() - startTime;
 			if (duration > threshold) {
-				logger.warn("SLOW_REQUEST", "Request exceeded threshold", {
-					correlationId: req.correlationId,
-					method: req.method,
-					url: req.url,
-					duration: `${duration}ms`,
-					threshold: `${threshold}ms`,
-					userId: req.userId,
-				});
+				// See MIDDLEWARE_ERROR note: message folded into arg 1.
+				logger.warn(
+					`SLOW_REQUEST: ${req.method} ${req.url} took ${duration}ms (threshold ${threshold}ms)`,
+					{
+						correlationId: req.correlationId,
+						method: req.method,
+						url: req.url,
+						duration: `${duration}ms`,
+						threshold: `${threshold}ms`,
+						userId: req.userId,
+					},
+				);
 			}
 		});
 

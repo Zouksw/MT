@@ -305,3 +305,81 @@ def test_sarimax_rejects_mismatched_exog_even_for_short_series():
         assert "exog length" in str(exc)
     else:
         raise AssertionError("mismatched exog on a short series must raise ValueError")
+
+
+# ─── round-119: output-side finite guard + LinAlgError semantics ─────────────
+
+
+def test_predict_downgrades_nan_bounds_to_absent(client, monkeypatch):
+    """statsmodels non-converged fits emit NaN se_mean -> NaN bounds. pydantic
+    v2 serializes non-finite floats as JSON null, so a 200 with
+    "lower_bound": [null, ...] used to reach the backend and land in Redis +
+    prediction_logs. Bounds containing NaN must come back as absent."""
+
+    def fake_predict(**kwargs):
+        return {
+            "values": [10.0, 11.0, 12.0, 13.0, 14.0],
+            "lower_bound": [float("nan")] * 5,
+            "upper_bound": [15.0, 16.0, 17.0, 18.0, 19.0],
+        }
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+    resp = client.post("/predict", json=BASE_PAYLOAD)
+    assert resp.status_code == 200
+    assert resp.json()["lower_bound"] is None
+    assert resp.json()["upper_bound"] is not None
+
+
+def test_predict_503_on_non_finite_forecast_values(client, monkeypatch):
+    """Non-finite forecast VALUES are a hard model failure — a 200-with-nulls
+    (or a batch-wide 500 from stdlib json.dumps allow_nan=False) is worse."""
+
+    def fake_predict(**kwargs):
+        return {"values": [10.0, float("nan"), 12.0]}
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+    resp = client.post("/predict", json=BASE_PAYLOAD)
+    assert resp.status_code == 503
+    assert "non-finite" in resp.json()["detail"]
+
+
+def test_predict_maps_linalg_error_to_503(client, monkeypatch):
+    """np.linalg.LinAlgError subclasses ValueError, so a degenerate-series LU
+    failure used to surface as 422 'Invalid input' — a server-side numerical
+    failure misreported as the client's fault."""
+
+    import numpy as np
+
+    def fake_predict(**kwargs):
+        raise np.linalg.LinAlgError("LU decomposition error")
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+    resp = client.post("/predict", json=BASE_PAYLOAD)
+    assert resp.status_code == 503
+    assert "numerical failure" in resp.json()["detail"]
+
+
+def test_predict_batch_contains_nan_item_as_error_not_whole_batch_500(client, monkeypatch):
+    """Before the finite guard, one NaN item blew up the whole batch AFTER the
+    handler returned (json.dumps allow_nan=False); the other items' results
+    were lost. The guard turns the item into a per-item error object."""
+
+    def fake_predict(**kwargs):
+        if kwargs["model_id"] == "arima":
+            return {"values": [1.0, 2.0, 3.0, 4.0, 5.0]}
+        return {"values": [1.0, float("nan"), 3.0, 4.0, 5.0]}
+
+    monkeypatch.setattr("routers.predict.predict", fake_predict)
+    resp = client.post(
+        "/predict/batch",
+        json=[
+            {**BASE_PAYLOAD, "model_id": "arima"},
+            {**BASE_PAYLOAD, "model_id": "holtwinters"},
+            {**BASE_PAYLOAD, "model_id": "arima"},
+        ],
+    )
+    assert resp.status_code == 200
+    items = resp.json()
+    assert items[0]["values"] == [1.0, 2.0, 3.0, 4.0, 5.0]
+    assert "error" in items[1] and "non-finite" in items[1]["error"]
+    assert items[2]["values"] == [1.0, 2.0, 3.0, 4.0, 5.0]

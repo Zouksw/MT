@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -27,7 +27,10 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 	// Form state
 	const [name, setName] = useState("");
 	const [isActive, setIsActive] = useState(true);
-	const [initialized, setInitialized] = useState(false);
+	// Ref, not state (round-119): `initialized` as state re-triggered this
+	// effect after the first successful fetch (its dep array included it), so
+	// every visit fired the GET twice.
+	const initializedRef = useRef(false);
 
 	// Fetch API key data
 	useEffect(() => {
@@ -38,10 +41,10 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 				);
 				const data = result.data || result;
 				setApiKey(data);
-				if (!initialized) {
+				if (!initializedRef.current) {
 					setName(String(data.name ?? ""));
 					setIsActive(data.isActive === undefined ? true : Boolean(data.isActive));
-					setInitialized(true);
+					initializedRef.current = true;
 				}
 			} catch {
 				toast.showError("Failed to load API key data");
@@ -50,7 +53,7 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 			}
 		}
 		fetchKey();
-	}, [id, initialized, toast]);
+	}, [id, toast]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -170,10 +173,10 @@ export default function ApiKeyEditPage({ params }: ApiKeyEditPageProps) {
 										</span>
 										<div className="font-mono text-sm text-gray-900 dark:text-gray-100">
 											...
-											{(apiKey.lastCharacters as number)
-												?.toString(16)
-												.toUpperCase()
-												.padStart(8, "0") || "N/A"}
+											{/* Decimal, matching the show page's iotd_••••{lastCharacters}
+											   identifier (round-119: this page used to render it as hex,
+											   so the same key showed two different "tails"). */}
+											{apiKey.lastCharacters != null ? String(apiKey.lastCharacters) : "N/A"}
 										</div>
 									</div>
 								</div>

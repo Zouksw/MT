@@ -12,7 +12,7 @@ import {
 	RefreshCw,
 	XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -234,6 +234,7 @@ export default function DataSourcesPage() {
 	const [refreshing, setRefreshing] = useState<string | null>(null);
 	const [expandedSource, setExpandedSource] = useState<string | null>(null);
 	const [historyLogs, setHistoryLogs] = useState<IngestionLog[]>([]);
+	const historyReqId = useRef(0);
 
 	const getToken = useCallback(async () => {
 		const { tokenManager } = await import("@/lib/tokenManager");
@@ -275,6 +276,17 @@ export default function DataSourcesPage() {
 					setCommodityFreshness(data.data.commodities || []);
 					setCommoditySummary(data.data.summary ?? null);
 				}
+			}
+
+			// round-119: Promise.allSettled never rejects, and none of the
+			// branches above handles the all-failed case — a down backend left
+			// loading=false + error=null + empty arrays, rendering a silent
+			// "Total Sources 0" page with no explanation.
+			const allFailed = [sourcesRes, freshnessRes, commodityRes].every(
+				(r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok),
+			);
+			if (allFailed) {
+				setError("Failed to load data source information (all endpoints unavailable)");
 			}
 		} catch {
 			setError("Failed to load data source information");
@@ -323,6 +335,10 @@ export default function DataSourcesPage() {
 			return;
 		}
 		setExpandedSource(sourceId);
+		// round-119 race guard: historyLogs is shared across sources — a slow
+		// response for A used to overwrite B's panel after a quick A→B toggle.
+		// Only the latest request may commit its logs.
+		const reqId = ++historyReqId.current;
 		try {
 			const token = await getToken();
 			const headers: Record<string, string> = {};
@@ -332,8 +348,10 @@ export default function DataSourcesPage() {
 				headers,
 			});
 			const data = await res.json();
+			if (reqId !== historyReqId.current) return;
 			if (data.success) setHistoryLogs(data.data.logs || []);
 		} catch {
+			if (reqId !== historyReqId.current) return;
 			setHistoryLogs([]);
 		}
 	};

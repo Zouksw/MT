@@ -406,12 +406,15 @@ export function useTradingData() {
 						const values = modelIds
 							.map((id) => modelPreds[id]?.values?.[i])
 							.filter((v: number | undefined) => v !== undefined);
+						// round-119: isFinite, not !==undefined — a short values array
+						// makes `undefined * 0.95` NaN, which slipped the old filter
+						// and turned the whole overlay bound into NaN.
 						const lowers = modelIds
 							.map((id) => modelPreds[id]?.lowerBound?.[i] ?? modelPreds[id]?.values?.[i] * 0.95)
-							.filter((v: number | undefined) => v !== undefined);
+							.filter((v: number | undefined) => Number.isFinite(v as number));
 						const uppers = modelIds
 							.map((id) => modelPreds[id]?.upperBound?.[i] ?? modelPreds[id]?.values?.[i] * 1.05)
-							.filter((v: number | undefined) => v !== undefined);
+							.filter((v: number | undefined) => Number.isFinite(v as number));
 
 						if (values.length === 0) return null;
 

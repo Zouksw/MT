@@ -19,7 +19,10 @@
  *   logs a warning and the run continues — never throws (scheduler also
  *   catches, but per-feed isolation keeps the other feeds on schedule).
  */
+
+import { createHash } from "node:crypto";
 import type { NewsCategory } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { XMLParser } from "fast-xml-parser";
 import { logger, prisma } from "@/lib";
 import { scraperFetch } from "@/services/dataIngestion/http";
@@ -145,8 +148,45 @@ async function ingestFeed(feed: RssFeedConfig, authorId: string): Promise<RssIng
 			});
 			result.inserted++;
 		} catch (err) {
-			// Most common: slug unique collision (two feeds paraphrasing the
-			// same headline) — a skip, not a failure.
+			// round-119: dedupe key is sourceUrl but the UNIQUE constraint is
+			// on slug. A second, DIFFERENT article whose title slugifies the
+			// same (weekly roundup titles) used to be dropped here on every
+			// 6h cycle — permanently, because the sourceUrl row never landed
+			// so the dedupe check could never match. Retry once with a stable
+			// sourceUrl hash suffix (deterministic → idempotent across runs).
+			if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+				const suffixed = `${slugifyTitle(item.title)}-${createHash("sha1")
+					.update(item.link)
+					.digest("hex")
+					.slice(0, 8)}`;
+				try {
+					await prisma.marketNews.create({
+						data: {
+							title: truncate(item.title, 200),
+							slug: suffixed,
+							summary: truncate(stripHtml(item.description), 500),
+							body: stripHtml(item.content || item.description),
+							category: feed.category,
+							source: feed.source,
+							sourceUrl: item.link,
+							tags: ["rss", feed.key],
+							status: "published",
+							publishedAt: item.publishedAt,
+							authorId,
+						},
+					});
+					result.inserted++;
+					continue;
+				} catch (err2) {
+					logger.warn(
+						`[rss] ${feed.key} item skipped even with disambiguated slug: ${
+							err2 instanceof Error ? err2.message : err2
+						}`,
+					);
+					result.skipped++;
+					continue;
+				}
+			}
 			result.skipped++;
 			logger.warn(
 				`[rss] ${feed.key} item skipped on create: ${err instanceof Error ? err.message : err}`,
