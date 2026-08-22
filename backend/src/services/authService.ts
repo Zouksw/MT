@@ -13,14 +13,8 @@ import bcrypt from "bcryptjs";
 import { config, jwtUtils, prisma } from "@/lib";
 import { MS_PER_DAY } from "@/lib/constants";
 import { logger } from "@/lib/logger.js";
-import {
-	ConflictError,
-	NotFoundError,
-	UnauthorizedError,
-} from "@/middleware/errorHandler";
-import {
-	recordFailedLogin,
-} from "@/services/authLockout";
+import { ConflictError, NotFoundError, UnauthorizedError } from "@/middleware/errorHandler";
+import { recordFailedLogin } from "@/services/authLockout";
 import { blacklistToken, isTokenBlacklisted } from "@/services/tokenBlacklist";
 
 /** Minimal request context extracted by the route layer from `req`. */
@@ -29,13 +23,7 @@ export interface RequestCtx {
 	userAgent: string | undefined;
 }
 
-export type AuditAction =
-	| "CREATE"
-	| "READ"
-	| "UPDATE"
-	| "DELETE"
-	| "EXPORT"
-	| "LOGIN";
+export type AuditAction = "CREATE" | "READ" | "UPDATE" | "DELETE" | "EXPORT" | "LOGIN";
 
 /** Tokens issued when a session is created or rotated. */
 export interface AuthTokens {
@@ -57,9 +45,7 @@ export interface PublicUser {
  * Resolve a Bearer token to a userId, rejecting blacklisted or unverified
  * tokens. Returns null (does not throw) so routes can map it to 401.
  */
-export async function getUserIdFromToken(
-	authHeader: string | undefined,
-): Promise<string | null> {
+export async function getUserIdFromToken(authHeader: string | undefined): Promise<string | null> {
 	if (!authHeader?.startsWith("Bearer ")) return null;
 	const token = authHeader.substring(7);
 	try {
@@ -118,7 +104,13 @@ export async function registerUser(input: {
 			email: input.email,
 			passwordHash,
 			name: input.name || input.email.split("@")[0],
-			role: "EDITOR",
+			// VIEWER, not EDITOR (round-119): registration used to hand out
+			// EDITOR — which carries news-publishing rights (requireEditorRole)
+			// and would pass the AI tier gate — to every anonymous signup.
+			// VIEWER can read everything; editorial rights are granted by an
+			// admin, and AI access stays open to all authenticated users
+			// (aiAccess tier enforcement is dormant until AI_TIER_ENFORCED).
+			role: "VIEWER",
 		},
 		select: {
 			id: true,
@@ -144,7 +136,14 @@ export async function verifyCredentials(
 	email: string,
 	password: string,
 	ipAddress: string,
-): Promise<{ id: string; email: string; name: string; role: string; avatarUrl: string | null; passwordHash: string }> {
+): Promise<{
+	id: string;
+	email: string;
+	name: string;
+	role: string;
+	avatarUrl: string | null;
+	passwordHash: string;
+}> {
 	const user = await prisma.user.findUnique({ where: { email } });
 	if (!user) {
 		await recordFailedLogin(email, ipAddress);
@@ -167,10 +166,7 @@ export async function verifyCredentials(
  * The session TTL is config.session.expiresDays, which must match the TTL
  * baked into the refresh-token JWT; do not reintroduce a hardcoded 7 days.
  */
-export async function createAuthSession(
-	userId: string,
-	ctx: RequestCtx,
-): Promise<AuthTokens> {
+export async function createAuthSession(userId: string, ctx: RequestCtx): Promise<AuthTokens> {
 	const token = jwtUtils.generateToken(userId);
 	const refreshToken = jwtUtils.generateRefreshToken(userId);
 	const session = await prisma.session.create({

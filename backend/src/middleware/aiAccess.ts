@@ -4,11 +4,13 @@
  * Provides multi-layered security for AI features:
  * - Feature flag control (global kill switch)
  * - Authentication required
- * - Tier gating: AI is a Pro-tier feature. VIEWER (free tier) is blocked and
- *   told to upgrade; EDITOR (Pro) and ADMIN pass. This realigns the AI layer
- *   with the "information platform with AI feature tiers" positioning —
- *   previously any authenticated user (incl. free VIEWER) could call AI
- *   endpoints without limit (M7).
+ * - Tier gating (dormant by default): when AI_TIER_ENFORCED=true, AI is a
+ *   Pro-tier feature — VIEWER (free tier) is blocked and told to upgrade,
+ *   EDITOR (Pro) and ADMIN pass. Enforcement is OFF by default (round-119):
+ *   registration now defaults to VIEWER and no upgrade path exists yet
+ *   (PRODUCT-SPEC §九: paywall/AI tiering deferred until there is a user
+ *   base), so enforcing the tier would lock every new user out of the core
+ *   value chain with no way through. The gate is built and one env var away.
  * - IP whitelist (optional)
  * - Audit logging
  */
@@ -26,7 +28,7 @@ const AI_ALLOWED_IPS = process.env.AI_ALLOWED_IPS
 	? process.env.AI_ALLOWED_IPS.split(",").map((ip) => ip.trim())
 	: [];
 
-/** Roles allowed to use AI features (Pro tier and above). */
+/** Roles allowed to use AI features when tier enforcement is on (Pro tier+). */
 const AI_ALLOWED_ROLES = new Set(["ADMIN", "EDITOR"]);
 
 /**
@@ -61,8 +63,10 @@ export function checkAIAccess(req: AuthRequest, _res: Response, next: NextFuncti
 		throw new ForbiddenError("Authentication required for AI features.");
 	}
 
-	// Layer 3: Tier gating — AI is a Pro-tier feature.
-	if (!AI_ALLOWED_ROLES.has(req.user.role)) {
+	// Layer 3: Tier gating — dormant unless AI_TIER_ENFORCED=true (round-119).
+	// See the module docstring: with registration defaulting to VIEWER and no
+	// upgrade path, enforcement is a product switch, not a code default.
+	if (process.env.AI_TIER_ENFORCED === "true" && !AI_ALLOWED_ROLES.has(req.user.role)) {
 		logger.warn(
 			`[AI_ACCESS] VIEWER (free tier) AI access denied for ${req.user.email} — upgrade required`,
 		);

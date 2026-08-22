@@ -172,7 +172,8 @@ describe("AI Access Control Middleware", () => {
 			expect(mockNext).toHaveBeenCalled();
 		});
 
-		it("should DENY access for VIEWER role (free tier — M7 fix)", async () => {
+		it("should DENY access for VIEWER role when AI_TIER_ENFORCED=true (M7 gate)", async () => {
+			process.env.AI_TIER_ENFORCED = "true";
 			mockReq.user = {
 				id: "viewer-123",
 				email: "viewer@example.com",
@@ -183,6 +184,22 @@ describe("AI Access Control Middleware", () => {
 				/Pro subscription/,
 			);
 			expect(mockNext).not.toHaveBeenCalled();
+			delete process.env.AI_TIER_ENFORCED;
+		});
+
+		it("should ALLOW VIEWER by default — tier enforcement dormant (round-119)", async () => {
+			// Registration defaults to VIEWER and no upgrade path exists yet
+			// (PRODUCT-SPEC §九 defers tiering), so the default must not lock
+			// new users out of the core AI value chain.
+			delete process.env.AI_TIER_ENFORCED;
+			mockReq.user = {
+				id: "viewer-123",
+				email: "viewer@example.com",
+				role: "VIEWER",
+			};
+
+			await checkAIAccess(mockReq as AuthRequest, mockRes as Response, mockNext);
+			expect(mockNext).toHaveBeenCalled();
 		});
 	});
 

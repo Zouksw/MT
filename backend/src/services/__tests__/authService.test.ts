@@ -150,7 +150,7 @@ beforeEach(() => {
 });
 
 describe("registerUser", () => {
-	it("creates a new EDITOR user and returns the public shape", async () => {
+	it("creates a new VIEWER user and returns the public shape (round-119)", async () => {
 		mocks.userFindUnique.mockResolvedValueOnce(null); // no existing user
 		mocks.userCreate.mockImplementationOnce(
 			async ({ data }: { data: Record<string, unknown> }) => ({
@@ -165,7 +165,9 @@ describe("registerUser", () => {
 
 		const user = await registerUser({ email: "new@example.com", password: "pw", name: "New" });
 
-		expect(user.role).toBe("EDITOR");
+		// Registration no longer grants EDITOR (news-publishing rights);
+		// editorial roles are assigned by an admin.
+		expect(user.role).toBe("VIEWER");
 		expect(user.email).toBe("new@example.com");
 		// The password must have been hashed before create — never stored in plaintext.
 		const createCall = mocks.userCreate.mock.calls[0][0].data;

@@ -295,10 +295,18 @@ describe("Signals Routes (Integration)", () => {
 		});
 	});
 	// round-104 / audit C6: the ensemble endpoints are the same cost class as
-	// POST /api/inference/predict and must carry the same tier gate. Before
-	// the fix, a free-tier VIEWER could run unlimited full-ensemble forecasts
-	// through these routes.
-	describe("AI tier gate (VIEWER blocked)", () => {
+	// POST /api/inference/predict and must carry the same tier gate. round-119:
+	// enforcement is dormant by default (registration defaults to VIEWER with
+	// no upgrade path — PRODUCT-SPEC §九 defers tiering), so the gate only
+	// fires when AI_TIER_ENFORCED=true.
+	describe("AI tier gate (VIEWER blocked when AI_TIER_ENFORCED)", () => {
+		beforeAll(() => {
+			process.env.AI_TIER_ENFORCED = "true";
+		});
+		afterAll(() => {
+			delete process.env.AI_TIER_ENFORCED;
+		});
+
 		it("GET /:commodityId returns 403 for VIEWER", async () => {
 			const res = await request(app)
 				.get("/api/signals/brl_usd?horizon=3")

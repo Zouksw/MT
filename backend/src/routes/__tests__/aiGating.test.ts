@@ -1,16 +1,18 @@
 /**
- * AI tier-gate regression (round-104 / audit C6).
+ * AI tier-gate regression (round-104 / audit C6; contract updated round-119).
  *
  * Full-ensemble endpoints outside /api/inference previously carried only
- * `authenticate` — a free-tier VIEWER blocked from POST /api/inference/predict
- * could run the identical (or heavier) inference through:
+ * `authenticate` — the gate now runs checkAIAccess (+ aiRateLimiter) on:
  *   GET  /api/signals/:commodityId   (ensemble consensus, cached 5 min)
  *   POST /api/signals/batch          (up to 50 ensembles per request)
  *   GET  /api/beef/forecasts         (one ensemble per forecastable cut)
- *   POST /api/inference/anomalies    (missing its aiRateLimiter sibling)
- * All four now run checkAIAccess (+ aiRateLimiter) — these tests pin the
- * 403 for VIEWER without touching the inference service (the gate fires
- * before any model call).
+ *   POST /api/inference/anomalies
+ *
+ * Round-119 contract: tier enforcement is DORMANT by default (registration
+ * defaults to VIEWER and no upgrade path exists — PRODUCT-SPEC §九 defers
+ * AI tiering), so a VIEWER passes the tier gate and proceeds to the
+ * endpoint. With AI_TIER_ENFORCED=true the M7 gate fires: VIEWER gets the
+ * upgrade 403 BEFORE any model call.
  */
 
 import type { Express } from "express";
@@ -41,14 +43,45 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	await prisma.user.deleteMany({ where: { id: viewerId } }).catch(() => {});
+	delete process.env.AI_TIER_ENFORCED;
 });
 
-describe("AI tier gating — ensemble endpoints (audit C6)", () => {
+describe("AI tier gating — default: enforcement dormant, VIEWER passes the gate", () => {
 	const auth = () => ({ Authorization: `Bearer ${viewerToken}` });
+
+	test("GET /api/signals/:commodityId — not blocked by the tier gate for VIEWER", async () => {
+		const res = await request(app).get("/api/signals/brl_usd").set(auth());
+		// The gate must not 403/401 the VIEWER; whatever follows (200 with a
+		// consensus, or a downstream error from a cold inference service) is
+		// past the gate.
+		expect([401, 403]).not.toContain(res.status);
+	});
+
+	test("GET /api/beef/forecasts — not blocked by the tier gate for VIEWER", async () => {
+		const res = await request(app).get("/api/beef/forecasts").set(auth());
+		expect([401, 403]).not.toContain(res.status);
+	});
+
+	test("unauthenticated stays 401 (gate ordering: auth before tier)", async () => {
+		const res = await request(app).get("/api/signals/brl_usd");
+		expect(res.status).toBe(401);
+	});
+});
+
+describe("AI tier gating — AI_TIER_ENFORCED=true: the M7 gate fires", () => {
+	const auth = () => ({ Authorization: `Bearer ${viewerToken}` });
+
+	beforeAll(() => {
+		process.env.AI_TIER_ENFORCED = "true";
+	});
+	afterAll(() => {
+		delete process.env.AI_TIER_ENFORCED;
+	});
 
 	test("GET /api/signals/:commodityId → 403 for VIEWER", async () => {
 		const res = await request(app).get("/api/signals/brl_usd").set(auth());
 		expect(res.status).toBe(403);
+		expect(res.body?.error?.message).toMatch(/Pro subscription/i);
 	});
 
 	test("POST /api/signals/batch → 403 for VIEWER", async () => {
@@ -75,10 +108,5 @@ describe("AI tier gating — ensemble endpoints (audit C6)", () => {
 			.set(auth())
 			.send({ commodityId: "brl_usd" });
 		expect(res.status).toBe(403);
-	});
-
-	test("unauthenticated stays 401 (gate ordering: auth before tier)", async () => {
-		const res = await request(app).get("/api/signals/brl_usd");
-		expect(res.status).toBe(401);
 	});
 });
