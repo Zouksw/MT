@@ -35,6 +35,7 @@
 | 文档 | 内容 |
 |------|------|
 | [deployment/DEPLOYMENT-CHECKLIST.md](deployment/DEPLOYMENT-CHECKLIST.md) | 生产部署清单 |
+| [guides/WEEKLY-DATA-IMPORT.md](guides/WEEKLY-DATA-IMPORT.md) | 牛肉价格周度导入 runbook（CSV 手动导入=数据解冻唯一路径，D1 期间） |
 | [guides/CONTRIBUTING.md](guides/CONTRIBUTING.md) | 贡献指南 |
 | [guides/SECRETS-MANAGEMENT.md](guides/SECRETS-MANAGEMENT.md) | 凭据管理 |
 | [../CLAUDE.md](../CLAUDE.md) | 编码准则 + Dev Server 管理 + Health Stack 质量门 |
