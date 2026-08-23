@@ -14,6 +14,7 @@
 | [KNOWN-ISSUES.md](KNOWN-ISSUES.md) | 开放阻塞与待决策（数据源失效、MAPE 验证环、Chronos 接入等），每条标注来源与验证日期 |
 | [TECH-DEBT.md](TECH-DEBT.md) | 过度工程化与冗余清单（BullMQ 死队列、多租户脚手架、死模型等），每条标注审计日期，动手前需复核 |
 | [AUTOMATION-STATUS.md](AUTOMATION-STATUS.md) | CI/CD、cron、护栏等自动化基础设施状态 |
+| [COMPETITIVE-ANALYSIS-MOOKET.md](COMPETITIVE-ANALYSIS-MOOKET.md) | 牧集对标分析：真正差距、价值未兑现根因、优势落实路径（2026-08-23，生产库实测） |
 | [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 
 ## 技术参考
