@@ -68,7 +68,7 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 ```
 MT
 ├── frontend/          Next.js 15 + React 19 + Tailwind CSS
-│   ├── app/           44 页面 (App Router)
+│   ├── app/           45 页面 (App Router)
 │   └── components/    可复用组件库
 ├── backend/           Express + TypeScript + Prisma ORM
 │   ├── routes/        20 API 路由模块
@@ -93,7 +93,7 @@ MT
 | 进程管理 | PM2 |
 | 安全 | JWT, bcrypt, CSRF, Helmet, rate limiting |
 
-> 上述规模数字（44 页面 / 20 路由 / 18 源 / 30 模型 / 9 model id）为 2026-08-23 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
+> 上述规模数字（45 页面 / 20 路由 / 18 源 / 30 模型 / 9 model id）为 2026-08-23 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
 
 ---
 

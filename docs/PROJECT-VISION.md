@@ -25,7 +25,7 @@
 > - **round-121/122**：牧集对标分析（`docs/COMPETITIVE-ANALYSIS-MOOKET.md`）+ 落地方案（`docs/IMPROVEMENT-PLAN.md`，执行状态已批注提交哈希）。
 > - **round-123（5 批全执行）**：共识池 3→7（chronos-only 池曾使质量淘汰静默失效，已修复并 live 验证）、公开预测战绩页 `/ai/track-record`、落地页换真实数据、ai/predict 页模型列表接推理服务、周度牛肉导入 runbook；测试→生产 Redis 缓存污染通道已封堵（测试强制 db1）。
 > - **round-124（瘦身轮）**：删双孤立路由/manualImport 服务/空壳设置页等，数据源爬虫 19→18。
-> - **当前基线（2026-08-23 实测）**：backend 1004+1（97 文件）/ frontend 317（34 套件）/ inference 64 = **1385 全绿**；三服务 PM2 在线。当前事实入口：`AGENTS.md` §三 + `docs/KNOWN-ISSUES.md` + `docs/TECH-DEBT.md` §十四/§十五。
+> - **当前基线（2026-08-23 实测）**：backend 1004+1（97 文件）/ frontend 322（35 套件）/ inference 64 = **1390 全绿**；三服务 PM2 在线。当前事实入口：`AGENTS.md` §三 + `docs/KNOWN-ISSUES.md` + `docs/TECH-DEBT.md` §十四/§十五。
 
 ---
 

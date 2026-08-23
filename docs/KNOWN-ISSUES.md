@@ -134,16 +134,17 @@
 
 ---
 
-### D4 — beef_carcass_us（FRED CBBTCUSD）单位语义存疑（2026-08-23 发现，展示层已防御）
+### D4 — beef_carcass_us 序列纠错（2026-08-23 发现并**已解决** round-126 `02fe33a`）
 
-**来源**：round-122 批 1 将该序列推上 landing Hero（公开 highlights 端点）时的取证。
-**现状（截至 2026-08-23 实测）**：
-- `commodities` 行：`beef_carcass_us`，unit=`USD/cwt`，metadata=`{"source":"fred","seriesId":"CBBTCUSD"}`；`cmeFutures.ts` FRED_DAILY 注释称 "daily, USDA-reported via FRED"。
-- 但现实中 FRED **CBBTCUSD 是 IMF《全球牛肉价》月度指数，单位 ¢/lb**——与库内 "daily + USD/cwt" 标签均矛盾。
-- 库内数据形态加剧疑点：4248 行日频（2014-12→2026-08-22），年内值域振荡 2~3 倍（2024 年 39,548~106,137；2026 年至 8 月 58,586~96,853），不符合任何胴体价序列的量级与波动特征。
-**影响**：该序列是**全站唯一日更牛肉序列**（D1 冻结后），且在 mapeTracking 的 fresh-source 验证名单里；绝对值的币种/单位展示若按 `USD/cwt` 直出会在内部 /market 页与 landing 上呈现失真量级。
-**已做防御（round-122 批 1）**：landing Hero 面板**不渲染 "$" 前缀**，改为裸值 + 存储单位 + 源序列号（`FRED · CBBTCUSD`）透明标注；日变动 % 与 sparkline（单位不变量）正常展示。
-**待核（需访问 FRED 原页）**：确认本环境 fred 镜像对 CBBTCUSD 实际下发的频率与单位，再决定：改 unit 标签 / 改序列映射（换真·USDA 日频胴体价序列）/ 接受为环境合成值。内部 /market 页的同款单位直出待该决策后统一处理。
+**来源**：round-122 批 1 将该序列推上 landing Hero（公开 highlights 端点）时的取证；round-126 访问 FRED 原页定案。
+**真相（FRED 原页实测，2026-08-23）**：`CBBTCUSD` 是 **Coinbase Bitcoin（美元/枚，日频）**，与牛肉毫无关系——最新观测 77,117.73（2026-08-22）与库内"胴体价"逐位一致。种子配置把 "CB-BTC-USD" 误读为牛肉胴体序列，导致 **11.6 年比特币日线（4248 行，2014-12→2026-08）以"US Beef Carcass (USD/cwt)"名义入库**，并曾展示于 Hero/dashboard；6165 条在其上的预测也随之失效。（2026-08-23 早先"CBBTCUSD 是 IMF 月度 ¢/lb"的猜测同样错误——IMF 牛肉序列是 PBEEFUSDM。）
+**修复（round-126，全部 live 验证）**：
+- 序列置换：`cmeFutures.ts` BEEF 项 `CBBTCUSD`→`PBEEFUSDM`（IMF 全球牛肉，月度，USC/lb），月度窗口 62 天 + interval 支持（原 7 天日频窗口对月度序列几乎必然空转）。
+- DB 迁移：商品改名 `Global Beef Price (IMF via FRED)`/`全球牛肉价格（IMF 月度）`、unit `USC/lb`、metadata 更新；删 4248 行 BTC 价格 + 6165 条错标预测（slug 保留以免外键/引用面碎裂，metadata 注明来历）。
+- 回填：1990 起 CSV 回填 **195 个月度点（2010-05~2026-07，IMF 基准起点）**，最新 331.78 USC/lb 与 FRED 官方一致。
+- highlights 端点：daily 空→回退 monthly；显示取整 2 位。Hero/dashboard/watchlist 全部改挂真实牛肉基准（dashboard 卡 round-126 起为"全球牛肉价"，月度 MoM）。
+- 验证：cme 爬虫手动刷新 31s 无错、195 行完好；公开端点返回 name/unit/seriesId/331.78/-2.87%MoM/30 点。
+**遗留（有意）**：真·US 胴体日频价（USDA LMR 系列）需 `USDA_MARS_API_KEY`（空，见 D1）——现用 IMF 全球月度基准是 FRED 上唯一免 key 牛肉序列，属当前约束下的最优诚实解。
 
 ---
 

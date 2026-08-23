@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-126 剩余开发任务轮（D1/D2 执行 + D4 意外定案修复，4 提交）
+
+用户指令"继续完成剩余的开发任务"= 对 IMPROVEMENT-PLAN 决策项 D1-D3 放行。执行中发现并修复一起**数据诚实性事故**。
+
+- **D2**（`c16ff34`）：dashboard KPI 冻结卡（进口均价，04-30 种子值 + "—"趋势）换为真实牛肉基准卡（同批 1 highlights 源：值+单位+日期入标题+观测间涨跌%+30 点 sparkline）；国产卡保留。
+- **D1**（`dd91b88`）：`/watchlists` 最小页 + `useWatchlists` hooks（+5 测试 317→**322**）——清单切换、optgroup 选品器（有价优先、无价标注）、现价/涨跌/真实数据日期、移除；导航"行情"段加入；消费既有 7 端点零后端改动；live 全流程（创建/加项/quotes）验证后清理验证数据。
+- **D4 定案+修复**（`02fe33a`，本轮最大发现）：访问 FRED 原页证实 **CBBTCUSD = Coinbase 比特币/美元日线**（最新 77,117.73 与库内逐位一致）——种子把 "CB-BTC-USD" 误读为牛肉胴体，**11.6 年 BTC 日线（4248 行）以"US Beef Carcass (USD/cwt)"名义入库**并曾展示于 Hero/dashboard，6165 条预测随之失效。修复：序列置换 `PBEEFUSDM`（IMF 全球牛肉月度，USC/lb）+ 月度 62 天窗口 + highlights 端点 monthly 回退与取整 + DB 清洗（改名/删 BTC 行/删错标预测）+ 1990 起回填 **195 个月度点**（最新 331.78 与 FRED 官方一致，MoM -2.87%）+ cme 爬虫手动刷新 31s 无错。dashboard 卡与 Hero 改挂"全球牛肉价（IMF 月度）"。真·USDA 胴体日频仍需 USDA key（KNOWN-ISSUES D1/D4 遗留注记）。
+- **D3 维持非代码**：种子用户访谈/档案周更/CSV 获取为运营与外部输入，无工程动作。
+
+**测试**：backend 1004+1（97 文件）不变、frontend 317→**322**（35 套件）、inference 64——合计 **1390 全绿**。文档：KNOWN-ISSUES D4 重写为已解决、IMPROVEMENT-PLAN 决策项状态块、TECH-DEBT §十四 watchlist 两条划除、AGENTS/README 页面数 44→45。
+
 ### 2026-08-23 — round-125 状态统一轮（docs-only，0 代码改动）
 
 round-121~124 四轮连改后全仓状态对齐实测：git 树净于 `aa20da5`、dist/.next 均新于源码、三服务 PM2 在线且 `/health/ready` 为 ready（DB/Redis/inference 全 true）；三套测试**实跑**复核 backend **1004+1**（97 文件）/ frontend **317**（34 套件）/ inference **64** = **1385 全绿**，与 AUTOMATION-STATUS 声称一致；live 抽查 public-highlights / public-track-record / /ai/track-record 均 200、已删 `/api/market/import` 404。
