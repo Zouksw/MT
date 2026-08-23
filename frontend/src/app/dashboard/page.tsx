@@ -25,6 +25,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { StatCard, type TrendIndicator } from "@/components/ui/StatCard";
 import { useAuth } from "@/contexts/auth";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { usePublicHighlights } from "@/hooks/usePublicHighlights";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
 import { getCachedUser } from "@/utils/auth";
@@ -43,7 +44,7 @@ const AlertDistributionChart = dynamic(
 // to re-render (and re-run useAnimatedCounter) on every parent render. These
 // icons are static, so hoisting them to module scope keeps their reference
 // stable across renders.
-const IMPORTED_ICON = <Globe className="size-5" />;
+const CARCASS_ICON = <Globe className="size-5" />;
 const DOMESTIC_ICON = <Beef className="size-5" />;
 const FACTORY_ICON = <Warehouse className="size-5" />;
 const RECORDS_ICON = <TrendingUp className="size-5" />;
@@ -127,6 +128,10 @@ function AIPredictionCard({
 
 export default function DashboardPage() {
 	const { stats, loading, error, manualRetry } = useDashboardStats();
+	// US carcass daily card (IMPROVEMENT-PLAN D2) — the platform's only
+	// daily-updating beef series (FRED beef_carcass_us), same public source
+	// as the landing Hero. Replaces the frozen 04-30 imported-average card.
+	const { live: carcass, loading: highlightsLoading } = usePublicHighlights();
 	const { status, user: authUser, logout } = useAuth();
 	const isMobile = useIsMobile();
 	// Session truth from AuthContext (cookie-verified on mount). The old
@@ -142,14 +147,21 @@ export default function DashboardPage() {
 	const beef = stats?.beef;
 
 	// Memoize the trend objects passed to StatCard — they depend only on the
-	// beef trend % values, but constructing them inline in JSX creates a new
+	// source trend % values, but constructing them inline in JSX creates a new
 	// object each render and defeats StatCard's React.memo shallow compare.
-	const importedTrend = useMemo<TrendIndicator | undefined>(
+	// Carcass value/unit shown as stored, WITHOUT a currency prefix — the
+	// series' absolute level carries KNOWN-ISSUES D4 unit doubt; the
+	// day-change % and sparkline are unit-invariant.
+	const carcassTrend = useMemo<TrendIndicator | undefined>(
 		() =>
-			beef?.importedTrendPct == null
+			carcass?.dayChangePct == null
 				? undefined
-				: { value: Math.abs(beef.importedTrendPct), isPositive: beef.importedTrendPct >= 0 },
-		[beef?.importedTrendPct],
+				: { value: Math.abs(carcass.dayChangePct), isPositive: carcass.dayChangePct >= 0 },
+		[carcass?.dayChangePct],
+	);
+	const carcassSpark = useMemo(
+		() => carcass?.series?.map((p) => p.close).slice(-30) ?? [],
+		[carcass?.series],
 	);
 	const domesticTrend = useMemo<TrendIndicator | undefined>(
 		() =>
@@ -231,7 +243,8 @@ export default function DashboardPage() {
 					</div>
 
 					{/* KPI HERO — three headline cards per PRODUCT-SPEC §5.1:
-					 * 进口均价 (imported avg) / 国产均价 (domestic avg) / AI 7日预测.
+					 * US 胴体价（日更，FRED beef_carcass_us — D2 换掉长期冻结的进口均价种子值）/
+					 * 国产均价 (domestic avg) / AI 7日预测.
 					 * Each surfaces an honest "--" when its data source is empty rather
 					 * than fabricating a number. The AI card's directional color comes
 					 * from the consensus direction (green up / red down / muted flat). */}
@@ -241,16 +254,16 @@ export default function DashboardPage() {
 						aria-atomic="true"
 					>
 						<StatCard
-							title="进口均价 (Imported)"
-							value={formatPrice(beef?.importedAvg ?? null, false)}
-							suffix="/kg"
-							icon={IMPORTED_ICON}
+							title={`US 胴体价${carcass?.latest ? ` · ${carcass.latest.date.slice(5, 10).replace("-", "/")}` : ""}`}
+							value={carcass?.latest?.close ?? "--"}
+							suffix={carcass?.unit}
+							icon={CARCASS_ICON}
 							variant="primary"
-							loading={loading}
-							// Day-over-day % change in the imported average (round-57).
-							// Mirrors the spec §5.1 mockup's ↓1.2%/↑0.5% trend badge. Null
-							// (no prior day) hides the badge — honest absence, not a fake 0.
-							trend={importedTrend}
+							loading={loading || highlightsLoading}
+							// Day-over-day % from the last two daily closes —
+							// unit-invariant, so it stays honest under D4.
+							trend={carcassTrend}
+							sparklineData={carcassSpark.length >= 2 ? carcassSpark : undefined}
 						/>
 						<StatCard
 							title="国产均价 (Domestic)"
