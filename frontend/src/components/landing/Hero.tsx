@@ -90,6 +90,19 @@ export const Hero: React.FC = () => {
 	const updatedLabel = live?.latest?.date
 		? new Date(live.latest.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 		: "";
+	// Cadence from the median gap between series points: ~1d → "Daily",
+	// ~28d+ → "Monthly". Derived from data instead of hardcoded so the label
+	// cannot drift from whatever series the whitelist actually serves.
+	const cadenceLabel = (() => {
+		const s = live?.series ?? [];
+		if (s.length < 2) return "";
+		const gaps = s
+			.slice(1)
+			.map((p, i) => (new Date(p.date).getTime() - new Date(s[i].date).getTime()) / 86_400_000)
+			.sort((a, b) => a - b);
+		const median = gaps[Math.floor(gaps.length / 2)];
+		return median >= 20 ? "Monthly series" : "Daily series";
+	})();
 
 	return (
 		<section className="relative overflow-hidden bg-white dark:bg-background min-h-[100dvh] flex items-center">
@@ -209,12 +222,12 @@ export const Hero: React.FC = () => {
 										</div>
 									</div>
 
-									{/* Latest value + day change. Rendered WITHOUT a "$" prefix: the
+									{/* Latest value + change. Rendered WITHOUT a "$" prefix: the
 									 * raw series value plus its stored unit and source series id
-									 * stay traceable — the unit's real-world denomination is
-									 * under verification (KNOWN-ISSUES, 2026-08-23), so the panel
-									 * must not over-assert currency semantics. Day-change % and
-									 * the sparkline are unit-invariant. */}
+									 * stay traceable (round-126: the series is IMF global beef
+									 * in US cents/lb — cents never take a "$" — resolved from
+									 * the CBBTCUSD bitcoin mislabel, KNOWN-ISSUES D4). Change %
+									 * and the sparkline are unit-invariant. */}
 									<div className="mb-3 flex items-baseline justify-between px-3 py-2.5 rounded-md bg-white/5">
 										<div className="flex items-baseline gap-2">
 											<span className="text-2xl font-mono font-semibold tabular-nums">
@@ -239,10 +252,15 @@ export const Hero: React.FC = () => {
 									<LiveSparkline points={(live.series ?? []).map((p) => p.close)} />
 
 									{/* Series provenance bar — replaces the fabricated
-									 * "AI Consensus · Price Up · 78%" signal. */}
+									 * "AI Consensus · Price Up · 78%" signal. Cadence is
+									 * derived from the actual point spacing (the IMF beef
+									 * benchmark is monthly; round-126 briefly mislabeled it
+									 * "Daily series"). */}
 									<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
 										<Gauge size={14} className="text-primary" />
-										<span className="text-xs font-medium text-muted-foreground">Daily series</span>
+										<span className="text-xs font-medium text-muted-foreground">
+											{cadenceLabel}
+										</span>
 										<span className="ml-auto text-xs text-gray-500 font-mono tabular-nums">
 											{live.seriesId ? `${live.seriesId} · ` : ""}
 											{live.series?.length ?? 0} pts · {live.latest?.source}

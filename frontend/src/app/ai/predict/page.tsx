@@ -85,9 +85,10 @@ export default function AIPredictPage() {
 	}, []);
 
 	// Form state
-	// Default series = the platform's only daily-updating beef series (slug is
-	// accepted; UUID works too). The old default "root.test2" matched no
-	// commodity, so the prefilled form always failed with a 400.
+	// Default series = the platform's only live beef series (IMF global beef
+	// benchmark, monthly; slug is accepted, UUID works too). The old default
+	// "root.test2" matched no commodity, so the prefilled form always failed
+	// with a 400.
 	const [formTimeseries, setFormTimeseries] = useState("beef_carcass_us");
 	// Default model: chronos_tiny when the engine lists it, else first entry.
 	const [formModel, setFormModel] = useState("chronos_tiny");

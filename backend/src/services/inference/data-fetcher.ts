@@ -24,16 +24,25 @@ export async function getCommodityPriceValues(
 	});
 	const authoritativeSource = getAuthoritativeSource(commodity?.slug);
 
-	const prices = await prisma.commodityPrice.findMany({
-		where: {
-			commodityId,
-			interval,
-			...(authoritativeSource ? { source: authoritativeSource } : {}),
-		},
-		orderBy: { date: "desc" },
-		select: { close: true, date: true },
-		take: limit,
-	});
+	const queryByInterval = async (iv: string) =>
+		prisma.commodityPrice.findMany({
+			where: {
+				commodityId,
+				interval: iv,
+				...(authoritativeSource ? { source: authoritativeSource } : {}),
+			},
+			orderBy: { date: "desc" },
+			select: { close: true, date: true },
+			take: limit,
+		});
+
+	let prices = await queryByInterval(interval);
+	// Monthly fallback (round-127): the IMF beef benchmark (beef_carcass_us)
+	// stores monthly rows — the daily default returned 0 points and every
+	// predict call for it 500'd with "Insufficient price data".
+	if (prices.length < 2 && interval === "daily") {
+		prices = await queryByInterval("monthly");
+	}
 
 	// Return in chronological order (oldest first) for prediction models
 	prices.reverse();

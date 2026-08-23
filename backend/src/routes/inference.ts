@@ -10,6 +10,35 @@ import { healthCheck as inferenceHealth, predictFromCache } from "@/services/inf
 import { authoritativeSourceWhere } from "@/services/inference/authoritativeSources";
 import { applyConformalInterval, getIntervalMultipliers } from "@/services/intervalCalibration";
 import { getValidModels, isValidModel } from "@/services/modelRegistry";
+
+/**
+ * Interval-agnostic history fetch (round-127): the IMF beef benchmark
+ * (beef_carcass_us) stores monthly rows — a daily-only query returned empty
+ * and the visualize/anomaly endpoints degraded or threw for it. Daily first
+ * (the common case), monthly fallback only when daily is empty.
+ */
+async function fetchHistoryWithFallback(
+	uuid: string,
+	slug: string,
+	limit: number,
+	order: "asc" | "desc",
+) {
+	const base = { commodityId: uuid, ...authoritativeSourceWhere(slug) };
+	const daily = await prisma.commodityPrice.findMany({
+		where: { ...base, interval: "daily" },
+		orderBy: { date: order },
+		take: limit,
+		select: { date: true, close: true },
+	});
+	if (daily.length > 0) return daily;
+	return prisma.commodityPrice.findMany({
+		where: { ...base, interval: "monthly" },
+		orderBy: { date: order },
+		take: limit,
+		select: { date: true, close: true },
+	});
+}
+
 import { PREDICTION_TTL_SECONDS } from "@/services/predictionCache";
 
 /**
@@ -306,16 +335,7 @@ router.post(
 		const limit = Math.min(Math.max(Number(historyPoints) || 50, 1), 1000);
 
 		const [historicalData, predictionResult] = await Promise.all([
-			prisma.commodityPrice.findMany({
-				where: {
-					commodityId: uuid,
-					interval: "daily",
-					...authoritativeSourceWhere(commodity.slug),
-				},
-				orderBy: { date: "desc" },
-				take: limit,
-				select: { date: true, close: true },
-			}),
+			fetchHistoryWithFallback(uuid, commodity.slug, limit, "desc"),
 			predictFromCache({
 				commodityId: uuid,
 				horizon: h,
@@ -358,16 +378,7 @@ router.post(
 		// historyPoints went straight into Prisma take.
 		const limit = Math.min(Math.max(Number(historyPoints) || 100, 1), 1000);
 
-		const prices = await prisma.commodityPrice.findMany({
-			where: {
-				commodityId: uuid,
-				interval: "daily",
-				...authoritativeSourceWhere(commodity.slug),
-			},
-			orderBy: { date: "asc" },
-			take: limit,
-			select: { date: true, close: true },
-		});
+		const prices = await fetchHistoryWithFallback(uuid, commodity.slug, limit, "asc");
 
 		const values = prices.map((p) => Number(p.close));
 		const timestamps = prices.map((p) => p.date.getTime());
@@ -436,16 +447,7 @@ router.post(
 		// historyPoints went straight into Prisma take.
 		const limit = Math.min(Math.max(Number(historyPoints) || 100, 1), 1000);
 
-		const prices = await prisma.commodityPrice.findMany({
-			where: {
-				commodityId: uuid,
-				interval: "daily",
-				...authoritativeSourceWhere(commodity.slug),
-			},
-			orderBy: { date: "asc" },
-			take: limit,
-			select: { date: true, close: true },
-		});
+		const prices = await fetchHistoryWithFallback(uuid, commodity.slug, limit, "asc");
 
 		const values = prices.map((p) => Number(p.close));
 		const timestamps = prices.map((p) => p.date.getTime());
