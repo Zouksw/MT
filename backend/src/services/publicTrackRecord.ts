@@ -3,8 +3,9 @@
  *
  * A prediction product earns trust ONLY through dated, checkable predictions.
  * The platform already logs every prediction and auto-verifies MAPE
- * (prediction_logs, 148k+ rows) — but that evidence sat behind the login
- * wall. This service exposes an UNAUTHENTICATED, privacy-whitelisted slice:
+ * (prediction_logs, 142k+ rows as of 2026-08-23) — but that evidence sat
+ * behind the login wall. This service exposes an UNAUTHENTICATED,
+ * privacy-whitelisted slice:
  *
  *   - leaderboard: the same 30-day aggregate getAllModelAccuracy serves
  *     (model-level aggregates only, no per-series detail);
@@ -146,7 +147,7 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 				"Every forecast is logged when made (predicted_at) and automatically re-scored when actual prices arrive; MAPE is computed against the aligned actuals window.",
 			window: `Leaderboard and freshness use a rolling ${days}-day verification window; samples are the most recent verified predictions.`,
 			metric:
-				"MAPE = mean absolute percentage error between predicted values and actuals over the horizon. Median is the headline stat (robust to outliers); mean is kept for risk context.",
+				"MAPE = mean absolute percentage error between predicted values and actuals over the horizon. Median is the headline stat (robust to outliers); mean is kept for risk context. Scoring uses ONLY predictions whose verification succeeded (status=verified) — rows invalidated or marked stale/unverifiable never enter medianMape/avgMape/verifiedCount, but they DO remain in predictionCount, which counts every logged prediction in the window: the two fields use different denominators by design.",
 			consensus:
 				"The signal consensus weighs each model by its verified MAPE; models verified strictly worse than the naive baseline are eliminated from the vote.",
 		},

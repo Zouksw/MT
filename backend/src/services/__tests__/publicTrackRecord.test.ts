@@ -12,6 +12,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { prisma } from "@/lib";
 import { getPublicTrackRecord, RECENT_SAMPLE_LIMIT } from "@/services/publicTrackRecord";
+import { BASELINE_MODELS, getAllModels } from "@/services/tradingSignals";
 import { createTestApp, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
@@ -124,5 +125,33 @@ describe("GET /api/signals/models/accuracy/public — public route contract", ()
 		const res = await request(app).get("/api/signals/models/accuracy/public");
 		const keys: string[] = res.body.data.samples.map((s: { seriesKey: string }) => s.seriesKey);
 		expect(keys).not.toContain(PRIVATE_ID);
+	});
+});
+
+describe("leaderboard — engine-registry pinning (round-129 batch 8)", () => {
+	// computeAllModelAccuracy enumerates the LIVE registry (getAllModels +
+	// BASELINE_MODELS), so removed models — dead-era sundial/timer_xl, 332
+	// legacy rows in production — can never surface on the public leaderboard,
+	// regardless of window. This tripwire pins that structural property
+	// before someone "simplifies" the enumeration into a GROUP BY model_id.
+	for (const days of [7, 30, 90]) {
+		test(`days=${days}: leaderboard models == engine registry set, dead models absent, no duplicates`, async () => {
+			const record = await getPublicTrackRecord(days);
+			const ids = record.leaderboard.map((m) => m.modelId);
+
+			expect(ids).not.toContain("sundial");
+			expect(ids).not.toContain("timer_xl");
+			expect(new Set(ids).size).toBe(ids.length);
+
+			const expected = new Set([...getAllModels(), ...BASELINE_MODELS]);
+			for (const id of ids) expect(expected.has(id)).toBe(true);
+		});
+	}
+
+	test("methodology states the verified-only scoring caliber and the predictionCount denominator difference", async () => {
+		const record = await getPublicTrackRecord(30);
+		const m = record.methodology;
+		expect(m.metric).toContain("status=verified");
+		expect(m.metric).toContain("predictionCount");
 	});
 });
