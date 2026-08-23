@@ -107,7 +107,7 @@ B2B 撮合 / 国内现货采价网络 / 冷链硬件 SaaS / 支付/下单/交易
 
 # 第二波（round-129 规划，2026-08-23；同日经对抗评审修订 v2）
 
-> **输入**：round-128 对标复评（COMPETITIVE-ANALYSIS v1.1.0 §七）+ round-127 登记（TECH-DEBT §十四 两条）+ 本轮规划期新取证。规划方法调用 14 个 skill（使用记录见 §G），任务模板取 `planning-and-task-breakdown`，切片纪律取 `incremental-implementation`，测试要求取 `tdd`。
+> **输入**：round-128 对标复评（COMPETITIVE-ANALYSIS v1.1.0 §七）+ round-127 登记（TECH-DEBT §十四 两条）+ 本轮规划期新取证。规划方法加载 15 个 skill（13 个实质应用 + 2 个按自身前提判定不适用，另有 1 个名字未命中，使用记录见 §G），任务模板取 `planning-and-task-breakdown`，切片纪律取 `incremental-implementation`，测试要求取 `tdd`。
 > **门禁（适用于 §B 每一批，无一例外）**：tsc + 全量测试（三套件计数不回退）+ `pnpm build`（PM2 跑 dist）+ PM2 重启 + live 验证 + 独立 commit。
 > **目标一句话**：让"牛肉"回到核心价值链——预测循环以**可验证**的方式重新覆盖牛肉序列（批 6a-6c）+ 修用户可见缺陷（批 7）+ 公信力口径统一（批 8）+ 让数据断流可被看见（批 9）+ 解冻配套（批 10）。
 >
