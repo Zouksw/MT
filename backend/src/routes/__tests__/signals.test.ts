@@ -218,6 +218,29 @@ describe("Signals Routes (Integration)", () => {
 			// (not ~0.2). Sanity-check the upper bound is in the fred band.
 			expect(fc.forecast.range.upper).toBeGreaterThan(4);
 		});
+
+		// REGRESSION (round-129 batch 7, TECH-DEBT §十四 F3): a commodity with
+		// zero price rows used to flow currentPrice=0 into generateForecast,
+		// which threw "Valid current price is required" and surfaced as an
+		// uncaught 500 (errorHandler's generic fallback). The route now
+		// answers 200 with an explicit insufficientData payload so clients
+		// render their honest "signal unavailable" state.
+		it("empty-series commodity degrades to 200 insufficientData, not 500", async () => {
+			await clearSignalsCache();
+			const slug = `empty-sig-${Date.now()}`;
+			await prisma.commodity.create({
+				data: { slug, name: "Empty Signal Fixture", category: "livestock", unit: "USD" },
+			});
+
+			const res = await request(app).get(`/api/signals/${slug}`).set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(res.body.data.insufficientData).toBe(true);
+			expect(res.body.data).not.toHaveProperty("direction");
+
+			await prisma.commodity.deleteMany({ where: { slug } }).catch(() => {});
+		});
 	});
 
 	describe("GET /api/signals/models/:modelId/accuracy (per-model)", () => {

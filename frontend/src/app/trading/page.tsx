@@ -119,7 +119,13 @@ export default function TradingPage() {
 
 			{/* Toolbar: Timeframe + Chart Type + Indicators + Multi-Source Toggle */}
 			<div className="flex items-center gap-4 mb-4 flex-wrap">
-				{!d.beefMode && <TimeframeSelector value={d.timeframe} onChange={d.setTimeframe} />}
+				{/* Monthly series (round-129 batch 7): daily/weekly timeframe options
+				 * are meaningless when the series only has monthly points — the
+				 * backend serves the series' real cadence regardless, so hide the
+				 * selector to keep the UI honest. */}
+				{!d.beefMode && d.selected?.interval !== "monthly" && (
+					<TimeframeSelector value={d.timeframe} onChange={d.setTimeframe} />
+				)}
 				<ChartToolbar
 					chartType={d.chartType}
 					onChartTypeChange={d.setChartType}

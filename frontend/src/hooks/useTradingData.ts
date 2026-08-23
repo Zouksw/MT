@@ -81,8 +81,11 @@ export function useTradingData() {
 	// Auto-select first commodity (or beef commodity in beef mode for AI signals)
 	useEffect(() => {
 		if (beefMode && !selectedSlug) {
-			// Select beef_cutout_us for AI signal context while showing cut prices
-			setSelectedSlug("beef_cutout_us");
+			// beef_carcass_us (IMF global beef, monthly) is the only beef series
+			// with live data — the previous default beef_cutout_us has 0 price
+			// rows, so signals degraded and the AI column stayed empty
+			// (round-129 batch 7, TECH-DEBT §十四 F3).
+			setSelectedSlug("beef_carcass_us");
 		} else if (!beefMode && !selectedSlug && commodities.length > 0) {
 			setSelectedSlug(commodities[0].slug);
 		}
@@ -227,16 +230,25 @@ export function useTradingData() {
 				if (signalRes.status === "fulfilled" && signalRes.value.ok) {
 					const data = await signalRes.value.json();
 					if (data.success && data.data) {
-						// Clear any stale error from a previous failed fetch now
-						// that the signal loaded successfully.
-						setError(null);
-						// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-						setSignal((prev: any) => {
-							if (prev?.direction && prev.direction !== data.data.direction) {
-								setPreviousDirection(prev.direction);
-							}
-							return data.data;
-						});
+						// Empty-series degradation (round-129 batch 7): the backend
+						// answers 200 + insufficientData for commodities without
+						// price rows — render the honest "signal unavailable" state
+						// instead of feeding an empty forecast into the panel.
+						if (data.data.insufficientData) {
+							setError(null);
+							setSignal(null);
+						} else {
+							// Clear any stale error from a previous failed fetch now
+							// that the signal loaded successfully.
+							setError(null);
+							// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+							setSignal((prev: any) => {
+								if (prev?.direction && prev.direction !== data.data.direction) {
+									setPreviousDirection(prev.direction);
+								}
+								return data.data;
+							});
+						}
 					}
 				}
 

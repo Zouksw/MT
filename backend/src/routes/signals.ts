@@ -419,6 +419,21 @@ router.get(
 		});
 		const currentPrice = latest?.close ? Number(latest.close) : 0;
 
+		// Empty-series degradation (round-129 batch 7, TECH-DEBT §十四 F3):
+		// a commodity with no price rows would flow currentPrice=0 into
+		// generateForecast, which throws "Valid current price is required"
+		// and surfaces as an uncaught 500. Answer 200 with an explicit
+		// insufficientData payload instead — clients render their honest
+		// "signal unavailable" state instead of an error.
+		if (!latest || currentPrice <= 0) {
+			return success(res, {
+				commodityId,
+				insufficientData: true as const,
+				reason: "No price data available for this commodity",
+				timestamp: new Date().toISOString(),
+			});
+		}
+
 		const models = params.models ? params.models.split(",").filter((m) => m) : undefined;
 
 		const forecast = await generateForecast({

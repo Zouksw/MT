@@ -74,6 +74,10 @@ export async function listCommodities() {
 			originCountry: c.originCountry,
 			unit: c.unit,
 			currency: c.currency,
+			// Cadence of the row latestPrice came from (round-129 batch 7):
+			// monthly-only series report "monthly" so consumers can hide
+			// meaningless daily/weekly timeframe options.
+			interval: latest?.interval ?? "daily",
 			latestPrice: latest?.close ?? null,
 			latestDate: latest?.date ?? null,
 		};
@@ -122,11 +126,23 @@ export async function getPriceHistory(slug: string, params: PriceHistoryParams) 
 	// the OLDEST rows instead — the exact bug getPricesBySource below fixed in
 	// round-106; a rangeless request (frontend CommodityPriceChart) rendered
 	// 2005-era prices for FRED series with 7000+ points.
-	const prices = await prisma.commodityPrice.findMany({
+	let prices = await prisma.commodityPrice.findMany({
 		where,
 		orderBy: { date: "desc" },
 		take: params.limit,
 	});
+
+	// Monthly fallback (round-129 batch 7): monthly-only series (beef_carcass_us
+	// = IMF monthly, the world_bank group) have no daily/weekly rows — a daily
+	// request returned [] and the trading page rendered an empty chart. Same
+	// pattern as fetchHistoryWithFallback (round-127) and public highlights.
+	if (prices.length === 0 && params.interval !== "monthly") {
+		prices = await prisma.commodityPrice.findMany({
+			where: { ...where, interval: "monthly" },
+			orderBy: { date: "desc" },
+			take: params.limit,
+		});
+	}
 	prices.reverse();
 
 	return { commodity, prices };

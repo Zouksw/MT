@@ -33,6 +33,8 @@ export interface Commodity {
 	factoryCode: string;
 	unit: string;
 	currency: string;
+	/** Series cadence "daily" | "weekly" | "monthly" (round-129 batch 7). */
+	interval: string;
 }
 
 export interface CommodityPricePoint {

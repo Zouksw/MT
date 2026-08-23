@@ -119,17 +119,23 @@ export function getConflictSlugs(): string[] {
  * Postgres collapse to one row per commodity before any rows cross the wire.
  *
  * Source resolution: conflict commodities (brl_usd/corn_cme/natural_gas_cme)
- * are split out and queried with their authoritative source filter, so
+ * are split out and queried with their authoritative source filter, so that
  * brl_usd reads fred (~5.0) not exchange_rate_api (~0.2). Plain commodities
  * get one unfiltered `DISTINCT ON` query.
  *
+ * Monthly fallback (round-129 batch 7): commodities with no daily rows
+ * (monthly-only series like beef_carcass_us / the world_bank group) fall back
+ * to their latest MONTHLY close — previously they resolved to "no price at
+ * all", so list/quotes surfaces showed them as price-less. The returned
+ * `interval` field tells callers which cadence the row belongs to.
+ *
  * @param commodities - the commodity set (id + slug) to resolve latest prices for
- * @returns Map<commodityId, { close, date }>
+ * @returns Map<commodityId, { close, date, interval }>
  */
 export async function batchLatestPrices(
 	commodities: ReadonlyArray<{ id: string; slug: string }>,
-): Promise<Map<string, { close: number; date: Date }>> {
-	const out = new Map<string, { close: number; date: Date }>();
+): Promise<Map<string, { close: number; date: Date; interval: string }>> {
+	const out = new Map<string, { close: number; date: Date; interval: string }>();
 	if (commodities.length === 0) return out;
 
 	// Partition into plain ids (no conflict) and conflict ids grouped by source.
@@ -148,25 +154,71 @@ export async function batchLatestPrices(
 
 	// Plain commodities: one DISTINCT ON query, no source filter.
 	if (plainIds.length > 0) {
-		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
-      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
+		const rows = await prisma.$queryRaw<
+			Array<{ commodityId: string; close: number; date: Date; interval: string }>
+		>`
+      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date, interval
       FROM commodity_prices
       WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
       ORDER BY commodity_id, date DESC
     `;
-		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
+		for (const p of rows)
+			out.set(p.commodityId, { close: p.close, date: p.date, interval: p.interval });
 	}
 
 	// Conflict commodities: one DISTINCT ON query per authoritative source,
 	// restricted to that source so the wrong source's rows never enter.
 	for (const [source, ids] of bySource) {
-		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
-      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
+		const rows = await prisma.$queryRaw<
+			Array<{ commodityId: string; close: number; date: Date; interval: string }>
+		>`
+      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date, interval
       FROM commodity_prices
       WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
       ORDER BY commodity_id, date DESC
     `;
-		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
+		for (const p of rows)
+			out.set(p.commodityId, { close: p.close, date: p.date, interval: p.interval });
+	}
+
+	// Monthly fallback for commodities the daily queries could not resolve.
+	// Mirrors the source partition: one plain query + per-conflict-source
+	// queries, all restricted to the still-missing ids.
+	const missing = commodities.filter((c) => !out.has(c.id));
+	if (missing.length > 0) {
+		const missingPlain = missing.filter((c) => !getAuthoritativeSource(c.slug)).map((c) => c.id);
+		if (missingPlain.length > 0) {
+			const rows = await prisma.$queryRaw<
+				Array<{ commodityId: string; close: number; date: Date; interval: string }>
+			>`
+        SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date, interval
+        FROM commodity_prices
+        WHERE commodity_id = ANY(${missingPlain}::text[]) AND interval = 'monthly'
+        ORDER BY commodity_id, date DESC
+      `;
+			for (const p of rows)
+				out.set(p.commodityId, { close: p.close, date: p.date, interval: p.interval });
+		}
+		const missingBySource = new Map<string, string[]>();
+		for (const c of missing) {
+			const source = getAuthoritativeSource(c.slug);
+			if (!source) continue;
+			const bucket = missingBySource.get(source);
+			if (bucket) bucket.push(c.id);
+			else missingBySource.set(source, [c.id]);
+		}
+		for (const [source, ids] of missingBySource) {
+			const rows = await prisma.$queryRaw<
+				Array<{ commodityId: string; close: number; date: Date; interval: string }>
+			>`
+        SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date, interval
+        FROM commodity_prices
+        WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'monthly' AND source = ${source}
+        ORDER BY commodity_id, date DESC
+      `;
+			for (const p of rows)
+				out.set(p.commodityId, { close: p.close, date: p.date, interval: p.interval });
+		}
 	}
 
 	return out;
