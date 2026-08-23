@@ -94,6 +94,8 @@ describe("Timeseries ownership (cross-user)", () => {
 	let tokenB = "";
 	let seriesA = { id: "" };
 	let seriesForDelete = { id: "" };
+	let datasetA2 = { id: "" };
+	let foreignDataset = { id: "" };
 	const userIds: string[] = [];
 
 	beforeAll(async () => {
@@ -130,6 +132,30 @@ describe("Timeseries ownership (cross-user)", () => {
 		});
 		seriesForDelete = await prisma.timeseries.create({
 			data: { datasetId: dataset.id, name: "A's delete target", slug: `a-del-${stamp}` },
+		});
+		// round-120 PATCH fixtures: a second OWNED dataset (move target), a
+		// foreign dataset (move must 404), and a same-dataset series whose
+		// slug is the rename-collision probe.
+		datasetA2 = await prisma.dataset.create({
+			data: {
+				name: "TS second dataset",
+				slug: `ts-ds2-${stamp}`,
+				storageFormat: "CSV",
+				ownerId: userA.id,
+			},
+		});
+		foreignDataset = await prisma.dataset.create({
+			data: {
+				name: "B's dataset",
+				slug: `ts-ds-b-${stamp}`,
+				storageFormat: "CSV",
+				ownerId: userB.id,
+			},
+		});
+		// Collision probe lives in datasetA2 — the move test below relocates
+		// seriesA there first, so the rename-collision check runs against it.
+		await prisma.timeseries.create({
+			data: { datasetId: datasetA2.id, name: "collision", slug: `taken-${stamp}` },
 		});
 	});
 
@@ -171,6 +197,88 @@ describe("Timeseries ownership (cross-user)", () => {
 				.send({ value: 12.34 });
 			expect(res.status).toBe(201);
 			expect(res.body.data.valueJson).toBe("12.34");
+		});
+	});
+
+	describe("PATCH /api/timeseries/:id", () => {
+		// round-120: the /timeseries/edit page has always submitted here but
+		// the route never existed — every edit save 404'd. These pin the
+		// restored contract (owner-scoped update, owned-dataset moves only).
+		test("requires authentication", async () => {
+			const res = await request(app).patch(`/api/timeseries/${seriesA.id}`).send({ name: "x" });
+			expect(res.status).toBe(401);
+		});
+
+		test("returns 404 for a non-existent timeseries", async () => {
+			const res = await request(app)
+				.patch("/api/timeseries/00000000-0000-0000-0000-000000000000")
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ name: "x" });
+			expect(res.status).toBe(404);
+		});
+
+		test("non-owner gets 404 (indistinguishable from missing)", async () => {
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenB}`)
+				.send({ name: "hijacked" });
+			expect(res.status).toBe(404);
+			const survivor = await prisma.timeseries.findUnique({ where: { id: seriesA.id } });
+			expect(survivor?.name).toBe("A's series");
+		});
+
+		test("owner updates scalar fields", async () => {
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ name: "A's series renamed", unit: "USD/kg", description: "updated" });
+			expect(res.status).toBe(200);
+			expect(res.body.data.name).toBe("A's series renamed");
+			expect(res.body.data.unit).toBe("USD/kg");
+		});
+
+		test("owner moves the series to another OWNED dataset", async () => {
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ datasetId: datasetA2.id });
+			expect(res.status).toBe(200);
+			expect(res.body.data.datasetId).toBe(datasetA2.id);
+		});
+
+		test("moving to a FOREIGN dataset is a 404, not a smuggle", async () => {
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ datasetId: foreignDataset.id });
+			expect(res.status).toBe(404);
+			const survivor = await prisma.timeseries.findUnique({ where: { id: seriesA.id } });
+			expect(survivor?.datasetId).toBe(datasetA2.id);
+		});
+
+		test("renaming to a slug taken in the target dataset is a 400", async () => {
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ slug: `taken-${stamp}` });
+			expect(res.status).toBe(400);
+		});
+
+		test("keeping the same slug on the same series is not a collision", async () => {
+			const current = await prisma.timeseries.findUnique({ where: { id: seriesA.id } });
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ slug: current?.slug });
+			expect(res.status).toBe(200);
+		});
+
+		test("invalid slug format is a 400", async () => {
+			const res = await request(app)
+				.patch(`/api/timeseries/${seriesA.id}`)
+				.set("Authorization", `Bearer ${tokenA}`)
+				.send({ slug: "Not Valid!" });
+			expect(res.status).toBe(400);
 		});
 	});
 

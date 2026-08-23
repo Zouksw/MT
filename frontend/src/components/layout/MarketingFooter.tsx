@@ -24,7 +24,9 @@ const FOOTER_SECTIONS = [
 	{
 		title: "Product",
 		links: [
-			{ label: "Features", href: "/#features" },
+			// round-120: the anchors live on /landing ("/" is a client redirect
+			// whose router.push drops the hash), so "/#features" never landed.
+			{ label: "Features", href: "/landing#features" },
 			{ label: "Pricing", href: "/pricing" },
 			{ label: "About", href: "/about" },
 		],
@@ -32,7 +34,7 @@ const FOOTER_SECTIONS = [
 	{
 		title: "Support",
 		links: [
-			{ label: "FAQ", href: "/#faq" },
+			{ label: "FAQ", href: "/landing#faq" },
 			{ label: "Get Started", href: "/register" },
 		],
 	},

@@ -29,14 +29,16 @@ export interface MarketingNavProps {
 	links: NavLink[];
 	/** CTA button label (default "Sign In"). */
 	ctaLabel?: string;
-	/** CTA button destination (default "/dashboard"). */
+	/** CTA button destination (default "/login"). */
 	ctaHref?: string;
 }
 
 export function MarketingNav({
 	links,
 	ctaLabel = "Sign In",
-	ctaHref = "/dashboard",
+	// round-120: "Sign In" pointed at /dashboard and relied on middleware to
+	// bounce anonymous visitors back to /login — link the login page directly.
+	ctaHref = "/login",
 }: MarketingNavProps) {
 	return (
 		<nav className="border-b border-black/5 dark:border-white/10 bg-white dark:bg-background sticky top-0 z-50">

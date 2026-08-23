@@ -19,15 +19,35 @@ import {
 describe("getSourceFreshness — dataHealth snapshot in summary", () => {
 	let ctx: TestContext;
 
+	// round-120: the suite used to rely on whatever ingestion_logs happened
+	// to sit in mt_test — seed-era rows aged out of the 7-day window on
+	// 2026-08-23 and `freshness.length > 0` went red overnight. Seed our own
+	// in-window rows so the contract test is deterministic.
+	const PROBE_PREFIX = "freshness-probe-";
+
 	beforeAll(async () => {
 		ctx = await createTestContext("freshness");
 		if (!ctx.available)
 			throw new Error(
 				"marketService freshness: integration suite requires PostgreSQL+Redis. Start them (docker-compose up) or run only unit tests — a silent skip would report false-green.",
 			);
+
+		await ctx.prisma.ingestionLog.createMany({
+			data: [
+				// A source that ran and wrote rows.
+				{ source: `${PROBE_PREFIX}ok`, status: "success", inserted: 5, updated: 1 },
+				// A source that ran but wrote 0 rows — exercises empty:true.
+				{ source: `${PROBE_PREFIX}empty`, status: "success", inserted: 0, updated: 0 },
+			],
+		});
 	});
 
 	afterAll(async () => {
+		if (ctx?.prisma) {
+			await ctx.prisma.ingestionLog.deleteMany({
+				where: { source: { startsWith: PROBE_PREFIX } },
+			});
+		}
 		await destroyTestContext(ctx);
 	});
 

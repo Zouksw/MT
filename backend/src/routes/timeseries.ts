@@ -365,6 +365,112 @@ router.post(
 /**
  * @openapi
  * /api/timeseries/{id}:
+ *   patch:
+ *     tags: [Time Series]
+ *     summary: Update a time series
+ *     description: >
+ *       Updates an owned time series (name, slug, unit, description, color,
+ *       timezone, anomaly toggle, or move to another owned dataset). Owner or
+ *       ADMIN only — 404 for missing and not-owned alike.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Time series ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               datasetId: { type: string, description: Target dataset (move) }
+ *               name: { type: string }
+ *               slug: { type: string }
+ *               unit: { type: string }
+ *               description: { type: string }
+ *               colorHex: { type: string, description: "Hex color like #F59E0B" }
+ *               timezone: { type: string }
+ *               isAnomalyDetectionEnabled: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Updated time series
+ *       400:
+ *         description: Invalid input or duplicate slug
+ *       401:
+ *         description: Not authenticated
+ *       404:
+ *         description: Time series (or target dataset) not found / not owned
+ */
+// PATCH /api/timeseries/:id - Update timeseries (requires authentication)
+//
+// round-120: the /timeseries/edit page has always submitted here (and API.md
+// documented it), but the route never existed — every edit save 404'd. Body
+// contract mirrors the create form field-for-field; datasetId moves the
+// series to another OWNED dataset, slug changes re-check uniqueness.
+router.patch(
+	"/:id",
+	authenticate,
+	asyncHandler(async (req: AuthRequest, res: Response) => {
+		const { id } = req.params;
+		const input = timeseriesCreateSchema.partial().parse(req.body ?? {});
+
+		const timeseries = await getOwnedTimeseries(id, req.userId as string, req.user?.role ?? "");
+
+		// Moving to another dataset: the target must be owned too, else the
+		// move would smuggle the series into someone else's workspace.
+		const targetDatasetId = input.datasetId ?? timeseries.datasetId;
+		if (input.datasetId && input.datasetId !== timeseries.datasetId) {
+			const target = await prisma.dataset.findFirst({
+				where: {
+					id: input.datasetId,
+					...(req.user?.role === "ADMIN" ? {} : { ownerId: req.userId }),
+				},
+				select: { id: true },
+			});
+			if (!target) throw new NotFoundError("Dataset");
+		}
+
+		// Slug rename: same uniqueness rule the create path enforces.
+		if (
+			input.slug &&
+			(input.slug !== timeseries.slug || targetDatasetId !== timeseries.datasetId)
+		) {
+			const duplicate = await prisma.timeseries.findFirst({
+				where: { datasetId: targetDatasetId, slug: input.slug, NOT: { id: timeseries.id } },
+				select: { id: true },
+			});
+			if (duplicate) {
+				throw new BadRequestError("Slug already exists in this dataset");
+			}
+		}
+
+		const updated = await prisma.timeseries.update({
+			where: { id: timeseries.id },
+			data: {
+				...(input.datasetId !== undefined ? { datasetId: input.datasetId } : {}),
+				...(input.name !== undefined ? { name: input.name } : {}),
+				...(input.slug !== undefined ? { slug: input.slug } : {}),
+				...(input.unit !== undefined ? { unit: input.unit } : {}),
+				...(input.description !== undefined ? { description: input.description } : {}),
+				...(input.colorHex !== undefined ? { colorHex: input.colorHex } : {}),
+				...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+				...(input.isAnomalyDetectionEnabled !== undefined
+					? { isAnomalyDetectionEnabled: input.isAnomalyDetectionEnabled }
+					: {}),
+			},
+		});
+
+		return success(res, updated);
+	}),
+);
+
+/**
+ * @openapi
+ * /api/timeseries/{id}:
  *   delete:
  *     tags: [Time Series]
  *     summary: Delete a time series

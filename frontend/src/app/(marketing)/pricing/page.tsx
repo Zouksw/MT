@@ -19,7 +19,8 @@ export default function PricingPage() {
 			price: { monthly: 0, yearly: 0 },
 			features: [
 				`${SITE_STATS.beefCuts} beef cut prices`,
-				"5 watchlist items",
+				// round-120: "5 watchlist items" removed — the watchlist has no
+				// UI entry point yet (backend + lib only); don't sell it.
 				"Basic charts & OHLCV data",
 				"7-day price history",
 				// round-119 honesty: AI tier gating is dormant — every registered

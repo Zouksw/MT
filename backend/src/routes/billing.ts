@@ -13,7 +13,9 @@ const PLANS = [
 		name: "Free",
 		price: 0,
 		features: [
-			"5 watchlist items",
+			// round-120: "5 watchlist items" removed — the watchlist has no UI
+			// entry point yet (backend + lib only); don't sell it as a tier
+			// differentiator.
 			// round-119: AI tier gating is dormant (AI_TIER_ENFORCED, default
 			// off) — every registered user can currently run all 9 model ids.
 			// Listing "3 AI prediction models" here claimed a restriction that
@@ -29,7 +31,8 @@ const PLANS = [
 		name: "Professional",
 		price: 49,
 		features: [
-			"50 watchlist items",
+			// round-120: "50 watchlist items" removed with the free-tier claim
+			// above — no watchlist UI exists to differentiate with.
 			// round-119: 7 was a stale count (registry has 9 model ids); the
 			// free/pro split on model access is not enforced today.
 			"All 9 AI models, priority inference (planned)",
