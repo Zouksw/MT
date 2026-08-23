@@ -1,7 +1,7 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "1.0.0"
+version: "2.0.0"
 last_updated: "2026-08-23"
 status: "active"
 maintainer: "MT Team"
@@ -101,3 +101,151 @@ B2B 撮合 / 国内现货采价网络 / 冷链硬件 SaaS / 支付/下单/交易
 - 批 1c = §十四 "value narrative caution" 的处置。
 - D1 = §十四 "watchlist UI" 决策项的具体化。
 - 批 3 完成后，§十四 该条尾注"已解决"。
+
+---
+---
+
+# 第二波（round-129 规划，2026-08-23；同日经对抗评审修订 v2）
+
+> **输入**：round-128 对标复评（COMPETITIVE-ANALYSIS v1.1.0 §七）+ round-127 登记（TECH-DEBT §十四 两条）+ 本轮规划期新取证。规划方法调用 14 个 skill（使用记录见 §G），任务模板取 `planning-and-task-breakdown`，切片纪律取 `incremental-implementation`，测试要求取 `tdd`。
+> **门禁（适用于 §B 每一批，无一例外）**：tsc + 全量测试（三套件计数不回退）+ `pnpm build`（PM2 跑 dist）+ PM2 重启 + live 验证 + 独立 commit。
+> **目标一句话**：让"牛肉"回到核心价值链——预测循环以**可验证**的方式重新覆盖牛肉序列（批 6a-6c）+ 修用户可见缺陷（批 7）+ 公信力口径统一（批 8）+ 让数据断流可被看见（批 9）+ 解冻配套（批 10）。
+>
+> **对抗评审记录（2026-08-23，doubt-driven 终稿步骤）**：初稿经 fresh-context 评审（Explore 只读代理，68 次读操作核对 file:line），报 2 blocker + 6 major + 6 minor，全部归类为有效可行动并已并入下文——关键修正：批 6 初稿会让月度预测**永远无法验证**且以 30 分钟节律日产 ~336 条日志（重演 round-62/66/114 清理过的病理），已分解为 6a/6b/6c 并把"达到 `verified` 状态"设为硬验收；批 7 初稿换默认序列后页面**仍显示不出数据**（价格拉取无月度回退），已扩范围；批 9 实现位与稳态噪音已定案；D5 相关性不做的理由已纠错。
+
+## §A 观察结果 → 计划映射（全部当日实测取证）
+
+| # | 观察结果 | 证据 | 处置 |
+|---|---------|------|------|
+| 1 | **背景预测循环与牛肉零交集**：24h 覆盖 17 商品全为汇率/CME；`beef_carcass_us` 0 条预测（月度序列被 7 天新鲜度门控排除） | round-128 附录 SQL；TECH-DEBT §十四 round-127 登记项 | **批 6a-6c**（前置 D5；订阅在 6b 验收前不开启） |
+| 2 | /trading 牛肉模式默认 `beef_cutout_us`（0 行数据）且 signals 空序列 500 | TECH-DEBT §十四 F3（round-127） | **批 7** |
+| 3 | **MAPE 口径分裂（本轮新发现）**：原始 SQL（含 `stale` 行）chronos_mini 30d avg=55.43，仅 `verified`=7.05（与公开档案页 7.05 精确吻合）；16 条 stale 行 avg≈9676% 污染原始口径；COMPETITIVE-ANALYSIS v1.1.0 §三.3 复评注误用了原始口径，与 PRODUCT-SPEC §七"30d 6-9%"自相矛盾 | 本轮 SQL：`SELECT status,count(*),avg(mape) … GROUP BY status`；`curl /api/signals/models/accuracy/public` | **批 8** + 本轮已即时修正文档 |
+| 4 | 死模型残留（sundial/timer_xl 332 行）**已被结构性隔离**：`computeAllModelAccuracy` 按现行注册表枚举（mapeTracking.ts:952-958），详情路由有 R3 守卫（signals.ts round-75）；days=30/90 实测均不出现 | 本轮读码 + live 双窗口实测 | **批 8** 测试钉住；数据清理 → **D7** |
+| 5 | 数据断流不可观测：beef_cut_prices 冻结 115 天、预测覆盖 17/0，均靠手写 SQL 才发现；cron-healthcheck 只看进程健康 | round-127/128 取证过程本身 | **批 9** |
+| 6 | CSV 回填 runbook 已有（第一波批 5），但回填后验证靠人工拼 SQL | docs/guides/WEEKLY-DATA-IMPORT.md | **批 10** |
+| 7 | 孤儿端点组（/api/models 8 / /api/security 3 / /api/analytics 2）+ portfolios 组 0 消费 | TECH-DEBT §十四（round-123 登记） | **D6**（deprecation 决策框架） |
+| 8 | 用户侧外部输入未变：4 个空 API key、beef_cut_prices CSV、种子用户 | KNOWN-ISSUES D1 | §C 清单（非工程） |
+
+## §B 批次详情（批 6a-6c、7-10）
+
+> 批 6 初稿按对抗评审 B1/B2 分解：月度序列**分三片落地，订阅在 6b 验收通过前不开启**——否则预测进得去、验证永远不成立，且 30 分钟刷新节律会对月度序列日产 ~336 条日志（7 模型 × 48 周期），重演 round-62/66/114 清理过的"永久 unverifiable 行污染"病理（predictionCache.ts:450-468 有完整历史注记）。
+
+### 批 6a — 新鲜度/门控 interval 感知（不订阅，只修判定）
+
+**内容**：
+1. `getCommodityFreshness`（marketService.ts:240-244，现只查 daily 行）：groupBy 谓词按 interval 分组返回，月度序列产出真实 `lastUpdated`（今天显示为 stale 是因为查询本身看不到月度行）；
+2. 调度门控谓词（predictionCache.ts:483-491/544-551，interval 硬编码在 WHERE 内）：月度订阅判定 = **最新点 ≤60 天 且 全序列 ≥3 点**——不用"窗口内 ≥2 点"镜像（月度点距 ~30 天，45 天窗多数时间只含 1 点，会导致每月约 2 周的订阅抖动，评审 M4）；阈值 60 天取 2× 发布节奏（PBEEFUSDM 于 M+1 月中发布，正常点距上限 ~45 天，60 天在其上，评审 m6）；
+3. 集中为 `stalenessWindow(interval)` 小 seam（见 §D，但见评审 M3：seam 只覆盖阈值策略，约占改动量 10%，其余为显式枚举的编辑点，不做夸大声明）。
+
+**验收**：freshness 板显示 beef_carcass_us 真实 lastUpdated（2026-07-01）与非 stale；daily 序列行为零变化（测试钉住）；**订阅清单不变**（beef_carcass_us 仍未订阅，测试断言）。规模 S。
+
+### 批 6b — 月度验证生命周期（最难的一片，订阅开启的总闸）
+
+**问题（评审 B1 全清单）**：验证生命周期 daily 中心化至少 6 处——到期判定 `horizon * 86400000`（mapeTracking.ts:652-653）、实际值窗 `anchorDay + (horizon+1) 天`（:680）、markUnverifiable Pass A/B 的 daily `findFirst`（:325-329/:408-415，月度序列会因"查无 daily 行"被立即判冻结）、expire/restore 的 `make_interval(days=>horizon)` + daily 实际值 SQL（:487-492/:523/:526/:557-565）。只改取数过滤，月度预测**永远无法验证且会被清扫为 unverifiable**。
+
+**内容**：
+1. `prediction_logs` 无 interval 列——每行 cadence 来源定为**写入时联查 commodities.interval 落库**（新增可空列 `interval`，迁移一次；旧行回填 daily 为默认？**不回填**，旧行按现状语义处理，避免重写 14 万行——新列 NULL=daily 时代旧行，语义兼容）；
+2. 到期/实际值窗口按 cadence：月度行 horizon N = N 个月（`make_interval(months=>horizon)`），实际值取月度点；
+3. 三处清扫（Pass A/B、expire、restore）对月度行使用月度冻结判定（最新点 >60 天才冻结，而非"无 daily 行即冻结"）；
+4. **月度刷新节律（评审 B2）**：月度序列仅在**新实际点落库后**重新预测（logPrediction 前置守卫：该序列最新 actual 日期 > 上次记录预测时的 actual 日期），否则跳过——一个新月度点最多产出 7 模型 × 1 轮预测，而非每天 336 条。
+
+**验收（硬门槛）**：
+- [ ] 手工构造月度预测（或等待新月度点）：`beef_carcass_us` 至少 1 条到达 `status='verified'` 且 mape 非空
+- [ ] 月度行的 unverifiable 增速为 0（清扫不再误伤）
+- [ ] 新实际点触发重预测、无新点时日志零增长（SQL 断言 24h 行数）
+- [ ] daily 全链路行为零变化（存量 14 万行的清扫/验证回归测试全绿）
+- [ ] **订阅开启**（本批验收通过后才 flip 门控让 beef_carcass_us 进循环）
+
+规模 L（评审 m1：mapeTracking 是全仓最高风险文件——原生 SQL + 状态生命周期，必须单独成批、单独 commit、live 专项检查点）。**依赖**：6a + D5 定案。
+
+### 批 6c — cadence 元数据 + 前端单位标注
+
+**问题（评审 M2/m1）**：`PriceForecastPanel` 硬编码"未来 {horizon} 天"（PriceForecastPanel.tsx:118）；月度序列 horizon 10 将被展示为"10 天"实为"10 个月"。`CachedPrediction` 形状有**三个写入方**共享（predictionCache.ts:26-29/208-217、inference.ts:205-209/288-292，round-114 INT-1 形状漂移 bug 的原址）。
+**内容**：`CachedPrediction` 增 `interval`/`horizonUnit` 字段——**三个写入方同一 commit 内同步改**（INT-1 教训），signals/inference 响应透传；前端 `PriceForecastPanel` 按 horizonUnit 显示"未来 N 个月/天"；推理服务侧评审已证实输出时间戳按最后两点间距外推（predict.py:113-123），月度输入天然产出月度间距，后端无需换算。
+**验收**：/trading 与 /ai/predict 对月度序列显示"个月"；daily 显示不变；三写入方形状一致性测试。规模 S-M。**依赖**：6b（订阅开启后才有月度信号流到前端）。
+
+### 批 7 — /trading 牛肉模式真正可用（F3；评审 M1 扩范围）
+
+**问题**：初稿只换默认序列，但 `useTradingData` 固定 `interval=daily` 拉价格（useTradingData.ts:23/97）→ `getPriceHistory` 无月度回退（marketService.ts:105-129）→ `loadSignal` 对空数组早退（useTradingData.ts:204）——**换默认后页面仍无图无信号**；且牛肉模式隐藏了 TimeframeSelector（trading/page.tsx:122），用户无法自救。signals 路由空序列 500（signals.ts:415-429 → tradingSignals.ts:141-143 → errorHandler 默认 500）。
+**内容**：
+1. 牛肉模式默认 `beef_cutout_us`→`beef_carcass_us`；
+2. `getPriceHistory` 按**序列真实 interval** 取数（commodity.interval 优先于请求默认），牛肉模式恢复 TimeframeSelector 或按序列隐藏 daily 选项；
+3. signals 路由空序列返回 2xx 降级载荷（`insufficientData: true`），不再未捕获 500。
+**验收**：live /trading 牛肉模式出**价格图 + 信号面板**（不只是页面 200）；0 行序列 curl signals 得 2xx 降级；回归测试钉住三者。规模 M（3 文件）。**依赖**：无（可与 6a 并行）。
+
+### 批 8 — 公信力口径统一 + 榜单钉住（含本轮已做文档修正的收尾）
+
+**内容**：
+1. 钉住测试（评审 m5：定位为 tripwire 而非主体工作——聚合按注册表枚举，测试防的是未来回归）：任何 `days≤90` 公开榜单 modelId 集合 == 引擎注册表集合；
+2. `getPublicTrackRecord` methodology 补**精确**排除规则：MAPE 分子仅 `verified` 行；`predictionCount` 分母**含** stale/unverifiable 行（mapeTracking.ts:853-861）——一句话必须两者都说清，笼统写"排除 stale"对 predictionCount 是错的；
+3. 三文档统一 verified-only 口径（COMPETITIVE-ANALYSIS §三.3、PRODUCT-SPEC §七、本计划），全周期长尾与当前 30d verified 双口径并列。
+
+**验收**：新测试绿；三文档 grep 无裸原始口径残留；公开页 methodology 含双向说明。**依赖**：无。**规模**：S。
+
+### 批 9 — 数据新鲜度可观测性（评审 M5/M6 定案）
+
+**实现位（M5 定案）**：**后端侧**——扩展现有 health 端点（或新增 ops 只读小端点，`authenticate` 管理员保护）返回两项检查结果，`scripts/cron-healthcheck.sh` curl 它并 grep——阈值 import 共享的 `stalenessWindow`，避免 bash 里第六处硬编码；shell 无 DB 直连问题消失。本批含 build + PM2 门禁。
+**降噪（M6 定案）**：事件只在**状态转移**时记（cron 脚本持久化小状态文件对比上次结果），外加每日一次心跳摘要——beef_cut_prices 已冻结 115 天是**已知稳态**，每 5 分钟刷屏会把真告警淹死；`prediction_coverage`（24h 背景预测覆盖的牛肉序列数）同规则。
+**验收**：人为调低阈值触发 fresh→stale 转移，日志出现一次且下一轮不重复；状态回正后恢复；心跳摘要可 grep。**依赖**：无（6a 落地后 threshold 共享才成立——若 6a 未先行，批 9 可自带常量并注明后续接驳）。**规模**：S-M。
+
+### 批 10 — CSV 回填验证一键化
+
+**内容**：`backend/scripts/verify-beef-import.ts`（评审 m2：遵循 backend/scripts/ + tsx 既有惯例，如 import-beef.ts；根 scripts/ 无 TS runner）。WEEKLY-DATA-IMPORT.md §五已有日期域与重复检测查询；**行数增量与工厂覆盖查询是新增**（初稿"打包自文档"表述不准），一并实现并回写 runbook 引用。
+**验收**：对当前库 dry-run 输出与手写 SQL 一致。**依赖**：无。**规模**：XS-S。
+
+**建议执行顺序**：批 7（用户可见修复）→ 批 8（口径收口）→ 6a → **D5 定案 → 6b**（订阅开启 + 专项检查点：live 验证牛肉序列进链路且首条 verified）→ 6c → 批 9 → 批 10。检查点节奏：每批独立 commit + 全量门禁；6b 后为强制人工检查点。
+
+## §C 决策项（不擅动，需用户点头）
+
+- **D5 月度序列预测语义（批 6a-6c 总纲，批 6b 前置）**：① horizon 单位 = 步长（月度序列 1 步 = 1 个月）；② MAPE 验证到期与实际值窗按步长（`make_interval(months=>horizon)`）；③ `prediction_logs` 增可空 `interval` 列（NULL=daily 时代旧行，不回填 14 万行）；④ 月度序列刷新节律 = 仅新实际点落库后重预测；⑤ correlationAnalysis 与 analytics **显式不做月度**——理由（对抗评审 m4 纠错后）：不是"195 点不够算 Pearson"（点数充足），而是 correlation 读取 daily-only（correlationAnalysis.ts:59）且跨节奏对齐无解，等日更牛肉数据解锁后随数据解决。建议以 ADR 形式记录（本仓库首个 ADR，格式从 `improve-codebase-architecture` 引用的 ADR-FORMAT 惯例）。
+- **D6 孤儿端点处置**：按 `deprecation-and-migration` 决策五问逐组评估（唯一价值/消费者数/替代品/迁移成本/持有成本）。建议：`/api/security` 3 端点（audit 上报，前端从未发送）为**收敛首选候选**；/api/models、/api/analytics 待批 8 口径统一后重评（可能与公开档案页互补）；portfolios 组维持登记。"不删非己所造"红线 → 全部先出处置建议等用户点头。
+- **D7 死模型残留数据（sundial/timer_xl 共 332 行）**：已结构性隔离（注册表枚举 + R3 守卫 + 批 8 钉住），**建议保留数据**（预测历史完整性）不删；若删属数据治理决定，需用户点头。
+
+**用户侧外部输入（非工程，不变）**：4 个空 API key（MLA/USDA_MARS/OPENWEATHER + FRED 免 key 已用）；beef_cut_prices CSV 周更（runbook 就绪）；3→10 种子用户访谈与档案周更。
+
+## §D 架构注记（zoom-out 模块地图 + 深化机会）
+
+月度语义涉及的模块地图（调用方 → 被调方）：
+
+```
+scheduler ──→ predictionCache ──→ inference/data-fetcher（已有 monthly 回退）
+    │              │──→ mapeTracking ──→ prediction_logs（actuals 取数 daily-only ←批 6.2）
+    │              └──→ tradingSignals ──→ modelQuality（30d 窗口径 ←批 8 关注）
+    └──→ getCommodityFreshness（daily-only ←批 6.1）
+correlationAnalysis / analytics（daily-only ←显式不做，D5）
+routes/inference.ts（fetchHistoryWithFallback，round-127 已修）
+```
+
+**深化机会（improve-codebase-architecture 词汇；经评审 M3 校准）**：interval 判定散在 ≥5 处（freshness、调度门控、mapeTracking actuals、correlation、analytics）——**浅接口碎片**。批 6a 引入 `stalenessWindow(interval)`：接口只有"interval→窗口/单位"，实现集中阈值规则。**删除测试通过**（删掉它，阈值知识散回 5 个调用点）。**诚实边界**：该 seam 只覆盖阈值策略，约占批 6 全部改动量的 ~10%——其余是显式枚举的编辑点（freshness 查询谓词、调度 WHERE、验证生命周期 6 处、`CachedPrediction` 三写入方、响应形状），不存在"一个小函数解决全部"的捷径。一次只做这一个 seam，不为假想的第三种 interval（weekly?）预留扩展。
+
+## §E 安全注记（security-and-hardening 速评）
+
+公开面新增代码仅批 6.3（响应字段追加，无新端点）。存量公开端点面（highlights / accuracy/public）已有：正白名单 fail-closed（samples）、cacheRoute、全局限流、无敏感字段。批 8.1 的钉住测试同时是信息完整性防线（榜单不可被历史死模型污染）。无新增外部输入面、无新依赖、无密钥接触——STRIDE 无新增项。
+
+## §F 可观测性注记（observability-and-instrumentation）
+
+On-call 三问（批 9 遥测必须能回答）：①核心序列多少天没更新了？②背景预测覆盖了几个牛肉序列？③（批 6 后）月度序列上次验证是什么时候？信号选型：结构化日志事件（`series_stale` / `prediction_coverage`）而非新指标系统——单机 PM2 部署，日志即遥测；阈值有据（7/45 天=数据源自然节奏的 1 个周期以上）；每次事件自带 runbook 指针（指向 WEEKLY-DATA-IMPORT.md 或批 6 说明）。
+
+## §G skill 使用记录（本轮规划，2026-08-23）
+
+| 阶段 | skill | 应用 |
+|------|-------|------|
+| 战略 | zoom-out | §D 模块地图（月度语义影响面） |
+| 战略 | source-driven-development | §A 全部主张附实测命令/live 证据；无凭记忆的框架断言 |
+| 战略 | doubt-driven-development | 规划期自我质疑 3 次（死模型暴露？→live 双窗口实测否定；MAPE 口径分裂？→实测证实并修正；horizon 污染？→入批 6c 风险）；**终稿经 fresh-context 对抗评审**（Explore 只读代理 68 次读操作核对 file:line）报 2 blocker + 6 major + 6 minor，全部归类有效可行动并已并入计划（批 6 分解、批 7 扩范围、批 9 定案、D5 纠错）；非交互上下文 → cross-model 跳过（规则要求显式宣布） |
+| 结构 | planning-and-task-breakdown | §B 批次模板（验收/验证/依赖/规模/检查点） |
+| 工程 | improve-codebase-architecture | §D stalenessWindow seam（删除测试通过）；D5 以 ADR 记录 |
+| 工程 | deprecation-and-migration | D6 五问框架 + advisory 优先 |
+| 工程 | incremental-implementation | 批次切片纪律（≤5 文件/批、每批独立 commit、绿灯后才进下一批） |
+| 质量 | tdd | 各批"验收=行为测试钉公共接口"（如 days≤90 榜单集合测试） |
+| 质量 | security-and-hardening | §E 速评 |
+| 质量 | observability-and-instrumentation | §F 三问 + 信号选型 |
+| 质量 | shipping-and-launch | 门禁继承 + 批 6 专项检查点 + 回滚=git revert 单批 commit |
+| 对齐 | spec-driven-development | 计划含 Objective/Commands/测试策略/边界（Always=门禁，Never=§九红线）结构化要素 |
+| 基线 | ops-check | PM2 模式确认 + 三服务 HTTP 探活（backend /health=200、landing 200、inference 200，2026-08-23） |
+| — | to-prd / triage | **不适用**：依赖 issue tracker 与 label 词表，本仓库计划落 docs（无 tracker）；已按其自身前提判定并记录 |
+| — | documentation-and-adr | 名字未命中（不在可用列表）；ADR 格式惯例改从 improve-codebase-architecture 引用文件取 |
+
+## §H 第二波不做清单（继承 + 新增显式项）
+
+继承第一波全部（B2B 撮合 / 国内采价网络 / 冷链 SaaS / 支付下单 / 负缓存）。新增显式：**correlationAnalysis 与 analytics 的月度序列支持**（D5 记录为不做：阻碍是 daily-only 读取与跨节奏对齐，非点数不足——等日更牛肉数据解锁）；死模型数据删除（D7 建议保留）；`prediction_logs` 旧行 interval 回填（14 万行重写不值得，NULL=daily 语义兼容）。

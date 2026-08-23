@@ -1,7 +1,7 @@
 ---
 title: "牧集（Mooket）对标分析"
 en_title: "Competitive Analysis: MT vs Mooket"
-version: "1.1.0"
+version: "1.1.1"
 last_updated: "2026-08-23"
 status: "active"
 maintainer: "MT Team"
@@ -74,6 +74,21 @@ related_docs:
 
    双口径合起来的准确结论：**典型序列上 chronos 不差（中位 <1%），但它有无界灾难长尾**（均值被劣化序列拉高 10 倍以上，naive 的最坏情况有界）。风险视角下均值才是对的度量——采购决策毁于爆仓日而非中位数日。（中位数普遍 <1% 同时提示验证集多为易预测序列——评估口径本身待复核，另见 KNOWN-ISSUES MAPE 验证环。）
    > **复评注（2026-08-23 晚）**：上表已验证数较初版（3357/3899~3904）下降约 500/模型、均值上移——因清除 CBBTCUSD 错标预测时连带删去了其已验证 MAPE 记录。**该序列（比特币连续日更数据）此前一直在"美化"各模型 MAPE 统计**；剔除后统计更真实地反映冻结数据环境。30 天窗口现行实测：统计基线 avg 0.74~0.82 / 中位 0.46~0.47（每模型仅 **20** 条新验证——验证吞吐已随数据冻结坍缩），chronos avg 55~72 / 中位 0.51~0.52 仍劣于 naive、仍被清出投票（初版修订结论不变）。
+   >
+   > **口径修正（2026-08-23 晚二轮，v1.1.1，round-129 规划期发现）**：上一段与本节初版表格用的是 **raw 口径**（`mape IS NOT NULL` 全行平均）——其中混入了已标记 `stale` 的失效行：chronos_mini 30 天窗 16 条 stale 行 **avg≈9676%**，把 chronos 的 raw 均值从 7.05 抬到 55.43（`SELECT status,count(*),avg(mape)…GROUP BY status` 实测：verified 3182 条 avg 7.05 / stale 16 条 avg 9676.07）。**可引用的口径是 verified-only**（公开档案页即此口径，`computeAllModelAccuracy` 按注册表枚举 + verified 分子，live days=30/90 双窗口实测与下表精确吻合）：
+   >
+   > | 模型（verified-only 全周期） | 已验证数 | 平均 MAPE | 中位 MAPE |
+   > |------|---------|-----------|-----------|
+   > | naive_forecaster | 2796 | 3.75% | 0.33% |
+   > | exponential_smoothing | 2796 | 3.84% | 0.34% |
+   > | holtwinters | 2796 | 4.00% | 0.31% |
+   > | arima | 2796 | 4.01% | 0.35% |
+   > | chronos_mini | 3182 | 7.05% | 0.51% |
+   > | chronos_tiny | 3183 | 7.09% | 0.52% |
+   > | chronos_base | 3183 | 10.28% | 0.52% |
+   > | stl_forecaster | 2796 | 12.48% | 7.61% |
+   >
+   > 修正后的结论仍成立但量级更新：chronos verified 均值 **7~10%**（非 raw 的 55~72%），约为 naive（3.75%）的 2 倍；中位 0.51~0.52 vs naive 0.33——**仍全面劣于 naive、仍被淘汰线清出投票，机制结论不变**。另注：verified 计数 == 近 90 天计数，说明 MAPE 自动验证机制本身是 round-110+ 的近期设施，尚无跨季度验证史。公开页 `predictionCount` 分母含 stale/unverifiable 行（mapeTracking.ts:853-861），与分子口径不同——IMPROVEMENT-PLAN 第二波批 8 将在 methodology 元数据中写明双向口径。
 
    > **修订（2026-08-23，制定改进方案时复核）**：上表为全周期口径；引擎实际使用的 **30 天窗口**下 chronos 均值为 6.2~8.8%（全周期均值含早期未清洗的单位错配离群，如 wheat_cme MAPE≈9500），中位结论不变（chronos 0.79~0.82 > naive 0.41）。**更正一处本文初版失实**：初版称"共识集成未按序列路由/加权，整体继承该尾部风险"——实际 `modelQuality.ts` 早已实现质量加权（30 天中位 MAPE，round-115）+ 劣于-naive 淘汰线（round-110，≥20 条验证且严格劣于 naive 者权重归零）。
    >

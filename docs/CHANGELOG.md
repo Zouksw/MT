@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-129 第二波开发计划（14 skill 规划法 + 对抗评审修订）
+
+用户指令"利用尽可能更多的skills，根据之前的观察结果规划后续的开发任务"。以 rounds 121-128 观察结果为输入（对标复评 §七、TECH-DEBT §十四 登记、MAPE 口径分裂等），调用 14 个 skill 分四批完成规划（战略/工程决策/质量发布/规格对齐；to-prd、triage 按"需 issue tracker"前提判不适用，1 个 skill 名未命中诚实记录），产出 IMPROVEMENT-PLAN.md **v2.0.0 第二波**：
+
+- **批 6a-6c 月度序列进预测链**（核心）：初稿经 fresh-context 对抗评审（Explore 代理 68 次读核对 file:line，报 2 blocker + 6 major + 6 minor 全部有效采纳）后分解——6a 门控 interval 感知（月度谓词=最新点≤60天 且 ≥3 点，防订阅抖动）、6b 验证生命周期（到期/实际值窗/三处清扫按 cadence；月度仅在新月度点后重预测，防日产 336 条日志污染；**硬验收=首条月度预测到达 verified**，订阅开启以此为止回闸）、6c cadence 元数据（CachedPrediction 三写入方同步改，防 INT-1 重演；前端"未来 N 个月"标注）。
+- 批 7 扩范围：仅换 /trading 默认序列不够——价格拉取无月度回退页面仍空（评审 M1），批含 getPriceHistory 按序列 interval 取数 + signals 空序列 2xx 降级。
+- 批 8 口径统一 / 批 9 新鲜度可观测（后端端点实现位 + 状态转移降噪）/ 批 10 CSV 验证一键化（backend/scripts + tsx 惯例）。
+- 决策项 D5（月度预测语义 ADR，含 correlation 不做的纠错理由：daily-only 读取与跨节奏对齐，非点数不足）/ D6（孤儿端点五问处置）/ D7（死模型数据保留）。
+- **规划期即时修正**：COMPETITIVE-ANALYSIS v1.1.1——发现并修正自家 v1.1.0 复评注的 MAPE raw 口径污染（chronos_mini 30d 16 条 stale 行 avg≈9676% 把 raw 均值抬到 55.43，verified-only 实为 7.05，与公开档案页精确吻合；全模型 verified-only 表入档），PRODUCT-SPEC §七 同步再修（46-59% raw → 7-10% verified，"全面劣于 naive 约 2 倍"结论不变）。
+
 ### 2026-08-23 — round-128 对标牧集第二轮复评（COMPETITIVE-ANALYSIS v1.1.0）
 
 用户指令"再次评估当前项目与牧集网之间的差距和相比之下拥有的优势"。对 v1.0.0（同日 round-121 制定）全文复核，两侧重新实测：
