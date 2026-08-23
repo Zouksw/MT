@@ -21,12 +21,14 @@
  *    models form the consensus".
  *  - 74 beef cut taxonomies defined (BeefCutTaxonomy count).
  *  - 21 factories tracked.
- *  - 19 data source integrations shipped (17 registered in the tiered
- *    schedule + CSV manual import; inac dormant since 08-15). Of these, 3
- *    currently produce rows (commodity_prices = FX, cme_futures,
- *    world_bank) — the rest are gated on API keys / network egress
- *    (KNOWN-ISSUES D1). The marketing number counts built integrations,
- *    the same way the /settings/data-sources board counts them.
+ *  - 19 data source integrations shipped = 18 source files (17 registered
+ *    in the tiered schedule + inac, dormant since 08-15) + the CSV beef
+ *    import channel (/api/beef/import; round-124 removed the standalone
+ *    manualImport source file). Of these, 3 currently produce rows
+ *    (commodity_prices = FX, cme_futures, world_bank) — the rest are gated
+ *    on API keys / network egress (KNOWN-ISSUES D1). The marketing number
+ *    counts built integrations, the same way the /settings/data-sources
+ *    board counts them.
  *  - 5 import source countries (US, BR, AUS, URY, ARG).
  *  - 2 live news RSS feeds (Beef Central, USDA Federal Register) since
  *    2026-08-22 (M3).
