@@ -51,6 +51,65 @@ const priceHistorySchema = z.object({
 	limit: z.coerce.number().min(1).max(10000).default(365),
 });
 
+/**
+ * Slugs exposed WITHOUT authentication on /public/highlights. The landing
+ * page's "live data" strip consumes this — only curated public macro series
+ * may appear here; user datasets/timeseries must never be listable
+ * anonymously (IMPROVEMENT-PLAN batch 1a).
+ */
+const PUBLIC_HIGHLIGHT_SLUGS = ["beef_carcass_us"] as const;
+
+router.get(
+	"/public/highlights",
+	cacheRoute("market:public-highlights", 300),
+	asyncHandler(async (_req, res) => {
+		const highlights = await Promise.all(
+			PUBLIC_HIGHLIGHT_SLUGS.map(async (slug) => {
+				try {
+					const { commodity, price } = await getLatestPrice(slug);
+					if (!price || price.close == null) {
+						return {
+							slug,
+							name: commodity.name,
+							unit: commodity.unit,
+							status: "no_data" as const,
+						};
+					}
+					const { prices } = await getPriceHistory(slug, {
+						interval: "daily",
+						limit: 30,
+					});
+					// Decimal(…) → number for JSON; series stays chronological.
+					const series = prices
+						.filter((p) => p.close != null)
+						.map((p) => ({ date: p.date, close: Number(p.close) }));
+					const prev = series.length >= 2 ? series[series.length - 2].close : null;
+					const close = Number(price.close);
+					const dayChangePct =
+						prev != null && prev > 0 ? Math.round(((close - prev) / prev) * 10000) / 100 : null;
+					return {
+						slug,
+						name: commodity.name,
+						unit: commodity.unit,
+						status: "ok" as const,
+						latest: { date: price.date, close, source: price.source },
+						// FRED series id when present — the landing panel surfaces it so
+						// the displayed value stays traceable to its source series.
+						seriesId: (commodity.metadata as { seriesId?: string } | null)?.seriesId ?? null,
+						dayChangePct,
+						series,
+					};
+				} catch {
+					// Unknown slug or DB hiccup — degrade to a status marker so one
+					// bad entry can't break the whole public strip.
+					return { slug, status: "error" as const };
+				}
+			}),
+		);
+		success(res, { highlights });
+	}),
+);
+
 router.get(
 	"/commodities",
 	authenticate,

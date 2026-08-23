@@ -14,8 +14,12 @@ const features = [
 	},
 	{
 		title: "AI Price Forecasting",
-		description: `${SITE_STATS.aiModels} pretrained Chronos models form the consensus ensemble, with statistical baselines (ARIMA, STL, Holt-Winters) reported alongside for comparison. Every forecast carries confidence intervals and is auto-verified via MAPE accuracy tracking.`,
-		details: [`${SITE_STATS.aiModels} Chronos models`, "Statistical baselines", "MAPE tracking"],
+		description: `${SITE_STATS.aiModels}-model consensus engine — pretrained Chronos and statistical baselines (ARIMA, STL, Holt-Winters) run on every forecast. The vote is quality-weighted by verified MAPE; models worse than the naive baseline are eliminated. Every forecast carries confidence intervals and is auto-verified.`,
+		details: [
+			"Quality-weighted consensus",
+			"Chronos + statistical models",
+			"MAPE auto-verification",
+		],
 		span: "",
 		visual: null,
 		goldAccent: true,
@@ -62,13 +66,15 @@ const metrics = [
 ];
 
 function CutsVisual() {
+	// Real rows from beef_cut_taxonomy (verified 2026-08-23) — coverage facts,
+	// not fabricated prices (batch 1 honesty fix).
 	const cuts = [
-		{ name: "Chuck Roll Choice", price: "$389", change: "+2.1%", up: true },
-		{ name: "Ribeye Lip-On", price: "$613", change: "+0.9%", up: true },
-		{ name: "Brisket Flat", price: "$295", change: "-0.5%", up: false },
-		{ name: "Strip Loin", price: "$548", change: "+1.4%", up: true },
-		{ name: "Outside Round", price: "$267", change: "-0.3%", up: false },
-		{ name: "Short Plate", price: "$198", change: "+0.7%", up: true },
+		{ name: "Chuck Roll", primal: "Chuck", imps: "116A" },
+		{ name: "Ribeye Lip-On", primal: "Rib", imps: "112D" },
+		{ name: "Brisket Point End", primal: "Brisket", imps: "120" },
+		{ name: "Striploin", primal: "Loin", imps: "180" },
+		{ name: "Flank Steak", primal: "Flank", imps: "193" },
+		{ name: "Tenderloin", primal: "Loin", imps: "189A" },
 	];
 
 	return (
@@ -80,13 +86,9 @@ function CutsVisual() {
 				>
 					<span className="text-xs text-muted-foreground truncate">{c.name}</span>
 					<div className="flex items-center gap-2">
+						<span className="text-xs text-gray-500">{c.primal}</span>
 						<span className="text-xs font-mono text-gray-900 dark:text-white tabular-nums">
-							{c.price}
-						</span>
-						<span
-							className={`text-xs font-mono tabular-nums ${c.up ? "text-success" : "text-destructive"}`}
-						>
-							{c.change}
+							IMPS {c.imps}
 						</span>
 					</div>
 				</div>
@@ -96,28 +98,23 @@ function CutsVisual() {
 }
 
 function TradeVisual() {
+	// Real integration facts (which origin writes what) — the previous version
+	// showed fabricated corridor volumes ("1.2Mt +8%").
 	const flows = [
-		{ origin: "🇧🇷 Brazil", dest: "🇨🇳 China", volume: "1.2Mt", trend: "+8%" },
-		{ origin: "🇦🇺 Australia", dest: "🇯🇵 Japan", volume: "340kt", trend: "+3%" },
-		{ origin: "🇺🇾 Uruguay", dest: "🇪🇺 EU", volume: "180kt", trend: "-2%" },
+		{ origin: "🇺🇸 US", what: "USDA AMS carcass quotes" },
+		{ origin: "🇧🇷 Brazil", what: "SECEX export data" },
+		{ origin: "🇦🇺 Australia", what: "MLA NLRS cut pricing" },
 	];
 
 	return (
 		<div className="mt-4 space-y-2">
 			{flows.map((f) => (
 				<div
-					key={`${f.origin}-${f.dest}`}
+					key={f.origin}
 					className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-700/30"
 				>
-					<span className="text-xs text-muted-foreground">
-						{f.origin} → {f.dest}
-					</span>
-					<div className="flex items-center gap-3">
-						<span className="text-xs font-mono text-gray-900 dark:text-white tabular-nums">
-							{f.volume}
-						</span>
-						<span className="text-xs font-mono text-success tabular-nums">{f.trend}</span>
-					</div>
+					<span className="text-xs text-muted-foreground">{f.origin}</span>
+					<span className="ml-auto text-xs text-gray-500">{f.what}</span>
 				</div>
 			))}
 		</div>

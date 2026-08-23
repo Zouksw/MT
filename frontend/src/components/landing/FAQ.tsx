@@ -18,7 +18,7 @@ const faqs: FAQItem[] = [
 	},
 	{
 		question: "How does the AI price forecasting work?",
-		answer: `${SITE_STATS.aiModels} pretrained Chronos models form the consensus ensemble — they vote on the directional signal (up/down/stable) with a confidence score. Statistical baselines (ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive) run alongside for comparison so you can see the pretrained advantage. Accuracy is tracked via rolling MAPE across 30/60/90-day windows.`,
+		answer: `${SITE_STATS.aiModels} models — pretrained Chronos plus statistical baselines (ARIMA, Holt-Winters, Exponential Smoothing, STL, Naive) — run on every forecast. The consensus vote is quality-weighted by each model's verified accuracy, and any model that verifies worse than the naive baseline is eliminated from the vote entirely. Accuracy is tracked via rolling MAPE across 30/60/90-day windows and shown on the /ai accuracy page.`,
 	},
 	{
 		question: "What beef cuts are covered?",

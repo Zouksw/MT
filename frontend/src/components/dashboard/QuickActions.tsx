@@ -26,7 +26,7 @@ const quickActions: QuickAction[] = [
 	{
 		key: "ai-signals",
 		title: "AI Price Signals",
-		description: `${SITE_STATS.aiModels} Chronos models forecasting beef`,
+		description: `${SITE_STATS.aiModels}-model engine forecasting beef`,
 		icon: <BrainCircuit className="size-5" />,
 		path: "/ai",
 	},

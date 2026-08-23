@@ -37,7 +37,7 @@ export default function PricingPage() {
 			price: { monthly: 49, yearly: 39 },
 			features: [
 				`全部 ${SITE_STATS.beefCuts} 牛肉部位`,
-				`${SITE_STATS.aiModels} Chronos models with consensus signals`,
+				`${SITE_STATS.aiModels}-model quality-weighted consensus engine`,
 				"Statistical baselines comparison (ARIMA, STL, etc.)",
 				"Multi-factor analysis (weather, forex, shipping)",
 				"Price alerts & anomaly detection",

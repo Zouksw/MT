@@ -134,6 +134,41 @@ describe("Market Data Routes", () => {
 		});
 	});
 
+	describe("GET /api/market/public/highlights", () => {
+		// IMPROVEMENT-PLAN batch 1a: the landing page's live-data strip. The
+		// defining contract is PUBLIC access (no Authorization header) with only
+		// whitelisted macro series — never user datasets/timeseries.
+		test("is accessible WITHOUT authentication", async () => {
+			const res = await request(app).get("/api/market/public/highlights");
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			const highlights = res.body.data.highlights;
+			expect(Array.isArray(highlights)).toBe(true);
+			expect(highlights).toHaveLength(1);
+			const entry = highlights[0];
+			// Whitelist entry present; status is one of the degrade markers when
+			// the test DB lacks the series, never a 500.
+			expect(entry.slug).toBe("beef_carcass_us");
+			expect(["ok", "no_data", "error"]).toContain(entry.status);
+		});
+
+		test("ok entries carry latest price + numeric series + dayChangePct", async () => {
+			const res = await request(app).get("/api/market/public/highlights");
+			expect(res.status).toBe(200);
+			const entry = res.body.data.highlights[0];
+			if (entry.status !== "ok") return; // DB without the series — shape covered above
+			expect(entry.name).toBeTruthy();
+			expect(typeof entry.latest.close).toBe("number");
+			expect(entry.latest.date).toBeTruthy();
+			expect(Array.isArray(entry.series)).toBe(true);
+			for (const point of entry.series) {
+				expect(typeof point.close).toBe("number");
+				expect(Number.isNaN(point.close)).toBe(false);
+			}
+			expect(entry.dayChangePct === null || typeof entry.dayChangePct === "number").toBe(true);
+		});
+	});
+
 	describe("GET /api/market/factors/exchange-rates", () => {
 		test("returns exchange-rate factors", async () => {
 			const res = await request(app).get("/api/market/factors/exchange-rates").set(authHeaders());

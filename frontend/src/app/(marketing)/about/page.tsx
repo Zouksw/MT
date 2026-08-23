@@ -103,10 +103,11 @@ export default function AboutPage() {
 							</MotionReveal>
 							<MotionReveal delay={0.15}>
 								<p className="text-body text-muted-foreground leading-relaxed">
-									By running {SITE_STATS.aiModels} pretrained Chronos models alongside statistical
-									baselines on each cut, we provide not just predictions but a spectrum of signals
-									with confidence scores. Every forecast is logged and back-checked against actual
-									prices via MAPE accuracy tracking — so you know how reliable each model truly is.
+									By running {SITE_STATS.aiModels} models — pretrained Chronos plus statistical
+									baselines — on each cut, we provide not just predictions but a spectrum of signals
+									with confidence scores. The consensus is quality-weighted by each model's verified
+									accuracy, and every forecast is logged and back-checked against actual prices via
+									MAPE — so you know how reliable each model truly is.
 								</p>
 							</MotionReveal>
 						</div>

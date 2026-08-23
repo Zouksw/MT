@@ -19,25 +19,16 @@ const steps = [
 		preview: (
 			<div className="space-y-2 mt-3">
 				{[
-					{ name: "Chuck Roll (巴西)", price: "¥45.2/kg", chg: "-0.8%", up: false },
-					{ name: "Brisket (美国)", price: "¥52.1/kg", chg: "+1.1%", up: true },
-					{ name: "牛腩 (国产)", price: "¥68.5/kg", chg: "+0.3%", up: true },
+					{ name: "Chuck Roll", source: "MLA NLRS" },
+					{ name: "Ribeye Lip-On", source: "MLA NLRS" },
+					{ name: "Brisket Point", source: "CEPEA" },
 				].map((c) => (
 					<div
 						key={c.name}
 						className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-white/[0.05]"
 					>
 						<span className="text-xs text-muted-foreground">{c.name}</span>
-						<div className="flex items-center gap-2">
-							<span className="text-xs font-mono text-gray-900 dark:text-white tabular-nums">
-								{c.price}
-							</span>
-							<span
-								className={`text-xs font-mono tabular-nums ${c.up ? "text-success" : "text-destructive"}`}
-							>
-								{c.chg}
-							</span>
-						</div>
+						<span className="text-xs text-gray-500 font-mono">{c.source}</span>
 					</div>
 				))}
 			</div>
@@ -47,27 +38,20 @@ const steps = [
 		number: 3,
 		title: "Set Up AI Signals",
 		description:
-			"View Chronos consensus signals with confidence intervals and MAPE accuracy scores.",
+			"The 9-model engine votes up / down / flat with confidence intervals; every model's MAPE is auto-verified.",
 		preview: (
 			<div className="mt-3 space-y-2">
 				{[
-					{ model: "Chronos-Tiny", signal: "Buy", conf: 84 },
-					{ model: "Chronos-Mini", signal: "Buy", conf: 79 },
-					{ model: "Chronos-Base", signal: "Buy", conf: 88 },
+					{ model: "Chronos-Base", role: "Pretrained T5" },
+					{ model: "ARIMA", role: "Statistical baseline" },
+					{ model: "Naive", role: "Verification bar" },
 				].map((s) => (
 					<div
 						key={s.model}
 						className="flex items-center gap-3 px-3 py-2 rounded-md bg-gray-50 dark:bg-white/[0.05]"
 					>
-						<span className="text-xs font-medium text-muted-foreground w-24">{s.model}</span>
-						<div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-							<div className="h-full rounded-full bg-primary/50" style={{ width: `${s.conf}%` }} />
-						</div>
-						<span
-							className={`text-xs font-mono tabular-nums ${s.signal === "Buy" ? "text-success" : "text-amber-500"}`}
-						>
-							{s.signal} {s.conf}%
-						</span>
+						<span className="text-xs font-medium text-muted-foreground w-28">{s.model}</span>
+						<span className="ml-auto text-xs text-gray-500">{s.role}</span>
 					</div>
 				))}
 			</div>
@@ -82,9 +66,10 @@ const steps = [
 				<Brain size={20} className="text-primary shrink-0" />
 				<div className="flex-1">
 					<div className="text-xs font-medium text-foreground">AI Consensus</div>
-					<div className="text-xs text-muted-foreground">Strong Buy — 73% confidence</div>
+					<div className="text-xs text-muted-foreground">
+						up · down · flat — weighted by verified MAPE
+					</div>
 				</div>
-				<div className="text-sm font-semibold text-success">+4.2%</div>
 			</div>
 		),
 	},

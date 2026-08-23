@@ -1,101 +1,65 @@
 "use client";
 
-import { ArrowRight, Gauge, TrendingUp } from "lucide-react";
+import { ArrowRight, Gauge, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef } from "react";
 import { HexGrid } from "@/components/ui/GeometricArt";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
+import { usePublicHighlights } from "@/hooks/usePublicHighlights";
 import { SITE_STATS } from "@/lib/site-stats";
 
-const DATA_STREAM = [
-	12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45, 42, 50, 48, 55, 52, 60, 58, 65, 62, 70, 68, 75,
-	72, 80, 78, 85, 82, 90,
-];
-
-function MiniSparkline() {
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const animRef = useRef<number>(0);
-	const offsetRef = useRef(0);
-
-	useEffect(() => {
-		const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
-
-		const dpr = window.devicePixelRatio || 1;
-		const rect = canvas.getBoundingClientRect();
-		canvas.width = rect.width * dpr;
-		canvas.height = rect.height * dpr;
-		ctx.scale(dpr, dpr);
-
-		const W = rect.width;
-		const H = rect.height;
-
-		function draw() {
-			if (!ctx) return;
-			ctx.clearRect(0, 0, W, H);
-
-			const offset = offsetRef.current;
-			const visiblePoints = 60;
-			const step = W / visiblePoints;
-
-			const lines = [
-				{ data: DATA_STREAM, color: "rgba(139, 105, 20, 0.5)", width: 2 },
-				{
-					data: DATA_STREAM.map((v) => v * 0.7 + 10),
-					color: "rgba(139, 105, 20, 0.25)",
-					width: 1.5,
-				},
-				{ data: DATA_STREAM.map((v) => v * 0.5 + 20), color: "rgba(139, 105, 20, 0.1)", width: 1 },
-			];
-
-			lines.forEach(({ data, color, width: lw }) => {
-				ctx.beginPath();
-				ctx.strokeStyle = color;
-				ctx.lineWidth = lw;
-				for (let i = 0; i < visiblePoints; i++) {
-					const idx = Math.floor((i + offset) % data.length);
-					const nextIdx = (idx + 1) % data.length;
-					const progress = (i + offset) % 1;
-					const value = data[idx] * (1 - progress) + data[nextIdx] * progress;
-					const x = i * step;
-					const y = H - (value / 100) * H * 0.8 - H * 0.1;
-					if (i === 0) ctx.moveTo(x, y);
-					else ctx.lineTo(x, y);
-				}
-				ctx.stroke();
-			});
-
-			const lastIdx = Math.floor((visiblePoints - 1 + offset) % DATA_STREAM.length);
-			const lastY = H - (DATA_STREAM[lastIdx] / 100) * H * 0.8 - H * 0.1;
-			const lastX = (visiblePoints - 1) * step;
-			ctx.beginPath();
-			ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
-			ctx.fillStyle = "rgba(139, 105, 20, 0.8)";
-			ctx.fill();
-			ctx.beginPath();
-			ctx.arc(lastX, lastY, 8, 0, Math.PI * 2);
-			ctx.fillStyle = "rgba(139, 105, 20, 0.15)";
-			ctx.fill();
-
-			if (prefersReducedMotion) return;
-			offsetRef.current += 0.15;
-			animRef.current = requestAnimationFrame(draw);
-		}
-
-		draw();
-		return () => cancelAnimationFrame(animRef.current);
-	}, []);
+/**
+ * Static SVG sparkline over REAL series points from the public highlights
+ * endpoint (batch 1). Replaces the old animated canvas that cycled a fake
+ * DATA_STREAM — the landing page must never fabricate market data.
+ */
+function LiveSparkline({ points }: { points: number[] }) {
+	if (points.length < 2) return null;
+	const min = Math.min(...points);
+	const max = Math.max(...points);
+	const span = max - min || 1;
+	const W = 100;
+	const H = 40;
+	const step = W / (points.length - 1);
+	const coords = points.map(
+		(v, i) => `${(i * step).toFixed(2)},${(H - ((v - min) / span) * (H - 6) - 3).toFixed(2)}`,
+	);
+	const last = coords[coords.length - 1].split(",");
 
 	return (
-		<canvas
-			ref={canvasRef}
-			className="w-full h-40 md:h-56 lg:h-72 opacity-80"
-			style={{ display: "block" }}
-		/>
+		<svg
+			viewBox={`0 0 ${W} ${H}`}
+			preserveAspectRatio="none"
+			className="w-full h-24 md:h-32"
+			role="img"
+			aria-label="Recent price trend"
+		>
+			<polyline
+				points={coords.join(" ")}
+				fill="none"
+				stroke="rgba(139, 105, 20, 0.7)"
+				strokeWidth="1.5"
+				vectorEffect="non-scaling-stroke"
+			/>
+			<circle cx={last[0]} cy={last[1]} r="1.6" fill="rgba(139, 105, 20, 0.9)" />
+		</svg>
+	);
+}
+
+/** Honest panel body when the live feed is unavailable — no fabricated numbers. */
+function MaintenancePanel() {
+	return (
+		<div className="rounded-2xl bg-background p-4 text-white">
+			<div className="mb-3 flex items-center gap-1.5">
+				<div className="size-2 rounded-full bg-white/20" />
+				<div className="size-2 rounded-full bg-white/20" />
+				<div className="size-2 rounded-full bg-white/20" />
+			</div>
+			<div className="flex h-64 flex-col items-center justify-center gap-2 rounded-md bg-white/5 px-4">
+				<TrendingUp size={20} className="text-muted-foreground" />
+				<p className="text-sm font-medium text-muted-foreground">Market data unavailable</p>
+				<p className="text-xs text-gray-500">Live feed maintenance — no sample data shown.</p>
+			</div>
+		</div>
 	);
 }
 
@@ -106,9 +70,9 @@ const features = [
 		span: "md:col-span-2",
 	},
 	{
-		title: `${SITE_STATS.aiModels} AI Price Models`,
+		title: "AI Price Forecasting",
 		description:
-			"Pretrained Chronos ensemble with statistical baselines (ARIMA, STL, Holt-Winters) for comparison — each forecast carries confidence intervals and MAPE accuracy tracking",
+			"9-model forecast engine (pretrained Chronos + statistical baselines) with a quality-weighted consensus — every model's MAPE is auto-verified, and models verified worse than the naive baseline are eliminated from the vote",
 		span: "",
 	},
 	{
@@ -119,13 +83,14 @@ const features = [
 	},
 ];
 
-const priceItems = [
-	{ name: "Chuck Roll Choice", price: "389.50", change: "+2.14%", up: true },
-	{ name: "Ribeye Lip-On", price: "612.80", change: "+0.87%", up: true },
-	{ name: "Brisket Flat", price: "295.25", change: "-0.53%", up: false },
-];
-
 export const Hero: React.FC = () => {
+	const { live, loading } = usePublicHighlights();
+
+	const dayUp = (live?.dayChangePct ?? 0) > 0;
+	const updatedLabel = live?.latest?.date
+		? new Date(live.latest.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+		: "";
+
 	return (
 		<section className="relative overflow-hidden bg-white dark:bg-background min-h-[100dvh] flex items-center">
 			{/* HexGrid SVG background */}
@@ -191,75 +156,100 @@ export const Hero: React.FC = () => {
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
 									<span className="text-primary font-semibold text-lg">{SITE_STATS.aiModels}</span>
-									<span>AI Price Models</span>
+									<span>Forecast Models</span>
 								</div>
 								<div className="w-px h-4 bg-muted" />
 								<div className="flex items-center gap-2">
-									<span className="text-primary font-semibold text-lg">5</span>
+									<span className="text-primary font-semibold text-lg">
+										{SITE_STATS.sourceCountries}
+									</span>
 									<span>Export Markets</span>
 								</div>
 							</div>
 						</MotionReveal>
 					</div>
 
-					{/* Right: Dashboard mockup (2/5) — dark panel, Tailwind code panel style */}
+					{/* Right: Live market panel (2/5) — real whitelisted series from the
+					 * public highlights endpoint. Previously this panel showed hardcoded
+					 * sample prices + a fake sparkline + a fabricated "78% consensus"
+					 * signal (batch 1 honesty fix). */}
 					<div className="lg:col-span-2">
 						<MotionReveal delay={0.3}>
-							<div className="rounded-2xl bg-background p-4 text-white">
-								{/* Window chrome — 3 dots */}
-								<div className="mb-3 flex items-center gap-1.5">
-									<div className="size-2 rounded-full bg-white/20" />
-									<div className="size-2 rounded-full bg-white/20" />
-									<div className="size-2 rounded-full bg-white/20" />
+							{loading ? (
+								<div className="rounded-2xl bg-background p-4 text-white">
+									<div className="mb-3 flex items-center gap-1.5">
+										<div className="size-2 rounded-full bg-white/20" />
+										<div className="size-2 rounded-full bg-white/20" />
+										<div className="size-2 rounded-full bg-white/20" />
+									</div>
+									<div className="h-64 animate-pulse rounded-md bg-white/5" />
 								</div>
+							) : !live ? (
+								<MaintenancePanel />
+							) : (
+								<div className="rounded-2xl bg-background p-4 text-white">
+									{/* Window chrome — 3 dots */}
+									<div className="mb-3 flex items-center gap-1.5">
+										<div className="size-2 rounded-full bg-white/20" />
+										<div className="size-2 rounded-full bg-white/20" />
+										<div className="size-2 rounded-full bg-white/20" />
+									</div>
 
-								{/* Header bar */}
-								<div className="mb-3 flex items-center justify-between">
-									<div className="flex items-center gap-2">
-										<TrendingUp size={16} className="text-primary" />
-										<span className="text-sm font-medium text-muted-foreground">
-											Chuck Roll Choice — USDA
+									{/* Header bar */}
+									<div className="mb-3 flex items-center justify-between">
+										<div className="flex items-center gap-2">
+											<TrendingUp size={16} className="text-primary" />
+											<span className="text-sm font-medium text-muted-foreground">{live.name}</span>
+										</div>
+										<div className="flex items-center gap-2">
+											<div className="size-1.5 rounded-full bg-success" />
+											<span className="text-xs text-muted-foreground font-medium">
+												Live · {updatedLabel}
+											</span>
+										</div>
+									</div>
+
+									{/* Latest value + day change. Rendered WITHOUT a "$" prefix: the
+									 * raw series value plus its stored unit and source series id
+									 * stay traceable — the unit's real-world denomination is
+									 * under verification (KNOWN-ISSUES, 2026-08-23), so the panel
+									 * must not over-assert currency semantics. Day-change % and
+									 * the sparkline are unit-invariant. */}
+									<div className="mb-3 flex items-baseline justify-between px-3 py-2.5 rounded-md bg-white/5">
+										<div className="flex items-baseline gap-2">
+											<span className="text-2xl font-mono font-semibold tabular-nums">
+												{live.latest?.close.toFixed(2)}
+											</span>
+											<span className="text-xs text-gray-500">{live.unit}</span>
+										</div>
+										{live.dayChangePct !== null &&
+											live.dayChangePct !== undefined &&
+											live.dayChangePct !== 0 && (
+												<span
+													className={`flex items-center gap-1 text-xs font-mono tabular-nums ${dayUp ? "text-success" : "text-destructive"}`}
+												>
+													{dayUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+													{dayUp ? "+" : ""}
+													{live.dayChangePct.toFixed(2)}%
+												</span>
+											)}
+									</div>
+
+									{/* Real sparkline */}
+									<LiveSparkline points={(live.series ?? []).map((p) => p.close)} />
+
+									{/* Series provenance bar — replaces the fabricated
+									 * "AI Consensus · Price Up · 78%" signal. */}
+									<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
+										<Gauge size={14} className="text-primary" />
+										<span className="text-xs font-medium text-muted-foreground">Daily series</span>
+										<span className="ml-auto text-xs text-gray-500 font-mono tabular-nums">
+											{live.seriesId ? `${live.seriesId} · ` : ""}
+											{live.series?.length ?? 0} pts · {live.latest?.source}
 										</span>
 									</div>
-									<div className="flex items-center gap-2">
-										<div className="size-1.5 rounded-full bg-muted-foreground/40" />
-										<span className="text-xs text-muted-foreground font-medium">Sample</span>
-									</div>
 								</div>
-
-								{/* Price tickers */}
-								<div className="mb-3 space-y-1.5">
-									{priceItems.map((item) => (
-										<div
-											key={item.name}
-											className="flex items-center justify-between px-3 py-2 rounded-md bg-white/5"
-										>
-											<span className="text-xs font-medium text-gray-300">{item.name}</span>
-											<div className="flex items-center gap-3">
-												<span className="text-xs font-mono text-white tabular-nums">
-													${item.price}
-												</span>
-												<span
-													className={`text-xs font-mono tabular-nums ${item.up ? "text-success" : "text-destructive"}`}
-												>
-													{item.change}
-												</span>
-											</div>
-										</div>
-									))}
-								</div>
-
-								{/* Sparkline chart */}
-								<MiniSparkline />
-
-								{/* Signal bar */}
-								<div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-md bg-white/5">
-									<Gauge size={14} className="text-primary" />
-									<span className="text-xs font-medium text-muted-foreground">AI Consensus</span>
-									<span className="text-xs font-semibold text-success ml-auto">Price Up</span>
-									<span className="text-xs text-gray-500 font-mono tabular-nums">78%</span>
-								</div>
-							</div>
+							)}
 						</MotionReveal>
 					</div>
 				</div>

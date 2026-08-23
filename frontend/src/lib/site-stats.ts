@@ -6,11 +6,16 @@
  * codebase — a credibility-damaging contradiction. This constant is the ONE
  * place these numbers live; every page imports from here.
  *
- * Numbers reflect the real backend state as of 2026-08-22:
- *  - 3 Chronos T5 foundation-model variants in the user-facing consensus
- *    (chronos_tiny / chronos_mini / chronos_base) — a multi-size ensemble.
- *    The 6 statistical models (ARIMA etc.) are retained as baselines for the
- *    /ai accuracy-comparison page but are NOT part of the main vote.
+ * Numbers reflect the real backend state as of 2026-08-23:
+ *  - 9 forecast model ids in the engine (6 statistical + 3 Chronos T5
+ *    variants) — all run on every consensus request and are reported
+ *    per-model. The consensus VOTE is quality-weighted by verified 30-day
+ *    median MAPE, and models verified strictly worse than the naive
+ *    baseline are eliminated from the vote entirely (backend
+ *    modelQuality.ts, round-110/115). In the current window the statistical
+ *    baselines carry the vote; the Chronos variants still run alongside.
+ *    Marketing must say "9-model engine, quality-weighted, MAPE-verified",
+ *    never "3 Chronos models form the consensus".
  *  - 74 beef cut taxonomies defined (BeefCutTaxonomy count).
  *  - 21 factories tracked.
  *  - 19 data source integrations shipped (17 registered in the tiered
@@ -25,8 +30,8 @@
  */
 
 export const SITE_STATS = {
-	/** Number of AI prediction models in the consensus ensemble (chronos variants). */
-	aiModels: 3,
+	/** Forecast model ids in the engine (statistical + Chronos; see header). */
+	aiModels: 9,
 	/** Beef cut taxonomies defined in BeefCutTaxonomy. */
 	beefCuts: 74,
 	/** Factories with beef price data. */

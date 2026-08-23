@@ -134,6 +134,19 @@
 
 ---
 
+### D4 — beef_carcass_us（FRED CBBTCUSD）单位语义存疑（2026-08-23 发现，展示层已防御）
+
+**来源**：round-122 批 1 将该序列推上 landing Hero（公开 highlights 端点）时的取证。
+**现状（截至 2026-08-23 实测）**：
+- `commodities` 行：`beef_carcass_us`，unit=`USD/cwt`，metadata=`{"source":"fred","seriesId":"CBBTCUSD"}`；`cmeFutures.ts` FRED_DAILY 注释称 "daily, USDA-reported via FRED"。
+- 但现实中 FRED **CBBTCUSD 是 IMF《全球牛肉价》月度指数，单位 ¢/lb**——与库内 "daily + USD/cwt" 标签均矛盾。
+- 库内数据形态加剧疑点：4248 行日频（2014-12→2026-08-22），年内值域振荡 2~3 倍（2024 年 39,548~106,137；2026 年至 8 月 58,586~96,853），不符合任何胴体价序列的量级与波动特征。
+**影响**：该序列是**全站唯一日更牛肉序列**（D1 冻结后），且在 mapeTracking 的 fresh-source 验证名单里；绝对值的币种/单位展示若按 `USD/cwt` 直出会在内部 /market 页与 landing 上呈现失真量级。
+**已做防御（round-122 批 1）**：landing Hero 面板**不渲染 "$" 前缀**，改为裸值 + 存储单位 + 源序列号（`FRED · CBBTCUSD`）透明标注；日变动 % 与 sparkline（单位不变量）正常展示。
+**待核（需访问 FRED 原页）**：确认本环境 fred 镜像对 CBBTCUSD 实际下发的频率与单位，再决定：改 unit 标签 / 改序列映射（换真·USDA 日频胴体价序列）/ 接受为环境合成值。内部 /market 页的同款单位直出待该决策后统一处理。
+
+---
+
 ## 二、推理服务
 
 ### R1 — Chronos 接入后端共识 + 网络可用性
