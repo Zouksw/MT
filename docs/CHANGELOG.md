@@ -42,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-123 改进方案执行轮（5 批全落地，5 提交，测试 999+1→1011+1 / 314→317）
+
+「执行」[IMPROVEMENT-PLAN](IMPROVEMENT-PLAN.md) 全部工程批，每批 tsc+全量测试+build+PM2+live+独立提交：
+
+- **批 1 活水证据 + 诚实 landing**（`72f180e`）：新公开端点 `GET /api/market/public/highlights`（白名单宏观序列，无鉴权 + cacheRoute 300s）；Hero 弃用捏造样本价（Chuck Roll $389.50 等硬编码 + 假动画 sparkline + 假 "AI Consensus 78%" 信号条）换真实日更 `beef_carcass_us`（无 "$" 前缀 + 源序列号 CBBTCUSD 透明标注——**单位语义存疑新登记 KNOWN-ISSUES D4**：现实中该 FRED 序列是月度 ¢/lb 指数，库内标 daily USD/cwt，绝对值展示降权为次要）；Features/GettingStarted 装饰图全部改真实分类学事实（beef_cut_taxonomy 实测 IMPS 码）与真实源名，清除已废除的 Buy 信号语义；`aiModels` 3→9 + 六处"Chronos 组成共识"声明结构改写为质量加权口径（FAQ/Features/about/pricing/QuickActions/site-stats）。
+- **批 3 共识对齐现实**（`39a13cc`）：执行中发现**淘汰线空转**——默认池 `ALL_MODELS` 仅 3 chronos，三模型全部劣于 naive 触发淘汰线后权重和 0 → 等权兜底，即"documented edge 就是生产默认"（COMPETITIVE-ANALYSIS §三.3 三次修订）。扩池 3→7（+4 统计基线；stl 按 B3、sarimax 无实证排除）使质量机制真正咬合（live 30 天中位：统计 0.40~0.52 投票、chronos 0.79~0.82 出局）；三处残留收口：共识 range 只由权重>0 模型构成、predictedChange 加权均值、bestModel 按验证权重（置信度仅决平）；mapeTracking 池/基线重叠去重；isPrimary 语义改为池成员（accuracy 页 pretrained-vs-statistical 分组解耦为 id 前缀）。
+- **批 4 predict 页**（`283c685`）：模型下拉改调 `/api/inference/models`（单一事实来源，不可达时诚实禁用而非静态复制）；预填 `root.test2`→`beef_carcass_us`（旧默认匹配不到任何 commodity，提交必 400）。
+- **批 2 公开预测档案**（`2f47d86`）：`GET /api/signals/models/accuracy/public`（无鉴权）30 天榜单 + 最近 50 条已验证预测（predicted vs actual vs MAPE），**正向白名单**（宏观 commodity + cut: 键，私有序列 id fail-closed，6 测试钉死含种子私有 id 排除断言）；公开页 `/ai/track-record`（PUBLIC_PATHS）+ Footer 入口 + 方法论展示——14.8 万条预测日志首次成为对外信任资产。**执行中发现并修复测试→生产 Redis 缓存投毒**：supertest 走 cacheRoute 会把 mt_test 响应写进共享 db0 的生产键（live 端点曾短暂返回测试 fixture 行）；测试现在强制 `redis://localhost:6379/1`，生产被污染键已清。
+- **批 5 周导入 runbook**（`e84033f`）：[WEEKLY-DATA-IMPORT](guides/WEEKLY-DATA-IMPORT.md)——第三方可照做的 30 分钟周节律（源/模板/步骤/验证 SQL/故障表/回滚/退出条件），D1 冻结期核心数据解冻的唯一路径。
+
+**测试基线**：backend 999+1 → **1011+1 skip**（98 文件）、frontend 314 → **317**（34 套件）、inference 64 未动——合计 **1392 全绿**，零回退。D1-D3 决策项（watchlist UI / dashboard KPI 卡 / 运营动作）保持登记未动。
+
 ### 2026-08-23 — round-122 改进方案制定（对标分析 → 执行计划，纯文档 + 一处事实修正）
 
 「按照探索的结果制定改进的方案」：规划前复核共识引擎现状，发现并**修正 round-121 分析文档一处失实**——初版称"共识未按 MAPE 加权、继承 chronos 尾部风险"，实测 `modelQuality.ts` 早已实现质量加权（round-115 中位口径）+ 劣于-naive 淘汰线（round-110）；当前 30 天窗口 chronos 三变体（中位 0.79~0.82 vs naive 0.41）与 stl 已被淘汰出共识投票，共识实际由 4 统计基线驱动；残留缺口收窄为 range min/max、无权 predictedChange 均值、bestModel 三处不感知权重 + 营销口径倒挂（Hero 仍以"3 Chronos 共识"领衔）。全周期 chronos 均值 46~59% 系早期未清洗窗口所致（30 天窗口实为 6.2~8.8%），修订记录已附原文。产出 [`docs/IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md)：5 个工程批（1 公开活水端点+Hero 假数据换真 beef_carcass_us+口径对齐 / 2 公开预测档案页（含私有序列白名单安全断言）/ 3 共识残留缺口收口 / 4 ai/predict 硬编码修正 / 5 周导入 runbook）+ 3 决策项（watchlist UI、dashboard KPI 卡、运营动作），每批附文件:行锚点、验收口径与门禁；发现 Hero 样本价为硬编码假数据（Hero.tsx:122-126）而真实日更数据在库——批 1 即"活水证据"。
