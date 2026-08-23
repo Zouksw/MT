@@ -174,7 +174,9 @@ describe("Signals Routes (Integration)", () => {
 			expect(["up", "down", "flat"]).toContain(res.body.data.direction);
 			expect(res.body.data).toHaveProperty("confidence");
 			expect(res.body.data).toHaveProperty("individualForecasts");
-			expect(res.body.data.individualForecasts).toHaveLength(3);
+			// Consensus pool = 7 models (round-122 batch 3: 3 chronos + 4
+			// statistical baselines — chronos-only defeated the elimination bar).
+			expect(res.body.data.individualForecasts).toHaveLength(7);
 		});
 
 		// REGRESSION (round-67): brl_usd has a multi-source conflict —

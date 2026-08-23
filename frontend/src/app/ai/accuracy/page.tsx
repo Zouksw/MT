@@ -113,7 +113,10 @@ function MapeBadge({ mape, verifiedCount = 0 }: { mape: number | null; verifiedC
  * figures, not a live leaderboard. Mirrors the SnapshotBanner honesty pattern.
  */
 function AccuracyTransitionBanner({ models }: { models: ModelWithBacktest[] }) {
-	const primaryModels = models.filter((m) => m.isPrimary ?? isPrimaryModel(m.modelId));
+	// Family split by id prefix (pretrained vs statistical), NOT backend
+	// isPrimary — that flag became consensus-pool membership in round-122
+	// batch 3 (pool now includes the statistical baselines).
+	const primaryModels = models.filter((m) => isPrimaryModel(m.modelId));
 	// Show only when at least one primary model is below the sample floor —
 	// once all primaries have accumulated enough verified rows this banner
 	// disappears on its own (no manual cleanup needed).
@@ -172,8 +175,9 @@ function EnsembleComparisonCard({ models }: { models: ModelWithBacktest[] }) {
 			(m) =>
 				m.avgMape !== null && m.avgMape !== undefined && m.verifiedCount >= MIN_VERIFIED_SAMPLE,
 		);
-		const primaries = valid.filter((m) => m.isPrimary ?? isPrimaryModel(m.modelId));
-		const baselines = valid.filter((m) => !(m.isPrimary ?? isPrimaryModel(m.modelId)));
+		// Family split by id prefix (pretrained vs statistical) — see banner note.
+		const primaries = valid.filter((m) => isPrimaryModel(m.modelId));
+		const baselines = valid.filter((m) => !isPrimaryModel(m.modelId));
 		if (primaries.length === 0 || baselines.length === 0) {
 			return { primaryAvg: null, baselineAvg: null, ratio: null };
 		}
@@ -236,10 +240,10 @@ const columns = [
 		title: "Model",
 		dataIndex: "displayName" as const,
 		render: (_value: unknown, record: ModelWithBacktest) => {
-			// isPrimary may be undefined for older API responses; fall back to
-			// the modelId-prefix classification so the role badge is always
-			// correct regardless of which fields the backend returned.
-			const primary = record.isPrimary ?? isPrimaryModel(record.modelId);
+			// Role badge = family by id prefix (pretrained vs statistical).
+			// Backend isPrimary is consensus-pool membership since round-122
+			// batch 3 and no longer equals the pretrained family.
+			const primary = isPrimaryModel(record.modelId);
 			return (
 				<div className="flex flex-col gap-1">
 					<Link

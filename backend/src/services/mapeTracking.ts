@@ -953,8 +953,9 @@ async function computeAllModelAccuracy(commodityId: string | undefined, days: nu
 	const primary = new Set(getAllModels());
 	// Order matters: primary (chronos) first, then baselines — matches the
 	// MODEL_NAME_MAP grouping and the primary-vs-baseline visual split on the
-	// accuracy page.
-	const models = [...getAllModels(), ...BASELINE_MODELS];
+	// accuracy page. Since round-122 batch 3 the baselines also sit in the
+	// primary pool, so filter the overlap to avoid double-counted rows.
+	const models = [...getAllModels(), ...BASELINE_MODELS.filter((m) => !primary.has(m))];
 
 	const results = await Promise.all(
 		models.map(async (modelId) => {

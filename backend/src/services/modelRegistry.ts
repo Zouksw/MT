@@ -9,10 +9,10 @@
  * Two concerns live here:
  *
  * 1. Curated tiers (static, semantic):
- *    - ALL_MODELS: the primary consensus ensemble (3 Chronos T5 sizes —
- *      capacity diversity for the weighted vote).
- *    - BASELINE_MODELS: classical statistical baselines reported on the
- *      /ai accuracy page for comparison, NOT part of the consensus vote.
+ *    - ALL_MODELS: the consensus pool (3 Chronos T5 sizes + 4 statistical
+ *      baselines — quality-weighted vote, worse-than-naive eliminated).
+ *    - BASELINE_MODELS: the statistical family, for the /ai accuracy
+ *      page's primary-vs-baseline split (members also vote in ALL_MODELS).
  *
  * 2. Runtime acceptance list (synced): which model ids on-demand /predict
  *    requests may call. inference-service GET /models is authoritative;
@@ -22,13 +22,31 @@
  *    inference service (7 curated vs 9 callable ids).
  */
 
-// PRIMARY consensus ensemble = 3 Chronos T5 sizes (capacity diversity).
-// The multi-size ensemble votes via the weighted consensus pipeline:
-// chronos_base (most accurate) weighs more when its MAPE is lower.
-export const ALL_MODELS = ["chronos_tiny", "chronos_mini", "chronos_base"] as const;
+// PRIMARY consensus pool (round-122 batch 3): 3 Chronos T5 sizes + the 4
+// statistical baselines. Until 2026-08-23 this was chronos-only — which
+// silently defeated the elimination bar: all three chronos variants verify
+// worse than naive in the current 30d window, so resolveModelWeights zeroed
+// every voter and fell back to EQUAL weights (the "documented edge" was the
+// production default). With the baselines in the pool the quality machinery
+// actually bites — chronos keeps its vote only where its verified MAPE earns
+// one, and the baselines carry the vote where they verify better (the
+// current window). The vote stays quality-weighted (30d median MAPE,
+// round-115); worse-than-naive models are eliminated (round-110).
+// stl_forecaster stays excluded (B3: no fresh evidence, 3-10x worse
+// history); sarimax stays excluded (zero verified history, never scheduled).
+export const ALL_MODELS = [
+	"chronos_tiny",
+	"chronos_mini",
+	"chronos_base",
+	"naive_forecaster",
+	"arima",
+	"holtwinters",
+	"exponential_smoothing",
+] as const;
 
-// BASELINE models — NOT part of the main consensus, but reported on the /ai
-// accuracy page so users can see chronos vs classical-method performance.
+// BASELINE models — the statistical family. Since round-122 batch 3 these
+// are ALSO part of the consensus pool (see ALL_MODELS); this constant keeps
+// its second role: the primary-vs-baseline split on the /ai accuracy page.
 // naive_forecaster is the standard "dumb baseline" any real model must beat.
 // stl_forecaster removed 2026-08-15 (B3): its verified pool froze 2026-07-26
 // when stat models left background scheduling, the post-fix forecaster has

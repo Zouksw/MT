@@ -56,15 +56,27 @@ describe("Price Forecast Engine", () => {
 	});
 
 	describe("getAllModels", () => {
-		it("returns the 3 chronos ensemble variants (primary consensus)", () => {
+		it("returns the 7-model consensus pool (3 chronos + 4 statistical baselines)", () => {
 			const models = getAllModels();
-			// Primary consensus = 3 Chronos T5 sizes (capacity-diversity ensemble).
-			// Statistical models moved to BASELINE_MODELS (not in the main vote).
-			// This guards against accidental reversion to the old 5-statistical setup.
+			// round-122 batch 3: the pool was chronos-only, which silently
+			// defeated the elimination bar (all 3 chronos verified worse than
+			// naive → every weight 0 → equal-weight fallback). With baselines
+			// in the pool the quality machinery bites. stl (B3) and sarimax
+			// (zero verified history) stay excluded.
 			expect(models).toEqual(
-				expect.arrayContaining(["chronos_tiny", "chronos_mini", "chronos_base"]),
+				expect.arrayContaining([
+					"chronos_tiny",
+					"chronos_mini",
+					"chronos_base",
+					"naive_forecaster",
+					"arima",
+					"holtwinters",
+					"exponential_smoothing",
+				]),
 			);
-			expect(models).toHaveLength(3);
+			expect(models).toHaveLength(7);
+			expect(models).not.toContain("stl_forecaster");
+			expect(models).not.toContain("sarimax");
 			expect(models).not.toContain("timer_xl");
 			expect(models).not.toContain("sundial");
 		});

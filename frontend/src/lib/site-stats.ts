@@ -8,14 +8,17 @@
  *
  * Numbers reflect the real backend state as of 2026-08-23:
  *  - 9 forecast model ids in the engine (6 statistical + 3 Chronos T5
- *    variants) — all run on every consensus request and are reported
- *    per-model. The consensus VOTE is quality-weighted by verified 30-day
- *    median MAPE, and models verified strictly worse than the naive
- *    baseline are eliminated from the vote entirely (backend
- *    modelQuality.ts, round-110/115). In the current window the statistical
- *    baselines carry the vote; the Chronos variants still run alongside.
- *    Marketing must say "9-model engine, quality-weighted, MAPE-verified",
- *    never "3 Chronos models form the consensus".
+ *    variants). The CONSENSUS POOL (round-122 batch 3) is 7 of them —
+ *    3 Chronos + 4 statistical baselines (naive/arima/holtwinters/
+ *    exponential_smoothing; stl excluded per B3, sarimax never verified).
+ *    The vote is quality-weighted by verified 30-day median MAPE, and models
+ *    verified strictly worse than the naive baseline are eliminated from
+ *    the vote entirely (modelQuality.ts, round-110/115). Until round-122
+ *    the pool was chronos-only, which made that elimination silently no-op
+ *    (all 3 chronos eliminated -> equal-weight fallback); with baselines in
+ *    the pool the quality machinery actually bites. Marketing says
+ *    "9-model engine, quality-weighted, MAPE-verified" — never "3 Chronos
+ *    models form the consensus".
  *  - 74 beef cut taxonomies defined (BeefCutTaxonomy count).
  *  - 21 factories tracked.
  *  - 19 data source integrations shipped (17 registered in the tiered

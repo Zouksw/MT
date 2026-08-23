@@ -8,11 +8,15 @@
  * when the product was repositioned to an information/analysis platform.
  *
  * Forecast logic:
- * - direction: up if models predict >+1% on average, down if <-1%, else flat
- * - confidence = agreement ratio blended with predicted magnitude, in [0,1]
- * - predictedPrice / range = median of available models' end-of-horizon values;
- *   range = [min, max] across models (robust to outlier models)
+ * - direction: quality-weighted vote (a direction backed by the best models
+ *   wins even if outvoted in headcount); up if >+1%, down if <-1%, else flat
+ * - confidence = weighted agreement ratio blended with predicted magnitude, in [0,1]
+ * - predictedPrice = weighted median of available models' end-of-horizon values
+ * - predictedChange = quality-weighted mean of the models' predicted changes
+ * - range = [min, max] across VOTING models (weight > 0; eliminated models
+ *   don't stretch the consensus range — round-122 batch 3)
  * - support / resistance = price floor / ceiling implied by the forecast range
+ * - bestModel = highest quality weight (tie-break: interval confidence)
  *
  * Uses Promise.allSettled for parallel execution — failed models don't block.
  */
@@ -274,13 +278,24 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 
 	// Consensus predicted price = WEIGHTED median (robust to outliers AND
 	// quality-aware). Falls back to plain median when weights are equal.
-	const predictedPrices = availableForecasts.map((f) => f.predictedPrice);
 	const consensusPrice = weightedMedian(
 		availableForecasts.map((f) => ({
 			price: f.predictedPrice,
 			weight: qualityWeights.get(f.modelId) ?? 1 / availableCount,
 		})),
 	);
+
+	// Forecast range = min/max across VOTING models only (round-122 batch 3).
+	// Eliminated models (weight 0, e.g. worse-than-naive) still appear in
+	// individualForecasts, but must not stretch the consensus range with
+	// predictions the quality machinery has already rejected. When nothing is
+	// eliminated (or the equal-weight fallback is active) this is every
+	// available model — the previous behavior.
+	const votingForecasts = availableForecasts.filter(
+		(f) => (qualityWeights.get(f.modelId) ?? 0) > 0,
+	);
+	const rangePool = votingForecasts.length > 0 ? votingForecasts : availableForecasts;
+	const predictedPrices = rangePool.map((f) => f.predictedPrice);
 
 	// Forecast range = min/max across models (shows model disagreement spread)
 	const rangeLower = Math.min(...predictedPrices);
@@ -306,14 +321,29 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 			)
 		: null;
 
+	// Consensus predicted change = WEIGHTED mean (round-122 batch 3). The old
+	// unweighted mean let eliminated models drag the headline change; the
+	// vote and median are already quality-weighted, so the change should be
+	// too. Falls back to the plain mean if weights somehow sum to 0.
+	const weightOf = (f: ModelForecast) => qualityWeights.get(f.modelId) ?? 0;
+	const totalWeight = availableForecasts.reduce((s, f) => s + weightOf(f), 0);
 	const predictedChange =
-		availableForecasts.reduce((sum, f) => sum + f.predictedChange, 0) / availableCount;
+		totalWeight > 0
+			? availableForecasts.reduce((sum, f) => sum + weightOf(f) * f.predictedChange, 0) /
+				totalWeight
+			: availableForecasts.reduce((sum, f) => sum + f.predictedChange, 0) / availableCount;
 
-	// Best model = highest confidence among available models
+	// Best model = highest quality WEIGHT among available models (round-122
+	// batch 3), tie-broken by interval-derived confidence. "Best" previously
+	// meant narrowest prediction interval — which can crown a low-MAPE-weight
+	// model; best must mean "most verified", with confidence as the tiebreak.
 	let bestModel: string | undefined;
+	let bestWeight = -1;
 	let bestConfidence = -1;
 	for (const f of availableForecasts) {
-		if (f.confidence > bestConfidence) {
+		const w = weightOf(f);
+		if (w > bestWeight || (w === bestWeight && f.confidence > bestConfidence)) {
+			bestWeight = w;
 			bestConfidence = f.confidence;
 			bestModel = f.modelId;
 		}

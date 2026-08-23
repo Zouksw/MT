@@ -348,25 +348,41 @@ describe("MAPE Tracking (real DB)", () => {
 
 		// REGRESSION: getAllModelAccuracy must forward last7dMape/last30dMape/
 		// lastVerifiedAt (previously dropped at this boundary) and tag each row
-		// with isPrimary so the comparison page can split the chronos ensemble
-		// (primary consensus) from statistical baselines. chronos_* → true,
-		// everything else → false.
+		// with isPrimary = consensus-pool membership. Since round-122 batch 3
+		// the pool is 3 chronos + 4 statistical baselines (chronos-only made
+		// the elimination bar no-op), so isPrimary no longer equals the
+		// chronos prefix — the frontend's pretrained-vs-statistical split
+		// uses the id prefix instead.
 		it("forwards freshness fields + isPrimary role tag per model", async () => {
 			const all = await getAllModelAccuracy();
 			expect(all.length).toBeGreaterThan(0);
+			const POOL = new Set([
+				"chronos_tiny",
+				"chronos_mini",
+				"chronos_base",
+				"naive_forecaster",
+				"arima",
+				"holtwinters",
+				"exponential_smoothing",
+			]);
 			for (const row of all) {
 				expect(row).toHaveProperty("last7dMape");
 				expect(row).toHaveProperty("last30dMape");
 				expect(row).toHaveProperty("lastVerifiedAt");
 				expect(row).toHaveProperty("isPrimary");
 				expect(typeof row.isPrimary).toBe("boolean");
-				// chronos ensemble is the primary consensus; stats are baselines.
-				expect(row.isPrimary).toBe(row.modelId.startsWith("chronos_"));
+				// isPrimary = the 7-model consensus pool (see modelRegistry).
+				expect(row.isPrimary).toBe(POOL.has(row.modelId));
 			}
-			// The primary chronos models must be present and tagged true.
+			// The chronos models must be present and tagged true.
 			const chronos = all.filter((r) => r.modelId.startsWith("chronos_"));
 			expect(chronos.length).toBeGreaterThan(0);
 			expect(chronos.every((r) => r.isPrimary)).toBe(true);
+			// The statistical baselines must ALSO be primary now (they vote).
+			for (const id of ["naive_forecaster", "arima", "holtwinters", "exponential_smoothing"]) {
+				const row = all.find((r) => r.modelId === id);
+				if (row) expect(row.isPrimary).toBe(true);
+			}
 		});
 	});
 

@@ -60,11 +60,12 @@ export function headlineMape(m: {
 }
 
 /**
- * Classify a modelId as part of the primary chronos consensus vs a statistical
- * baseline. Mirrors the backend's ALL_MODELS (tradingSignals.ts:29) — chronos_*
- * is the primary set, everything else is a baseline. Falls back to false so an
- * unknown id is treated conservatively as a baseline (not awarded primary
- * status it may not have).
+ * Classify a modelId into its FAMILY: pretrained Chronos vs statistical
+ * baseline. Since round-122 batch 3 this is a family classifier for the
+ * accuracy page's ensemble-vs-baseline comparison — it is deliberately NOT
+ * the backend's isPrimary flag, which became consensus-pool membership (the
+ * pool now includes the statistical baselines). Falls back to false so an
+ * unknown id is treated conservatively as a baseline.
  */
 export function isPrimaryModel(modelId: string): boolean {
 	return modelId.startsWith("chronos_");

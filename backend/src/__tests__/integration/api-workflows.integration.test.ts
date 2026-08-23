@@ -308,9 +308,10 @@ describe("API Workflow Integration Tests", () => {
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			// Primary consensus = 3 chronos variants (was 5 statistical models).
-			expect(res.body.data.models.length).toBe(3);
-			expect(res.body.data.count).toBe(3);
+			// Consensus pool = 3 chronos + 4 statistical baselines (round-122
+			// batch 3 — chronos-only silently defeated the elimination bar).
+			expect(res.body.data.models.length).toBe(7);
+			expect(res.body.data.count).toBe(7);
 		});
 
 		test("should generate signal for commodity (with fallback price)", async () => {
@@ -325,8 +326,8 @@ describe("API Workflow Integration Tests", () => {
 			expect(["up", "down", "flat"]).toContain(res.body.data.direction);
 			expect(res.body.data).toHaveProperty("confidence");
 			expect(res.body.data).toHaveProperty("individualForecasts");
-			// Primary consensus = 3 chronos variants (was 5 statistical models).
-			expect(res.body.data.individualForecasts).toHaveLength(3);
+			// Consensus pool = 7 models (round-122 batch 3).
+			expect(res.body.data.individualForecasts).toHaveLength(7);
 		});
 
 		test("should get model accuracy data", async () => {
