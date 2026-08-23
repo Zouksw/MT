@@ -44,7 +44,7 @@ const AlertDistributionChart = dynamic(
 // to re-render (and re-run useAnimatedCounter) on every parent render. These
 // icons are static, so hoisting them to module scope keeps their reference
 // stable across renders.
-const CARCASS_ICON = <Globe className="size-5" />;
+const BEEF_ICON = <Globe className="size-5" />;
 const DOMESTIC_ICON = <Beef className="size-5" />;
 const FACTORY_ICON = <Warehouse className="size-5" />;
 const RECORDS_ICON = <TrendingUp className="size-5" />;
@@ -128,10 +128,12 @@ function AIPredictionCard({
 
 export default function DashboardPage() {
 	const { stats, loading, error, manualRetry } = useDashboardStats();
-	// US carcass daily card (IMPROVEMENT-PLAN D2) — the platform's only
-	// daily-updating beef series (FRED beef_carcass_us), same public source
-	// as the landing Hero. Replaces the frozen 04-30 imported-average card.
-	const { live: carcass, loading: highlightsLoading } = usePublicHighlights();
+	// Global beef benchmark card (IMPROVEMENT-PLAN D2) — the platform's only
+	// live beef series (FRED PBEEFUSDM, IMF global beef, monthly), same public
+	// source as the landing Hero. Replaces the frozen 04-30 imported-average
+	// card. Round-126: this slot previously rendered CBBTCUSD — Coinbase
+	// Bitcoin mislabeled as "US carcass" — before the series swap.
+	const { live: beefLive, loading: highlightsLoading } = usePublicHighlights();
 	const { status, user: authUser, logout } = useAuth();
 	const isMobile = useIsMobile();
 	// Session truth from AuthContext (cookie-verified on mount). The old
@@ -149,19 +151,19 @@ export default function DashboardPage() {
 	// Memoize the trend objects passed to StatCard — they depend only on the
 	// source trend % values, but constructing them inline in JSX creates a new
 	// object each render and defeats StatCard's React.memo shallow compare.
-	// Carcass value/unit shown as stored, WITHOUT a currency prefix — the
-	// series' absolute level carries KNOWN-ISSUES D4 unit doubt; the
-	// day-change % and sparkline are unit-invariant.
-	const carcassTrend = useMemo<TrendIndicator | undefined>(
+	// Beef value/unit shown as stored, WITHOUT a currency prefix — the series
+	// is IMF global beef in US cents/lb (monthly); the observation-over-
+	// observation % and sparkline are unit-invariant.
+	const beefTrend = useMemo<TrendIndicator | undefined>(
 		() =>
-			carcass?.dayChangePct == null
+			beefLive?.dayChangePct == null
 				? undefined
-				: { value: Math.abs(carcass.dayChangePct), isPositive: carcass.dayChangePct >= 0 },
-		[carcass?.dayChangePct],
+				: { value: Math.abs(beefLive.dayChangePct), isPositive: beefLive.dayChangePct >= 0 },
+		[beefLive?.dayChangePct],
 	);
-	const carcassSpark = useMemo(
-		() => carcass?.series?.map((p) => p.close).slice(-30) ?? [],
-		[carcass?.series],
+	const beefSpark = useMemo(
+		() => beefLive?.series?.map((p) => p.close).slice(-30) ?? [],
+		[beefLive?.series],
 	);
 	const domesticTrend = useMemo<TrendIndicator | undefined>(
 		() =>
@@ -243,7 +245,7 @@ export default function DashboardPage() {
 					</div>
 
 					{/* KPI HERO — three headline cards per PRODUCT-SPEC §5.1:
-					 * US 胴体价（日更，FRED beef_carcass_us — D2 换掉长期冻结的进口均价种子值）/
+					 * 全球牛肉价（IMF 月度基准，FRED PBEEFUSDM — D2 换掉长期冻结的进口均价种子值）/
 					 * 国产均价 (domestic avg) / AI 7日预测.
 					 * Each surfaces an honest "--" when its data source is empty rather
 					 * than fabricating a number. The AI card's directional color comes
@@ -254,16 +256,16 @@ export default function DashboardPage() {
 						aria-atomic="true"
 					>
 						<StatCard
-							title={`US 胴体价${carcass?.latest ? ` · ${carcass.latest.date.slice(5, 10).replace("-", "/")}` : ""}`}
-							value={carcass?.latest?.close ?? "--"}
-							suffix={carcass?.unit}
-							icon={CARCASS_ICON}
+							title={`全球牛肉价${beefLive?.latest ? ` · ${beefLive.latest.date.slice(5, 10).replace("-", "/")}` : ""}`}
+							value={beefLive?.latest?.close ?? "--"}
+							suffix={beefLive?.unit}
+							icon={BEEF_ICON}
 							variant="primary"
 							loading={loading || highlightsLoading}
-							// Day-over-day % from the last two daily closes —
-							// unit-invariant, so it stays honest under D4.
-							trend={carcassTrend}
-							sparklineData={carcassSpark.length >= 2 ? carcassSpark : undefined}
+							// Observation-over-observation % (monthly series:
+							// month-over-month) — unit-invariant, honest.
+							trend={beefTrend}
+							sparklineData={beefSpark.length >= 2 ? beefSpark : undefined}
 						/>
 						<StatCard
 							title="国产均价 (Domestic)"

@@ -7,9 +7,9 @@ import { apiFetch } from "@/lib/apiFetch";
  * Public market highlights for the landing page's live-data strip
  * (IMPROVEMENT-PLAN batch 1). Backed by GET /api/market/public/highlights —
  * an UNAUTHENTICATED endpoint that only serves whitelisted public macro
- * series (currently the US beef carcass price, the platform's only
- * daily-updating beef series). The landing Hero renders these instead of
- * fabricated sample prices.
+ * series (currently the IMF global beef benchmark, FRED PBEEFUSDM, monthly —
+ * the platform's only live beef series). The landing Hero renders these
+ * instead of fabricated sample prices.
  */
 
 export interface HighlightPoint {

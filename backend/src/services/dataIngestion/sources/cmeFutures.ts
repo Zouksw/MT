@@ -158,10 +158,21 @@ export const FUTURES: Record<
 	},
 };
 
-/** FRED series IDs that provide daily data via public CSV download (no API key) */
+/** FRED series IDs that provide data via public CSV download (no API key) */
 const FRED_DAILY: Record<
 	string,
-	{ seriesId: string; slug: string; name: string; category: string; unit: string }
+	{
+		seriesId: string;
+		slug: string;
+		name: string;
+		category: string;
+		unit: string;
+		/** Monthly series (IMF via FRED) need a wider window — with the default
+		 *  7-day slice the one observation per month almost never lands in it. */
+		interval?: "daily" | "monthly";
+		/** Lookback window in days (default 7). */
+		windowDays?: number;
+	}
 > = {
 	CL: {
 		seriesId: "DCOILWTICO",
@@ -177,13 +188,20 @@ const FRED_DAILY: Record<
 		category: "energy",
 		unit: "USD/MMBtu",
 	},
-	// Beef carcass price (daily, USDA-reported via FRED)
+	// Global beef benchmark — IMF Primary Commodity Prices via FRED, monthly,
+	// US cents per pound. HISTORY: this slot was wired to CBBTCUSD from the
+	// first seed — CBBTCUSD is Coinbase BITCOIN ("CB-BTC-USD"), not a beef
+	// series — so 11+ years of BTC closes were stored under beef_carcass_us
+	// and shown as "US Beef Carcass" until the round-126 purge (KNOWN-ISSUES
+	// D4 resolution). Slug kept for continuity; name/unit tell the truth.
 	BEEF: {
-		seriesId: "CBBTCUSD",
+		seriesId: "PBEEFUSDM",
 		slug: "beef_carcass_us",
-		name: "US Beef Carcass Price (FRED)",
+		name: "Global Beef Price (IMF via FRED)",
 		category: "beef_cuts",
-		unit: "USD/cwt",
+		unit: "USC/lb",
+		interval: "monthly",
+		windowDays: 62,
 	},
 	// Exchange rates (daily, FRED DEX series — no API key needed)
 	USDCNY: {
@@ -220,13 +238,13 @@ async function fetchFredDaily(
 	config: (typeof FRED_DAILY)[string],
 ): Promise<{ inserted: number; updated: number }> {
 	const start = new Date();
-	start.setDate(start.getDate() - 7);
+	start.setDate(start.getDate() - (config.windowDays ?? 7));
 	// Shared FRED CSV implementation (round-105) — this used to be a private
 	// near-duplicate of worldBankPrices.fetchFredMonthly.
 	return fetchFredCsvSeries({
 		config,
 		start,
-		interval: "daily",
+		interval: config.interval ?? "daily",
 		commoditySource: "fred",
 		timeoutMs: 10000,
 		logPrefix: "[CME/FRED]",

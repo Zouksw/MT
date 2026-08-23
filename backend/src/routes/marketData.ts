@@ -68,16 +68,28 @@ router.get(
 							status: "no_data" as const,
 						};
 					}
-					const { prices } = await getPriceHistory(slug, {
+					// Interval-agnostic history: daily first, fall back to
+					// monthly (the IMF beef benchmark is monthly — round-126;
+					// a daily-only query returned an empty series and nulled
+					// the change %).
+					let { prices } = await getPriceHistory(slug, {
 						interval: "daily",
 						limit: 30,
 					});
-					// Decimal(…) → number for JSON; series stays chronological.
+					if (prices.length === 0) {
+						({ prices } = await getPriceHistory(slug, {
+							interval: "monthly",
+							limit: 30,
+						}));
+					}
+					// Decimal(…) → number for JSON; round to 2dp for display
+					// (the IMF series carries 6+ decimals from period
+					// averaging); series stays chronological.
 					const series = prices
 						.filter((p) => p.close != null)
-						.map((p) => ({ date: p.date, close: Number(p.close) }));
+						.map((p) => ({ date: p.date, close: Math.round(Number(p.close) * 100) / 100 }));
 					const prev = series.length >= 2 ? series[series.length - 2].close : null;
-					const close = Number(price.close);
+					const close = Math.round(Number(price.close) * 100) / 100;
 					const dayChangePct =
 						prev != null && prev > 0 ? Math.round(((close - prev) / prev) * 10000) / 100 : null;
 					return {
