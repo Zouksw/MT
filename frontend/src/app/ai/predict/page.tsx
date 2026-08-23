@@ -2,7 +2,7 @@
 
 import { ChevronRight, Zap } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -43,6 +43,16 @@ interface VisualizationResult {
 	algorithm: string;
 }
 
+/** Engine model row from GET /api/inference/models (single source of truth). */
+interface EngineModel {
+	id: string;
+	name?: string;
+	type?: string;
+	role?: string;
+	description?: string;
+	available?: boolean;
+}
+
 export default function AIPredictPage() {
 	const [loading, setLoading] = useState(false);
 	const [result, setResult] = useState<VisualizationResult | null>(null);
@@ -51,11 +61,35 @@ export default function AIPredictPage() {
 	const isMobile = useIsMobile();
 	const toast = useToast();
 
+	// Model list is fetched from the engine (via /api/inference/models) instead
+	// of a hardcoded copy — the old static list had already drifted from the
+	// engine's callable ids (TECH-DEBT §十四). On fetch failure the select is
+	// disabled with an honest notice; a static fallback would re-introduce the
+	// drift this batch removes (and a prediction would fail anyway if the
+	// engine is unreachable).
+	const [engineModels, setEngineModels] = useState<EngineModel[]>([]);
+	const [modelsUnavailable, setModelsUnavailable] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+		apiFetch<{ models?: EngineModel[] }>("/api/inference/models")
+			.then((d) => {
+				if (!cancelled) setEngineModels(d.models ?? []);
+			})
+			.catch(() => {
+				if (!cancelled) setModelsUnavailable(true);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
 	// Form state
-	const [formTimeseries, setFormTimeseries] = useState("root.test2");
-	// Default to the smallest Chronos variant — the primary prediction engine
-	// per the chronos-ensemble architecture. Traditional statistical models
-	// remain selectable below as baselines for comparison.
+	// Default series = the platform's only daily-updating beef series (slug is
+	// accepted; UUID works too). The old default "root.test2" matched no
+	// commodity, so the prefilled form always failed with a 400.
+	const [formTimeseries, setFormTimeseries] = useState("beef_carcass_us");
+	// Default model: chronos_tiny when the engine lists it, else first entry.
 	const [formModel, setFormModel] = useState("chronos_tiny");
 	const [formHorizon, setFormHorizon] = useState("10");
 	const [formStartTime, setFormStartTime] = useState("");
@@ -64,64 +98,23 @@ export default function AIPredictPage() {
 	// Validation state
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
-	// Chronos variants are the primary prediction engine (foundation model,
-	// zero-shot). Traditional statistical models are retained as selectable
-	// baselines so users can A/B compare on the same series.
-	const models = [
-		{
-			id: "chronos_tiny",
-			name: "Chronos-T5 Tiny",
-			type: "Primary",
-			description: "Foundation model (zero-shot, 32MB)",
-		},
-		{
-			id: "chronos_mini",
-			name: "Chronos-T5 Mini",
-			type: "Primary",
-			description: "Foundation model (zero-shot, ~80MB)",
-		},
-		{
-			id: "chronos_base",
-			name: "Chronos-T5 Base",
-			type: "Primary",
-			description: "Foundation model (zero-shot, ~200MB)",
-		},
-		{
-			id: "naive_forecaster",
-			name: "Naive Forecaster",
-			type: "Baseline",
-			description: "Dumb baseline — last observed value",
-		},
-		{
-			id: "arima",
-			name: "ARIMA",
-			type: "Baseline",
-			description: "Auto-Regressive Integrated Moving Average",
-		},
-		{
-			id: "holtwinters",
-			name: "Holt-Winters",
-			type: "Baseline",
-			description: "Triple Exponential Smoothing",
-		},
-		{
-			id: "exponential_smoothing",
-			name: "Exponential Smoothing",
-			type: "Baseline",
-			description: "Simple Exponential Smoothing",
-		},
-		{
-			id: "stl_forecaster",
-			name: "STL Forecaster",
-			type: "Baseline",
-			description: "STL Decomposition Forecast",
-		},
-	];
+	const selectableModels = useMemo(
+		() => engineModels.filter((m) => m.available !== false),
+		[engineModels],
+	);
 
-	const modelOptions = models.map((model) => ({
+	const modelOptions = selectableModels.map((model) => ({
 		value: model.id,
-		label: `${model.name} — ${model.type} - ${model.description}`,
+		label: `${model.name ?? model.id} — ${model.type ?? "model"}${model.description ? ` - ${model.description}` : ""}`,
 	}));
+
+	// Keep the selected model valid against the fetched list.
+	useEffect(() => {
+		if (selectableModels.length === 0) return;
+		if (!selectableModels.some((m) => m.id === formModel)) {
+			setFormModel(selectableModels[0].id);
+		}
+	}, [selectableModels, formModel]);
 
 	const validate = (): boolean => {
 		const newErrors: Record<string, string> = {};
@@ -247,21 +240,29 @@ export default function AIPredictPage() {
 							<div className="space-y-4">
 								<Input
 									label="Time Series Path"
-									placeholder="e.g., root.test2"
+									placeholder="e.g., beef_carcass_us"
 									value={formTimeseries}
 									onChange={(e) => setFormTimeseries(e.target.value)}
 									error={errors.timeseries}
+									helperText="Commodity slug or UUID"
 									fullWidth
 								/>
 
-								<Select
-									label="AI Model"
-									options={modelOptions}
-									value={formModel}
-									onChange={(val) => setFormModel(val)}
-									error={errors.model}
-									fullWidth
-								/>
+								{modelsUnavailable ? (
+									<Alert variant="warning" title="Model list unavailable">
+										Could not reach the inference engine to list callable models. Prediction would
+										fail too — retry once the service is reachable.
+									</Alert>
+								) : (
+									<Select
+										label="AI Model"
+										options={modelOptions}
+										value={formModel}
+										onChange={(val) => setFormModel(val)}
+										error={errors.model}
+										fullWidth
+									/>
+								)}
 
 								<Input
 									label="Prediction Horizon"
@@ -321,22 +322,23 @@ export default function AIPredictPage() {
 								historical time series data from PostgreSQL.
 							</p>
 							<p className="mb-2">
-								<strong className="text-foreground">Primary Engine — Chronos:</strong>
+								<strong className="text-foreground">Model engine:</strong>
 							</p>
 							<ul className="list-disc pl-4 space-y-1">
 								<li>
-									<strong className="text-foreground">Chronos-T5:</strong> Pretrained foundation
-									model for zero-shot time series forecasting
+									<strong className="text-foreground">Chronos-T5:</strong> pretrained foundation
+									model for zero-shot time series forecasting (3 sizes)
 								</li>
 								<li>
-									<strong className="text-foreground">Multi-size ensemble:</strong> Tiny / Mini /
-									Base variants vote in the weighted consensus
+									<strong className="text-foreground">Statistical baselines:</strong> Naive, ARIMA,
+									Holt-Winters, Exponential Smoothing (and more via the list above)
+								</li>
+								<li>
+									<strong className="text-foreground">Quality-weighted consensus:</strong> the
+									signal vote weighs each model by its verified MAPE; models verified worse than the
+									naive baseline are eliminated from the vote
 								</li>
 							</ul>
-							<p className="mt-2 mb-2">
-								<strong className="text-foreground">Baselines (for comparison):</strong> Naive,
-								ARIMA, Holt-Winters, Exponential Smoothing, STL.
-							</p>
 						</div>
 					</div>
 				</div>
