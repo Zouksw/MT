@@ -554,7 +554,23 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - **产品决策（建 UI or 收敛）**：watchlist 前端页面（后端 7 端点 + lib/watchlist.ts hooks 现成，唯一缺口是页面/入口——真实用户出现前建它无消费对象，暂缓）；顶栏搜索（现为 "Planned" 徽章，接线需后端搜索端点）；顶栏用户菜单（登出仅在 dashboard 页内）。
 - **孤儿端点收敛候选（65 个无前端消费，不删只登记——"不删非己所造"惯例）**：整组无消费 `/api/models`(8) / `/api/security`(3，audit 上报端点前端从未发送) / `/api/analytics`(2)；watchlists/portfolios 写路径（两组关注类后端 0 页面消费）；`/api/inference/predict/batch` 与推理服务 `POST /predict/batch`（批量能力两端闲置）；~~`/api/market/import`+`/preview`（无消费且无路由测试，双重孤立——若要保留需补测试，否则收敛候选）~~（**已删除 round-124 `d21de3a` 后续提交**：用户瘦身指令下按登记处置，连带 manualImport 服务与其 7 测试同批移除，live 404 验证；数据回填走 `/api/beef/import` 不受影响）。
 - **UI 细节缩水（spec §5 承诺 vs 实现）**：dashboard 热门部位表缺"涨跌"列（数据冻结期会全显 "—"，等数据新鲜后再补更有意义）；cut 详情展开缺置信区间可视化（现为文本 Range）；~~`/ai/predict` 模型下拉硬编码 8 项且预填测试路径 `root.test2`~~（**已解决 `283c685`，round-122 批 4**：下拉改调 `/api/inference/models`（引擎单一事实来源，不可达时诚实禁用）；预填 `root.test2`→`beef_carcass_us`——旧默认匹配不到任何 commodity，表单提交必 400）。
-- **空壳页**：`/settings/sessions`（诚实占位，需 GET/DELETE /api/auth/sessions 后端）；`/settings/notifications`（localStorage-only，需邮件系统支撑——与 SMTP 空配置同命运）。
+- ~~**空壳页**：`/settings/sessions`（诚实占位，需 GET/DELETE /api/auth/sessions 后端）；`/settings/notifications`（localStorage-only，需邮件系统支撑——与 SMTP 空配置同命运）~~（**已删除 round-124 `b53b20a`**：用户瘦身指令下按登记处置——页面承诺的功能后端不存在且无规划，留着只会教用户点到空页；settings 集线卡/快捷入口/e2e 同步移除；需要时按 git 历史重建）。
 - ~~**价值叙事注意（非工程项）**~~（**已处置 `72f180e`+`39a13cc`，round-122 批 1/3**：营销口径全面改为"9 模型引擎、质量加权共识、劣于 naive 淘汰"（Hero/FAQ/Features/about/pricing/QuickActions/site-stats）；引擎侧扩池 3→7 使淘汰线真正咬合——执行中发现更多一层事实：原池为 chronos-only，三模型全触发淘汰线后落入等权兜底，淘汰机制空转，详见 COMPETITIVE-ANALYSIS §三.3 三次修订。此条从"叙事谨慎"升级为"叙事与引擎一致"）。
 
 **验证**：backend 990+1 → **999+1 skip**（96 文件，+9）、frontend 314、inference 64；live：PATCH owner 200 / 他人 404 / 坏 slug 400 / 未认证 401，/beef/cuts 路由命中（307 经 auth middleware 非 404），pricing+plans 0 处 watchlist 文案，探测数据已清理。
+
+---
+
+## 十五、瘦身轮（round-124，2026-08-23，用户指令："体量不过于臃肿，核心功能最重要"）
+
+方法：双 Explore 全量零引用扫描（前端 111 文件 / 后端全量）+ 依赖审计 + §十四 登记项按用户瘦身指令处置。**结论：代码库已相当紧**——后端零死模块（20 路由全挂载、inac 为登记的休眠源）、前端仅 1 个死文件；臃肿主要在登记过的非核心面。三批处置（每批 tsc+全量测试+build+PM2+live+独立提交）：
+
+| 批 | 提交 | 内容 |
+|----|------|------|
+| A | `d21de3a` | 前端唯一死文件 `lib/watchlist.ts`（101 行，0 消费者含测试）；后端 5 个零调用导出（batchLatestPriceWhere/dedupeLatestByCommodity/lastNDays/formatDateYMD/getCutMapping）+ 孤儿注释；过期 e2e（整删 trading-subpages.spec 5 条不存在路由 + 3 条死 goto）；未用依赖 cross-fetch/is-core-module/js-yaml |
+| B | `8e7248b` | §十四 登记的双重孤立 `POST /api/market/import`+`/preview`（无消费+无测试）删除，连带 manualImport 服务与其 7 测试；**数据回填正路 `/api/beef/import` 不受影响**；API.md 144→142；live 404 验证 |
+| C | `b53b20a` | §十四 登记的空壳页 `/settings/sessions`+`/settings/notifications` 删除（功能后端不存在且无规划），settings 集线/快捷入口/e2e 同步 |
+
+**测试口径说明**：backend 1011+1 → **1004+1**（97 文件）——减少的 7 条全部是被删服务 manualImport 自带的测试（删除功能的测试随功能走，非覆盖回退）；frontend **317** 不变；e2e 规格 10→9。合计 **1385 全绿**。
+
+**明确不动（有登记依据或属核心/决策项）**：watchlists/portfolios 后端（D1 决策项，仅删了前端死 hooks，端点保留）；`/api/models`(8)/`/api/security`(3)/`/api/analytics`(2)（产品决策）；`/api/inference/predict/batch`（推理服务侧联动，单列）；inacData.ts（D1 源复活候选，登记休眠）；beefCutNormalizer 的 detectFieldMapping（normalizer 模块活体、有测试）；EDGE Prisma 模型 coldStorage/weeklyKill/usageRecord（牛肉产业链数据，1 引用 LIVE，删除需迁移单列轮次）。

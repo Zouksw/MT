@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-124 瘦身轮（用户指令"体量不过于臃肿，核心功能最重要"，3 提交）
+
+双路全量零引用扫描（前端 111 文件/后端全量）+ 依赖审计 + §十四 登记项按指令处置（TECH-DEBT §十五 记录）。结论：代码库已相当紧（后端 0 死模块），臃肿在登记过的非核心面。三批：
+
+- **批 A**（`d21de3a`）：删前端唯一死文件 `lib/watchlist.ts`（101 行 0 消费者）；后端 5 个零调用导出 + 孤儿注释；过期 e2e（trading-subpages.spec 整删——5 条 goto 指向不存在路由，另 3 条死 goto）；未用依赖 cross-fetch/is-core-module/js-yaml。
+- **批 B**（`8e7248b`）：删 §十四 登记的双重孤立 `POST /api/market/import`+`/preview`（无前端消费+无路由测试）连同 manualImport 服务及其 7 测试；数据回填正路 `/api/beef/import` 不受影响；API.md 144→**142** 端点；live 404 验证。
+- **批 C**（`b53b20a`）：删 §十四 登记的空壳页 `/settings/sessions`+`/settings/notifications`（承诺的功能后端不存在且无规划），settings 集线卡/快捷入口/e2e 同步。
+
+**测试口径**：backend 1011+1 → **1004+1**（97 文件；-7 为被删服务自带测试，随功能走非覆盖回退）、frontend **317**、inference 64——合计 **1385 全绿**。核心价值链（数据→推理→信号→前端）零触碰；watchlists 端点/D1 决策项/inac 休眠源/EDGE Prisma 模型全部保留并登记不动理由。
+
 ### 2026-08-23 — round-123 改进方案执行轮（5 批全落地，5 提交，测试 999+1→1011+1 / 314→317）
 
 「执行」[IMPROVEMENT-PLAN](IMPROVEMENT-PLAN.md) 全部工程批，每批 tsc+全量测试+build+PM2+live+独立提交：

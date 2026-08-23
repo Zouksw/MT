@@ -168,12 +168,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 98（2026-08-23） | **1011 pass / 1 skip** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 97（2026-08-23） | **1004 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 34（2026-08-23） | **317 pass** |
 | inference | pytest 8 | conftest.py | 4（2026-08-22） | **64 pass** |
-| frontend E2E | Playwright | playwright.config.ts | 10 specs | chromium only |
+| frontend E2E | Playwright | playwright.config.ts | 9 specs | chromium only |
 
-> 三者合计 **1392 全绿**（1011 + 317 + 64，截至 2026-08-23 round-123 执行轮实测；round-122 批 2 起后端测试强制 Redis db1，与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1385 全绿**（1004 + 317 + 64，截至 2026-08-23 round-124 瘦身轮实测；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离；round-124 删除 manualImport 服务时其 7 条测试随功能同批移除，属删功能非覆盖回退）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 

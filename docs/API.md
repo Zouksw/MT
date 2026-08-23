@@ -389,8 +389,8 @@ Error body shape:
 
 ## Known Gaps（round-120 审计登记）
 
-- `PATCH /api/auth/sessions`-style session management endpoints do **not**
-  exist (settings/sessions page is an honest placeholder).
+- Session management endpoints do **not** exist (the /settings/sessions
+  placeholder page was removed round-124 rather than kept waiting on them).
 - No `/api/billing/checkout` — billing is informational only by design.
 - ~~`/api/market/import` + `/preview`~~ removed round-124 (double-orphan:
   no frontend consumer, no route test); `/api/inference/predict/batch`
