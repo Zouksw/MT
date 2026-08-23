@@ -96,7 +96,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | 行情 > 价格总览 | `/dashboard` | **重定位**: 库存计数 → 实时牛肉价格看板 |
 | 行情 > 进口牛肉 | `/beef` | 重命名/聚焦为进口牛肉行情 |
 | 行情 > 国产牛肉 | `/beef` (筛选) | 按产地拆分视图 |
-| 行情 > 牛副产品 | `/beef/cuts` | 按部位分类 |
+| 行情 > 牛副产品 | `/beef/cuts` | 按部位分类（round-120 起该 URL 为到 `/beef` primal 分组看板的重定向——功能实现于 /beef 页内） |
 | 分析 > 价格走势 | `/trading` | 保留 (ProfessionalChart 是核心资产) |
 | 分析 > 产地对比 | `/dashboard/analysis` | 聚焦多产地价格对比 |
 | 分析 > 相关性 | `/dashboard/analysis` (correlation) | 已有逻辑,提取独立页 |
@@ -188,10 +188,10 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（chronos MAPE 1.7% 显著优于 stat 3.6%，round-82 accuracy 页已强化展示） |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
-| 资讯数据 | ✅ MarketNews model + route + service + 5 页 (2026-07-19) | 已建（5 条 seed）；⚠️ 外部 RSS 抓取源未接入（M3 待办） |
-| 实时更新 | ✅ SWR 轮询已开 (30s/15s/60s) + socket.io WebSocket | ✅ 已具备（`app.ts` SocketIOServer + `anomalies.ts` emit + `alertNotifications.ts` WS 通道） |
+| 资讯数据 | ✅ MarketNews model + route + service + 4 路由页 + dashboard 资讯条 | ✅ 已接入（M3/round-118）：Beef Central + USDA Federal Register RSS 每 6h 摄取入 market_news，sourceUrl 幂等去重——当前唯一自动更新的外部内容通道 |
+| 实时更新 | SWR 轮询 (30s/15s/60s) | ✅ 轮询已具备。~~socket.io WebSocket~~ **已移除（round-112 复核 2026-08-23）**：Socket.IO 服务长期零消费者被整体摘除（`app.ts` 注释、CHANGELOG、TECH-DEBT TD 有据），实时能力现状 = SWR 轮询 only；如需 WS 需重新立项 |
 
-**结论（2026-08-09 核实）**: M1+M2 阶段（阶段 0-3）**全部已实现**——beef-only 叙事、6 区 IA、dashboard hero 重构、AI 预测融入行情行、WebSocket 实时均已落地。平台地基完成度 **>90%**。唯一硬阻塞是 D1 数据流（网络封锁），可通过 CSV 手动导入绕行。剩余 M3 待办：资讯 RSS 源接入 + 品牌完善。
+**结论（2026-08-09 核实，2026-08-23 round-120 修订）**: M1+M2 阶段（阶段 0-3）**已实现**——beef-only 叙事、6 区 IA、dashboard hero 重构、AI 预测融入行情行均已落地；~~WebSocket 实时~~（round-112 移除，见上表）。平台地基完成度 **>90%**。唯一硬阻塞是 D1 数据流（网络封锁/key 缺失），可通过 CSV 手动导入绕行。M3 资讯 RSS 已接入（round-118），品牌完善见 M3 清单。
 
 ---
 

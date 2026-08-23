@@ -534,3 +534,27 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - ~~**产品决策**：注册默认 `role:"EDITOR"`~~ **已处置（round-119 决策执行，commit `1073acc`，2026-08-22）**：注册默认改 **VIEWER**（EDITOR 的资讯发布权不再随注册发放，编辑角色由管理员指派）；AI 分层闸改 **env 门控 `AI_TIER_ENFORCED`（默认关）**——PRODUCT-SPEC §九 明确付费墙/AI 分层"留待用户基数到"，且当前无任何升级通道，默认强制会把每个新注册者锁死在核心价值链外；闸结构保留、真实付费层落地时一个环境变量即可武装。同批清理生产库 **1796 个集成测试残留用户**（concurrent-N@example.com / idor-*.x.com，0 真实注册者）+ 1798 sessions + 1 残留 dataset（备份 `backups/round119/test_residue_*`），用户表回归 seed 三人组。live 实证：注册→VIEWER、AI 端点对 VIEWER 200、POST /api/news 403。+3 测试（974+1 skip）。
 - ~~**设计权衡（单列轮次）**~~ **已处置（round-119 权衡批，commit `739d375`，2026-08-22，用户授权按"最合逻辑+尽量简化"决断）**：runAndCachePrediction 增加 **in-flight 去重**（按缓存键共享一次计算 + 一次 logPrediction——并发 miss 曾双写 prediction_logs 污染 MAPE 分母；键与 Redis 缓存一致故忽略 confidenceLevel，与既有缓存语义相同）；推理客户端**超时不再重试**（AbortError 直接 503——超时=服务已接连接但饱和，重试双倍等待+加倍负载；ECONNREFUSED 类快速失败保留单次廉价重试）。**负缓存明确不做**：需引入失败标记缓存族 + 读路径形状映射，复杂度大于收益（去重+免重试已限界，失败不记忆、下一调用方即重试）。同批对齐 **billing/pricing 文案**与开放阶段现实（"Free=3 AI models / Pro=All 7 / Paid tiers unlock AI" 均为失实口径 → 明示"当前对所有注册用户开放"，过期计数 7 修为 9）。
 - ~~**低优先加固**~~ **已处置（同 commit `739d375`）**：datasets import valueColumns 上限 50（超出 400，防列数扇出）；alerts rules 的 timeseriesId 验归属/存在（非属主与不存在同 404，沿 round-119 属主化惯例）；`GET /api/market/sources` 剥离 scraper 原始错误串（cacheRoute 全用户共享缓存下按角色分支不可行；status 枚举已是故障信号，细节走 PM2 日志；前端 data-sources 板对应渲染块同删）；useDashboardStats 去掉 `/api/alerts?limit=5` 双请求（与 limit=100 同一首页数据，切片即可，每次 dashboard 少一次网络请求）；beefIngest `MM/DD/YYYY` 斜杠日期显式 UTC 解析（原按服务器本地时区，TZ=+08 退一天；越界分量如 02/31 拒绝而非滚动成合法日期）。验证：backend 974+1 → **990+1 skip**（96 文件）、frontend 314、inference 64；live 三项（plans 文案 / sources 0 error 字段 / ghost 规则 404）+ 三服务 200。
+
+---
+
+## 十四、round-120 完整度审查轮（2026-08-23）
+
+**背景**：用户指令「重新审查项目的完整度」。与缺陷挖掘轮不同，本轮核对**承诺 vs 实现**——4 只读子代理（PRODUCT-SPEC 符合度矩阵 / 前端 44 页逐页 / 后端 143 端点全查 / 数据-推理管线五段）+ 运行时与生产库取证。总体判定：**骨架完整、数据贫血**——价值链五段代码无断点、44 页 0 死链、spec 51 条承诺 ≈90% 达成；但核心数据（beef_cut_prices）100% 冻结于 2026-04-30（16/74 cut 有过数据、0 新鲜），真实用户 0（3 seed 用户、0 datasets/timeseries/rules）。
+
+**已处置（round-120 快修批，commit `398ad98`）**：
+- **timeseries 编辑断链**：`/timeseries/edit/[id]` 一直提交 `PATCH /api/timeseries/:id` 而该路由从未存在——每次编辑保存必 404（API.md 还写着它，三方漂移）。补齐路由（属主或 ADMIN、同 404 惯例；datasetId 迁移仅限本人 dataset；slug 改名查重），+9 集成测试。
+- **`/beef/cuts` 死路由**：spec IA 点名的 URL 404（只有 `[cutCode]` 详情页）。加 redirect → `/beef`（primal 分组看板所在地），不复制页面。
+- 营销导航三处：Footer `/#features`/`/#faq` 锚点永远落空（`/` 是会丢 hash 的客户端重定向）→ `/landing#features`/`#faq`；MarketingNav "Sign In" 直指 `/login`（不再借 middleware 弹回）。
+- **watchlist 虚假卖点移除**：pricing 页与后端 billing PLANS 的 "5/50 watchlist items" 删除——watchlist 后端+SWR lib 完整但**零页面消费**，不卖无入口的功能。
+- 顺带修时间炸弹 flaky：marketService.freshness 测试依赖 mt_test 里的种子 ingestion_logs，2026-08-23 恰好老化出 7 天窗口隔夜翻红——改为测试自播种窗口内 fixture。
+
+**文档对齐（同轮）**：API.md 1.3.0 → **2.0.0 全量重写**（旧版 9 个幽灵端点 + 5 处方法/路径错误 + ~95 个未记载；新版按 app.ts 实挂载 20 router/144 端点，标注 API-only 组）；PRODUCT-SPEC §七 修订两处失真（socket.io "✅已具备"→ 已于 round-112 移除；资讯 RSS "未接入"→ round-118 已接入）+ IA 表 /beef/cuts 注明重定向。
+
+**仍开放（按处置类型登记）**：
+- **产品决策（建 UI or 收敛）**：watchlist 前端页面（后端 7 端点 + lib/watchlist.ts hooks 现成，唯一缺口是页面/入口——真实用户出现前建它无消费对象，暂缓）；顶栏搜索（现为 "Planned" 徽章，接线需后端搜索端点）；顶栏用户菜单（登出仅在 dashboard 页内）。
+- **孤儿端点收敛候选（65 个无前端消费，不删只登记——"不删非己所造"惯例）**：整组无消费 `/api/models`(8) / `/api/security`(3，audit 上报端点前端从未发送) / `/api/analytics`(2)；watchlists/portfolios 写路径（两组关注类后端 0 页面消费）；`/api/inference/predict/batch` 与推理服务 `POST /predict/batch`（批量能力两端闲置）；`/api/market/import`+`/preview`（无消费且无路由测试，双重孤立——若要保留需补测试，否则收敛候选）。
+- **UI 细节缩水（spec §5 承诺 vs 实现）**：dashboard 热门部位表缺"涨跌"列（数据冻结期会全显 "—"，等数据新鲜后再补更有意义）；cut 详情展开缺置信区间可视化（现为文本 Range）；`/ai/predict`+`/ai/anomalies` 模型下拉硬编码 8 项且预填测试路径 `root.test2`（应改调 GET /api/inference/models 并清理预填）。
+- **空壳页**：`/settings/sessions`（诚实占位，需 GET/DELETE /api/auth/sessions 后端）；`/settings/notifications`（localStorage-only，需邮件系统支撑——与 SMTP 空配置同命运）。
+- **价值叙事注意（非工程项）**：已验证池 naive/exp_smoothing/arima 平均 MAPE（3.4–3.7）全面优于 chronos（6.3–9.0）——数据新鲜度恢复、chronos 积累同期可比样本前，"AI 优于基线"的表述需谨慎（PREDICTION-STRATEGY 既有分析的生产数据再确认）。
+
+**验证**：backend 990+1 → **999+1 skip**（96 文件，+9）、frontend 314、inference 64；live：PATCH owner 200 / 他人 404 / 坏 slug 400 / 未认证 401，/beef/cuts 路由命中（307 经 auth middleware 非 404），pricing+plans 0 处 watchlist 文案，探测数据已清理。

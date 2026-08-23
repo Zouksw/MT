@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-120 完整度审查 + 快修批（骨架完整、数据贫血；快修 8 文件 + 文档 3 份）
+
+「重新审查项目的完整度」：4 只读子代理（spec 符合度 51 条 / 前端 44 页 / 后端 143 端点 / 数据-推理管线五段）+ 运行时与生产库取证。总体判定：**骨架完整（价值链五段代码无断点、44 页 0 死链、spec ≈90% 达成、零 TODO 残留）、数据贫血（beef_cut_prices 100% 冻结于 04-30、真实用户 0）**。处置：
+
+- **快修批**（`398ad98`）：补 `PATCH /api/timeseries/:id`（前端编辑页自始提交该路由但它从未存在——保存必 404，+9 测试）；`/beef/cuts` 死路由加 redirect → `/beef`；Footer 锚点 `/#features`→`/landing#features`（`/` 是丢 hash 的客户端重定向）；"Sign In" 直指 `/login`；移除 pricing/PLANS 的 "5/50 watchlist items" 虚假卖点（watchlist 无 UI 入口）；修 freshness 测试时间炸弹（种子数据出 7 天窗口隔夜翻红，改自播种）。
+- **文档对齐**：API.md 1.3.0→**2.0.0 全量重写**（旧版 9 幽灵端点/5 错/~95 缺 → 新版 20 router 144 端点实口径，含 API-only 标注）；PRODUCT-SPEC §七 修订 socket.io 失真（round-112 已移除）与 RSS 状态（round-118 已接入），IA 表注明 /beef/cuts 重定向；TECH-DEBT 新增 §十四（65 孤儿端点收敛候选、watchlist/search/用户菜单决策项、UI 细节缩水清单、空壳页、naive 优于 chronos 的价值叙事注意）。
+- **测试基线**：backend 990+1 → **999+1 skip**（96 文件）、frontend **314**（33 套件）、inference **64**——合计 **1377 全绿**，零回退。
+
 ### 2026-08-22 — round-119 缺陷深挖 + 修复轮（探查 ~40 项新缺陷，修复 4 批）
 
 全仓四路审查（后端正确性 / 安全 IDOR / 前端 / 推理服务，4 只读子代理）+ 运行时日志 + 生产库审计，在既有台账外确认约 40 项新缺陷（9 高 / 14 中 / 17 低），全部高严重度经直接取证复核（推理侧 2 项由子代理 TestClient 复现）。按 4 批修复（每批 tsc + 全量测试 + build + PM2 重启 + live 验证 + 独立提交，明细见 TECH-DEBT §十三）：
