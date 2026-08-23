@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-122 改进方案制定（对标分析 → 执行计划，纯文档 + 一处事实修正）
+
+「按照探索的结果制定改进的方案」：规划前复核共识引擎现状，发现并**修正 round-121 分析文档一处失实**——初版称"共识未按 MAPE 加权、继承 chronos 尾部风险"，实测 `modelQuality.ts` 早已实现质量加权（round-115 中位口径）+ 劣于-naive 淘汰线（round-110）；当前 30 天窗口 chronos 三变体（中位 0.79~0.82 vs naive 0.41）与 stl 已被淘汰出共识投票，共识实际由 4 统计基线驱动；残留缺口收窄为 range min/max、无权 predictedChange 均值、bestModel 三处不感知权重 + 营销口径倒挂（Hero 仍以"3 Chronos 共识"领衔）。全周期 chronos 均值 46~59% 系早期未清洗窗口所致（30 天窗口实为 6.2~8.8%），修订记录已附原文。产出 [`docs/IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md)：5 个工程批（1 公开活水端点+Hero 假数据换真 beef_carcass_us+口径对齐 / 2 公开预测档案页（含私有序列白名单安全断言）/ 3 共识残留缺口收口 / 4 ai/predict 硬编码修正 / 5 周导入 runbook）+ 3 决策项（watchlist UI、dashboard KPI 卡、运营动作），每批附文件:行锚点、验收口径与门禁；发现 Hero 样本价为硬编码假数据（Hero.tsx:122-126）而真实日更数据在库——批 1 即"活水证据"。
+
 ### 2026-08-23 — round-121 牧集对标分析（差距/根因/优势/落实路径，纯文档）
 
 「比较当前项目与牧集网之间的真正差距」：牧集公开面实测（App/产品页/应用商店，付费墙内不可验）+ MT 生产库 psql 取证（3 用户；beef_cut_prices 2401 行/16 部位/5 工厂/仅 2026-04 一月冻结 115 天；prediction_logs 148,245 条，MAPE 均值+中位双口径）。产出 [`docs/COMPETITIVE-ANALYSIS-MOOKET.md`](COMPETITIVE-ANALYSIS-MOOKET.md) 并注册 INDEX。核心结论：真正差距在**数据资产与分发**（不在功能/工程——MT 反超）；价值未兑现根因链 = 价值链倒置建设 + 数据获取模式错配（国内现货价无公开源可爬）+ AI 叙事与实测倒挂（chronos 中位 0.8% 不差但均值 46-59% 灾难长尾，被营销领衔的恰是尾部风险最大的）+ 预测公信力无对外展示面 + 3 用户零反馈。可防御优势：可验证预测机制、国际源头管道（beef_carcass_us 全站唯一日更牛肉序列）、中立性+可私有部署。落实路径 P0=CSV 回填节律（唯一 P0）→ P1 公开带时间戳预测档案 + 共识按实测加权 → P2 定位"进口牛肉国际行情×可验证预测"+种子用户 → P3 私有部署楔子；不做撮合/采价网络/冷链。

@@ -15,6 +15,7 @@
 | [TECH-DEBT.md](TECH-DEBT.md) | 过度工程化与冗余清单（BullMQ 死队列、多租户脚手架、死模型等），每条标注审计日期，动手前需复核 |
 | [AUTOMATION-STATUS.md](AUTOMATION-STATUS.md) | CI/CD、cron、护栏等自动化基础设施状态 |
 | [COMPETITIVE-ANALYSIS-MOOKET.md](COMPETITIVE-ANALYSIS-MOOKET.md) | 牧集对标分析：真正差距、价值未兑现根因、优势落实路径（2026-08-23，生产库实测） |
+| [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) | 改进方案：对标分析落地执行计划（5 工程批 + 3 决策项，文件锚点与验收口径，2026-08-23） |
 | [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 
 ## 技术参考
