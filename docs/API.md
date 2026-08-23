@@ -21,7 +21,7 @@ REST API documentation for the MT beef-price platform.
 > `/api/forecasts*`, `/api/cache/*`, `/api/datasets/:id/export`), used the wrong
 > `/api/apikeys` prefix, and omitted ~95 real endpoints. This version was
 > regenerated from the actual route files (`backend/src/routes/*.ts`, mounts in
-> `backend/src/app.ts`): **20 routers, 144 endpoints**, all verified against code.
+> `backend/src/app.ts`): **20 routers, 142 endpoints**, all verified against code.
 
 ---
 
@@ -201,8 +201,6 @@ has no frontend consumer** (API-only).
 | `/api/market/factors/exchange-rates` | GET | Latest FX rates (API-only) |
 | `/api/market/sources` | GET | Data-source health board (status enum only — raw error strings removed round-119) |
 | `/api/market/commodities/:slug/sources` | GET | Per-commodity contributing sources |
-| `/api/market/import/preview` | POST | Commodity CSV preview (API-only, untested) |
-| `/api/market/import` | POST | Commodity CSV import (API-only, untested) |
 | `/api/market/sources/:sourceId/refresh` | POST | Trigger one scraper (from data-sources board) |
 | `/api/market/sources/refresh-all` | POST | Trigger all scrapers |
 | `/api/market/sources/freshness` | GET | 7-day per-source freshness + empty-source flags |
@@ -394,8 +392,9 @@ Error body shape:
 - `PATCH /api/auth/sessions`-style session management endpoints do **not**
   exist (settings/sessions page is an honest placeholder).
 - No `/api/billing/checkout` — billing is informational only by design.
-- `/api/market/import` + `/preview` and `/api/inference/predict/batch` are the
-  only endpoints with neither frontend consumer nor direct route test.
+- ~~`/api/market/import` + `/preview`~~ removed round-124 (double-orphan:
+  no frontend consumer, no route test); `/api/inference/predict/batch`
+  remains the only untested API-only endpoint.
 
 ---
 

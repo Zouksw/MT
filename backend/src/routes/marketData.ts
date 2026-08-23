@@ -8,8 +8,6 @@ import { cacheRoute } from "@/middleware/cacheDecorator";
 import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import { scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
-import { detectFieldMapping, type FieldMapping } from "@/services/dataIngestion/normalizer";
-import { importRows, parseCSV } from "@/services/dataIngestion/sources/manualImport";
 import {
 	getCommodityFreshness,
 	getFundamentals,
@@ -32,11 +30,6 @@ const router = Router();
  * "beef data is flowing" apart from "some data is flowing".
  */
 type BeefRelevance = "direct" | "adjacent" | "macro";
-
-/** Shape of a multer-augmented request (file property added by multer). */
-interface MulterFile {
-	buffer: Buffer;
-}
 
 const priceHistorySchema = z.object({
 	interval: z.enum(["daily", "weekly", "monthly"]).default("daily"),
@@ -444,127 +437,6 @@ router.get(
 			},
 			priceSources,
 			factorSources,
-		});
-	}),
-);
-
-router.post(
-	"/import/preview",
-	authenticate,
-	authorize("ADMIN"),
-	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		if (!req.is("multipart/form-data")) {
-			throw new BadRequestError("Content-Type must be multipart/form-data");
-		}
-
-		// Lazy-load multer only when needed
-		const multer = await import("multer");
-		const upload = multer.default({
-			storage: multer.default.memoryStorage(),
-			limits: { fileSize: 10 * 1024 * 1024 },
-		});
-
-		await new Promise<void>((resolve, reject) => {
-			upload.single("file")(
-				req as Parameters<ReturnType<typeof upload.single>>[0],
-				res as Parameters<ReturnType<typeof upload.single>>[1],
-				(err) => {
-					if (err) reject(new BadRequestError(err.message));
-					else resolve();
-				},
-			);
-		});
-
-		const file = (req as unknown as { file?: MulterFile }).file;
-		if (!file) {
-			throw new BadRequestError("No file uploaded");
-		}
-
-		const rows = parseCSV(file.buffer);
-		if (rows.length === 0) {
-			throw new BadRequestError("CSV file is empty");
-		}
-
-		const headers = Object.keys(rows[0]);
-		const mapping = detectFieldMapping(headers);
-		const sample = rows.slice(0, 5);
-
-		success(res, {
-			headers,
-			detectedMapping: mapping,
-			rowCount: rows.length,
-			sample,
-		});
-	}),
-);
-
-router.post(
-	"/import",
-	authenticate,
-	authorize("ADMIN"),
-	asyncHandler(async (req: AuthenticatedRequest, res) => {
-		if (!req.is("multipart/form-data")) {
-			throw new BadRequestError("Content-Type must be multipart/form-data");
-		}
-
-		const multer = await import("multer");
-		const upload = multer.default({
-			storage: multer.default.memoryStorage(),
-			limits: { fileSize: 10 * 1024 * 1024 },
-		});
-
-		await new Promise<void>((resolve, reject) => {
-			upload.single("file")(
-				req as Parameters<ReturnType<typeof upload.single>>[0],
-				res as Parameters<ReturnType<typeof upload.single>>[1],
-				(err) => {
-					if (err) reject(new BadRequestError(err.message));
-					else resolve();
-				},
-			);
-		});
-
-		const file = (req as unknown as { file?: MulterFile }).file;
-		if (!file) {
-			throw new BadRequestError("No file uploaded");
-		}
-
-		const bodySchema = z.object({
-			commodityId: z.string().min(1),
-			interval: z.enum(["daily", "weekly", "monthly"]).default("daily"),
-			delimiter: z.string().max(1).optional(),
-			mapping: z.record(z.string()).optional(),
-		});
-
-		const params = bodySchema.parse(req.body);
-		const rows = parseCSV(file.buffer, { delimiter: params.delimiter });
-
-		if (rows.length === 0) {
-			throw new BadRequestError("CSV file is empty");
-		}
-
-		let mapping: FieldMapping | undefined;
-		if (params.mapping) {
-			const m = params.mapping;
-			mapping = {
-				date: m.date,
-				close: m.close,
-				open: m.open,
-				high: m.high,
-				low: m.low,
-				volume: m.volume,
-			};
-		} else {
-			const headers = Object.keys(rows[0]);
-			mapping = detectFieldMapping(headers);
-		}
-
-		// biome-ignore lint/style/noNonNullAssertion: mapping is set in all branches above
-		const result = await importRows(params.commodityId, rows, mapping!, params.interval);
-
-		success(res, {
-			imported: result.inserted + result.updated,
-			...result,
 		});
 	}),
 );
