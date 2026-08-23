@@ -60,7 +60,9 @@ related_docs:
 2. 页面返回 ImportResultTable：inserted / updated / 错误行明细。**updated 不是坏事**——重传同周数据会幂等更新而非重复插入。
 3. 任何被拒行按提示修正后重传即可（导入是事务性的，坏行不会半写入）。
 
-## 五、导入后验证（照抄执行）
+## 五、导入后验证（一键版优先）
+
+**一键版（round-129 批 10）**：`cd /root/backend && npx tsx scripts/verify-beef-import.ts`——打包下列全部检查，另含 runbook 原缺的两项：**行数增量**（对上次验证的基线，基线存 `/root/.mt-healthcheck/beef-import-baseline.json`）与**近 14 天工厂/部位覆盖**。退出码 0=PASS（允许 WARN），1=FAIL。以下 SQL 为其等价展开，供人工排查用：
 
 ```bash
 cd /root/backend && set -a && source .env && set +a && psql "${DATABASE_URL%%\?*}" -P pager=off
