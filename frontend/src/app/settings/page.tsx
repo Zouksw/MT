@@ -1,10 +1,8 @@
 "use client";
 
 import {
-	Bell,
 	ChevronRight,
 	CircleCheck,
-	Clock,
 	CreditCard,
 	Database,
 	KeyRound,
@@ -64,18 +62,6 @@ export default function SettingsPage() {
 			description: "Update your personal information and preferences",
 			icon: <User className="size-[18px]" />,
 			path: "/settings/profile",
-		},
-		{
-			title: "Notifications",
-			description: "Configure how you receive alerts and notifications",
-			icon: <Bell className="size-[18px]" />,
-			path: "/settings/notifications",
-		},
-		{
-			title: "Session History",
-			description: "View your recent login history and active sessions",
-			icon: <Clock className="size-[18px]" />,
-			path: "/settings/sessions",
 		},
 		{
 			title: "API Keys",
@@ -295,18 +281,6 @@ export default function SettingsPage() {
 					</div>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						{[
-							{
-								title: "View Sessions",
-								desc: "See active sessions",
-								path: "/settings/sessions",
-								icon: <Clock className="size-4" />,
-							},
-							{
-								title: "Notifications",
-								desc: "Configure alerts",
-								path: "/settings/notifications",
-								icon: <Bell className="size-4" />,
-							},
 							{
 								title: "API Keys",
 								desc: "Manage access tokens",
