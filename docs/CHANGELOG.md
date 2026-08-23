@@ -42,6 +42,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-127 方向符合性深度审计（debug 轮，2 提交：修复+登记）
+
+用户指令"对项目进行深入的debug，寻找与项目规划方向不符的地方"。以 PRODUCT-SPEC/核心价值链/不可越线为准绳全面比对，产出发现清单并处置：
+
+**审计确认合规（无需动作）**：交易/支付零残留（billing 静态、无 checkout、前端无下单语义）；`.fit()` 为统计模型推理固有机制（约束明确允许统计模型，非"训练"违规）；预测管线健康（~323 条/小时在写——过程中一次"停摆"警报系 psql 会话时区比较假象，已澄清撤销）；三服务健康。
+
+**发现并已修复（round-126 换月度序列引入的回归，本轮 own 并修）**：
+- `/ai/predict` 默认表单 500：`data-fetcher.getCommodityPriceValues` 与 `inference.ts` 三处历史查询硬编码 `interval:"daily"`，月度牛肉基准取 0 点。修复：daily 空则回退 monthly（`fetchHistoryWithFallback` helper + data-fetcher 回退），live 复测 success=True/50 历史点/10 步预测。
+- landing Hero "Daily series" 硬标签错标月度序列：改为按序列点间距中位数推导（≥20 天 → Monthly）。
+- Hero "unit 核验中"过时注释 + predict 页 "only daily-updating" 过时注释更正（D4 已定案）。
+
+**发现并登记（TECH-DEBT §十四 新增两条，不擅动）**：
+- 月度序列未进后台预测链（决策项）：调度订阅门控/MAPE actuals/相关性/新鲜度板全部 daily-only，唯一真实牛肉序列被静默移出核心价值链；on-demand 已修，后台需先决策月度语义（horizon 步长/验证窗口）。
+- `/trading` 牛肉模式默认选 `beef_cutout_us`（0 价格行）且 signals 对空序列 500 而非优雅空信号（前端有诚实降级）；正确默认应为 beef_carcass_us。
+
+**产品真相同步（PRODUCT-SPEC 修订注记 3 处）**：§5.1 三卡 mockup、§六 表格行（round-126 第一卡已换全球牛肉价）；§七 MAPE "1.7%/3.6%" 陈旧声明按 round-121 取证修订。
+
+**测试**：backend 1004+1（97 文件）、frontend 322（35 套件）、inference 64——**1390 全绿**零回退；build×2 + PM2×2 + live 复测全过。
+
 ### 2026-08-23 — round-126 剩余开发任务轮（D1/D2 执行 + D4 意外定案修复，4 提交）
 
 用户指令"继续完成剩余的开发任务"= 对 IMPROVEMENT-PLAN 决策项 D1-D3 放行。执行中发现并修复一起**数据诚实性事故**。

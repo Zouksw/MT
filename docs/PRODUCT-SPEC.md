@@ -120,6 +120,8 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 ## 五、核心页面最终形态
 
 ### 5.1 行情总览页 (首页,对标牧集首页)
+
+> **修订注记（2026-08-23 round-126 D2）**：第一张 KPI 卡已由"进口均价"（04-30 冻结种子值）换为**全球牛肉价**（IMF 全球牛肉月度基准，FRED PBEEFUSDM，USC/lb）——全站唯一有活数据的牛肉序列；该槽位原挂的 CBBTCUSD 实为 Coinbase 比特币（KNOWN-ISSUES D4）。三卡现为：全球牛肉价 / 国产均价 / AI 7日预测。
 ```
 ┌────────────────────────────────────────────────────┐
 │  今日牛肉行情                                       │
@@ -167,7 +169,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 ### 计划新增任务
 | # | 任务 | 阶段 | 状态（2026-08-09 核实） |
 |---|------|------|------|
-| **新** | 行情总览页重构 (库存计数 → 实时牛肉价格看板) | 阶段 3 | ✅ 已实现（`dashboard/page.tsx:179-225` 三卡 hero：进口均价/国产均价/AI 预测） |
+| **新** | 行情总览页重构 (库存计数 → 实时牛肉价格看板) | 阶段 3 | ✅ 已实现（`dashboard/page.tsx:179-225` 三卡 hero；round-126 起第一卡为全球牛肉价，见 §5.1 修订注记） |
 | **新** | AI 预测融入行情行 (每个商品旁显示预测摘要) | 阶段 3 | ✅ 已实现（`beef/page.tsx` 7d Forecast 列 + `CutForecastCell` + `MarketForecastBoard`） |
 | **新** | 资讯模块 (market dynamics feed) | 阶段 4 | ✅ 已建（MarketNews model + route + service + 5 页 + 5 条 seed）；⚠️ 外部 RSS 抓取源未接入（M3 待办） |
 | **新** | IA 重组: 行情/分析/AI预测/资讯/数据/系统 6 区 | 阶段 2 | ✅ 已实现（`AppShell.tsx:38-83` 6 个 NAV_SECTIONS；⚠️ 资讯/分析顺序与本文档 spec 略有出入，属产品微调） |
@@ -185,7 +187,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | 最终形态需要 | 现状 | 差距 |
 |-------------|------|------|
 | 牛肉价格数据 (进口/国产/部位) | 8 源代码已存在 (abares/cepea/inac/mla/secex/usda_ams/usda_psd/chinaCustomsStats) | ⚠️ 数据冻结 2026-04-30（详见 KNOWN-ISSUES D1：3 个 key 已 set 但源站网络封锁，非缺 key）；CSV 手动导入路径已验证可用（round-81） |
-| AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（chronos MAPE 1.7% 显著优于 stat 3.6%，round-82 accuracy 页已强化展示） |
+| AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（~~chronos MAPE 1.7% 显著优于 stat 3.6%~~ **2026-08-23 round-121 取证修订**：全时间轴 chronos 均值 46-59%（早期单位错配离群值主导）、30 天窗口 6-9%、中位数均 <1%——真实故事是"chronos 尾部风险 vs naive 有界最差"，详见 COMPETITIVE-ANALYSIS §三.3 与 accuracy 页按窗口口径） |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
 | 资讯数据 | ✅ MarketNews model + route + service + 4 路由页 + dashboard 资讯条 | ✅ 已接入（M3/round-118）：Beef Central + USDA Federal Register RSS 每 6h 摄取入 market_news，sourceUrl 幂等去重——当前唯一自动更新的外部内容通道 |
