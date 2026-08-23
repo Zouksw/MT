@@ -19,6 +19,7 @@
  */
 
 import { prisma } from "@/lib";
+import { stalenessWindowDays } from "@/services/cadence";
 import { scraperManager } from "@/services/dataIngestion";
 import { PredictionStatus as PS } from "@/services/predictionLifecycle";
 
@@ -67,6 +68,24 @@ export interface DataHealthSnapshot {
 	verificationRatio: number;
 	/** True iff verificationRatio is below 0.05 (severe debt signal). */
 	hasVerificationDebt: boolean;
+	/** Core beef-series staleness (round-129 batch 9): days since the latest
+	 * point for the two series an operator cares about most — the cut board
+	 * (beef_cut_prices) and the IMF benchmark (beef_carcass_us). Round-127/128
+	 * could only see this via hand-written SQL; now it rides /health/ready. */
+	beefSeries: Array<{
+		key: "beef_cut_prices" | "beef_carcass_us";
+		latestDate: Date | null;
+		daysSince: number | null;
+		/** Stale per the cadence policy (cut table = daily 7d; benchmark = its
+		 * own interval, monthly 60d via cadence.ts). */
+		stale: boolean;
+	}>;
+	/** Beef-series commodities (category beef_cuts) with ≥1 prediction logged
+	 * in the last 24h — ANY path counts (background scheduler AND manual
+	 * /api/signals calls both write prediction_logs). Round-128 measured this
+	 * at 0 — every subscribed commodity was FX/CME — the single most
+	 * important number for "is the AI loop still about beef". */
+	predictionBeefCoverage24h: number;
 }
 
 /**
@@ -175,6 +194,48 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 			? predictionVerified / (predictionVerified + predictionBacklog)
 			: 0;
 
+	// Core beef-series staleness + prediction coverage (round-129 batch 9).
+	// The cut board is a daily table (7d policy); the benchmark staleness uses
+	// its own interval via cadence.ts. Coverage joins prediction_logs to
+	// commodities (no Prisma relation on commodityId — raw SQL, established
+	// pattern in this file).
+	const MS_PER_DAY = 86400000;
+	const daysSince = (d: Date | null) =>
+		d ? Math.floor((Date.now() - d.getTime()) / MS_PER_DAY) : null;
+	const isStale = (d: Date | null, interval: string) => {
+		if (!d) return true;
+		return daysSince(d)! > stalenessWindowDays(interval);
+	};
+
+	const [cutLatest, benchmarkLatest, coverageRows] = await Promise.all([
+		prisma.beefCutPrice.aggregate({ _max: { date: true } }),
+		prisma.commodityPrice.findFirst({
+			where: { commodity: { slug: "beef_carcass_us" } },
+			orderBy: { date: "desc" },
+			select: { date: true, interval: true },
+		}),
+		prisma.$queryRaw<Array<{ count: bigint }>>`
+			SELECT COUNT(DISTINCT pl.commodity_id) AS count
+			FROM prediction_logs pl
+			JOIN commodities c ON c.id = pl.commodity_id
+			WHERE pl.predicted_at > now() - interval '24 hours' AND c.category = 'beef_cuts'`,
+	]);
+
+	const beefSeries: DataHealthSnapshot["beefSeries"] = [
+		{
+			key: "beef_cut_prices",
+			latestDate: cutLatest._max.date ?? null,
+			daysSince: daysSince(cutLatest._max.date ?? null),
+			stale: isStale(cutLatest._max.date ?? null, "daily"),
+		},
+		{
+			key: "beef_carcass_us",
+			latestDate: benchmarkLatest?.date ?? null,
+			daysSince: daysSince(benchmarkLatest?.date ?? null),
+			stale: isStale(benchmarkLatest?.date ?? null, benchmarkLatest?.interval ?? "daily"),
+		},
+	];
+
 	return {
 		asOf: new Date(),
 		windowDays,
@@ -188,5 +249,7 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 		predictionUnverifiable,
 		verificationRatio,
 		hasVerificationDebt: verificationRatio < 0.05,
+		beefSeries,
+		predictionBeefCoverage24h: Number(coverageRows[0]?.count ?? 0),
 	};
 }

@@ -143,6 +143,14 @@ router.get(
 				predictionUnverifiable: number;
 				verificationRatio: number;
 				hasVerificationDebt: boolean;
+				// round-129 batch 9: beef staleness + prediction coverage.
+				beefSeries: Array<{
+					key: "beef_cut_prices" | "beef_carcass_us";
+					latestDate: Date | null;
+					daysSince: number | null;
+					stale: boolean;
+				}>;
+				predictionBeefCoverage24h: number;
 			},
 		};
 
@@ -220,6 +228,10 @@ router.get(
 				predictionUnverifiable: dh.predictionUnverifiable,
 				verificationRatio: dh.verificationRatio,
 				hasVerificationDebt: dh.hasVerificationDebt,
+				// round-129 batch 9: beef staleness + AI-loop beef coverage —
+				// the two numbers round-127/128 could only see by hand-written SQL.
+				beefSeries: dh.beefSeries,
+				predictionBeefCoverage24h: dh.predictionBeefCoverage24h,
 			};
 		} catch (error) {
 			// Data-health is observability; a failure here must not flip the

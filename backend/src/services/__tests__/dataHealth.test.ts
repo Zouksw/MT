@@ -190,3 +190,30 @@ describe("getDataHealth — data-layer observability (real DB)", () => {
 		}
 	});
 });
+
+// round-129 batch 9: beef staleness + AI-loop beef coverage ride the snapshot.
+describe("getDataHealth — beef series staleness + prediction coverage (round-129 batch 9)", () => {
+	it("beefSeries carries both keys with coherent staleness fields", async () => {
+		const snap = await getDataHealth();
+		const keys = snap.beefSeries.map((s) => s.key).sort();
+		expect(keys).toEqual(["beef_carcass_us", "beef_cut_prices"]);
+
+		for (const s of snap.beefSeries) {
+			// daysSince is null iff latestDate is null; stale defaults true
+			// when there is no data at all (fail-closed).
+			if (s.latestDate === null) {
+				expect(s.daysSince).toBeNull();
+				expect(s.stale).toBe(true);
+			} else {
+				expect(s.daysSince).not.toBeNull();
+				expect(typeof s.stale).toBe("boolean");
+			}
+		}
+	});
+
+	it("predictionBeefCoverage24h is a non-negative integer", async () => {
+		const snap = await getDataHealth();
+		expect(Number.isInteger(snap.predictionBeefCoverage24h)).toBe(true);
+		expect(snap.predictionBeefCoverage24h).toBeGreaterThanOrEqual(0);
+	});
+});

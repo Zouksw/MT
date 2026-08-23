@@ -108,3 +108,45 @@ MIHOMO_STATE=$(systemctl is-active mihomo 2>/dev/null || echo "unknown")
 if [ "$MIHOMO_STATE" != "active" ] || ! timeout 2 bash -c 'exec 3<>/dev/tcp/127.0.0.1/7890' 2>/dev/null; then
     echo "[$NOW] PROXY-DOWN: mihomo state=$MIHOMO_STATE port 7890 unreachable — cme_futures (Yahoo) will write 0 rows until restored"
 fi
+
+# Beef-series staleness + AI-loop beef coverage (round-129 batch 9).
+# Both numbers were invisible until round-128's hand-written SQL showed the
+# cut board frozen 115+ days and background predictions covering ZERO beef
+# series while 17 FX/CME commodities cycled. They now ride /health/ready.
+# Logged only on STATE TRANSITION against the previous run's status (state
+# file below) plus ONE heartbeat line per day — the freeze is a known steady
+# state, and firing every 5 minutes would bury real transitions in noise.
+# No restart action: data gaps need human/API-key action, not a process
+# bounce. Runbook: docs/guides/WEEKLY-DATA-IMPORT.md; prediction-coverage
+# semantics: docs/adr/ADR-0001.
+STATE_DIR="/root/.mt-healthcheck"
+mkdir -p "$STATE_DIR"
+BEEF_STATUS=$(curl -sf -m 6 http://localhost:8000/health/ready 2>/dev/null | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)["data"]["checks"]["dataLayer"]
+    parts = ["{0}:latest={1}:stale={2}".format(
+                 s.get("key"), s.get("daysSince"), s.get("stale"))
+             for s in (d.get("beefSeries") or [])]
+    parts.append("predictionBeefCoverage24h={0}".format(d.get("predictionBeefCoverage24h")))
+    print("|".join(parts) if parts else "EMPTY")
+except Exception:
+    print("PROBE_FAILED")
+' 2>/dev/null || echo "PROBE_FAILED")
+
+if [ "$BEEF_STATUS" != "PROBE_FAILED" ]; then
+    PREV=$(cat "$STATE_DIR/beef-state" 2>/dev/null || echo "none")
+    if [ "$BEEF_STATUS" != "$PREV" ]; then
+        echo "[$NOW] BEEF-DATA state change: $BEEF_STATUS (was: $PREV)"
+        echo "$BEEF_STATUS" > "$STATE_DIR/beef-state"
+        date +%Y-%m-%d > "$STATE_DIR/beef-heartbeat-day"
+    fi
+    # Daily heartbeat even when unchanged — proves the probe itself is alive
+    # (daysSince bumps naturally make staleness lines daily; coverage lines
+    # need this heartbeat or a stable freeze stays silent forever).
+    TODAY=$(date +%Y-%m-%d)
+    if [ "$(cat "$STATE_DIR/beef-heartbeat-day" 2>/dev/null)" != "$TODAY" ]; then
+        echo "[$NOW] BEEF-DATA daily heartbeat: $BEEF_STATUS"
+        echo "$TODAY" > "$STATE_DIR/beef-heartbeat-day"
+    fi
+fi
