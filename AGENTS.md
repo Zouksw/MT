@@ -1,7 +1,7 @@
 # AGENTS.md
 
 > 本文件是 AI 代理（含 ZCode / Claude / Codex 等）在本仓库工作的**首要入口**。
-> 所有事实均经只读命令核实（2026-08-21）。改动数字类陈述前请重新核实。
+> 所有事实均经只读命令核实（2026-08-23）。改动数字类陈述前请重新核实。
 
 ---
 
@@ -19,7 +19,7 @@
 ## 二、核心价值链（一切开发围绕这条链）
 
 ```
-19 个数据源爬虫 → PostgreSQL（CommodityPrice / BeefCutPrice）
+18 个数据源爬虫 → PostgreSQL（CommodityPrice / BeefCutPrice）
                           ↓
         inference-service（6 统计模型 + 3 Chronos 变体，共 9 个 model id）
                           ↓
@@ -32,11 +32,11 @@
 
 ---
 
-## 三、规模事实（2026-08-21 实测，计数方式附后）
+## 三、规模事实（2026-08-23 实测，计数方式附后）
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **19** | `backend/src/services/dataIngestion/sources/*.ts`（排除 index/test） |
+| 数据源爬虫 | **18** | `backend/src/services/dataIngestion/sources/*.ts`（排除 index/test；2026-08-23 复核，round-124 删 manualImport（CSV 导入服务，非爬虫）后为 18） |
 | Prisma 模型 | **30** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-21 复核；round-114 删 organizations 后为 30） |
 | 后端路由 | **20** | `backend/src/routes/*.ts`（排除 `*.test.ts`） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx` |
@@ -68,7 +68,7 @@
 ```
 backend/            Express + TS + Prisma
   src/routes/       API 路由（20 个）
-  src/services/     业务服务（含 dataIngestion/sources/ 19 爬虫）
+  src/services/     业务服务（含 dataIngestion/sources/ 18 爬虫）
   src/middleware/   认证、限流、安全、日志
   prisma/           schema.prisma（30 模型）+ migrations
 frontend/           Next.js 15 App Router（44 页）
@@ -163,7 +163,7 @@ cd backend && npx prisma db seed          # 种子数据
 
 ## 九、编写文档的严谨性要求
 
-- **数字必须实测**：不沿用历史 README / round 报告里已被发现矛盾的数字（例：旧文档写"18 数据源 / 36 模型 / 5 统计模型"，2026-08-21 实测为 19 / 30 / 6）。
+- **数字必须实测**：不沿用历史 README / round 报告里已被发现矛盾的数字（例：旧文档写"18 数据源 / 36 模型 / 5 统计模型"，2026-08-21 实测为 19 / 30 / 6，round-124 删 manualImport 后 2026-08-23 再实测为 18 —— 数字随轮次演进，引用前须重测）。
 - **测试数不写死**：各文档历史测试数互相矛盾（431/433/573/307/277/21…），只写"运行 `pnpm test` 获取当前数"。
 - **未验证的不写成定论**：标注"待确认 / 待复核"，附证据来源（文件:行 或 命令）与日期。
 

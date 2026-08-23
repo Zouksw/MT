@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-125 状态统一轮（docs-only，0 代码改动）
+
+round-121~124 四轮连改后全仓状态对齐实测：git 树净于 `aa20da5`、dist/.next 均新于源码、三服务 PM2 在线且 `/health/ready` 为 ready（DB/Redis/inference 全 true）；三套测试**实跑**复核 backend **1004+1**（97 文件）/ frontend **317**（34 套件）/ inference **64** = **1385 全绿**，与 AUTOMATION-STATUS 声称一致；live 抽查 public-highlights / public-track-record / /ai/track-record 均 200、已删 `/api/market/import` 404。
+
+- **AGENTS.md**：数据源爬虫 **19→18**（round-124 删 manualImport 所致，附复核说明），§三 复核日期 2026-08-23，§九 示例改为"数字随轮次演进"。
+- **README.md**：5 处"19 数据源"陈述改 18；数据源表删 Manual Import 行（18 行与 18 文件一一对应）；规模数字注记更新为 2026-08-23 实测。
+- **PROJECT-VISION.md**：新增 2026-08-23 状态指针（round-121~124 摘要 + 当前基线 + 事实入口），历史正文不重写。
+- 核对无漂移：API.md（142 端点行，import 已划除）、AUTOMATION-STATUS（1385 口径含删测试说明）、TECH-DEBT §十四/§十五、INDEX、PRODUCT-SPEC、KNOWN-ISSUES；AUTOMATION-STATUS 内"19 源"均为带日期历史审计记录，保留。
+
 ### 2026-08-23 — round-124 瘦身轮（用户指令"体量不过于臃肿，核心功能最重要"，3 提交）
 
 双路全量零引用扫描（前端 111 文件/后端全量）+ 依赖审计 + §十四 登记项按指令处置（TECH-DEBT §十五 记录）。结论：代码库已相当紧（后端 0 死模块），臃肿在登记过的非核心面。三批：

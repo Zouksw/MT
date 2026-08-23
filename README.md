@@ -59,7 +59,7 @@ MT 是一个**牛肉贸易价格数据与分析平台**，为进口商、贸易�
 - **74 个牛肉切割部位分类** — `beef_cut_taxonomy`（进口 US/BR/AUS/URY/ARG + 国产），当前 16 个部位有实价数据
 - **21 个工厂** — 工厂级别价格溯源
 - **2,400+ 牛肉切割价格行** — 按部位 × 工厂 × 来源（2026-04 种子快照，上游源恢复中，见 [KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) D1）
-- **19 个数据源** — USDA、CEPEA、MLA、INAC、ABARES、World Bank、FRED、CME、DCE 等（实现在 `backend/src/services/dataIngestion/sources/`）
+- **18 个数据源** — USDA、CEPEA、MLA、INAC、ABARES、World Bank、FRED、CME、DCE 等（实现在 `backend/src/services/dataIngestion/sources/`）
 
 ---
 
@@ -72,7 +72,7 @@ MT
 │   └── components/    可复用组件库
 ├── backend/           Express + TypeScript + Prisma ORM
 │   ├── routes/        20 API 路由模块
-│   ├── services/      业务服务（含 dataIngestion/sources/ 19 个数据采集源）
+│   ├── services/      业务服务（含 dataIngestion/sources/ 18 个数据采集源）
 │   └── middleware/     认证、限流、安全、日志
 ├── inference-service/ Python FastAPI 推理服务（6 统计模型 + 3 Chronos 变体）
 ├── prisma/            数据库 Schema（30 个模型）
@@ -93,7 +93,7 @@ MT
 | 进程管理 | PM2 |
 | 安全 | JWT, bcrypt, CSRF, Helmet, rate limiting |
 
-> 上述规模数字（44 页面 / 20 路由 / 19 源 / 30 模型 / 9 model id）为 2026-08-21 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
+> 上述规模数字（44 页面 / 20 路由 / 18 源 / 30 模型 / 9 model id）为 2026-08-23 实测，计数方式见 [AGENTS.md](AGENTS.md) §三。测试总数随时间变化，运行 `pnpm test` 获取当前值。
 
 ---
 
@@ -255,7 +255,7 @@ backend/
 │   │   ├── mapeTracking.ts      # 预测精度追踪
 │   │   ├── backtesting.ts       # 历史回测
 │   │   ├── correlationAnalysis.ts  # 相关性分析
-│   │   ├── dataIngestion/sources/  # 19 个数据采集源
+│   │   ├── dataIngestion/sources/  # 18 个数据采集源
 │   │   └── ...
 │   └── middleware/          # 认证、安全、限流
 ├── prisma/
@@ -279,7 +279,7 @@ frontend/
 
 ## 数据源
 
-> 共 19 个数据源，实现于 `backend/src/services/dataIngestion/sources/`。下表按覆盖地域归类：
+> 共 18 个数据源，实现于 `backend/src/services/dataIngestion/sources/`。下表按覆盖地域归类（CSV 手动回填走 `POST /api/beef/import`，见 `docs/guides/WEEKLY-DATA-IMPORT.md`，非数据源）：
 
 | 来源（文件） | 数据类型 | 覆盖 |
 |------|----------|------|
@@ -301,7 +301,6 @@ frontend/
 | Baltic Dry (`balticDry.ts`) | 干散货运费指数 | 全球 |
 | Shipping Index (`shippingIndex.ts`) | 集运指数 | 全球 |
 | Weather Data (`weatherData.ts`) | 气象数据 | 全球 |
-| Manual Import (`manualImport.ts`) | 手动导入 | 自定义 |
 
 ---
 

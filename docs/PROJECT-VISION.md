@@ -19,6 +19,14 @@
 >
 > 本文保留作历史记录（loop 当时决策依据）；**当前真实状态以本前置说明 + `docs/KNOWN-ISSUES.md`（最新）为准**。下文未逐条改写。
 
+> ## ⚠️ 2026-08-23 状态指针（最新）
+>
+> 2026-08-01 说明之后的轮次（121-124）已大幅改变项目状态，本文正文与 08-01 说明中的数字均不再代表现状：
+> - **round-121/122**：牧集对标分析（`docs/COMPETITIVE-ANALYSIS-MOOKET.md`）+ 落地方案（`docs/IMPROVEMENT-PLAN.md`，执行状态已批注提交哈希）。
+> - **round-123（5 批全执行）**：共识池 3→7（chronos-only 池曾使质量淘汰静默失效，已修复并 live 验证）、公开预测战绩页 `/ai/track-record`、落地页换真实数据、ai/predict 页模型列表接推理服务、周度牛肉导入 runbook；测试→生产 Redis 缓存污染通道已封堵（测试强制 db1）。
+> - **round-124（瘦身轮）**：删双孤立路由/manualImport 服务/空壳设置页等，数据源爬虫 19→18。
+> - **当前基线（2026-08-23 实测）**：backend 1004+1（97 文件）/ frontend 317（34 套件）/ inference 64 = **1385 全绿**；三服务 PM2 在线。当前事实入口：`AGENTS.md` §三 + `docs/KNOWN-ISSUES.md` + `docs/TECH-DEBT.md` §十四/§十五。
+
 ---
 
 ## 与 v1 的关键差异（先读这个）
