@@ -1,6 +1,6 @@
 # ADR-0001：月度序列的预测语义（cadence-aware prediction semantics）
 
-- **状态**：**Proposed（待用户确认，2026-08-23）**——本 ADR 是批 6b 开工的前置决策项（IMPROVEMENT-PLAN 第二波 D5）。用户点头后状态改 Accepted 并开工。
+- **状态**：**Accepted（2026-08-23 用户确认 D5，当日开工批 6b）**。
 - **背景**：round-126 起 `beef_carcass_us` = IMF PBEEFUSDM（月度，195 点，全站唯一在更牛肉序列）；round-128 复评发现背景预测循环与牛肉零交集（17 个在预测商品全是汇率/CME）。验证生命周期（到期判定、实际值窗、三处清扫）与调度门控全部 daily 中心化（TECH-DEBT §十四 round-127 登记 + round-129 对抗评审 B1/B2 全清单）。
 
 ## Context（为什么必须先定语义）

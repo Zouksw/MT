@@ -323,6 +323,13 @@ model PredictionLog {
   // predictedAt systematically misaligned MAPE (round-104). Nullable for
   // legacy rows; readers fall back to predictedAt.
   forecastStartAt DateTime? @map("forecast_start_at")
+  // Cadence of the predicted series ("daily" | "monthly"). NULL = legacy rows
+  // written before this column existed (ADR-0001: the 140k historical rows are
+  // NOT backfilled — readers treat NULL as daily, which is what they are).
+  // Writers stamp it at write time so the verification lifecycle can branch
+  // per-row cadence: a monthly row's horizon counts MONTHS and its actuals
+  // window reads monthly price points (make_interval(months => horizon)).
+  interval        String?
 
   @@index([modelId])
   @@index([commodityId])
