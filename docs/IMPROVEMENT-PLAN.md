@@ -112,6 +112,8 @@ B2B 撮合 / 国内现货采价网络 / 冷链硬件 SaaS / 支付/下单/交易
 > **目标一句话**：让"牛肉"回到核心价值链——预测循环以**可验证**的方式重新覆盖牛肉序列（批 6a-6c）+ 修用户可见缺陷（批 7）+ 公信力口径统一（批 8）+ 让数据断流可被看见（批 9）+ 解冻配套（批 10）。
 >
 > **对抗评审记录（2026-08-23，doubt-driven 终稿步骤）**：初稿经 fresh-context 评审（Explore 只读代理，68 次读操作核对 file:line），报 2 blocker + 6 major + 6 minor，全部归类为有效可行动并已并入下文——关键修正：批 6 初稿会让月度预测**永远无法验证**且以 30 分钟节律日产 ~336 条日志（重演 round-62/66/114 清理过的病理），已分解为 6a/6b/6c 并把"达到 `verified` 状态"设为硬验收；批 7 初稿换默认序列后页面**仍显示不出数据**（价格拉取无月度回退），已扩范围；批 9 实现位与稳态噪音已定案；D5 相关性不做的理由已纠错。
+>
+> **执行状态（2026-08-23 round-130，"开始执行计划"后）**：批 7 `e33956b`（扩范围版：默认序列 + getPriceHistory/batchLatestPrices 月度回退 + signals 200 降级；live 四项全过）· 批 8 `21661cd`（钉住测试 days=7/30/90 + methodology 双向口径；live 验证）· 批 6a `dd0eaeaa`（`cadence.ts` 策略模块 + freshness interval 感知；live：beef_carcass_us monthly/2026-07-01/非 stale）· 批 9 `583c376`（/health/ready beefSeries + predictionBeefCoverage24h + cron 状态转移降噪；双跑 live 验证）· 批 10 `40286a7`（verify-beef-import.ts 一键验证；生产双跑）。**执行注**：6a 的调度门控谓词按简化原则挪入 6b（与验证生命周期+开闸同批，避免死代码 flag——现有 predictionCache 测试已钉住订阅不变）。D5 ADR 已起草（`docs/adr/ADR-0001-...`，**Proposed 待用户确认**）。**待办：D5 确认 → 6b（强制检查点）→ 6c。** 测试基线 backend 1004+1 → **1020+1**（98 文件）、frontend 322/35（批 7 含前端改动后全绿）、inference 64 不变；零回退。附带登记：watchlistService 本地 batchLatestPrices 副本仍 daily-only（TECH-DEBT §十四）。
 
 ## §A 观察结果 → 计划映射（全部当日实测取证）
 
@@ -197,7 +199,7 @@ B2B 撮合 / 国内现货采价网络 / 冷链硬件 SaaS / 支付/下单/交易
 
 ## §C 决策项（不擅动，需用户点头）
 
-- **D5 月度序列预测语义（批 6a-6c 总纲，批 6b 前置）**：① horizon 单位 = 步长（月度序列 1 步 = 1 个月）；② MAPE 验证到期与实际值窗按步长（`make_interval(months=>horizon)`）；③ `prediction_logs` 增可空 `interval` 列（NULL=daily 时代旧行，不回填 14 万行）；④ 月度序列刷新节律 = 仅新实际点落库后重预测；⑤ correlationAnalysis 与 analytics **显式不做月度**——理由（对抗评审 m4 纠错后）：不是"195 点不够算 Pearson"（点数充足），而是 correlation 读取 daily-only（correlationAnalysis.ts:59）且跨节奏对齐无解，等日更牛肉数据解锁后随数据解决。建议以 ADR 形式记录（本仓库首个 ADR，格式从 `improve-codebase-architecture` 引用的 ADR-FORMAT 惯例）。
+- **D5 月度序列预测语义（批 6a-6c 总纲，批 6b 前置）**：已按本条起草 [`docs/adr/ADR-0001-monthly-series-prediction-semantics.md`](adr/ADR-0001-monthly-series-prediction-semantics.md)（**状态 Proposed，待用户确认**——确认后改 Accepted 并开工批 6b）。五点语义包：① horizon 单位 = 步长（月度序列 1 步 = 1 个月）；② 验证到期与实际值窗按步长（`make_interval(months=>horizon)`）；③ `prediction_logs` 增可空 `interval` 列（NULL=daily 时代旧行，不回填）；④ 月度刷新节律 = 仅新实际点后重预测；⑤ 订阅谓词 monthly = 最新点 ≤60 天 且 ≥3 点。correlationAnalysis/analytics 显式不做月度（理由经评审 m4 纠错：daily-only 读取与跨节奏对齐，非点数不足）。
 - **D6 孤儿端点处置**：按 `deprecation-and-migration` 决策五问逐组评估（唯一价值/消费者数/替代品/迁移成本/持有成本）。建议：`/api/security` 3 端点（audit 上报，前端从未发送）为**收敛首选候选**；/api/models、/api/analytics 待批 8 口径统一后重评（可能与公开档案页互补）；portfolios 组维持登记。"不删非己所造"红线 → 全部先出处置建议等用户点头。
 - **D7 死模型残留数据（sundial/timer_xl 共 332 行）**：已结构性隔离（注册表枚举 + R3 守卫 + 批 8 钉住），**建议保留数据**（预测历史完整性）不删；若删属数据治理决定，需用户点头。
 

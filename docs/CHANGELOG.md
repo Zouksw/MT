@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-23 — round-130 第二波执行：批 7/8/6a/9/10 落地（5 提交，D5 ADR 待确认）
+
+用户指令"开始执行计划"。按 IMPROVEMENT-PLAN 第二波顺序执行全部无决策依赖批次，每批独立门禁（tsc + 全量测试 + build + PM2 + live + commit）：
+
+- **批 7 `e33956b`（F3 修复，扩范围）**：/trading 牛肉模式默认 `beef_cutout_us`(0 行)→`beef_carcass_us`；对抗评审发现的深层问题一并修——价格历史与共享 `batchLatestPrices` 加月度回退（月度序列此前在列表/自选显示"无价格"，latestPrice=null）；signals 空序列 200 + `insufficientData` 降级（原 500）；前端诚实处理 + 月度序列隐藏无意义周期选择器。live 四项全过。
+- **批 8 `21661cd`（口径收口）**：公开档案页 methodology 写明 verified-only 分子 + predictionCount 分母含失效行的双向口径（消解 7% vs raw 55% 的口径歧义）；榜单注册表钉住测试（days=7/30/90，死模型结构性不可出现）。
+- **批 6a `dd0aeaa`（cadence 感知第一步）**：新建 `services/cadence.ts`（stalenessWindowDays：7d daily/60d monthly 单一策略 seam）；freshness 板 interval 感知——`beef_carcass_us` 从"null/stale"变为"monthly/2026-07-01/非 stale"。调度门控按简化原则挪 6b。
+- **批 9 `583c376`（可观测性）**：/health/ready dataLayer 增 `beefSeries`（cut 板 115d stale + 基准 53d 非 stale）与 `predictionBeefCoverage24h`（诚实命名：含手动路径，实测批 7 的 live 调用使其 0→1）；cron 状态转移 + 日心跳降噪（双跑验证：首跑记录、次跑静默、字段改名重触发）。
+- **批 10 `40286a7`（解冻配套）**：`backend/scripts/verify-beef-import.ts` 一键验证（打包 runbook §五 + 新增行数增量基线与 14 天覆盖）；生产双跑：基线 2401、冻结 115 天如实 WARN。
+- **D5 ADR 起草**：`docs/adr/ADR-0001-monthly-series-prediction-semantics.md`（仓库首个 ADR，**Proposed 待用户确认**——批 6b/6c 的前置门）。
+- 登记：watchlistService 本地 batchLatestPrices 副本仍 daily-only（TECH-DEBT §十四）；round-127 两条登记项更新（月度链进展注记 + F3 已解决）。
+- 测试基线：backend 1004+1 → **1020+1**（97→98 文件，+16）、frontend 322/35、inference 64 不变；零回退。服务全程在线。
+
 ### 2026-08-23 — round-129 第二波开发计划（14 skill 规划法 + 对抗评审修订）
 
 用户指令"利用尽可能更多的skills，根据之前的观察结果规划后续的开发任务"。以 rounds 121-128 观察结果为输入（对标复评 §七、TECH-DEBT §十四 登记、MAPE 口径分裂等），调用 14 个 skill 分四批完成规划（战略/工程决策/质量发布/规格对齐；to-prd、triage 按"需 issue tracker"前提判不适用，1 个 skill 名未命中诚实记录），产出 IMPROVEMENT-PLAN.md **v2.0.0 第二波**：
