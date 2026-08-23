@@ -14,6 +14,7 @@ import {
 	Search,
 	Settings,
 	Sparkles,
+	Star,
 	TrendingUp,
 	X,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const NAV_SECTIONS: NavSection[] = [
 		items: [
 			{ label: "价格总览", href: "/dashboard", icon: LayoutGrid },
 			{ label: "牛肉行情", href: "/beef", icon: TrendingUp },
+			{ label: "自选清单", href: "/watchlists", icon: Star },
 		],
 	},
 	{
