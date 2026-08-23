@@ -30,6 +30,7 @@ import {
 import { getAllModelAccuracy, getModelAccuracy } from "@/services/mapeTracking";
 import { getAllCachedPredictions } from "@/services/predictionCache";
 import { PredictionStatus as PS } from "@/services/predictionLifecycle";
+import { getPublicTrackRecord } from "@/services/publicTrackRecord";
 import { BASELINE_MODELS, generateForecast, getAllModels } from "@/services/tradingSignals";
 
 const router = Router();
@@ -86,6 +87,25 @@ router.get(
 		const accuracy = await getAllModelAccuracy(commodityId, days);
 
 		success(res, { accuracy, days });
+	}),
+);
+
+/**
+ * GET /api/signals/models/accuracy/public
+ *
+ * PUBLIC track record (no authentication — IMPROVEMENT-PLAN batch 2): the
+ * trust surface for a prediction product. Model-level 30d leaderboard plus
+ * the most recent VERIFIED predictions, privacy-whitelisted to macro
+ * commodities and beef-cut series ONLY — user dataset/timeseries ids fail
+ * closed inside getPublicTrackRecord (positive whitelist, tests pin it).
+ */
+router.get(
+	"/models/accuracy/public",
+	cacheRoute("signals:public-track-record", 300),
+	asyncHandler(async (req, res) => {
+		const days = Math.min(parseInt(req.query.days as string, 10) || 30, 90);
+		const trackRecord = await getPublicTrackRecord(days);
+		success(res, trackRecord);
 	}),
 );
 

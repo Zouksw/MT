@@ -1,7 +1,18 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/landing", "/login", "/register", "/about", "/pricing"];
+const PUBLIC_PATHS = [
+	"/",
+	"/landing",
+	"/login",
+	"/register",
+	"/about",
+	"/pricing",
+	// Public prediction track record — the trust surface is worthless behind
+	// a login wall (IMPROVEMENT-PLAN batch 2). Data is privacy-whitelisted
+	// server-side (macro + beef-cut series only).
+	"/ai/track-record",
+];
 
 export function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;

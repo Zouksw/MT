@@ -22,6 +22,15 @@ process.env.JWT_SECRET =
 	process.env.JWT_SECRET || "test-secret-key-for-jwt-testing-purposes-only-32chars";
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
 process.env.SESSION_SECRET =
-	process.env.SESSION_SECRET || "test-session-key-for-testing-purposes-only-32-chars-min";
-process.env.REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+	process.env.SESSION_SECRET || "test-session-key-for-testing-purposes-only-32chars-min";
+// Redis isolation (2026-08-23, round-122 batch 2): FORCE db1, unconditionally.
+// Integration suites run the app in-process, so cacheRoute writes go to
+// whatever REDIS_URL points at. With prod's db0 that means supertest
+// responses get cached under PRODUCTION keys — the live public track-record
+// endpoint once served a mt_test fixture row this way (test Redis ≠ test DB
+// guard: the DB has refused mt_db since 2026-08-16, Redis had no such guard).
+// db1 is never read by the production process, so test cache writes can
+// never bleed into live responses. Mirrors the DB fail-loud philosophy:
+// tests never share stateful infra with production, period.
+process.env.REDIS_URL = "redis://localhost:6379/1";
 process.env.INFERENCE_URL = process.env.INFERENCE_URL || "http://localhost:10810";

@@ -29,6 +29,8 @@ const FOOTER_SECTIONS = [
 			{ label: "Features", href: "/landing#features" },
 			{ label: "Pricing", href: "/pricing" },
 			{ label: "About", href: "/about" },
+			// Public, checkable prediction record — the trust entry point.
+			{ label: "Track Record", href: "/ai/track-record" },
 		],
 	},
 	{

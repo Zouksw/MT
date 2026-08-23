@@ -1,0 +1,231 @@
+"use client";
+
+import { BadgeCheck, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/apiFetch";
+
+/**
+ * Public prediction track record (IMPROVEMENT-PLAN batch 2).
+ *
+ * A prediction product earns trust through dated, checkable forecasts — not
+ * claims. This page is reachable WITHOUT login (middleware PUBLIC_PATHS) and
+ * renders the privacy-whitelisted public aggregate: the 30-day model
+ * leaderboard plus the most recent auto-verified predictions with their
+ * actuals. Data source: GET /api/signals/models/accuracy/public.
+ */
+
+interface LeaderRow {
+	modelId: string;
+	medianMape: number | null;
+	avgMape: number | null;
+	verifiedCount: number;
+	predictionCount: number;
+	lastVerifiedAt: string | null;
+}
+
+interface SampleRow {
+	seriesKey: string;
+	seriesLabel: string;
+	modelId: string;
+	horizon: number;
+	predictedAt: string;
+	predicted: number | null;
+	actual: number | null;
+	mape: number | null;
+	verifiedAt: string;
+}
+
+interface TrackRecord {
+	windowDays: number;
+	generatedAt: string;
+	leaderboard: LeaderRow[];
+	samples: SampleRow[];
+	methodology: {
+		verification: string;
+		window: string;
+		metric: string;
+		consensus: string;
+	};
+}
+
+function fmtMape(v: number | null): string {
+	return v == null ? "—" : `${v.toFixed(2)}%`;
+}
+
+function fmtNum(v: number | null): string {
+	return v == null ? "—" : v.toFixed(2);
+}
+
+function fmtDate(iso: string | null): string {
+	if (!iso) return "—";
+	return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export default function TrackRecordPage() {
+	const [record, setRecord] = useState<TrackRecord | null>(null);
+	const [error, setError] = useState<Error | null>(null);
+	const [loading, setLoading] = useState(true);
+
+	const load = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		try {
+			const res = await apiFetch<{ data: TrackRecord }>("/api/signals/models/accuracy/public");
+			setRecord(res.data);
+		} catch (e) {
+			setError(e instanceof Error ? e : new Error("Failed to load track record"));
+		} finally {
+			setLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		load();
+	}, [load]);
+
+	return (
+		<div className="min-h-screen bg-background">
+			<div className="mx-auto max-w-5xl px-6 py-12">
+				{/* Header */}
+				<div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+					<ShieldCheck className="size-4 text-primary" />
+					<span>Public record — no account required</span>
+				</div>
+				<h1 className="text-3xl font-semibold tracking-tight text-foreground">
+					Prediction Track Record
+				</h1>
+				<p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+					Every forecast is logged when made and automatically re-scored against actual prices. This
+					page shows the rolling {record?.windowDays ?? 30}-day model leaderboard and the most
+					recent verified predictions — checkable, not just claimed.
+				</p>
+
+				{loading && <div className="mt-10 h-40 animate-pulse rounded-lg bg-muted" />}
+
+				{error && (
+					<div
+						className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+						role="alert"
+					>
+						Track record unavailable: {error.message}
+						<button type="button" onClick={load} className="ml-2 underline">
+							Retry
+						</button>
+					</div>
+				)}
+
+				{record && !loading && (
+					<>
+						{/* Leaderboard */}
+						<section className="mt-10">
+							<h2 className="mb-3 text-lg font-semibold text-foreground">
+								Model leaderboard — last {record.windowDays} days
+							</h2>
+							<div className="overflow-x-auto rounded-lg ring-1 ring-black/5 dark:ring-white/10">
+								<table className="w-full text-sm">
+									<thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+										<tr>
+											<th className="px-4 py-3">Model</th>
+											<th className="px-4 py-3">Median MAPE</th>
+											<th className="px-4 py-3">Mean MAPE</th>
+											<th className="px-4 py-3">Verified</th>
+											<th className="px-4 py-3">Last verified</th>
+										</tr>
+									</thead>
+									<tbody>
+										{[...record.leaderboard]
+											.sort((a, b) => (a.medianMape ?? 999) - (b.medianMape ?? 999))
+											.map((row) => (
+												<tr
+													key={row.modelId}
+													className="border-t border-black/5 dark:border-white/5"
+												>
+													<td className="px-4 py-2.5 font-mono text-xs">{row.modelId}</td>
+													<td className="px-4 py-2.5 tabular-nums">{fmtMape(row.medianMape)}</td>
+													<td className="px-4 py-2.5 tabular-nums text-muted-foreground">
+														{fmtMape(row.avgMape)}
+													</td>
+													<td className="px-4 py-2.5 tabular-nums">{row.verifiedCount}</td>
+													<td className="px-4 py-2.5 text-muted-foreground">
+														{fmtDate(row.lastVerifiedAt)}
+													</td>
+												</tr>
+											))}
+									</tbody>
+								</table>
+							</div>
+						</section>
+
+						{/* Recent verified predictions */}
+						<section className="mt-10">
+							<h2 className="mb-1 text-lg font-semibold text-foreground">
+								Recent verified predictions
+							</h2>
+							<p className="mb-3 text-xs text-muted-foreground">
+								Predicted value = end-of-horizon forecast at log time; actual = the value that later
+								arrived. Only public series (macro commodities and beef cuts) are shown.
+							</p>
+							<div className="overflow-x-auto rounded-lg ring-1 ring-black/5 dark:ring-white/10">
+								<table className="w-full text-sm">
+									<thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+										<tr>
+											<th className="px-4 py-3">Series</th>
+											<th className="px-4 py-3">Model</th>
+											<th className="px-4 py-3">Made</th>
+											<th className="px-4 py-3">Horizon</th>
+											<th className="px-4 py-3">Predicted</th>
+											<th className="px-4 py-3">Actual</th>
+											<th className="px-4 py-3">MAPE</th>
+										</tr>
+									</thead>
+									<tbody>
+										{record.samples.slice(0, 25).map((s, i) => (
+											// biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id
+											<tr key={i} className="border-t border-black/5 dark:border-white/5">
+												<td className="max-w-52 truncate px-4 py-2.5">{s.seriesLabel}</td>
+												<td className="px-4 py-2.5 font-mono text-xs">{s.modelId}</td>
+												<td className="px-4 py-2.5 text-muted-foreground">
+													{fmtDate(s.predictedAt)}
+												</td>
+												<td className="px-4 py-2.5 tabular-nums">{s.horizon}d</td>
+												<td className="px-4 py-2.5 tabular-nums">{fmtNum(s.predicted)}</td>
+												<td className="px-4 py-2.5 tabular-nums">{fmtNum(s.actual)}</td>
+												<td className="px-4 py-2.5 tabular-nums">
+													<span className={s.mape != null && s.mape <= 5 ? "text-success" : ""}>
+														{fmtMape(s.mape)}
+													</span>
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</section>
+
+						{/* Methodology */}
+						<section className="mt-10 rounded-lg bg-muted/40 p-5">
+							<h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+								<BadgeCheck className="size-4 text-primary" />
+								How verification works
+							</h2>
+							<ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+								<li>{record.methodology.verification}</li>
+								<li>{record.methodology.metric}</li>
+								<li>{record.methodology.consensus}</li>
+								<li>{record.methodology.window}</li>
+							</ul>
+						</section>
+
+						<p className="mt-8 text-xs text-muted-foreground">
+							Generated {new Date(record.generatedAt).toLocaleString()} ·{" "}
+							<Link href="/ai/accuracy" className="underline hover:text-primary">
+								logged-in users see the full accuracy workbench
+							</Link>
+						</p>
+					</>
+				)}
+			</div>
+		</div>
+	);
+}

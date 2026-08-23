@@ -326,7 +326,9 @@ describe("API Workflow Integration Tests", () => {
 			expect(["up", "down", "flat"]).toContain(res.body.data.direction);
 			expect(res.body.data).toHaveProperty("confidence");
 			expect(res.body.data).toHaveProperty("individualForecasts");
-			// Consensus pool = 7 models (round-122 batch 3).
+			// Consensus pool = 7 models (round-122 batch 3). individualForecasts
+			// carries one entry per REQUESTED model (available or unavailable),
+			// so the length is deterministic regardless of inference hiccups.
 			expect(res.body.data.individualForecasts).toHaveLength(7);
 		});
 
