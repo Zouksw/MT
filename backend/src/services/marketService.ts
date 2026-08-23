@@ -12,6 +12,7 @@
 import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { NotFoundError } from "@/middleware/errorHandler";
+import { stalenessWindowDays } from "@/services/cadence";
 import { getDataHealth } from "@/services/dataHealth";
 import {
 	authoritativeSourceWhere,
@@ -245,24 +246,32 @@ export async function getLatestExchangeRates() {
 }
 
 /**
- * Per-commodity data freshness — last daily price date for each commodity.
- * Stale threshold is one week (price data is daily). Mirrors the
- * `/commodities/freshness` endpoint.
+ * Per-commodity data freshness — latest price date for each commodity at its
+ * OWN cadence (round-129 batch 6a). Previously daily-only: monthly-only
+ * series (beef_carcass_us = IMF, world_bank group) reported lastUpdated null
+ * and stale:true no matter how fresh their monthly points were. Stale
+ * thresholds come from the cadence policy (7d daily / 60d monthly). Mirrors
+ * the `/commodities/freshness` endpoint.
  */
 export async function getCommodityFreshness() {
 	const now = new Date();
-	const staleThreshold = new Date(now.getTime() - MS_PER_WEEK);
 
+	// Latest point per commodity per interval; the newest interval wins per
+	// commodity below. (Mixed-cadence series are honest: the cadence of the
+	// newest point is the cadence the board reports.)
 	const latestPrices = await prisma.commodityPrice.groupBy({
-		by: ["commodityId"],
-		where: { interval: "daily" },
+		by: ["commodityId", "interval"],
 		_max: { date: true },
 	});
 
-	const lastByCommodity = new Map<string, Date>();
+	const lastByCommodity = new Map<string, { date: Date; interval: string }>();
 	for (const row of latestPrices) {
 		const d = row._max.date;
-		if (d) lastByCommodity.set(row.commodityId, d);
+		if (!d) continue;
+		const existing = lastByCommodity.get(row.commodityId);
+		if (!existing || d > existing.date) {
+			lastByCommodity.set(row.commodityId, { date: d, interval: row.interval });
+		}
 	}
 
 	const commodities = await prisma.commodity.findMany({
@@ -277,15 +286,20 @@ export async function getCommodityFreshness() {
 	});
 
 	const items = commodities.map((c) => {
-		const lastUpdated = lastByCommodity.get(c.id) ?? null;
+		const last = lastByCommodity.get(c.id) ?? null;
+		const staleThreshold = new Date(
+			now.getTime() - stalenessWindowDays(last?.interval ?? "daily") * MS_PER_DAY,
+		);
 		return {
 			id: c.id,
 			slug: c.slug,
 			name: c.name,
 			category: c.category,
 			isActive: c.isActive,
-			lastUpdated,
-			stale: lastUpdated ? lastUpdated < staleThreshold : true,
+			lastUpdated: last?.date ?? null,
+			// Cadence of the row lastUpdated came from (null when no data).
+			interval: last?.interval ?? null,
+			stale: last ? last.date < staleThreshold : true,
 		};
 	});
 
