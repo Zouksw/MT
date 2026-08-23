@@ -37,6 +37,50 @@ export interface LogPredictionParams {
 	 * point). Verification aligns actuals to this anchor — see schema note on
 	 * PredictionLog.forecastStartAt (round-104). */
 	forecastStartAt?: Date;
+	/** Cadence of the predicted series (ADR-0001 ③). Omitted rows read as
+	 * daily — legacy semantics; cut-series rows stay unstamped because their
+	 * cadence is the CSV import rhythm, not a CommodityPrice interval. */
+	interval?: "daily" | "monthly";
+}
+
+/**
+ * ADR-0001 ④ — monthly refresh predicate: has this monthly series received
+ * an actual point at/after the newest logged monthly forecast's first step?
+ *
+ * A monthly series gains a new actual point ~once a month (PBEEFUSDM
+ * publishes mid M+1), so the 30-min background refresh and any on-demand
+ * request after cache expiry would otherwise retrain on IDENTICAL data and
+ * log duplicate rows that sit unverified for months (the daily path doesn't
+ * have this pathology — its rows mature in ~10 days). True means a fresh
+ * prediction retrains on grown data and is worth logging.
+ *
+ * Returns the newest row's id alongside the boolean so logPrediction can
+ * dedup without a second query. modelId omitted = judge by the newest row of
+ * ANY model (the background refresh uses that form to skip whole cycles).
+ */
+export async function monthlyNewPointState(
+	commodityId: string,
+	modelId?: string,
+): Promise<{ hasNewPoint: boolean; newestRowId: string | null }> {
+	const newest = await prisma.predictionLog.findFirst({
+		where: { commodityId, interval: "monthly", ...(modelId ? { modelId } : {}) },
+		orderBy: { predictedAt: "desc" },
+		select: { id: true, forecastStartAt: true },
+	});
+	// Nothing logged yet (or a legacy-shaped row without forecastStartAt): a
+	// first prediction is always worth logging.
+	if (!newest?.forecastStartAt) {
+		return { hasNewPoint: true, newestRowId: newest?.id ?? null };
+	}
+	const latest = await prisma.commodityPrice.findFirst({
+		where: { commodityId, interval: "monthly" },
+		orderBy: { date: "desc" },
+		select: { date: true },
+	});
+	// No monthly prices at all: nothing can be new (and the training fetch
+	// would fail anyway) — never log in this state.
+	if (!latest) return { hasNewPoint: false, newestRowId: newest.id };
+	return { hasNewPoint: latest.date >= newest.forecastStartAt, newestRowId: newest.id };
 }
 
 /**
@@ -49,6 +93,17 @@ export interface LogPredictionParams {
  *   completed  → verified   (verifyPrediction runs when actuals arrive)
  */
 export async function logPrediction(params: LogPredictionParams): Promise<string> {
+	// Monthly dedup guard (ADR-0001 ④): re-log only when a new actual point
+	// has landed. Without it, every 30-min refresh cycle and every on-demand
+	// request after cache expiry logs a row trained on identical data — for a
+	// monthly series that's ~336 duplicate rows/day sitting unverified for
+	// months. Daily rows are exempt: they mature in ~10 days, so re-predicting
+	// them each cycle is the existing, intended behavior.
+	if (params.interval === "monthly") {
+		const state = await monthlyNewPointState(params.commodityId, params.modelId);
+		if (!state.hasNewPoint && state.newestRowId) return state.newestRowId;
+	}
+
 	const log = await prisma.predictionLog.create({
 		data: {
 			modelId: params.modelId,
@@ -59,6 +114,7 @@ export async function logPrediction(params: LogPredictionParams): Promise<string
 			upperBounds: params.upperBounds ?? undefined,
 			confidence: params.confidence ?? undefined,
 			forecastStartAt: params.forecastStartAt ?? undefined,
+			interval: params.interval ?? undefined,
 			status: PS.COMPLETED,
 		},
 	});

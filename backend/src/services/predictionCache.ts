@@ -18,9 +18,11 @@ import {
 	STALE_WINDOW_DAYS,
 } from "./beefQueries";
 import { cacheKeys } from "./cache";
+import { stalenessWindowDays } from "./cadence";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
 import { applyConformalInterval, getIntervalMultipliers } from "./intervalCalibration";
+import { monthlyNewPointState } from "./mapeTracking";
 import { BASELINE_MODELS, getAllModels } from "./modelRegistry";
 
 /** Shared by the on-demand routes (inference.ts) — every writer of the
@@ -45,6 +47,10 @@ interface CommoditySubscription {
 	commodityId: string;
 	models: string[];
 	horizon: number;
+	/** Cadence of the subscribed series (ADR-0001 ⑤). The 30-min timer ticks
+	 * for every subscription, but monthly cycles are skipped unless a new
+	 * actual point has landed (see refreshCommodityPredictions). */
+	interval: "daily" | "monthly";
 }
 
 // Active subscriptions for background refresh
@@ -166,6 +172,11 @@ async function computeAndCachePrediction(
 		// only ran on macro commodities. See services/beefCutSeries.ts.
 		let values: number[];
 		let timestamps: number[];
+		// Cadence actually used for training — stamped onto the prediction_log
+		// row so verification can branch per-row cadence (ADR-0001 ③). Cut
+		// series stay unstamped: their rhythm is the CSV import cadence, not a
+		// CommodityPrice interval, and their verification path is unchanged.
+		let seriesInterval: "daily" | "monthly" | undefined;
 		if (isCutSeriesKey(commodityId)) {
 			const parsed = parseCutSeriesKey(commodityId);
 			if (!parsed) {
@@ -176,7 +187,10 @@ async function computeAndCachePrediction(
 				cutCode: parsed.cutCode,
 			}));
 		} else {
-			({ values, timestamps } = await getCommodityPriceValues(commodityId, 200));
+			const series = await getCommodityPriceValues(commodityId, 200);
+			values = series.values;
+			timestamps = series.timestamps;
+			seriesInterval = series.interval;
 		}
 
 		const result = await predict({
@@ -263,6 +277,7 @@ async function computeAndCachePrediction(
 					Array.isArray(result.timestamps) && result.timestamps.length > 0
 						? new Date(result.timestamps[0])
 						: undefined,
+				interval: seriesInterval,
 			});
 		} catch (error) {
 			logger.error(
@@ -281,6 +296,18 @@ async function computeAndCachePrediction(
  * Refresh all predictions for a subscribed commodity
  */
 async function refreshCommodityPredictions(sub: CommoditySubscription): Promise<void> {
+	// ADR-0001 ④: a monthly series gains a new actual point ~once a month —
+	// re-running inference between points retrains on identical data and (pre-
+	// guard) logged ~336 duplicate rows/day. Skip the whole cycle when no new
+	// point has landed; logPrediction carries the same predicate for the
+	// on-demand path — this early return additionally saves the inference
+	// calls. The monthly prediction itself re-enters the cache on-demand the
+	// next time cache expiry coincides with a genuinely new point.
+	if (sub.interval === "monthly") {
+		const state = await monthlyNewPointState(sub.commodityId);
+		if (!state.hasNewPoint) return;
+	}
+
 	logger.info(`Refreshing predictions for ${sub.commodityId} (${sub.models.length} models)`);
 
 	await Promise.allSettled(
@@ -297,11 +324,17 @@ async function refreshCommodityPredictions(sub: CommoditySubscription): Promise<
 /**
  * Subscribe a commodity to background prediction refresh
  */
-export function subscribeCommodity(commodityId: string, models: string[], horizon: number): void {
+export function subscribeCommodity(
+	commodityId: string,
+	models: string[],
+	horizon: number,
+	interval: "daily" | "monthly" = "daily",
+): void {
 	subscriptions.set(commodityId, {
 		commodityId,
 		models,
 		horizon,
+		interval,
 	});
 
 	// Start background refresh timer if not already running
@@ -500,12 +533,51 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 		}
 	}
 
+	// ADR-0001 ⑤ — monthly predicate: latest point within the monthly
+	// staleness window (60d = 2× publication rhythm; PBEEFUSDM publishes
+	// mid M+1, so a healthy latest point sits ~45d old) AND the full series
+	// ≥3 points (the engine's minimum for spacing extrapolation on monthly
+	// data). This is the gate that finally admits beef_carcass_us (pure
+	// monthly, 195 points) into the prediction loop — round-128 found the
+	// background loop had ZERO beef coverage because the daily-only gate
+	// above silently excluded every monthly series.
+	const monthlyCommodities = await prisma.commodity.findMany({
+		where: {
+			isActive: true,
+			prices: { some: { interval: "monthly" } },
+		},
+		select: {
+			id: true,
+			_count: { select: { prices: { where: { interval: "monthly" } } } },
+		},
+	});
+	const monthlyWindowMs = stalenessWindowDays("monthly") * 86400000;
+	let subscribedMonthly = 0;
+	for (const commodity of monthlyCommodities) {
+		if (commodity._count.prices < 3) continue;
+		// A commodity serving both cadences (fresh daily rows AND monthly
+		// rows) keeps its daily subscription above — it's the finer refresh;
+		// the Map is keyed by commodityId, so re-subscribing would replace it.
+		if (subscriptions.has(commodity.id)) continue;
+		const latest = await prisma.commodityPrice.findFirst({
+			where: { commodityId: commodity.id, interval: "monthly" },
+			orderBy: { date: "desc" },
+			select: { date: true },
+		});
+		if (!latest || Date.now() - latest.date.getTime() > monthlyWindowMs) continue;
+		subscribeCommodity(commodity.id, MODELS, 10, "monthly");
+		subscribedMonthly++;
+	}
+
 	const skipped = commodities.length - subscribed;
 	logger.info(
-		`[PREDICT] Subscribed ${subscribed} commodities to prediction refresh (${skipped} active commodities had <2 daily prices in last ${STALE_WINDOW_DAYS}d, skipped)`,
+		`[PREDICT] Subscribed ${subscribed} commodities to prediction refresh (${skipped} active commodities had <2 daily prices in last ${STALE_WINDOW_DAYS}d, skipped)` +
+			(subscribedMonthly > 0
+				? ` + ${subscribedMonthly} monthly series (ADR-0001, new-point-gated)`
+				: ""),
 	);
 
-	return subscribed;
+	return subscribed + subscribedMonthly;
 }
 
 /**

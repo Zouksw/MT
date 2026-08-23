@@ -1,0 +1,263 @@
+/**
+ * Monthly-cadence subscription & refresh gating (ADR-0001 ④⑤).
+ *
+ * Real-DB integration: covers the three pieces that admit a monthly series
+ * into the prediction loop without the ~336-rows/day duplicate pathology —
+ *   1. monthlyNewPointState: the "new actual point since the newest logged
+ *      forecast?" predicate,
+ *   2. logPrediction's monthly dedup guard (returns the existing row id
+ *      instead of duplicating),
+ *   3. schedulePredictionsFromPostgreSQL's monthly predicate (latest point
+ *      ≤60d AND ≥3 points → subscribed as interval="monthly").
+ *
+ * Fixtures are throwaway commodities with controlled monthly price history;
+ * cleanup deletes prices → commodity → prediction rows per test.
+ */
+
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { logPrediction, monthlyNewPointState } from "@/services/mapeTracking";
+import {
+	getSubscribedCommodities,
+	schedulePredictionsFromPostgreSQL,
+	unsubscribeCommodity,
+} from "@/services/predictionCache";
+import {
+	createTestContext,
+	destroyTestContext,
+	type TestContext,
+} from "@/test/helpers/testContext";
+
+/** UTC midnight of the first day of the month `offset` months from now. */
+function monthStart(offset = 0): Date {
+	const now = new Date();
+	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+}
+
+async function makeMonthlyCommodity(
+	ctx: TestContext,
+	slug: string,
+	points: Array<{ date: Date; close: number }>,
+) {
+	const commodity = await ctx.prisma.commodity.create({
+		data: {
+			id: `${ctx.prefix}-${slug}`,
+			slug: `${ctx.prefix}-${slug}`,
+			name: slug,
+			category: "test",
+			unit: "USD",
+			currency: "USD",
+			isActive: true,
+		},
+	});
+	for (const p of points) {
+		await ctx.prisma.commodityPrice.create({
+			data: {
+				commodityId: commodity.id,
+				date: p.date,
+				interval: "monthly",
+				close: p.close,
+				source: "test",
+			},
+		});
+	}
+	return commodity;
+}
+
+async function cleanupCommodity(ctx: TestContext, commodityId: string) {
+	await ctx.prisma.predictionLog.deleteMany({ where: { commodityId } });
+	await ctx.prisma.commodityPrice.deleteMany({ where: { commodityId } });
+	await ctx.prisma.commodity.deleteMany({ where: { id: commodityId } });
+}
+
+describe("Monthly cadence — subscription & refresh gating (ADR-0001)", () => {
+	let ctx: TestContext;
+
+	beforeAll(async () => {
+		ctx = await createTestContext("monthly-cache");
+		if (!ctx.available)
+			throw new Error(
+				"predictionCache.monthly: integration suite requires PostgreSQL+Redis. Start them or run only unit tests — a silent skip would report false-green.",
+			);
+	});
+
+	afterAll(async () => {
+		await destroyTestContext(ctx);
+	});
+
+	describe("monthlyNewPointState", () => {
+		it("reports hasNewPoint=true when nothing is logged yet (first prediction always logs)", async () => {
+			const c = await makeMonthlyCommodity(ctx, "pred-empty", [
+				{ date: monthStart(0), close: 100 },
+			]);
+			try {
+				const state = await monthlyNewPointState(c.id);
+				expect(state).toEqual({ hasNewPoint: true, newestRowId: null });
+			} finally {
+				await cleanupCommodity(ctx, c.id);
+			}
+		});
+
+		it("reports hasNewPoint=false while the latest actual predates the newest forecast's first step", async () => {
+			const c = await makeMonthlyCommodity(ctx, "pred-stable", [
+				{ date: monthStart(-2), close: 100 },
+				{ date: monthStart(-1), close: 101 },
+				{ date: monthStart(0), close: 102 },
+			]);
+			try {
+				// Forecast made off the monthStart(0) point → first step is
+				// monthStart(+1). The newest actual (monthStart(0)) predates it →
+				// every model would retrain on identical data.
+				const row = await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: "monthly-pred-test",
+						commodityId: c.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3],
+						status: "completed",
+						forecastStartAt: monthStart(1),
+						interval: "monthly",
+					},
+				});
+				const state = await monthlyNewPointState(c.id);
+				expect(state.hasNewPoint).toBe(false);
+				expect(state.newestRowId).toBe(row.id);
+			} finally {
+				await cleanupCommodity(ctx, c.id);
+			}
+		});
+
+		it("flips to hasNewPoint=true once an actual lands at/after the forecast's first step", async () => {
+			const c = await makeMonthlyCommodity(ctx, "pred-grow", [
+				{ date: monthStart(-1), close: 100 },
+				{ date: monthStart(0), close: 101 },
+			]);
+			try {
+				await ctx.prisma.predictionLog.create({
+					data: {
+						modelId: "monthly-pred-test",
+						commodityId: c.id,
+						horizon: 10,
+						predictedValues: [1, 2, 3],
+						status: "completed",
+						forecastStartAt: monthStart(1),
+						interval: "monthly",
+					},
+				});
+				expect((await monthlyNewPointState(c.id)).hasNewPoint).toBe(false);
+				// New monthly point lands (the one the forecast was FOR):
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: c.id,
+						date: monthStart(1),
+						interval: "monthly",
+						close: 103,
+						source: "test",
+					},
+				});
+				expect((await monthlyNewPointState(c.id)).hasNewPoint).toBe(true);
+			} finally {
+				await cleanupCommodity(ctx, c.id);
+			}
+		});
+	});
+
+	describe("logPrediction monthly dedup guard (ADR-0001 ④)", () => {
+		it("returns the existing row id on a no-new-point re-log, and logs a fresh row once a new point lands", async () => {
+			const c = await makeMonthlyCommodity(ctx, "dedup", [
+				{ date: monthStart(-1), close: 100 },
+				{ date: monthStart(0), close: 101 },
+			]);
+			try {
+				const base = {
+					modelId: "monthly-dedup-test",
+					commodityId: c.id,
+					horizon: 10,
+					predictedValues: [1, 2, 3],
+					forecastStartAt: monthStart(1),
+					interval: "monthly" as const,
+				};
+				const id1 = await logPrediction(base);
+				// Same training data (latest actual monthStart(0) < first step
+				// monthStart(1)) → dedup, not a duplicate row.
+				const id2 = await logPrediction(base);
+				expect(id2).toBe(id1);
+				expect(await ctx.prisma.predictionLog.count({ where: { commodityId: c.id } })).toBe(1);
+
+				// A new actual point arrives → next log is a genuinely new row.
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: c.id,
+						date: monthStart(1),
+						interval: "monthly",
+						close: 103,
+						source: "test",
+					},
+				});
+				const id3 = await logPrediction(base);
+				expect(id3).not.toBe(id1);
+				expect(await ctx.prisma.predictionLog.count({ where: { commodityId: c.id } })).toBe(2);
+			} finally {
+				await cleanupCommodity(ctx, c.id);
+			}
+		});
+
+		it("does not guard daily-cadence rows (identical params re-log, as today)", async () => {
+			const c = await makeMonthlyCommodity(ctx, "daily-nodedup", [
+				{ date: monthStart(0), close: 100 },
+			]);
+			try {
+				const base = {
+					modelId: "daily-nodedup-test",
+					commodityId: c.id,
+					horizon: 10,
+					predictedValues: [1, 2, 3],
+				};
+				const id1 = await logPrediction(base);
+				const id2 = await logPrediction(base);
+				expect(id2).not.toBe(id1); // daily path keeps unconditional create
+				expect(await ctx.prisma.predictionLog.count({ where: { commodityId: c.id } })).toBe(2);
+			} finally {
+				await cleanupCommodity(ctx, c.id);
+			}
+		});
+	});
+
+	describe("schedulePredictionsFromPostgreSQL monthly predicate (ADR-0001 ⑤)", () => {
+		it("subscribes a healthy monthly series (latest ≤60d, ≥3 points) and skips stale/thin ones", async () => {
+			// Healthy: latest point ~30d old (inside the 60d window), 4 points.
+			const healthy = await makeMonthlyCommodity(ctx, "sched-healthy", [
+				{ date: monthStart(-3), close: 100 },
+				{ date: monthStart(-2), close: 101 },
+				{ date: monthStart(-1), close: 102 },
+				{ date: monthStart(0), close: 103 },
+			]);
+			// Stale: latest ~90d old (> 60d staleness window) despite 4 points.
+			const stale = await makeMonthlyCommodity(ctx, "sched-stale", [
+				{ date: monthStart(-6), close: 100 },
+				{ date: monthStart(-5), close: 101 },
+				{ date: monthStart(-4), close: 102 },
+				{ date: monthStart(-3), close: 103 },
+			]);
+			// Thin: latest point fresh but only 2 points total.
+			const thin = await makeMonthlyCommodity(ctx, "sched-thin", [
+				{ date: monthStart(-1), close: 100 },
+				{ date: monthStart(0), close: 101 },
+			]);
+
+			try {
+				await schedulePredictionsFromPostgreSQL();
+				const subscribed = getSubscribedCommodities();
+				expect(subscribed).toContain(healthy.id);
+				expect(subscribed).not.toContain(stale.id);
+				expect(subscribed).not.toContain(thin.id);
+			} finally {
+				// Module state cleanup: drop the fixture from the subscription
+				// map so later suites start clean.
+				unsubscribeCommodity(healthy.id);
+				await cleanupCommodity(ctx, healthy.id);
+				await cleanupCommodity(ctx, stale.id);
+				await cleanupCommodity(ctx, thin.id);
+			}
+		});
+	});
+});

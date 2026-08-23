@@ -51,8 +51,11 @@ vi.mock("@/services/tradingSignals", () => ({
 }));
 
 // mapeTracking.logPrediction — the function whose failure we exercise.
+// monthlyNewPointState is imported by predictionCache for the monthly
+// refresh guard (ADR-0001 ④) — stub it so the mock stays shape-complete.
 vi.mock("@/services/mapeTracking", () => ({
 	logPrediction: (...args: unknown[]) => mocks.logPrediction(...args),
+	monthlyNewPointState: vi.fn(async () => ({ hasNewPoint: true, newestRowId: null })),
 }));
 
 // --- subject ------------------------------------------------------------

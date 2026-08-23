@@ -4,6 +4,11 @@ import { getAuthoritativeSource } from "@/services/inference/authoritativeSource
 export interface TimeSeriesData {
 	values: number[];
 	timestamps: number[];
+	/** Cadence of the RETURNED series: "monthly" when the round-127 fallback
+	 * (or an explicit monthly request) supplied the rows, else "daily".
+	 * Prediction writers stamp this onto prediction_logs.interval so the
+	 * verification lifecycle can branch per-row cadence (ADR-0001 ③). */
+	interval: "daily" | "monthly";
 }
 
 export async function getCommodityPriceValues(
@@ -36,12 +41,14 @@ export async function getCommodityPriceValues(
 			take: limit,
 		});
 
+	let seriesInterval: "daily" | "monthly" = interval === "monthly" ? "monthly" : "daily";
 	let prices = await queryByInterval(interval);
 	// Monthly fallback (round-127): the IMF beef benchmark (beef_carcass_us)
 	// stores monthly rows — the daily default returned 0 points and every
 	// predict call for it 500'd with "Insufficient price data".
 	if (prices.length < 2 && interval === "daily") {
 		prices = await queryByInterval("monthly");
+		seriesInterval = "monthly";
 	}
 
 	// Return in chronological order (oldest first) for prediction models
@@ -56,5 +63,6 @@ export async function getCommodityPriceValues(
 	return {
 		values: prices.map((p) => Number(p.close)),
 		timestamps: prices.map((p) => p.date.getTime()),
+		interval: seriesInterval,
 	};
 }
