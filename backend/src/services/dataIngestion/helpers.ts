@@ -296,11 +296,6 @@ export async function upsertFactor(data: {
 	return existed ? { inserted: 0, updated: 1 } : { inserted: 1, updated: 0 };
 }
 
-/** Date to YYYYMMDD for Stooq-style APIs. */
-export function formatDateYMD(d: Date): string {
-	return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-}
-
 /** Parse YYYYMM or YYYY-MM to Date (first of month, UTC). */
 export function parseMonth(str: string): Date | null {
 	const m = str.replace(/-/g, "").match(/^(\d{4})(\d{2})$/);
@@ -317,12 +312,4 @@ export function monthRange(start: Date, end: Date): string[] {
 		d.setMonth(d.getMonth() + 1);
 	}
 	return months;
-}
-
-/** Generate list of YYYYMMDD strings for last N days. */
-export function lastNDays(n: number): { start: string; end: string } {
-	const end = new Date();
-	const start = new Date();
-	start.setDate(start.getDate() - n);
-	return { start: formatDateYMD(start), end: formatDateYMD(end) };
 }

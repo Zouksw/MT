@@ -838,10 +838,3 @@ export function normalizeBeefCut(name: string): string | null {
 export function getAllCutMappings(): CutMapping[] {
 	return [...CUT_MAPPINGS];
 }
-
-/**
- * Get a specific cut mapping by cutCode.
- */
-export function getCutMapping(cutCode: string): CutMapping | undefined {
-	return CUT_MAPPINGS.find((c) => c.cutCode === cutCode);
-}
