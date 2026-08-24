@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-08-22"
+last_updated: "2026-08-24"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-08-24 — round-131 批 6b/6c 落地：月度序列进预测链闭环（D5 已确认，ADR-0001 Accepted）
+
+用户确认 D5。ADR-0001 转 Accepted，按计划执行第二波最重的批 6b（4 个子提交）与批 6c，每批独立门禁：
+
+- **批 6b-1 `43984cd`（迁移）**：`prediction_logs` 增可空 `interval` 列（TEXT，无回填——14 万旧行 NULL=daily 语义兼容，ADR-0001 ③）；mt_db/mt_test 双库应用；ADR 状态 Proposed→**Accepted**。
+- **批 6b-2（订阅 + 守卫 + 落库）**：调度器月度谓词（最新点 ≤60d——取自 `cadence.ts`，2× 发布节奏——且全序列 ≥3 点，ADR ⑤）；`logPrediction` 月度去重守卫 + 30 分钟刷新周期级跳过（"仅新实际点后重预测"，ADR ④——否则月度序列以 30 分钟节律日产 ~336 条同训练集重复行）；data-fetcher 返回携带实际服务节奏，写库时 stamp。cut 序列不 stamp（导入节奏，非 CommodityPrice cadence）。
+- **批 6b-3（验证生命周期节奏感知，全仓最高风险文件单独成批，ADR ②）**：`verifyDuePredictions` 月度到期 = 锚点 + horizon 个日历月、实际值窗按月取月度点；`markUnverifiable` Pass A/B 按 (commodity, cadence) 分组、冻结探测读行自身节奏、月度冻结需源 >60 天死（发布滞后宽限）；expire/restore 原生 SQL `CASE COALESCE(interval,'daily')` 分流（月度窗按月 + 60 天回填宽限）；共享 `windowHasActualsBarSql` 保持三清扫互为补集。daily 路径字节级不变（旧行为由存量测试全绿钉住）。**执行自纠 2 处**：Pass A 首版漏月度 60 天宽限（计划 6b 第 3 条原文，集成测试抓获）、Pass B 分区标记早退 bug。
+- **批 6b-4（live 硬验收 + 订阅开启）**：`scripts/verify-monthly-lifecycle.ts` 受控验收——beef 回填行（窗口含真实 2026-05..07 PBEEFUSDM 收盘）按 server 同序穿越全部清扫 → **`verified`、MAPE 0、配对正确** → 探针删除零残留（可复跑）。live：`[PREDICT] Subscribed 15 daily + 13 monthly`（不止牛肉，全部健康月度序列进循环）；首轮按需触发 7 模型 × 1 行（forecast_start_at 2026-07-31）；二次请求/重启重算/缓存过期均**零日志增长**；unverifiable 增速 0；`predictionBeefCoverage24h` 0→**1**（round-128"背景预测与牛肉零交集"缺口闭合）。
+- **批 6c `397a86f`（cadence 元数据端到端，ADR ①）**：`CachedPrediction` 增 `interval`/`horizonUnit`，**三写方同 commit** stamp（predictionCache 后台写方 + /predict + /predict/batch，INT-1 形状漂移教训）；`PriceForecast`（signals）与 /predict/visualize 载荷透传 `horizonUnit`；`cadence.ts horizonUnitOf` 单一推导；前端 `PriceForecastPanel`"未来 {horizon} 天"→单位感知"未来 N 个月/天"（默认 day，daily 显示与旧信号安全退化）。live：beef 信号载荷 `horizonUnit=month`。
+- 测试：backend 1020+1 → **1034+1**（98→100 文件，+14：月度谓词/守卫 6 + 生命周期集成 6 + INT-1 形状钉住 2）、frontend 322 → **324**（月度/默认标签 2）、inference 64 不变；零回退。文档：IMPROVEMENT-PLAN round-131 执行状态 + D5 定案、TECH-DEBT round-127 月度链条目收口（遗留 correlation/analytics 为 ADR 显式不做）。
 
 ### 2026-08-23 — round-130 第二波执行：批 7/8/6a/9/10 落地（5 提交，D5 ADR 待确认）
 
