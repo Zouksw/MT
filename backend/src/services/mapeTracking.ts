@@ -9,6 +9,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
+import { stalenessWindowDays } from "@/services/cadence";
 import {
 	getAuthoritativeSource,
 	getConflictSlugs,
@@ -24,6 +25,40 @@ const MAX_HORIZON_DAYS = 10;
 /** Actuals bar: a window needs ≥ min(horizon, 3) in-window actuals before the
  * verifier can verify — verify, expire and restore must all agree on it. */
 const minActualsBar = (horizon: number) => Math.min(horizon, 3);
+
+// --- cadence (ADR-0001 ②③) ----------------------------------------------
+// A monthly series' horizon counts MONTHS and its actuals window reads
+// monthly price points. Everything below branches per-row cadence; the
+// daily path (including legacy NULL rows, which ARE daily) keeps its exact
+// pre-ADR arithmetic.
+
+/** Row cadence: NULL = legacy daily-era rows (no backfill — see ADR-0001 ③). */
+type RowCadence = "daily" | "monthly";
+const rowCadence = (interval: string | null): RowCadence =>
+	interval === "monthly" ? "monthly" : "daily";
+
+/** Calendar-month arithmetic on the UTC clock — a monthly horizon matures in
+ * MONTHS, not horizon×30.44d (anchor +1 step must stay month-anchored across
+ * 28/29/30/31-day months). Anchors are month starts in practice; the day
+ * component is preserved for the predictedAt fallback path. */
+function addMonthsUTC(date: Date, months: number): Date {
+	return new Date(
+		Date.UTC(
+			date.getUTCFullYear(),
+			date.getUTCMonth() + months,
+			date.getUTCDate(),
+			date.getUTCHours(),
+			date.getUTCMinutes(),
+			date.getUTCSeconds(),
+			date.getUTCMilliseconds(),
+		),
+	);
+}
+
+/** Backfill grace for monthly windows in the expire sweep: one full
+ * publication cycle (cadence.ts monthly staleness window, 60d) instead of
+ * the daily 7d — PBEEFUSDM legitimately publishes ~45d late. */
+const MONTHLY_GRACE_DAYS = stalenessWindowDays("monthly");
 
 export interface LogPredictionParams {
 	modelId: string;
@@ -330,16 +365,22 @@ export async function markUnverifiablePredictions(): Promise<number> {
 	const now = Date.now();
 	let markedTotal = 0;
 
-	// Step 1: find commodity-IDs with due completed predictions (non-cut).
-	// Due = predictedAt <= cutoff AND predictedAt + horizon <= now. The SQL
-	// cutoff is the max-horizon superset; the per-row horizon check below
-	// refines it. We only need per-commodity aggregates.
+	// Step 1: find (commodity, cadence) groups with due completed predictions
+	// (non-cut). Due = predictedAt <= cutoff AND predictedAt + horizon <= now.
+	// The SQL cutoff is the max-horizon superset; the per-group horizon check
+	// below refines it. We only need per-group aggregates.
 	// Round-104: this was an unbounded findMany of EVERY due row (up to
 	// ~26k at 18 commodities × 3 models × 30min cadence × 10 days) loaded
 	// into Node only to collapse into per-commodity min/max. groupBy does
 	// the collapse SQL-side and returns one row per commodity.
+	// Round-130 (ADR-0001 ②): the grouping gains the interval column so
+	// monthly and daily rows of the same commodity are judged — and marked —
+	// independently. This is where the pre-ADR sweep destroyed monthly
+	// series: everything grouped as one daily bucket, the Step-2 probe read
+	// daily prices only, and a pure-monthly commodity (beef_carcass_us, no
+	// daily rows) froze its whole group on every run.
 	const dueGroups = await prisma.predictionLog.groupBy({
-		by: ["commodityId"],
+		by: ["commodityId", "interval"],
 		where: {
 			status: PS.COMPLETED,
 			predictedAt: { lte: cutoff },
@@ -358,51 +399,94 @@ export async function markUnverifiablePredictions(): Promise<number> {
 		return markLaggingFrozenPredictions(cutoff, now);
 	}
 
-	// hasDueRow sound approximation: earliest predictedAt + the group's MAX
-	// horizon <= now implies earliest + ANY row's own horizon <= now, so the
-	// approximation can never claim due when no row is (only the converse —
-	// a missed due row is rechecked next cycle).
-	const byCommodity = new Map<string, { earliestPredictedAt: Date; hasDueRow: boolean }>();
+	const byGroup = new Map<
+		string,
+		{ commodityId: string; cadence: RowCadence; earliestPredictedAt: Date; hasDueRow: boolean }
+	>();
 	for (const g of dueGroups) {
+		const cadence = rowCadence(g.interval);
 		const earliest = g._min.predictedAt as Date;
 		const maxHorizon = g._max.horizon ?? 0;
-		byCommodity.set(g.commodityId, {
+		// hasDueRow sound approximation: earliest predictedAt + the group's MAX
+		// horizon <= now implies earliest + ANY row's own horizon <= now, so the
+		// approximation can never claim due when no row is (only the converse —
+		// a missed due row is rechecked next cycle). Monthly horizons elapse in
+		// calendar months off the same earliest anchor (ADR-0001 ②).
+		const matured =
+			cadence === "monthly"
+				? addMonthsUTC(earliest, maxHorizon).getTime() <= now
+				: earliest.getTime() + maxHorizon * 86400000 <= now;
+		byGroup.set(`${g.commodityId}:${cadence}`, {
+			commodityId: g.commodityId,
+			cadence,
 			earliestPredictedAt: earliest,
-			hasDueRow: earliest.getTime() + maxHorizon * 86400000 <= now,
+			hasDueRow: matured,
 		});
 	}
 
-	// Step 2: for each candidate commodity, check if its latest daily price
-	// is older than the earliest due prediction. If so, no actuals exist
-	// for ANY due prediction on that commodity → frozen → mark unverifiable.
-	const frozenCommodityIds: string[] = [];
-	for (const [commodityId, info] of byCommodity) {
+	// Step 2: for each candidate group, check if the latest price OF THAT
+	// CADENCE is older than the earliest due prediction. If so, no actuals
+	// exist for ANY due prediction in the group → frozen → mark all of them
+	// unverifiable. Monthly rows additionally require the source to be dead
+	// past the 60d monthly window (ADR-0001 ② / batch-6b item 3): a healthy
+	// monthly source's latest point can sit ~45d old mid publication cycle
+	// — "no price after the prediction" alone must not freeze it during the
+	// publish lag; a truly dead source (nothing for >60d) still freezes.
+	const frozen: Array<{ commodityId: string; cadence: RowCadence }> = [];
+	for (const info of byGroup.values()) {
 		if (!info.hasDueRow) continue; // no row has actually matured yet
 		const latestPrice = await prisma.commodityPrice.findFirst({
-			where: { commodityId, interval: "daily" },
+			where: { commodityId: info.commodityId, interval: info.cadence },
 			orderBy: { date: "desc" },
 			select: { date: true },
 		});
 		// No price at all, or latest price is before the earliest due
 		// prediction → no actuals can ever exist for the due window.
 		if (!latestPrice || latestPrice.date <= info.earliestPredictedAt) {
-			frozenCommodityIds.push(commodityId);
+			if (
+				info.cadence === "monthly" &&
+				latestPrice &&
+				now - latestPrice.date.getTime() <= stalenessWindowDays("monthly") * 86400000
+			) {
+				continue; // within the publish-lag grace — still alive
+			}
+			frozen.push({ commodityId: info.commodityId, cadence: info.cadence });
 		}
 	}
 
-	if (frozenCommodityIds.length > 0) {
-		// Step 3: mark all due completed predictions for frozen commodities
-		// as unverifiable in one batched updateMany (predictedAt <= cutoff).
-		const result = await prisma.predictionLog.updateMany({
-			where: {
-				status: PS.COMPLETED,
-				commodityId: { in: frozenCommodityIds },
-				predictedAt: { lte: cutoff },
-				NOT: { commodityId: { startsWith: "cut:" } },
-			},
-			data: { status: PS.UNVERIFIABLE },
-		});
-		markedTotal += result.count;
+	if (frozen.length > 0) {
+		// Step 3: cadence-partitioned batched marking (predictedAt <= cutoff).
+		// The daily batch is the union of legacy NULL rows and stamped 'daily'
+		// rows — the exact set the pre-ADR sweep touched; monthly rows are
+		// only ever marked by a monthly freeze decision.
+		const dailyIds = frozen.filter((f) => f.cadence === "daily").map((f) => f.commodityId);
+		const monthlyIds = frozen.filter((f) => f.cadence === "monthly").map((f) => f.commodityId);
+		if (dailyIds.length > 0) {
+			const result = await prisma.predictionLog.updateMany({
+				where: {
+					status: PS.COMPLETED,
+					commodityId: { in: dailyIds },
+					predictedAt: { lte: cutoff },
+					NOT: { commodityId: { startsWith: "cut:" } },
+					OR: [{ interval: "daily" }, { interval: null }],
+				},
+				data: { status: PS.UNVERIFIABLE },
+			});
+			markedTotal += result.count;
+		}
+		if (monthlyIds.length > 0) {
+			const result = await prisma.predictionLog.updateMany({
+				where: {
+					status: PS.COMPLETED,
+					commodityId: { in: monthlyIds },
+					predictedAt: { lte: cutoff },
+					NOT: { commodityId: { startsWith: "cut:" } },
+					interval: "monthly",
+				},
+				data: { status: PS.UNVERIFIABLE },
+			});
+			markedTotal += result.count;
+		}
 	}
 
 	// Pass B (round-66): within-cutoff lagging-source predictions that the
@@ -434,62 +518,85 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 	// the due cutoff (Pass A's complement). The horizon check is irrelevant
 	// here — we care only that the source is already dead, so even a 1-day-
 	// old prediction on a 95-day-dead commodity should be drained.
-	// Pick the NEWEST completed prediction per commodity. distinct collapses
-	// to one row per commodityId; orderBy predictedAt desc makes that row the
-	// latest. Without the orderBy, Postgres returned an arbitrary row per
-	// commodity, making the freeze test (latestPrice.date <= row.predictedAt)
-	// nondeterministic at the boundary — a borderline-dead source could be
-	// marked unverifiable or left completed depending on row ordering.
+	// Pick the NEWEST completed prediction per (commodity, cadence) —
+	// round-130 (ADR-0001 ②) adds interval to the distinct key so daily and
+	// monthly rows of one commodity are probed against their own cadence's
+	// prices and staleness window. distinct collapses to one row per group;
+	// orderBy predictedAt desc makes that row the latest. Postgres DISTINCT
+	// ON requires the initial ORDER BY to match the distinct expressions,
+	// hence the interval sort key (nulls sort first; grouping unaffected).
 	const laggingCommodities = await prisma.predictionLog.findMany({
 		where: {
 			status: PS.COMPLETED,
 			predictedAt: { gt: cutoff },
 			NOT: { commodityId: { startsWith: "cut:" } },
 		},
-		select: { commodityId: true, predictedAt: true },
-		distinct: ["commodityId"],
-		orderBy: [{ commodityId: "asc" }, { predictedAt: "desc" }],
+		select: { commodityId: true, predictedAt: true, interval: true },
+		distinct: ["commodityId", "interval"],
+		orderBy: [{ commodityId: "asc" }, { interval: "asc" }, { predictedAt: "desc" }],
 	});
 
 	if (laggingCommodities.length === 0) return 0;
 
-	const sourceDeadCutoff = new Date(nowMs - STALE_WINDOW_DAYS * 86400000);
-	const frozenCommodityIds: string[] = [];
+	const frozen: Array<{ commodityId: string; cadence: RowCadence }> = [];
 
-	// Per-commodity: frozen iff latest price is ≤ the prediction (no post-
-	// prediction actuals can exist) AND the latest price itself is older
-	// than the platform-wide stale window (source confirmed dead, not a
-	// 1-2 day lag).
+	// Per-group: frozen iff the latest price OF THAT CADENCE is ≤ the
+	// prediction (no post-prediction actuals can exist) AND that price is
+	// older than the cadence's staleness window (daily 7d, monthly 60d —
+	// a healthy monthly point sits ~45d old mid-publication-cycle, so the
+	// daily window would false-freeze every monthly series; ADR-0001 ②).
 	for (const row of laggingCommodities) {
+		const cadence = rowCadence(row.interval);
 		const latestPrice = await prisma.commodityPrice.findFirst({
-			where: { commodityId: row.commodityId, interval: "daily" },
+			where: { commodityId: row.commodityId, interval: cadence },
 			orderBy: { date: "desc" },
 			select: { date: true },
 		});
 		if (!latestPrice) {
-			frozenCommodityIds.push(row.commodityId); // no price at all
+			frozen.push({ commodityId: row.commodityId, cadence }); // no price at all
 			continue;
 		}
+		const sourceDeadCutoff = new Date(nowMs - stalenessWindowDays(cadence) * 86400000);
 		if (latestPrice.date <= row.predictedAt && latestPrice.date < sourceDeadCutoff) {
-			frozenCommodityIds.push(row.commodityId);
+			frozen.push({ commodityId: row.commodityId, cadence });
 		}
 	}
 
-	if (frozenCommodityIds.length === 0) return 0;
+	if (frozen.length === 0) return 0;
 
-	// Mark all within-cutoff completed predictions for these frozen
-	// commodities unverifiable (predictedAt > cutoff — disjoint from Pass A).
-	const result = await prisma.predictionLog.updateMany({
-		where: {
-			status: PS.COMPLETED,
-			commodityId: { in: frozenCommodityIds },
-			predictedAt: { gt: cutoff },
-			NOT: { commodityId: { startsWith: "cut:" } },
-		},
-		data: { status: PS.UNVERIFIABLE },
-	});
-
-	return result.count;
+	// Cadence-partitioned marking of within-cutoff completed predictions
+	// (predictedAt > cutoff — disjoint from Pass A; daily batch = stamped
+	// 'daily' ∪ legacy NULL, exactly the pre-ADR set).
+	const dailyIds = frozen.filter((f) => f.cadence === "daily").map((f) => f.commodityId);
+	const monthlyIds = frozen.filter((f) => f.cadence === "monthly").map((f) => f.commodityId);
+	let marked = 0;
+	if (dailyIds.length > 0) {
+		const result = await prisma.predictionLog.updateMany({
+			where: {
+				status: PS.COMPLETED,
+				commodityId: { in: dailyIds },
+				predictedAt: { gt: cutoff },
+				NOT: { commodityId: { startsWith: "cut:" } },
+				OR: [{ interval: "daily" }, { interval: null }],
+			},
+			data: { status: PS.UNVERIFIABLE },
+		});
+		marked += result.count;
+	}
+	if (monthlyIds.length > 0) {
+		const result = await prisma.predictionLog.updateMany({
+			where: {
+				status: PS.COMPLETED,
+				commodityId: { in: monthlyIds },
+				predictedAt: { gt: cutoff },
+				NOT: { commodityId: { startsWith: "cut:" } },
+				interval: "monthly",
+			},
+			data: { status: PS.UNVERIFIABLE },
+		});
+		marked += result.count;
+	}
+	return marked;
 }
 
 /**
@@ -542,10 +649,18 @@ export async function expireWindowElapsedPredictions(): Promise<number> {
 			-- Same candidate pre-filter as verifyDuePredictions (MAX_HORIZON_DAYS).
 			AND pl.predicted_at <= (now() AT TIME ZONE 'utc') - make_interval(days => ${MAX_HORIZON_DAYS}::int)
 			-- Window long elapsed: anchor + horizon + grace is still in the past.
+			-- Monthly rows (ADR-0001 ②): horizon steps are calendar months
+			-- (make_interval(months)) and the backfill grace widens to the
+			-- monthly staleness window (60d = one full publication cycle;
+			-- PBEEFUSDM legitimately publishes ~45d late) instead of daily 7d.
 			AND (
 				COALESCE(pl.forecast_start_at, pl.predicted_at)
-				+ make_interval(days => pl.horizon::int)
-				+ make_interval(days => ${STALE_WINDOW_DAYS}::int)
+				+ CASE WHEN COALESCE(pl.interval, 'daily') = 'monthly'
+					THEN make_interval(months => pl.horizon::int)
+					ELSE make_interval(days => pl.horizon::int) END
+				+ CASE WHEN COALESCE(pl.interval, 'daily') = 'monthly'
+					THEN make_interval(days => ${MONTHLY_GRACE_DAYS}::int)
+					ELSE make_interval(days => ${STALE_WINDOW_DAYS}::int) END
 			) < (now() AT TIME ZONE 'utc')
 			-- Guard: the window can never reach the verifier's actuals bar.
 			AND NOT EXISTS (${windowHasActualsBarSql()})
@@ -555,11 +670,13 @@ export async function expireWindowElapsedPredictions(): Promise<number> {
 
 /**
  * The shared "this row's window can reach the verifier's actuals bar"
- * predicate (round-114): actuals in [anchor-day midnight, anchor + horizon + 1
- * days), counted with the SAME authoritative-source filter the verifier reads
- * with, bar min(horizon, 3). expire asserts NOT EXISTS, restore asserts
- * EXISTS — one definition, two uses, so the two sweeps are exact set
- * complements and cannot ping-pong.
+ * predicate (round-114): actuals in [anchor-day midnight, anchor + horizon +
+ * 1 STEPS), counted with the SAME authoritative-source filter the verifier
+ * reads with, bar min(horizon, 3). A step is a day for daily rows and a
+ * calendar month for monthly rows (ADR-0001 ②) — the cadence join and the
+ * window CASE below keep expire/restore/verify on one definition. expire
+ * asserts NOT EXISTS, restore asserts EXISTS — one definition, two uses, so
+ * the two sweeps are exact set complements and cannot ping-pong.
  *
  * References the outer query's alias `pl`.
  */
@@ -576,10 +693,15 @@ function windowHasActualsBarSql(): Prisma.Sql {
 		FROM commodity_prices AS cp
 		JOIN commodities AS c ON c.id = cp.commodity_id
 		WHERE cp.commodity_id = pl.commodity_id
-			AND cp.interval = 'daily'
+			-- Cadence-matched actuals (ADR-0001 ②): monthly prediction rows
+			-- count monthly price points in a months-wide window; daily rows
+			-- (including legacy NULL) keep the exact pre-ADR daily window.
+			AND cp.interval = COALESCE(pl.interval, 'daily')
 			AND cp.date >= date_trunc('day', COALESCE(pl.forecast_start_at, pl.predicted_at))
 			AND cp.date < COALESCE(pl.forecast_start_at, pl.predicted_at)
-				+ make_interval(days => pl.horizon::int + 1)
+				+ CASE WHEN COALESCE(pl.interval, 'daily') = 'monthly'
+					THEN make_interval(months => pl.horizon::int + 1)
+					ELSE make_interval(days => pl.horizon::int + 1) END
 			AND (
 				c.slug NOT IN (${Prisma.join(conflictSlugs)})
 				OR cp.source = CASE c.slug ${authoritativeCases} END
@@ -668,6 +790,7 @@ export async function verifyDuePredictions(): Promise<number> {
 			horizon: true,
 			predictedAt: true,
 			forecastStartAt: true,
+			interval: true,
 		},
 		// OLDEST first so the backlog drains. DESC kept re-sampling the same
 		// near-cutoff rows every run, starving older verifiable candidates.
@@ -704,11 +827,22 @@ export async function verifyDuePredictions(): Promise<number> {
 
 	for (const log of due) {
 		try {
-			// Per-row horizon check: predictedAt + horizon days must have elapsed
-			const horizonMs = log.horizon * 86400000;
-			if (log.predictedAt.getTime() + horizonMs > now) {
-				skippedHorizon++;
-				continue;
+			// Per-row horizon check (ADR-0001 ②): monthly horizons mature in
+			// calendar months anchored to the forecast timeline; the daily
+			// check keeps its exact pre-ADR arithmetic (predictedAt + days).
+			const cadence = rowCadence(log.interval);
+			if (cadence === "monthly") {
+				const maturityAnchor = log.forecastStartAt ?? log.predictedAt;
+				if (addMonthsUTC(maturityAnchor, log.horizon).getTime() > now) {
+					skippedHorizon++;
+					continue;
+				}
+			} else {
+				const horizonMs = log.horizon * 86400000;
+				if (log.predictedAt.getTime() + horizonMs > now) {
+					skippedHorizon++;
+					continue;
+				}
 			}
 
 			// Actuals-window anchor: the forecast's own timeline start when
@@ -732,8 +866,13 @@ export async function verifyDuePredictions(): Promise<number> {
 			// verifier used to fetch the first horizon+1 rows after the anchor
 			// regardless of arrival date — late backfilled data would pair
 			// forecast day-1 with an actual weeks later and inflate MAPE with
-			// misaligned pairs. Same window as the SQL sweeps now.
-			const windowEnd = new Date(anchorDay + (log.horizon + 1) * 86400000);
+			// misaligned pairs. Same window as the SQL sweeps now. Monthly rows
+			// (ADR-0001 ②): the window spans calendar months and the actuals
+			// query reads monthly price points.
+			const windowEnd =
+				cadence === "monthly"
+					? addMonthsUTC(new Date(anchorDay), log.horizon + 1)
+					: new Date(anchorDay + (log.horizon + 1) * 86400000);
 			const alignToAnchorDay = <T extends { date: Date }>(rows: T[]): T[] =>
 				rows.filter((r) => r.date.getTime() >= anchorDay);
 
@@ -792,7 +931,10 @@ export async function verifyDuePredictions(): Promise<number> {
 				const actualPrices = await prisma.commodityPrice.findMany({
 					where: {
 						commodityId: log.commodityId,
-						interval: "daily",
+						// Cadence-matched actuals (ADR-0001 ②): monthly rows
+						// verify against monthly price points; daily rows
+						// (incl. legacy NULL) keep the daily filter.
+						interval: cadence,
 						date: { gte: fetchFrom, lt: windowEnd },
 						...(authoritativeSource ? { source: authoritativeSource } : {}),
 					},
