@@ -32,3 +32,10 @@ export function stalenessWindowDays(interval: string): number {
 			return 7;
 	}
 }
+
+/** Display unit for horizon STEPS of a series cadence (ADR-0001 ①): a
+ * monthly series' horizon 10 is ten MONTHS, not ten days. Unknown/legacy
+ * (undefined) cadences default to day — the pre-ADR display semantics. */
+export function horizonUnitOf(interval: string | null | undefined): "day" | "month" {
+	return interval === "monthly" ? "month" : "day";
+}

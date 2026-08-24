@@ -72,3 +72,25 @@ describe("PriceForecastPanel — range guard (round-97)", () => {
 		expect(container.firstChild).not.toBeNull();
 	});
 });
+
+describe("PriceForecastPanel — horizon unit label (round-130 批6c, ADR-0001 ①)", () => {
+	it("labels monthly-series horizon in months when horizonUnit='month'", () => {
+		const { container } = render(
+			<PriceForecastPanel
+				{...baseProps}
+				horizon={10}
+				horizonUnit="month"
+				range={{ lower: 9.8, upper: 10.7 }}
+			/>,
+		);
+		expect(container.textContent).toContain("未来 10 个月");
+		expect(container.textContent).not.toContain("未来 10 天");
+	});
+
+	it("keeps the day label by default (daily series and legacy signals without the field)", () => {
+		const { container } = render(
+			<PriceForecastPanel {...baseProps} horizon={7} range={{ lower: 9.8, upper: 10.7 }} />,
+		);
+		expect(container.textContent).toContain("未来 7 天");
+	});
+});

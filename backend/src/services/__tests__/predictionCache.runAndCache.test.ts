@@ -234,3 +234,39 @@ describe("runAndCachePrediction — Redis outage degradation (round-119)", () =>
 		expect(mocks.logger.warn).toHaveBeenCalled();
 	});
 });
+
+describe("runAndCachePrediction — cadence shape stamping (round-130 批6c, INT-1)", () => {
+	it("stamps interval AND horizonUnit together on the cache entry and the log row (monthly series)", async () => {
+		// INT-1 rule: every writer of the prediction:{...} key family must
+		// stamp both cadence fields in the same write — a writer that adds
+		// one but not the other reintroduces the round-114 shape drift.
+		mocks.getValues.mockResolvedValue({
+			values: [100, 101, 102],
+			timestamps: [1, 2, 3],
+			interval: "monthly",
+		});
+
+		const result = await runAndCachePrediction("c-monthly", "arima", 10);
+
+		expect(result.interval).toBe("monthly");
+		expect(result.horizonUnit).toBe("month");
+
+		const setExPayload = JSON.parse(mocks.redis.setEx.mock.calls[0][2]);
+		expect(setExPayload.interval).toBe("monthly");
+		expect(setExPayload.horizonUnit).toBe("month");
+
+		const logParams = mocks.logPrediction.mock.calls[0][0];
+		expect(logParams.interval).toBe("monthly");
+	});
+
+	it("leaves unstamped fetches (legacy/cut shapes) on legacy day defaults", async () => {
+		// setupHappyPath's getValues mock returns no interval — the legacy /
+		// cut-series shape → fields must degrade to undefined, never "month".
+		const result = await runAndCachePrediction("c-legacy", "arima", 10);
+
+		expect(result.interval).toBeUndefined();
+		expect(result.horizonUnit).toBeUndefined();
+		const setExPayload = JSON.parse(mocks.redis.setEx.mock.calls[0][2]);
+		expect(setExPayload.interval).toBeUndefined();
+	});
+});

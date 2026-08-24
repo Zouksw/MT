@@ -39,6 +39,7 @@ async function fetchHistoryWithFallback(
 	});
 }
 
+import { horizonUnitOf } from "@/services/cadence";
 import { PREDICTION_TTL_SECONDS } from "@/services/predictionCache";
 
 /**
@@ -192,12 +193,16 @@ router.post(
 		});
 
 		const { lowerBound, upperBound } = await calibrateBounds(modelId, result);
+		// ADR-0001 ① + INT-1: both cadence fields are stamped together so the
+		// route response and the cache entry keep one shape.
 		const response = {
 			timestamps: result.timestamps,
 			values: result.values,
 			lowerBound,
 			upperBound,
 			algorithm: modelId,
+			interval: result.interval,
+			horizonUnit: horizonUnitOf(result.interval),
 		};
 
 		// Same key family as the background refresh — write the full
@@ -281,6 +286,8 @@ router.post(
 					lowerBound,
 					upperBound,
 					algorithm: modelId,
+					interval: result.interval,
+					horizonUnit: horizonUnitOf(result.interval),
 				};
 
 				// Same key family as the background refresh — write the full
@@ -352,6 +359,9 @@ router.post(
 			})),
 			prediction: predictionResult,
 			algorithm: modelId,
+			// ADR-0001 ①: horizon steps are months for monthly series —
+			// /ai/predict consumers label units from this, not from "天".
+			horizonUnit: horizonUnitOf(predictionResult.interval),
 		});
 	}),
 );

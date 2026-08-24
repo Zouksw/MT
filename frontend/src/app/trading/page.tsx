@@ -296,6 +296,7 @@ export default function TradingPage() {
 							currentPrice={d.currentPrice}
 							predictedPrice={d.signal.predictedPrice ?? d.currentPrice}
 							horizon={d.signal.horizon ?? 10}
+							horizonUnit={d.signal.horizonUnit}
 							range={d.signal.range}
 							supportLevel={d.signal.supportLevel}
 							resistanceLevel={d.signal.resistanceLevel}

@@ -29,6 +29,10 @@ export interface PredictionResult {
 	values: number[];
 	lowerBound?: number[];
 	upperBound?: number[];
+	/** Cadence of the series this prediction was trained on (ADR-0001 ①③) —
+	 * stamped by predictFromCache from the fetched data. Absent for legacy
+	 * callers / cut series (readers default to daily). */
+	interval?: "daily" | "monthly";
 }
 
 /**
@@ -224,7 +228,7 @@ export async function predict(request: InferencePredictRequest): Promise<Inferen
 
 export async function predictFromCache(request: PredictionRequest): Promise<PredictionResult> {
 	const { getCommodityPriceValues } = await import("./data-fetcher");
-	const { values, timestamps } = await getCommodityPriceValues(request.commodityId, 200);
+	const { values, timestamps, interval } = await getCommodityPriceValues(request.commodityId, 200);
 
 	const result = await predict({
 		values,
@@ -239,5 +243,6 @@ export async function predictFromCache(request: PredictionRequest): Promise<Pred
 		values: result.values,
 		lowerBound: result.lower_bound ?? undefined,
 		upperBound: result.upper_bound ?? undefined,
+		interval,
 	};
 }

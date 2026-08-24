@@ -18,7 +18,7 @@ import {
 	STALE_WINDOW_DAYS,
 } from "./beefQueries";
 import { cacheKeys } from "./cache";
-import { stalenessWindowDays } from "./cadence";
+import { horizonUnitOf, stalenessWindowDays } from "./cadence";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
 import { applyConformalInterval, getIntervalMultipliers } from "./intervalCalibration";
@@ -41,6 +41,14 @@ interface CachedPrediction {
 	cachedAt: number;
 	commodityId: string;
 	horizon: number;
+	/** Cadence of the predicted series (ADR-0001 ①③). Optional so cache
+	 * entries written before this field existed (TTL 45min) still parse;
+	 * readers default undefined → daily. INT-1 shape-sharing rule: every
+	 * writer of this key family stamps interval AND horizonUnit together. */
+	interval?: "daily" | "monthly";
+	/** Display unit for horizon steps, derived from interval — lets the UI
+	 * say "未来 N 个月" without re-deriving cadence. */
+	horizonUnit?: "day" | "month";
 }
 
 interface CommoditySubscription {
@@ -228,6 +236,11 @@ async function computeAndCachePrediction(
 			cachedAt: Date.now(),
 			commodityId,
 			horizon,
+			// Cut series stay unstamped (import rhythm — verification and
+			// display keep legacy day semantics); commodity series carry the
+			// fetched cadence.
+			interval: seriesInterval,
+			horizonUnit: seriesInterval ? horizonUnitOf(seriesInterval) : undefined,
 		};
 
 		// Cache write is best-effort (round-119): a Redis outage (or its 30s

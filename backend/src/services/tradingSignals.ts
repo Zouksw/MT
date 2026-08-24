@@ -23,6 +23,7 @@
 
 import { logger, prisma } from "../lib";
 import { cutSeriesKey, getBeefCutSeries, STALE_WINDOW_DAYS } from "./beefQueries";
+import { horizonUnitOf } from "./cadence";
 import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
 import { ALL_MODELS, BASELINE_MODELS, getAllModels } from "./modelRegistry";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
@@ -65,8 +66,12 @@ export interface PriceForecast {
 	currentPrice: number;
 	/** Consensus predicted price at end of horizon (median of available models). */
 	predictedPrice: number;
-	/** Forecast horizon in steps (days for daily series). */
+	/** Forecast horizon in steps — each step is a day for daily series and a
+	 * month for monthly ones (ADR-0001 ①). */
 	horizon: number;
+	/** Display unit matching horizon's steps ("month" for monthly series) —
+	 * the UI labels "未来 N 个月/天" from this instead of assuming days. */
+	horizonUnit: "day" | "month";
 	/** Consensus price range across models: [min, max] of end-of-horizon values. */
 	range: { lower: number; upper: number };
 	/** Price floor implied by non-down models; null when no model qualifies
@@ -142,7 +147,11 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		throw new Error("Valid current price is required");
 	}
 
-	// Execute all models in parallel — failed models become "unavailable"
+	// Execute all models in parallel — failed models become "unavailable".
+	// seriesInterval is captured from whichever model prediction carries a
+	// stamped cadence (all models of one forecast share the series; cached
+	// entries written pre-6c may not carry it).
+	let seriesInterval: "daily" | "monthly" | undefined;
 	const results = await Promise.allSettled(
 		models.map(async (modelId): Promise<ModelForecast> => {
 			try {
@@ -151,6 +160,8 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 				if (!prediction) {
 					prediction = await runAndCachePrediction(req.commodityId, modelId, horizon);
 				}
+
+				if (prediction.interval) seriesInterval = prediction.interval;
 
 				if (!prediction.values?.length) {
 					return {
@@ -229,6 +240,7 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 			currentPrice,
 			predictedPrice: currentPrice,
 			horizon,
+			horizonUnit: horizonUnitOf(seriesInterval),
 			range: { lower: currentPrice, upper: currentPrice },
 			supportLevel: null,
 			resistanceLevel: null,
@@ -359,6 +371,7 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		currentPrice,
 		predictedPrice: Math.round(consensusPrice * 100) / 100,
 		horizon,
+		horizonUnit: horizonUnitOf(seriesInterval),
 		range: {
 			lower: Math.round(rangeLower * 100) / 100,
 			upper: Math.round(rangeUpper * 100) / 100,

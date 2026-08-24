@@ -29,6 +29,10 @@ interface PriceForecastPanelProps {
 	currentPrice: number;
 	predictedPrice: number;
 	horizon: number;
+	/** Unit of horizon steps — "month" for monthly series (ADR-0001 ①);
+	 * default "day" keeps the pre-6c display for daily series and legacy
+	 * signals that predate the field. */
+	horizonUnit?: "day" | "month";
 	range?: { lower: number; upper: number };
 	supportLevel: number | null;
 	resistanceLevel: number | null;
@@ -54,6 +58,7 @@ export default function PriceForecastPanel({
 	currentPrice = 0,
 	predictedPrice,
 	horizon,
+	horizonUnit = "day",
 	range,
 	supportLevel,
 	resistanceLevel,
@@ -115,7 +120,7 @@ export default function PriceForecastPanel({
 	return (
 		<div className="rounded-lg bg-card ring-1 ring-black/[0.06] dark:ring-white/[0.08] mb-4">
 			<div className="px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/60 font-semibold">
-				价格预测 · 未来 {horizon} 天
+				价格预测 · 未来 {horizon} {horizonUnit === "month" ? "个月" : "天"}
 			</div>
 
 			<div className="p-5">
