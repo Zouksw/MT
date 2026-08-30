@@ -14,7 +14,11 @@ import {
 	pageFreshnessSummary,
 	withFreshness,
 } from "@/services/beefQueries";
-import { findForecastableFactoryForCut, generateBeefCutForecast } from "@/services/tradingSignals";
+import {
+	evaluateFactoryForCut,
+	findForecastableFactoryForCut,
+	generateBeefCutForecast,
+} from "@/services/tradingSignals";
 
 const router = Router();
 
@@ -96,7 +100,7 @@ router.get(
 router.get(
 	"/prices",
 	asyncHandler(async (req, res) => {
-		const { cutCode, factoryCode, country, source, grade, days = "30" } = req.query;
+		const { cutCode, factoryCode, country, region, source, grade, days = "30" } = req.query;
 
 		const daysNum = Math.min(Number(days) || 30, 365);
 		const since = new Date();
@@ -126,9 +130,18 @@ router.get(
 			if (!factory) throw new NotFoundError(`Factory not found: ${factoryCode}`);
 			where.factoryId = factory.id;
 		}
-		if (country && typeof country === "string" && !factoryCode) {
+		// Factory-level location filters (round-146 批 2): country and region
+		// (state/province, e.g. NSW/QLD/Santa Fe) both resolve to factory id
+		// sets. A region may span countries, so region is NOT nested under
+		// country — they AND naturally only when both are given.
+		if ((country || region) && !factoryCode) {
 			const factories = await prisma.factory.findMany({
-				where: { country: country as string },
+				where: {
+					...(country && typeof country === "string" ? { country: country as string } : {}),
+					...(region && typeof region === "string"
+						? { region: { equals: region as string, mode: "insensitive" } }
+						: {}),
+				},
 				select: { id: true },
 				take: 100,
 			});
@@ -184,7 +197,7 @@ router.get(
 router.get(
 	"/prices/latest",
 	asyncHandler(async (req, res) => {
-		const { cutCode, factoryCode, country, source, grade } = req.query;
+		const { cutCode, factoryCode, country, region, source, grade } = req.query;
 
 		// Build the filter applied to BOTH the latest-date lookup and the row
 		// fetch, so the "latest" reflects the active filter (e.g. latest price
@@ -203,8 +216,21 @@ router.get(
 			if (!factory) throw new NotFoundError(`Factory not found: ${factoryCode}`);
 			where.factoryId = factory.id;
 		}
-		if (country && typeof country === "string") {
+		if (country && typeof country === "string" && !factoryCode) {
 			where.factory = { country: country as string };
+		}
+		// Region (state/province) filter — round-146 批 2. Composes with country
+		// when both are given; skipped when a factory is already pinned.
+		if (region && typeof region === "string" && !factoryCode) {
+			const factories = await prisma.factory.findMany({
+				where: {
+					region: { equals: region as string, mode: "insensitive" },
+					...(country && typeof country === "string" ? { country: country as string } : {}),
+				},
+				select: { id: true },
+				take: 100,
+			});
+			where.factoryId = { in: factories.map((f) => f.id) };
 		}
 
 		// Get the most recent date matching the filter
@@ -645,6 +671,8 @@ router.get(
 	asyncHandler(async (req, res) => {
 		const { cutCode } = req.params;
 		const horizon = Math.min(Number(req.query.horizon) || 10, 30);
+		const factoryCode =
+			typeof req.query.factoryCode === "string" ? req.query.factoryCode : undefined;
 
 		// Verify the cut exists in taxonomy.
 		const cut = await prisma.beefCutTaxonomy.findUnique({
@@ -655,27 +683,49 @@ router.get(
 			throw new NotFoundError(`Cut not found: ${cutCode}`);
 		}
 
-		// Find the factory with the most real, fresh data for this cut.
-		// Returns null if no factory has ≥2 non-bridge points OR if the latest
-		// point is stale (>STALE_WINDOW_DAYS) — see tradingSignals for the gate.
-		const factory = await findForecastableFactoryForCut(cutCode);
+		// ?factoryCode= pins the forecast to ONE factory's series (round-146
+		// 批 2): the same ≥2-non-bridge-points + freshness gate applies to that
+		// factory, so a thin series can't be forecast just because another
+		// factory's series for the same cut is healthy. Without the param the
+		// representative pick (most real, fresh data) is used — unchanged.
+		let pinnedFactoryId: string | undefined;
+		if (factoryCode) {
+			const resolved = await prisma.factory.findUnique({
+				where: { code: factoryCode },
+				select: { id: true },
+			});
+			if (!resolved) {
+				throw new NotFoundError(`Factory not found: ${factoryCode}`);
+			}
+			pinnedFactoryId = resolved.id;
+		}
+
+		const factory = pinnedFactoryId
+			? await evaluateFactoryForCut(pinnedFactoryId, cutCode)
+			: await findForecastableFactoryForCut(cutCode);
 		if (!factory) {
 			// Distinguish "no data at all" from "stale data" for an honest UI message.
 			const anyData = await prisma.beefCutPrice.findFirst({
-				where: { cutCode, source: { not: { startsWith: "bridge:" } } },
+				where: {
+					cutCode,
+					...(pinnedFactoryId ? { factoryId: pinnedFactoryId } : {}),
+					source: { not: { startsWith: "bridge:" } },
+				},
 				orderBy: { date: "desc" },
 				select: { date: true },
 			});
+			const scope = pinnedFactoryId ? `this cut at factory ${factoryCode}` : "this cut";
 			const reason = anyData
-				? `Price data for this cut is stale (latest ${anyData.date.toISOString().split("T")[0]}). Forecasting requires fresh data (within ${"7"} days). Activate a beef data source to enable predictions.`
-				: "Insufficient real (non-bridge) price data for this cut. Forecasting requires ≥2 real price points.";
-			return success(res, { cutCode, forecastable: false, reason });
+				? `Price data for ${scope} is stale (latest ${anyData.date.toISOString().split("T")[0]}). Forecasting requires fresh data (within ${"7"} days). Activate a beef data source to enable predictions.`
+				: `Insufficient real (non-bridge) price data for ${scope}. Forecasting requires ≥2 real price points.`;
+			return success(res, { cutCode, factoryCode, forecastable: false, reason });
 		}
 
 		try {
 			const forecast = await generateBeefCutForecast(factory.factoryId, cutCode, horizon);
 			success(res, {
 				cutCode,
+				factoryCode,
 				forecastable: true,
 				factoryId: factory.factoryId,
 				dataPoints: factory.pointCount,
@@ -687,7 +737,7 @@ router.get(
 			// Return forecastable:false with the reason rather than a 500, so the
 			// UI treats it as an honest "can't forecast" state.
 			const reason = err instanceof Error ? err.message : String(err);
-			success(res, { cutCode, forecastable: false, reason });
+			success(res, { cutCode, factoryCode, forecastable: false, reason });
 		}
 	}),
 );

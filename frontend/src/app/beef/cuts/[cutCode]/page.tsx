@@ -49,6 +49,22 @@ export default function CutDetail() {
 	// grouping key. (PRODUCT-SPEC §5.2 产地对比 — both dimensions are useful.)
 	const [groupBy, setGroupBy] = useState<GroupBy>("source");
 
+	// Distinct factories carrying this cut (round-146 批 2) — feeds the
+	// per-factory forecast selector in CutForecastSection (?factoryCode=).
+	const factoryOptions = useMemo(() => {
+		const seen = new Map<string, { code: string; name: string; country: string }>();
+		for (const p of prices) {
+			if (p.factory?.code && !seen.has(p.factory.code)) {
+				seen.set(p.factory.code, {
+					code: p.factory.code,
+					name: p.factory.name,
+					country: p.factory.country,
+				});
+			}
+		}
+		return [...seen.values()];
+	}, [prices]);
+
 	// Group prices into series for the chart. Switching the key re-derives the
 	// series without refetching.
 	const chartGroups = useMemo(() => {
@@ -194,7 +210,7 @@ export default function CutDetail() {
 
 			{/* AI Forecast — per-cut prediction (dual-backend, layer 1 integration).
 			    Consumes /api/beef/forecasts/:cutCode; honest about forecastable:false. */}
-			{cutCode && <CutForecastSection cutCode={cutCode} />}
+			{cutCode && <CutForecastSection cutCode={cutCode} factoryOptions={factoryOptions} />}
 
 			{/* Price History by Source */}
 			{priceErr && <p className="text-sm text-destructive mb-4">Failed to load price history</p>}

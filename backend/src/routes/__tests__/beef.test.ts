@@ -165,6 +165,93 @@ describe("Beef Routes (Integration)", () => {
 				.set(authHeaders(token));
 			expect(res.status).toBe(404);
 		});
+
+		it("returns 404 for an unknown factoryCode (round-146 批 2 pin)", async () => {
+			const res = await request(app)
+				.get("/api/beef/forecasts/STRIPLOIN?factoryCode=NO-SUCH-99")
+				.set(authHeaders(token));
+			expect(res.status).toBe(404);
+		});
+
+		it("?factoryCode= scopes the honesty gate to THAT factory (round-146 批 2)", async () => {
+			// Pin a factory that has ZERO rows for a cut with data elsewhere —
+			// the pinned series must fail the ≥2-points gate even though the
+			// cut is forecastable via other factories (mt_test seed data is
+			// fresh, so the no-pin path CAN return a real forecast).
+			const someRow = await prisma.beefCutPrice.findFirst({
+				where: { source: { not: { startsWith: "bridge:" } } },
+				select: { cutCode: true, factoryId: true, factory: { select: { code: true } } },
+			});
+			if (!someRow) throw new Error("seed invariant: no non-bridge beef rows in mt_test");
+
+			const emptyFactory = await prisma.factory.findFirst({
+				where: { prices: { none: { cutCode: someRow.cutCode } } },
+				select: { code: true },
+			});
+			if (!emptyFactory) throw new Error("seed invariant: no factory without rows for this cut");
+
+			const res = await request(app)
+				.get(`/api/beef/forecasts/${someRow.cutCode}?factoryCode=${emptyFactory.code}`)
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.data.forecastable).toBe(false);
+			expect(res.body.data.factoryCode).toBe(emptyFactory.code);
+			expect(res.body.data.reason).toContain(`factory ${emptyFactory.code}`);
+			expect(res.body.data.reason).toContain("Insufficient");
+		});
+
+		it("?factoryCode= forecasts the PINNED factory's series, not the representative pick", async () => {
+			const someRow = await prisma.beefCutPrice.findFirst({
+				where: { source: { not: { startsWith: "bridge:" } } },
+				select: { cutCode: true, factoryId: true, factory: { select: { code: true } } },
+			});
+			if (!someRow) throw new Error("seed invariant: no non-bridge beef rows in mt_test");
+
+			const res = await request(app)
+				.get(`/api/beef/forecasts/${someRow.cutCode}?factoryCode=${someRow.factory.code}`)
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			expect(res.body.data.factoryCode).toBe(someRow.factory.code);
+			// The pin contract: whichever series the gate accepts, it MUST be
+			// the pinned factory's — never silently falling back to another.
+			if (res.body.data.forecastable) {
+				expect(res.body.data.factoryId).toBe(someRow.factoryId);
+			} else {
+				expect(res.body.data.reason).toContain(`factory ${someRow.factory.code}`);
+			}
+		});
+	});
+
+	describe("GET /api/beef/prices?region= (round-146 批 2)", () => {
+		it("filters rows to factories in the region (case-insensitive)", async () => {
+			const res = await request(app)
+				.get("/api/beef/prices?region=QLD&days=365&limit=100")
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			const qldCodes = new Set(
+				(await prisma.factory.findMany({ where: { region: "QLD" }, select: { code: true } })).map(
+					(f) => f.code,
+				),
+			);
+			expect(qldCodes.size).toBeGreaterThan(0);
+			for (const p of res.body.data.prices) {
+				expect(qldCodes.has(p.factory.code)).toBe(true);
+			}
+		});
+
+		it("composes region with country (AND, not OR)", async () => {
+			const res = await request(app)
+				.get("/api/beef/prices?country=AU&region=QLD&days=365&limit=100")
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			for (const p of res.body.data.prices) {
+				expect(p.factory.country).toBe("AU");
+			}
+		});
 	});
 
 	// CSV import — the no-API-key real-data injection point (D1 workaround).

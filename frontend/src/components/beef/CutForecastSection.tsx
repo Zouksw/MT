@@ -4,6 +4,7 @@ import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { ApiFetchError, apiFetch } from "@/lib/apiFetch";
 import { formatPrice, formatSignedPercent } from "@/lib/format";
@@ -94,12 +95,26 @@ interface CutForecastSectionProps {
 	cutCode: string;
 	/** Forecast horizon in days (default 7 — the market view horizon). */
 	horizon?: number;
+	/** Distinct factories carrying this cut (round-146 批 2). When given, a
+	 * factory selector is offered: "auto" keeps the representative pick
+	 * (most real, fresh data); a specific code forecasts THAT factory's
+	 * series through the same honesty gate (?factoryCode=). */
+	factoryOptions?: { code: string; name: string; country: string }[];
 }
 
-export const CutForecastSection: React.FC<CutForecastSectionProps> = ({ cutCode, horizon = 7 }) => {
+const AUTO_FACTORY = "auto";
+
+export const CutForecastSection: React.FC<CutForecastSectionProps> = ({
+	cutCode,
+	horizon = 7,
+	factoryOptions,
+}) => {
 	const [showModels, setShowModels] = useState(false);
+	const [factoryCode, setFactoryCode] = useState(AUTO_FACTORY);
 	const { data, error, isLoading } = useRetryableFetch(
-		`/api/beef/forecasts/${cutCode}?horizon=${horizon}`,
+		`/api/beef/forecasts/${cutCode}?horizon=${horizon}${
+			factoryCode !== AUTO_FACTORY ? `&factoryCode=${encodeURIComponent(factoryCode)}` : ""
+		}`,
 		forecastFetcher,
 	);
 
@@ -166,11 +181,28 @@ export const CutForecastSection: React.FC<CutForecastSectionProps> = ({ cutCode,
 	return (
 		<Card className="mb-4">
 			<CardHeader>
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between gap-3 flex-wrap">
 					<CardTitle className="text-sm">AI Forecast ({horizon}-day)</CardTitle>
-					<span className="text-xs text-muted-foreground">
-						Based on {resp.dataPoints} data points
-					</span>
+					<div className="flex items-center gap-3">
+						{factoryOptions && factoryOptions.length > 0 && (
+							<Select
+								value={factoryCode}
+								onChange={setFactoryCode}
+								aria-label="预测工厂"
+								options={[
+									{ value: AUTO_FACTORY, label: "自动（数据最全厂）" },
+									...factoryOptions.map((f) => ({
+										value: f.code,
+										label: `${f.code} · ${f.name} (${f.country})`,
+									})),
+								]}
+								className="w-56"
+							/>
+						)}
+						<span className="text-xs text-muted-foreground">
+							Based on {resp.dataPoints} data points
+						</span>
+					</div>
 				</div>
 			</CardHeader>
 			<CardBody>

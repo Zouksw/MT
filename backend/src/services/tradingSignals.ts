@@ -469,7 +469,36 @@ export async function findForecastableFactoryForCut(cutCode: string): Promise<{
 
 	if (factories.length === 0) return null;
 	const factoryId = factories[0].factoryId;
-	const pointCount = factories[0]._count._all;
+
+	return evaluateFactoryForCut(factoryId, cutCode);
+}
+
+/**
+ * Evaluate ONE specific factory's series for a cut against the same
+ * data-honesty gate as findForecastableFactoryForCut (≥2 non-bridge points +
+ * latest point within STALE_WINDOW_DAYS). Used by the ?factoryCode= path of
+ * GET /api/beef/forecasts/:cutCode so a caller can ask "what does THIS
+ * factory's series say" instead of the representative pick.
+ */
+export async function evaluateFactoryForCut(
+	factoryId: string,
+	cutCode: string,
+): Promise<{
+	factoryId: string;
+	latestPrice: number;
+	latestDate: Date;
+	pointCount: number;
+} | null> {
+	const grouped = await prisma.beefCutPrice.groupBy({
+		by: ["factoryId"],
+		where: {
+			factoryId,
+			cutCode,
+			source: { not: { startsWith: "bridge:" } },
+		},
+		_count: { _all: true },
+	});
+	const pointCount = grouped[0]?._count._all ?? 0;
 
 	if (pointCount < 2) return null;
 
