@@ -65,6 +65,10 @@ export default function AlertRules() {
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
 	const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+	// Channel transparency (round-146 批 3): "email" delivery without SMTP
+	// config degrades silently to in-app — surface that instead of letting
+	// users believe an email is coming.
+	const [emailChannelNote, setEmailChannelNote] = useState<string | null>(null);
 	const isMobile = useIsMobile();
 	const toast = useToast();
 
@@ -104,6 +108,16 @@ export default function AlertRules() {
 		fetchRules();
 		fetchTimeseries();
 	}, [fetchRules, fetchTimeseries]);
+
+	useEffect(() => {
+		authFetch(`${API_BASE}/api/alerts/channels-status`)
+			.then((r) => (r.ok ? r.json() : null))
+			.then((body) => {
+				const email = body?.data?.channels?.email;
+				if (email && email.available === false) setEmailChannelNote(email.reason);
+			})
+			.catch(() => setEmailChannelNote(null)); // unknown state → no banner, not a false claim
+	}, []);
 
 	const handleCreate = () => {
 		setEditingRule(null);
@@ -305,6 +319,12 @@ export default function AlertRules() {
 					</Button>
 				}
 			/>
+
+			{emailChannelNote && (
+				<Alert variant="warning" title="邮件渠道未配置" className={isMobile ? "mb-3" : "mb-4"}>
+					{emailChannelNote}
+				</Alert>
+			)}
 
 			{/* Statistics Cards */}
 			<div className={`grid grid-cols-2 ${isMobile ? "gap-2 mb-4" : "gap-4 mb-6"}`}>

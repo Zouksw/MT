@@ -217,6 +217,20 @@ export default function MarketDigestPage() {
 					)}
 				</div>
 			)}
+
+			{/* Feedback — deliberately OUTSIDE the data-loaded branch: when the
+			    data is broken or stale is exactly when feedback matters most. */}
+			<p className="text-xs text-muted-foreground">
+				数据有误或建议改进？
+				<a
+					href="https://github.com/Zouksw/MT/issues"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-primary underline"
+				>
+					反馈到项目仓库
+				</a>
+			</p>
 		</PageContainer>
 	);
 }

@@ -38,6 +38,9 @@ const FOOTER_SECTIONS = [
 		links: [
 			{ label: "FAQ", href: "/landing#faq" },
 			{ label: "Get Started", href: "/register" },
+			// round-146 批 3: real feedback channel — the public project repo
+			// (github.com/Zouksw/MT, verified 200 anonymous). External link.
+			{ label: "Feedback", href: "https://github.com/Zouksw/MT/issues" },
 		],
 	},
 ] as const;

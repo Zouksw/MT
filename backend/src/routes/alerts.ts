@@ -117,6 +117,40 @@ router.get(
 );
 
 /**
+ * GET /api/alerts/channels-status — delivery-channel transparency (round-146
+ * 批 3). A rule may request email/slack delivery, but when the transport
+ * config is absent dispatch degrades SILENTLY (non-blocking by design) — the
+ * user believes an email is coming while only the in-app alert row appears.
+ * This endpoint tells the UI the truth per channel so the rules page can
+ * label "email" as in-app-only until SMTP is configured.
+ */
+router.get(
+	"/channels-status",
+	authenticate,
+	asyncHandler(async (_req, res) => {
+		const emailConfigured = Boolean(
+			process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS,
+		);
+		const slackConfigured = Boolean(process.env.SLACK_WEBHOOK_URL);
+		success(res, {
+			channels: {
+				inApp: { available: true },
+				email: {
+					available: emailConfigured,
+					reason: emailConfigured
+						? null
+						: "SMTP 未配置（SMTP_HOST/SMTP_USER/SMTP_PASS）——邮件投递关闭，告警仅站内可见",
+				},
+				slack: {
+					available: slackConfigured,
+					reason: slackConfigured ? null : "SLACK_WEBHOOK_URL 未设置——Slack 投递关闭",
+				},
+			},
+		});
+	}),
+);
+
+/**
  * @openapi
  * /api/alerts/rules:
  *   post:

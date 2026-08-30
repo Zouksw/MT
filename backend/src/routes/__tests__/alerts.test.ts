@@ -41,6 +41,35 @@ describe("Alerts Routes (Integration)", () => {
 		});
 	});
 
+	describe("GET /api/alerts/channels-status (round-146 批 3)", () => {
+		it("rejects unauthenticated requests", async () => {
+			const res = await request(app).get("/api/alerts/channels-status");
+			expect(res.status).toBe(401);
+		});
+
+		it("reports per-channel availability with reasons when unavailable", async () => {
+			const res = await request(app)
+				.get("/api/alerts/channels-status")
+				.set({ Authorization: `Bearer ${token}` });
+
+			expect(res.status).toBe(200);
+			const { channels } = res.body.data;
+			// In-app delivery is the alert rows themselves — always available.
+			expect(channels.inApp.available).toBe(true);
+			// Contract per outbound channel: boolean availability, and an
+			// actionable reason exactly when unavailable (this box has no SMTP
+			// configured, so email must carry the in-app-only explanation).
+			expect(typeof channels.email.available).toBe("boolean");
+			if (channels.email.available === false) {
+				expect(typeof channels.email.reason).toBe("string");
+				expect(channels.email.reason).toContain("SMTP");
+			} else {
+				expect(channels.email.reason).toBeNull();
+			}
+			expect(typeof channels.slack.available).toBe("boolean");
+		});
+	});
+
 	describe("GET /api/alerts/stats", () => {
 		it("should return alert statistics", async () => {
 			const res = await request(app)
