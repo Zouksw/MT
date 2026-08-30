@@ -15,6 +15,7 @@
 | [TECH-DEBT.md](TECH-DEBT.md) | 过度工程化与冗余清单（BullMQ 死队列、多租户脚手架、死模型等），每条标注审计日期，动手前需复核 |
 | [AUTOMATION-STATUS.md](AUTOMATION-STATUS.md) | CI/CD、cron、护栏等自动化基础设施状态 |
 | [COMPETITIVE-ANALYSIS-MOOKET.md](COMPETITIVE-ANALYSIS-MOOKET.md) | 牧集对标分析：真正差距、价值未兑现根因、优势落实路径 + §八 深度探查（SPA 路由图/报盘词汇/公司事实，2026-08-30） |
+| [RESEARCH-BEEF-INFO-LANDSCAPE.md](RESEARCH-BEEF-INFO-LANDSCAPE.md) | **牧集及同类牛肉行情信息网站调研报告**（v1.0.0，2026-08-31）：国内外 17 家供给全景（国内 B2B 平台/行情服务商/国际基准源五层）、牧集+必孚 bundle 级深探、报价 schema 词汇表、商业模式五型与付费墙双假设、数据合规框架、对 MT 九条启示（新发地免费部位级接口/MLA 90CL/空位验证）；经独立复审修订 |
 | [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) | 改进方案：v3.1.0 第三波（AI 预测核心专轮：月度修复/滚动回测/冠军路由/方向准确率，2026-08-30）+ 并行轨（成本计算器等）；v2 正文已执行完毕存档 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 

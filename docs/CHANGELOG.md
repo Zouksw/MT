@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-148：调研轮 — 牧集及同类牛肉行情信息网站深度调研报告（RESEARCH-BEEF-INFO-LANDSCAPE v1.0.0）
+
+用户指令：对牧集网等同类牛肉交易信息收集网站深度探查，形成完备调研报告，初版后 review 确保理解正确、角度广、深度深。纯文档轮（无代码改动，测试基线不受影响）。
+
+- **报告**（`docs/RESEARCH-BEEF-INFO-LANDSCAPE.md`，~370 行）：五层供给框架（撮合平台/行情服务商/政府统计/交易所/媒体聚合）下覆盖国内外 17 家——牧集 2026-08-31 现场复核（50 路由、付费墙常量级证据：研报浏览墙 15 本地计数 + 报盘/求购发布配额；**新发现五端分发**：桌面客户端 v1.2.0 直链/H5 端/gateway.mujidigital.com）、**必孚 BTC 深探**（CA 未覆盖的同构玩家：~40 路由含 ArticleFree/Article 显式分流与猪肉副线、会员线下合同制 PDF 取证、美区 iOS 2023 停更 vs 官网 APK 1.8.26）、优顶特/飞熊领鲜/冻品在线/冻品e港/死站群、1688/惠农网挂牌 schema、卓创（**App IAP ¥588-1998/年**，唯一可公开取证的国内个人级价目）/Mysteel 全链条/布瑞克、**新发地（国内唯一免费部位级日更源，公开接口实测 48,668 条）**、USDA/MLA/CEPEA/世行/FRED/Expana/Beef Central 国际全景；横向矩阵（含"对 MT"列）、报价 schema 词汇表、商业模式五型 + 付费墙双假设（加工深度×专业粒度稀缺性）、数据合规框架、用户画像、对 MT 九条启示。
+- **Review 闭环**：初版 v0.1.0 后由独立复审代理批判性审读（其自行重做 20 余项 curl 取证），修复 4 处事实错误（优顶特行引证失实→按新华网/21财经/深圳贸促委原文重写并注明"10 年 vs 11 年"口径分歧、世行序列**口径三次切换史**（2024-01 起新西兰 90CL c.i.f.；1995-2021-08 为 85% FOB——长序列拼接不可比）、FRED 195 观测非 196、新发地**服务端类目过滤参数不生效**须解析侧过滤）+ 17 处断言降级（全称否定→公开面样本限定等）+ 增补广度章节（格局演化时间线/数据合规/用户画像/术语表）。报告中全部断言按【实测】/【代理】/【转述】三级标注。
+- **顺手修正**：PRODUCT-SPEC §七 D1 括注"3 个 key 已 set 但源站网络封锁"已过期（`.env` 实查 MLA/USDA_MARS/OPENWEATHER 均空值、FRED 行缺失，与 KNOWN-ISSUES D1 现行口径对齐）。
+- **对 MT 最可操作的三条新情报**：① 新发地接口可评估对接（注意解析侧过滤 + ToS 未验证需限速）；② MLA 90CL 周度指标（与世行现行 90CL 口径一致）可扩展现有 mlaNlrs 源；③ `/market/digest` 与 track-record 两个空位 + `/tools/landing-cost`（样本内无同类公开计算器）经 17 家交叉印证。
+- **round-147 "意外观察"揭晓**：其所见来源不明的 `docs/RESEARCH-BEEF-INFO-LANDSCAPE.md`（208 行草稿，mtime 04:38）即本调研轮初稿（与本 CHANGELOG 条目同会话），本轮以 v1.0.0 定稿提交。
+- **基线**：无代码改动；backend 1054+1 / frontend 349 / inference 61 不变。
+
 ### 2026-08-31 — round-147：收尾轮 — track-snapshot watch 闭环 + 批 0a 前置检查 + /trading ?slug= 深链打磨
 
 用户指令"继续完成后续剩余的任务"。三件事 + 文档同步，两个代码 commit（其一为快照 cron 自动提交）。

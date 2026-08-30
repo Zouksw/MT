@@ -186,7 +186,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 | 最终形态需要 | 现状 | 差距 |
 |-------------|------|------|
-| 牛肉价格数据 (进口/国产/部位) | 8 源代码已存在 (abares/cepea/inac/mla/secex/usda_ams/usda_psd/chinaCustomsStats) | ⚠️ 数据冻结 2026-04-30（详见 KNOWN-ISSUES D1：3 个 key 已 set 但源站网络封锁，非缺 key）；CSV 手动导入路径已验证可用（round-81） |
+| 牛肉价格数据 (进口/国产/部位) | 8 源代码已存在 (abares/cepea/inac/mla/secex/usda_ams/usda_psd/chinaCustomsStats) | ⚠️ 数据冻结 2026-04-30（详见 KNOWN-ISSUES D1：key 现状为 MLA/USDA_MARS/OPENWEATHER 空串 + FRED 行缺失，网络层经代理已非硬阻塞——2026-08-31 复核修正，原"3 个 key 已 set"括注已过期）；CSV 手动导入路径已验证可用（round-81） |
 | AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（~~chronos MAPE 1.7% 显著优于 stat 3.6%~~ **2026-08-23 round-121 取证修订**：~~全时间轴 chronos 均值 46-59%~~（**round-129 口径再修**：46-59% 为 raw 口径，混入 stale 失效行——chronos 30d 窗 16 条 stale 行 avg≈9676% 主导；可引用的 verified-only 口径为 **chronos 全周期均值 7-10% vs naive 3.75%，中位 0.51-0.52 vs 0.33**）、中位数均 <1%——真实故事是"chronos 全面劣于 naive（约 2 倍均值）、被淘汰线清出投票"，详见 COMPETITIVE-ANALYSIS §三.3 v1.1.1 口径修正与 accuracy 页） |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
