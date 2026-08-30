@@ -19,6 +19,8 @@ related_docs:
 
 > ## 第三波 v3.1.0（2026-08-30，round-135 规划）— AI 预测牛肉价格·核心专轮
 >
+> **执行状态（2026-08-30 下午，批 0 已落地，round-136）**：0b 未到期守卫 `a8a893f`（三清扫共享 `monthlyActionableMs` 定义 + restore 自愈子句，月度套件 6→9）· 0c horizon [1,3] `314d134`（`cadence.forecastHorizons` 政策缝 + 订阅 horizons 数组化 + **去重键加 horizon 维度**——旧 (commodity, model) 键会吞掉同训练态的第二个 horizon）· 0a/0d 一次性恢复 `0635c92`（实测 **42 行**误杀恢复 completed：6 序列 × 7 各恢复；7 条 NULL 遗留行标 stale；备份 `backups/round136/` 39M dump）· **批 1 前置（推理确定性）`760f825`**（chronos 每请求 payload 派生 torch 种子，live 验证两次相同请求逐位一致；pytest 64→66）。**计划数字修正**：缺口 1 的"56 条"实测为 **49**（42 月度 + 7 NULL，审计后部分行状态已变）。D5 按建议执行（horizon [1,3] + 遗留行 stale，用户 round-136 "开始按照计划实施"授权）。测试基线 backend **1008 pass + 1 skip**（两连全绿；首跑 1 例 flake 见 CHANGELOG round-136 登记）。
+>
 > **指令来源**：用户"结合当前项目最核心的功能，利用 AI 大模型预测牛肉价格的变化，制定后续的开发计划"。
 > **依据**：引擎与生产库 2026-08-30 实测（见 V3-一）+ [PREDICTION-STRATEGY](PREDICTION-STRATEGY.md)（含本轮补写的失效标注——其 §五 实验序列实为比特币错标数据）+ [COMPETITIVE-ANALYSIS §八](COMPETITIVE-ANALYSIS-MOOKET.md)。
 > **核心论断**：预测**机制**已经成熟（质量加权共识 + 劣于-naive 淘汰制 + split-conformal 区间 + cadence 感知验证环，全部 live），当前缺口是**证据、序列适配、产品面**三件事——牛肉预测此刻拿不出一条可展示的验证证据（被误杀 + horizon 过长）；模型质量权重是全局的而非按序列的；方向准确率（采购择时真正要的指标）没有度量。

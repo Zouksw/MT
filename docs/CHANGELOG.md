@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-136 执行轮：IMPROVEMENT-PLAN v3.1.0 批 0（P0 月度验证生命周期修复）全部落地
+
+用户指令"/goal 开始按照计划实施"。批 0 四件套按 0b→0c→0a→0d 顺序执行（守卫先行，数据修复在守卫保护下进行），三个独立 commit + 一次 build/PM2 重启/live 验证：
+
+- **0b 未到期守卫（`a8a893f`）**："未到期 ≠ 不可验证"语义代码化——`monthlyActionableMs`（anchor + horizon 日历月 + 90d 宽限）成为 Pass A/Pass B/expire/restore 四处共享的唯一定义（互为补集，不可能乒乓）：Pass A/B 的月度标记改走 `markActionableMonthlyRows`（逐行日历判定；旧实现是组级 matured 后批量 updateMany，会把未到期兄弟行一并标掉——08-30 事故的第二个放大面）；`restoreVerifiablePredictions` 增自愈子句（未到期 unverifiable 月度行无条件回收）。月度套件 6→9（事故形态/逐行兄弟判定/自愈+僵尸不误回收；deadA/deadB fixture 改为 actionable 行保持原意图）。
+- **0c horizon 校准（`314d134`，D5 按建议执行）**：`cadence.forecastHorizons`——daily 维持 [10] 天，月度改 **[1, 3] 个月**（下月+下季度；旧继承 daily 默认 10 = 十个月，首批牛肉验证要等 2027-05，改后 2026-09/11 起滚动成熟）。订阅 `horizons: number[]` 数组化，刷新按 (model × horizon) 组合；**执行中发现并修复一个计划外缺陷**：`monthlyNewPointState` 去重键原为 (commodity, model)，多 horizon 下第二个 horizon 会被去重守卫吞掉——键扩为 (commodity, model, horizon)，且整周期守卫改为逐组合守卫（顺带消除部分失败跳过洞）。既有 horizon=10 行保留自然验证。
+- **0a/0d 一次性恢复（`0635c92`，生产库执行 13:34 UTC）**：实测 **42 行**误杀月度行（6 序列 × 7：aluminum_lme / beef_carcass_us / iron_ore_cfr / natural_gas_us / rice_thai / rubber_tsr20，anchor 2026-07-31 horizon 10）全部恢复 `completed`；7 条 beef NULL-interval 遗留行（08-23、horizon 6、daily 语义下永不可验证）标 `stale` 保留历史。脚本幂等 + 形态核对（预期数不符即中止）；备份 `backups/round136/prediction_logs-before-batch0a-*.dump`（39M）。**计划数字修正**：round-135 规划写的"56 条"实测 49（42+7，审计与执行间部分行状态已变），KNOWN-ISSUES 无需新增条目（闭环记录在 IMPROVEMENT-PLAN V3 执行状态）。
+- **门禁**：backend 全量 **1008 pass + 1 skip 两连全绿**（首跑 1 例 flake：`mapeTracking.test.ts` "leaves a verifiable prediction as completed"——并行测试文件共享测试库时全局 sweep 竞争 fixture 行，机制为既有暴露面〔全局 sweep + 无套件级隔离〕，本轮月度套件新增 sweep 调用略微加宽窗口；隔离运行与后续两轮全量均绿，登记不重构）；tsc 干净；build + PM2 重启 + `/health` 200；重启日志确认 6 月度序列按新代码订阅（horizons [1,3]），首个刷新 tick 后 84 行 horizon-1/3 月度预测落库（6 序列 × 7 模型 × 2 horizon），42 恢复行全部保持 completed。
+- **批 1 前置（推理确定性）一并落地（`760f825`）**：chronos `predict_quantiles` 采样路径每请求以 payload（repo_id+values+horizon+quantiles）派生 sha256 → 31 位 torch 种子，在信号量内、采样前播种——相同请求逐位复现（live 验证：两次相同 chronos_tiny 请求输出完全一致），不同请求流去相关；统计模型本就确定。可复现契约 = 串行调用方（回测脚本即串行 rolling-origin），live 并行刷新保吞吐不保证逐位。pytest **64→66**（种子稳定性/敏感性 + 播种先于采样），ruff 干净。PREDICTION-STRATEGY §6.2 规范 6 兑现，批 1 回测可复跑性就绪。
+
 ### 2026-08-30 — round-135 规划轮：AI 预测牛肉价格核心专轮（IMPROVEMENT-PLAN v3.1.0）
 
 **补充二（同日晚，回应用户"时序预测最新科研成果"问询）**：PREDICTION-STRATEGY 新增 §七（最新科研成果借鉴清单，六路检索）——**Chronos-2**（2025-10，120M，原生协变量/多变量零样本）使批 3 领先指标实验改**双臂**（sarimax lagged-exog + chronos-2 协变量，同一滚动门禁）；TimesFM 2.5（200M，less-is-more）/ Moirai 2.0（原生分位数）备选登记；LLM 时序之争收敛至"事件知识有效、数值预测无效"（NeurIPS 2024 → arXiv 2410.12326 → 2026-02 再评估）支撑"LLM 读资讯出事件标记"维持登记不进共识；conformal 三篇 2025 顶会（关系型校准 ICML'25 = 现行"残差跨商品池化"近似的研究级修法、变结构点 CPTC NeurIPS'25、综述 2511.13608）落点登记；**M6 竞赛教训**（约 163 队仅 1 队跑赢 naive）作为"方向+区间+公开对错"叙事的最硬外部引用。D6 补例外细化（chronos-2 属家族升级，随批 3 臂 B 评估）。来源声明已注明（基准口径系来源方，未经本仓独立复核）。**Timer-XL 专项评估（同日，回应用户"清华的 timexl 有用吗"）**：不建议现在接入——本仓上一代以在线训练路径接入过并被作为反模式移除，残留 16 条 verified 平均 MAPE 41.4%（08-07 文档口径 0.728 系 10 条小样本，KNOWN-ISSUES R3 已复测修订）；长上下文优势对 195 点月度序列无用武之地、无原生协变量；若未来引入只准 zero-shot 过批 1 门禁。已入 §7.1 取舍表。
