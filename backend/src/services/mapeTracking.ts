@@ -1226,49 +1226,82 @@ export function directionVerdict(
 
 interface DirectionRow {
 	commodityId: string;
-	interval: string | null;
-	forecastStartAt: Date | null;
-	predictedAt: Date;
-	predLast: number | null;
-	actLast: number | null;
-	predLen: number | null;
-	actLen: number | null;
+	interval: string;
+	forecastStartAt: Date;
+	/** Predicted value at the last common verified step (null if unparsable). */
+	predEnd: number | null;
+	/** Actual value at the same step. */
+	actEnd: number | null;
+	/** Overlap length (min of the two arrays) — the steps MAPE scored. */
+	commonLen: number | null;
 }
 
 /**
  * Rolling direction-hit stats for one model — READ-SIDE derivation, no schema
  * change (IMPROVEMENT-PLAN 批4 pins "读侧聚合（不加列）"). The verdict per
- * verified row is computed at read time from the stored end-of-horizon values
- * plus the anchor close (last price point STRICTLY before the row's forecast
- * window, cadence-matched; forecastStartAt-null legacy rows fall back to
- * predictedAt, the documented reader convention).
+ * verified row is computed at read time: predicted vs actual value at the
+ * last COMMON verified step (the same overlap MAPE scores — weekend gaps
+ * make actuals shorter than horizon steps) against the anchor close (the
+ * last close before the UTC DAY FLOOR of forecastStartAt — the previous
+ * day's close under either 00:00 or 16:00 stamp convention, i.e. the true
+ * training end; cadence- and source-matched).
  *
- * Exclusions each just shrink the denominator: cut: series (anchor would live
- * in beef_cut_prices — zero verified rows today), rows whose value arrays
- * mismatch in length (index pairing broken), rows with no anchor point within
- * the lookback buffer, and flat predictions/actuals (directionVerdict null).
+ * Exclusions each just shrink the denominator: rows without forecastStartAt
+ * (the predictedAt fallback anchors inside the actuals window —
+ * anti-correlated noise, live-measured 12.9% on crude legacy rows), cut:
+ * series (anchor would live in beef_cut_prices — zero verified rows today),
+ * rows with no anchor point within the lookback buffer, flat
+ * predictions/actuals (directionVerdict null), and — provenance guard —
+ * series whose anchor window mixes undeclared sources (no unambiguous
+ * anchor exists; MAPE unaffected).
  */
 export async function getModelDirectionStats(
 	modelId: string,
 	commodityId?: string,
 	days: number = 30,
 ): Promise<DirectionStats> {
+	// naive_forecaster is flat BY CONSTRUCTION (repeat the last training point)
+	// — it carries no direction to hit. The backtest reached this conclusion
+	// value-wise (pred末 === anchor → excluded); read-side the value-level
+	// flatness check is unreproducible (multi-source anchors + backfill make
+	// pred末 ≠ reconstructed anchor for stored rows), so the rule is enforced
+	// at the model level — same outcome as the backtest's "— (flat)".
+	if (modelId === "naive_forecaster") {
+		return { directionHitRate: null, directionCount: 0 };
+	}
 	const since = new Date(Date.now() - days * 86400000);
-	// SQL extracts only the LAST array elements — the direction口径 needs one
-	// number per side, not the whole arrays shipped to Node.
+	// SQL extracts ONE number per side at the last COMMON verified step —
+	// actuals are frequently shorter than the horizon steps (CME weekend
+	// gaps: a 10-step window holds 6–9 trading-day closes), and the
+	// verification loop itself scores MAPE over that overlap, so direction
+	// pairs the same step MAPE scored. Rows WITHOUT forecast_start_at are
+	// skipped: the predictedAt fallback anchors ~10d AFTER the true training
+	// end (round-104), i.e. INSIDE the actuals window — direction judged
+	// against it is systematically anti-correlated (live proof:
+	// crude_oil_cme's legacy NULL-start rows scored 12.9%, below the coin
+	// flip). Those rows keep their MAPE; direction just can't see their
+	// anchor. Legacy interval='' normalizes to daily (schema note: NULL/blank
+	// = pre-ADR daily rows).
 	const rows = await prisma.$queryRaw<DirectionRow[]>(Prisma.sql`
-		SELECT commodity_id AS "commodityId", interval,
-		       forecast_start_at AS "forecastStartAt", predicted_at AS "predictedAt",
-		       (predicted_values ->> -1)::float8 AS "predLast",
-		       (actual_values ->> -1)::float8 AS "actLast",
-		       jsonb_array_length(predicted_values) AS "predLen",
-		       jsonb_array_length(actual_values) AS "actLen"
-		FROM prediction_logs
-		WHERE model_id = ${modelId}
-			AND status = ${PS.VERIFIED}
-			AND verified_at >= ${since}
-			AND commodity_id NOT ILIKE '%test%'
-			${commodityId ? Prisma.sql`AND commodity_id = ${commodityId}` : Prisma.empty}
+		SELECT "commodityId", "interval", "forecastStartAt",
+		       (predicted_values ->> ("commonLen" - 1))::float8 AS "predEnd",
+		       (actual_values ->> ("commonLen" - 1))::float8 AS "actEnd",
+		       "commonLen"
+		FROM (
+			SELECT commodity_id AS "commodityId",
+			       COALESCE(NULLIF(interval, ''), 'daily') AS "interval",
+			       forecast_start_at AS "forecastStartAt",
+			       least(jsonb_array_length(predicted_values), jsonb_array_length(actual_values)) AS "commonLen",
+			       predicted_values, actual_values
+			FROM prediction_logs
+			WHERE model_id = ${modelId}
+				AND status = ${PS.VERIFIED}
+				AND verified_at >= ${since}
+				AND commodity_id NOT ILIKE '%test%'
+				AND forecast_start_at IS NOT NULL
+				AND jsonb_array_length(actual_values) > 0
+				${commodityId ? Prisma.sql`AND commodity_id = ${commodityId}` : Prisma.empty}
+		) t
 	`);
 	if (rows.length === 0) return { directionHitRate: null, directionCount: 0 };
 
@@ -1277,28 +1310,61 @@ export async function getModelDirectionStats(
 	// (staleness window + 7d) guarantees a point exists before the earliest
 	// window unless the series genuinely has an age gap there.
 	const groups = new Map<string, { commodityId: string; interval: string; starts: number[] }>();
+	// Anchor boundary = UTC midnight of forecastStartAt's calendar day, NOT
+	// the raw timestamp: stamps mix conventions (forecastStartAt is often
+	// 16:00 — training-end + 1d from an era-style series — while price rows
+	// are 00:00). "Strictly before the raw timestamp" then grabs the FIRST
+	// STEP's own same-day close (live proof: live_cattle anchors came back
+	// === actual[0], inflating chronos direction to 82-90%). Truncating to
+	// the day floor makes the anchor the last close of the PREVIOUS day under
+	// either stamp convention — the true training end.
+	const dayFloor = (d: Date): number => {
+		const t = new Date(d);
+		return Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+	};
 	for (const r of rows) {
 		if (isCutSeriesKey(r.commodityId)) continue;
-		const interval = r.interval ?? "daily"; // NULL = legacy daily rows (schema note)
-		const key = `${r.commodityId}|${interval}`;
-		const g = groups.get(key) ?? { commodityId: r.commodityId, interval, starts: [] };
-		g.starts.push((r.forecastStartAt ?? r.predictedAt).getTime());
+		const key = `${r.commodityId}|${r.interval}`;
+		const g = groups.get(key) ?? { commodityId: r.commodityId, interval: r.interval, starts: [] };
+		g.starts.push(dayFloor(r.forecastStartAt));
 		groups.set(key, g);
 	}
 
+	// Anchor provenance (the lesson from the first live run, 2026-08-30): the
+	// anchor must come from the SAME source universe the model trained on.
+	// Mapped conflict slugs resolve to their single authoritative source; an
+	// UNMAPPED multi-source series (aud_usd today: fred@00:00 +
+	// exchange_rate_api@16:00 rows interleave in one merged series, same-day
+	// gaps ≈ the daily move) has no unambiguous anchor — those rows are
+	// EXCLUDED from direction rather than judged against a coin-flip
+	// reference. Their MAPE is unaffected (MAPE needs no anchor).
+	const groupIds = [...new Set([...groups.values()].map((g) => g.commodityId))];
+	const commodityRows = await prisma.commodity.findMany({
+		where: { id: { in: groupIds } },
+		select: { id: true, slug: true },
+	});
+	const slugById = new Map(commodityRows.map((c) => [c.id, c.slug]));
+
 	const anchors = new Map<string, number>();
+	let ambiguousRows = 0;
 	for (const g of groups.values()) {
 		const minStart = Math.min(...g.starts);
 		const bufferMs = (stalenessWindowDays(g.interval) + 7) * 86400000;
+		const authoritative = getAuthoritativeSource(slugById.get(g.commodityId));
 		const closes = await prisma.commodityPrice.findMany({
 			where: {
 				commodityId: g.commodityId,
 				interval: g.interval,
 				date: { gte: new Date(minStart - bufferMs), lt: new Date(Math.max(...g.starts) + 1) },
+				...(authoritative ? { source: authoritative } : {}),
 			},
-			select: { date: true, close: true },
+			select: { date: true, close: true, source: true },
 			orderBy: { date: "asc" },
 		});
+		if (!authoritative && new Set(closes.map((c) => c.source)).size > 1) {
+			ambiguousRows += g.starts.length;
+			continue;
+		}
 		const times = closes.map((c) => c.date.getTime());
 		for (const start of g.starts) {
 			// last close STRICTLY before the row's window start (binary search)
@@ -1318,16 +1384,21 @@ export async function getModelDirectionStats(
 	let hits = 0;
 	let judged = 0;
 	for (const r of rows) {
-		if (r.predLast == null || r.actLast == null) continue;
-		if (r.predLen == null || r.actLen == null || r.predLen !== r.actLen) continue;
-		const interval = r.interval ?? "daily";
-		const start = (r.forecastStartAt ?? r.predictedAt).getTime();
-		const anchor = anchors.get(`${r.commodityId}|${interval}|${start}`);
+		if (r.predEnd == null || r.actEnd == null || r.commonLen == null || r.commonLen < 1) continue;
+		const anchor = anchors.get(`${r.commodityId}|${r.interval}|${dayFloor(r.forecastStartAt)}`);
 		if (anchor == null) continue;
-		const verdict = directionVerdict(r.predLast, r.actLast, anchor);
+		const verdict = directionVerdict(r.predEnd, r.actEnd, anchor);
 		if (verdict == null) continue;
 		judged++;
 		if (verdict) hits++;
+	}
+	if (ambiguousRows > 0) {
+		// Dynamic import — mapeTracking must not statically depend on @/lib's
+		// logger (circular-import guard, same pattern as verifyPrediction).
+		const { logger } = await import("@/lib");
+		logger.info(
+			`[DIRECTION] ${modelId}: ${ambiguousRows} verified rows excluded — commodity series has undeclared multi-source provenance (no unambiguous anchor)`,
+		);
 	}
 	return {
 		directionHitRate: judged > 0 ? Math.round((hits / judged) * 10000) / 10000 : null,

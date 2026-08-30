@@ -157,7 +157,7 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 			metric:
 				"MAPE = mean absolute percentage error between predicted values and actuals over the horizon. Median is the headline stat (robust to outliers); mean is kept for risk context. Scoring uses ONLY predictions whose verification succeeded (status=verified) — rows invalidated or marked stale/unverifiable never enter medianMape/avgMape/verifiedCount, but they DO remain in predictionCount, which counts every logged prediction in the window: the two fields use different denominators by design.",
 			direction:
-				"Direction hit = the end-of-horizon forecast's up/down move relative to the last pre-forecast price (anchor) matched the actual move. Flat forecasts (the naive baseline repeats the anchor) are excluded from the denominator, not counted as misses — the same semantics as the published beef monthly backtest.",
+				"Direction hit = the end-of-horizon forecast's up/down move relative to the last pre-forecast price (anchor) matched the actual move. Flat forecasts (the naive baseline repeats the anchor) are excluded from the denominator, not counted as misses — the same semantics as the published beef monthly backtest. Series whose price history mixes undeclared sources have no unambiguous anchor and are excluded from direction (their MAPE is unaffected).",
 			consensus:
 				"The signal consensus weighs each model by its verified MAPE; models verified strictly worse than the naive baseline are eliminated from the vote.",
 		},
