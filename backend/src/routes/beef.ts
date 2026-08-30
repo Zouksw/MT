@@ -472,7 +472,10 @@ router.get(
 			take: 1000,
 		});
 
-		// Group by (cutCode, date, source) to show spreads
+		// Group by (cutCode, source+country, currency) over the requested
+		// window. Currency is part of the key: BeefCutPrice rows carry mixed
+		// currencies (USD/BRL/AUD...), and a min/max/avg bucket that merges a
+		// USD/kg row with a BRL/kg row is numeric noise, not a spread.
 		const spreads: Record<
 			string,
 			Record<string, { min: number; max: number; avg: number; count: number }>
@@ -482,7 +485,7 @@ router.get(
 			const price = Number(p.price);
 			const key = p.cutCode;
 			if (!spreads[key]) spreads[key] = {};
-			const sourceKey = `${p.source} (${p.factory?.country || "unknown"})`;
+			const sourceKey = `${p.source} (${p.factory?.country || "unknown"}) [${p.currency}]`;
 			if (!spreads[key][sourceKey]) {
 				spreads[key][sourceKey] = {
 					min: price,
@@ -725,7 +728,7 @@ router.get(
  * any API key.
  *
  * ADMIN-only. Multipart form-data with a 'file' field. 10MB limit.
- * See services/beefImport.ts for the CSV contract.
+ * See services/beefIngest.ts (beefImport section) for the CSV contract.
  */
 router.post(
 	"/import",

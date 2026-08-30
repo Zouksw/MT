@@ -299,4 +299,56 @@ describe("Beef Routes (Integration)", () => {
 			expect(res.status).toBe(400);
 		});
 	});
+
+	// Mixed-currency spread grouping (round-144): BeefCutPrice rows carry
+	// USD/BRL/AUD currencies; a spread bucket that merges a USD/kg row with a
+	// BRL/kg row produces numeric noise. Currency must be part of the group key.
+	describe("GET /api/beef/spreads (currency-aware grouping)", () => {
+		const testSource = "test:spreads-currency";
+
+		afterAll(async () => {
+			await prisma.beefCutPrice.deleteMany({ where: { source: testSource } });
+		});
+
+		it("splits same-source rows into per-currency buckets", async () => {
+			const factory = await prisma.factory.findFirst({});
+			if (!factory) throw new Error("seed invariant: no factory rows in mt_test");
+
+			const today = new Date();
+			const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+			// Same factory/cut/source, different dates (unique constraint),
+			// different currencies — must land in two separate buckets.
+			for (const [date, currency, price] of [
+				[today, "USD", 10],
+				[yesterday, "BRL", 50],
+			] as const) {
+				await prisma.beefCutPrice.create({
+					data: {
+						factoryId: factory.id,
+						cutCode: "STRIPLOIN",
+						price,
+						currency,
+						unit: currency === "USD" ? "USD/kg" : "BRL/kg",
+						source: testSource,
+						date,
+					},
+				});
+			}
+
+			const res = await request(app)
+				.get("/api/beef/spreads")
+				.query({ cutCode: "STRIPLOIN" })
+				.set(authHeaders(token));
+
+			expect(res.status).toBe(200);
+			const striploin = res.body.data.spreads.STRIPLOIN ?? {};
+			const buckets = Object.entries(striploin).filter(([key]) => key.includes(testSource));
+			// The same source appears twice — once per currency — never merged.
+			expect(buckets).toHaveLength(2);
+			const usd = buckets.find(([key]) => key.endsWith("[USD]"));
+			const brl = buckets.find(([key]) => key.endsWith("[BRL]"));
+			expect(usd?.[1]).toMatchObject({ min: 10, max: 10, avg: 10, count: 1 });
+			expect(brl?.[1]).toMatchObject({ min: 50, max: 50, avg: 50, count: 1 });
+		});
+	});
 });

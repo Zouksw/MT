@@ -519,6 +519,15 @@ const CUT_MAPPINGS: CutMapping[] = [
 		hsCode: "0206.10",
 	},
 	{
+		cutCode: "BEEF_CHEEK",
+		nameEn: "Beef Cheek",
+		nameZh: "牛颊肉",
+		nameEs: "Cachete",
+		namePt: "Bochecha",
+		primal: "Offal",
+		hsCode: "0206.10",
+	},
+	{
 		cutCode: "TAIL",
 		nameEn: "Oxtail",
 		nameZh: "牛尾",
@@ -728,7 +737,9 @@ for (const cut of CUT_MAPPINGS) {
 }
 
 // Common aliases that don't fit in the structured data
-const ALIASES: Record<string, string> = {
+// Exported for the dead-alias guard test: every value must resolve to a
+// canonical CUT_MAPPINGS cutCode (the "beef cheek" → OFFAL bug, round-144).
+export const ALIASES: Record<string, string> = {
 	// Chinese aliases
 	肥牛: "BRISKET_NAVEL",
 	牛排: "STRIPLOIN",
@@ -761,7 +772,7 @@ const ALIASES: Record<string, string> = {
 	"ranch steak": "CHUCK_ROLL",
 	delmonico: "RIB_EYE_ROLL",
 	"spencer steak": "RIB_EYE_ROLL",
-	"beef cheek": "OFFAL",
+	"beef cheek": "BEEF_CHEEK",
 	"ground beef": "BEEF_MINCE",
 	"minced beef": "BEEF_MINCE",
 	"diced beef": "BEEF_MINCE",

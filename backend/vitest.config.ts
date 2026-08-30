@@ -10,7 +10,7 @@ export default defineConfig({
 			provider: "v8",
 			reporter: ["text", "lcov", "html"],
 			include: ["src/**/*.ts"],
-			exclude: ["src/**/*.d.ts", "src/**/__tests__/**", "src/test-helpers.ts", "src/test-setup.ts"],
+			exclude: ["src/**/*.d.ts", "src/**/__tests__/**", "src/test/helpers/**", "src/test-setup.ts"],
 			// Thresholds calibrated 2-3pp below measured so routine changes don't
 			// trip the gate but a real regression (>3pp drop) fails CI.
 			// Re-calibrated 2026-08-15 against a fresh seeded scratch DB (the
