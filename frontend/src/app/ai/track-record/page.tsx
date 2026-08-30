@@ -3,6 +3,7 @@
 import { BadgeCheck, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import BeefBacktestSection from "@/components/ai/BeefBacktestSection";
 import { apiFetch } from "@/lib/apiFetch";
 
 /**
@@ -114,6 +115,12 @@ export default function TrackRecordPage() {
 						</button>
 					</div>
 				)}
+
+				{/* Beef monthly backtest evidence (批1) — static dated snapshot,
+				 * rendered independent of the live API (the evidence exists even
+				 * while the live beef rolling verification is still maturing,
+				 * first due 2026-09). */}
+				<BeefBacktestSection />
 
 				{record && !loading && (
 					<>
