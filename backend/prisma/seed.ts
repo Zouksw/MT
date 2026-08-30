@@ -3,7 +3,6 @@ import {
 	type AlertType,
 	type AnomalySeverity,
 	type DetectionMethod,
-	type ModelAlgorithm,
 	PrismaClient,
 	type StorageFormat,
 	type UserRole,
@@ -409,14 +408,6 @@ const DATASETS: DatasetDef[] = [
 	},
 ];
 
-const MODEL_DEFS: { algorithm: ModelAlgorithm; description: string }[] = [
-	{ algorithm: "ARIMA", description: "Auto-Regressive Integrated Moving Average model" },
-	{ algorithm: "PROPHET", description: "Facebook Prophet decomposition model" },
-	{ algorithm: "LSTM", description: "Long Short-Term Memory neural network" },
-	{ algorithm: "TRANSFORMER", description: "Attention-based Transformer model" },
-	{ algorithm: "ENSEMBLE", description: "Weighted ensemble of multiple models" },
-];
-
 const DETECTION_METHODS: DetectionMethod[] = ["STATISTICAL", "ML_AUTOENCODER", "RULE_BASED"];
 
 // ============================================================================
@@ -450,8 +441,6 @@ async function main() {
 	console.log("[1/9] Cleaning existing data...");
 
 	// Delete in correct order respecting foreign key constraints
-	await prisma.forecast.deleteMany();
-	await prisma.forecastingModel.deleteMany();
 	await prisma.anomaly.deleteMany();
 	await prisma.alert.deleteMany();
 	await prisma.alertRule.deleteMany();
@@ -459,7 +448,6 @@ async function main() {
 	await prisma.timeseries.deleteMany();
 	await prisma.dataset.deleteMany();
 	await prisma.auditLog.deleteMany();
-	await prisma.securityAuditLog.deleteMany();
 	await prisma.apiKey.deleteMany();
 	await prisma.session.deleteMany();
 	// prisma.organizations went with the model itself (round-114 multi-tenant
@@ -628,100 +616,6 @@ async function main() {
 	}
 
 	console.log(`       Total datapoints: ${totalDatapoints.toLocaleString()}`);
-
-	// ------------------------------------------------------------------
-	// 5. Create forecasting models
-	// ------------------------------------------------------------------
-	console.log("[5/9] Creating forecasting models...");
-
-	const models: { id: string; timeseriesId: string }[] = [];
-
-	// Create models for the first 5 timeseries
-	for (let i = 0; i < Math.min(5, allTimeseries.length); i++) {
-		const ts = allTimeseries[i];
-		const modelDef = MODEL_DEFS[i % MODEL_DEFS.length];
-		const trainedAt = new Date(NOW.getTime() - randInt(1, 14) * 24 * 60 * 60 * 1000);
-
-		const model = await prisma.forecastingModel.create({
-			data: {
-				timeseriesId: ts.id,
-				trainedById: pick(users).id,
-				algorithm: modelDef.algorithm,
-				hyperparameters: {
-					description: modelDef.description,
-					lookbackWindow: randInt(24, 168),
-					forecastHorizon: randInt(12, 72),
-					learningRate: parseFloat(rand(0.001, 0.01).toFixed(4)),
-					epochs: randInt(50, 200),
-					batchSize: pick([16, 32, 64, 128]),
-				},
-				trainingMetrics: {
-					mae: parseFloat(rand(0.1, 5).toFixed(4)),
-					rmse: parseFloat(rand(0.2, 7).toFixed(4)),
-					mape: parseFloat(rand(1, 15).toFixed(2)),
-					r2: parseFloat(rand(0.7, 0.99).toFixed(4)),
-					trainingTimeSeconds: randInt(30, 600),
-				},
-				version: randInt(1, 5),
-				isActive: Math.random() > 0.2,
-				trainedAt,
-				deployedAt:
-					Math.random() > 0.3 ? new Date(trainedAt.getTime() + randInt(1, 60) * 60 * 1000) : null,
-			},
-		});
-		models.push({ id: model.id, timeseriesId: ts.id });
-		console.log(`       Model: ${modelDef.algorithm} -> ${ts.name}`);
-	}
-
-	// ------------------------------------------------------------------
-	// 6. Create forecasts
-	// ------------------------------------------------------------------
-	console.log("[6/9] Creating forecasts...");
-
-	let totalForecasts = 0;
-
-	for (const model of models) {
-		// Generate 48 forecast points (4 hours ahead at 5-min intervals)
-		const forecastBatch: {
-			modelId: string;
-			timeseriesId: string;
-			timestamp: Date;
-			predictedValue: number;
-			lowerBound: number;
-			upperBound: number;
-			confidence: number;
-			anomalyProbability: number | null;
-			isAnomaly: boolean;
-		}[] = [];
-
-		const baseTs = allTimeseries.find((t) => t.id === model.timeseriesId);
-		const baseValue = baseTs?.def.baseValue ?? 50;
-
-		for (let i = 0; i < 48; i++) {
-			const timestamp = new Date(NOW.getTime() + i * 5 * 60 * 1000);
-			const predicted =
-				baseValue + Math.sin(i / 6) * (baseTs?.def.amplitude ?? 5) + (Math.random() - 0.5) * 2;
-			const uncertainty = (i / 48) * 5 + 1; // uncertainty grows with horizon
-			const confidence = Math.max(0.5, 0.98 - i * 0.008);
-
-			forecastBatch.push({
-				modelId: model.id,
-				timeseriesId: model.timeseriesId,
-				timestamp,
-				predictedValue: parseFloat(predicted.toFixed(6)),
-				lowerBound: parseFloat((predicted - uncertainty).toFixed(6)),
-				upperBound: parseFloat((predicted + uncertainty).toFixed(6)),
-				confidence: parseFloat(confidence.toFixed(2)),
-				anomalyProbability: i > 30 ? parseFloat(rand(0.05, 0.4).toFixed(2)) : null,
-				isAnomaly: false,
-			});
-		}
-
-		await prisma.forecast.createMany({ data: forecastBatch });
-		totalForecasts += forecastBatch.length;
-	}
-
-	console.log(`       Created ${totalForecasts} forecast points across ${models.length} models`);
 
 	// ------------------------------------------------------------------
 	// 7. Create anomalies
@@ -996,51 +890,8 @@ async function main() {
 		});
 	}
 
-	// Create security audit logs
-	const securityEvents = [
-		{ event: "login_success", severity: "INFO" },
-		{ event: "login_failed", severity: "WARNING" },
-		{ event: "token_refresh", severity: "INFO" },
-		{ event: "password_change", severity: "INFO" },
-		{ event: "api_key_created", severity: "INFO" },
-		{ event: "permission_denied", severity: "WARNING" },
-		{ event: "rate_limit_exceeded", severity: "WARNING" },
-		{ event: "suspicious_activity", severity: "HIGH" },
-	];
-
-	for (let i = 0; i < 25; i++) {
-		const evt = pick(securityEvents);
-		await prisma.securityAuditLog.create({
-			data: {
-				event: evt.event,
-				userId: pick(users).id,
-				sessionId: `sess-${randInt(10000, 99999)}`,
-				details: {
-					ip: `192.168.${randInt(1, 10)}.${randInt(1, 254)}`,
-					browser: pick(["Chrome", "Firefox", "Safari"]),
-					path: pick(["/api/datasets", "/api/timeseries", "/api/auth/login", "/api/alerts"]),
-				},
-				severity: evt.severity,
-				userAgent: pick([
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-					"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-					"TradeMind-CLI/1.0",
-				]),
-				url: pick([
-					"/api/datasets",
-					"/api/timeseries",
-					"/api/auth/login",
-					"/api/alerts",
-					"/api/forecasts",
-				]),
-				receivedAt: new Date(THIRTY_DAYS_AGO.getTime() + randInt(0, 29) * 24 * 60 * 60 * 1000),
-			},
-		});
-	}
-
 	console.log(`       Created ${apiKeyHashes.length} API keys`);
 	console.log(`       Created 30 audit logs`);
-	console.log(`       Created 25 security audit logs`);
 
 	// ------------------------------------------------------------------
 	// 10. Create TradeMind AI commodity data
@@ -3042,8 +2893,6 @@ async function main() {
 	console.log(`  Datasets:      ${DATASETS.length}`);
 	console.log(`  Timeseries:    ${allTimeseries.length}`);
 	console.log(`  Datapoints:    ${totalDatapoints.toLocaleString()}`);
-	console.log(`  Models:        ${models.length}`);
-	console.log(`  Forecasts:     ${totalForecasts}`);
 	console.log(`  Anomalies:     ${anomalies.length}`);
 	console.log(`  Alert Rules:   ${alertRules.length}`);
 	console.log(`  Alerts:        ${totalAlerts}`);

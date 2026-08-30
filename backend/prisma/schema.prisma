@@ -27,8 +27,6 @@ model User {
   apiKeys             ApiKey[]
   auditLogs           AuditLog[]
   datasets            Dataset[]
-  models              ForecastingModel[]
-  securityAuditLogs   SecurityAuditLog[] @relation("SecurityAuditLogs")
   sessions            Session[]
   watchlists          Watchlist[]
   portfolios          Portfolio[]
@@ -82,8 +80,6 @@ model Timeseries {
   alerts                    Alert[]
   anomalies                 Anomaly[]
   dataPoints                Datapoint[]
-  models                    ForecastingModel[]
-  forecasts                 Forecast[]
   dataset                   Dataset            @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 
   @@unique([datasetId, slug])
@@ -107,50 +103,6 @@ model Datapoint {
   @@index([timestamp(sort: Desc)]) // NEW: For time-range queries
   @@index([timeseriesId, isOutlier]) // NEW: For outlier detection
   @@map("datapoints")
-}
-
-model ForecastingModel {
-  id              String         @id @default(uuid())
-  timeseriesId    String         @map("timeseries_id")
-  trainedById     String?        @map("trained_by_id")
-  algorithm       ModelAlgorithm
-  hyperparameters Json
-  trainingMetrics Json?          @map("training_metrics")
-  version         Int            @default(1)
-  isActive        Boolean        @default(true) @map("is_active")
-  trainedAt       DateTime?      @map("trained_at")
-  deployedAt      DateTime?      @map("deployed_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  timeseries      Timeseries     @relation(fields: [timeseriesId], references: [id], onDelete: Cascade)
-  trainedBy       User?          @relation(fields: [trainedById], references: [id])
-  forecasts       Forecast[]
-
-  @@index([timeseriesId])
-  @@index([trainedById])
-  @@index([isActive])
-  @@index([trainedAt(sort: Desc)])
-  @@index([createdAt(sort: Desc)])
-  @@map("forecasting_models")
-}
-
-model Forecast {
-  id                 String           @id @default(uuid())
-  modelId            String           @map("model_id")
-  timeseriesId       String           @map("timeseries_id")
-  timestamp          DateTime
-  predictedValue     Decimal          @map("predicted_value") @db.Decimal(15, 6)
-  lowerBound         Decimal?         @map("lower_bound") @db.Decimal(15, 6)
-  upperBound         Decimal?         @map("upper_bound") @db.Decimal(15, 6)
-  confidence         Decimal          @db.Decimal(3, 2)
-  anomalyProbability Decimal?         @map("anomaly_probability") @db.Decimal(3, 2)
-  isAnomaly          Boolean          @default(false) @map("is_anomaly")
-  createdAt          DateTime         @default(now()) @map("created_at")
-  model              ForecastingModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  timeseries         Timeseries       @relation(fields: [timeseriesId], references: [id], onDelete: Cascade)
-
-  @@index([modelId])
-  @@index([timeseriesId, timestamp(sort: Desc)])
-  @@map("forecasts")
 }
 
 model Anomaly {
@@ -281,26 +233,6 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-model SecurityAuditLog {
-  id         String   @id @default(uuid())
-  event      String
-  timestamp  DateTime @default(now())
-  userId     String?  @map("user_id")
-  sessionId  String   @map("session_id")
-  details    Json     @default("{}")
-  severity   String
-  userAgent  String?  @map("user_agent")
-  url        String?
-  receivedAt DateTime @default(now()) @map("received_at")
-  user       User?    @relation("SecurityAuditLogs", fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([event, timestamp])
-  @@index([severity, timestamp])
-  @@index([timestamp])
-  @@map("security_audit_logs")
-}
-
 model PredictionLog {
   id              String    @id @default(uuid())
   modelId         String    @map("model_id")
@@ -359,14 +291,6 @@ enum StorageFormat {
   INFLUXDB
   OPENML
   CSV
-}
-
-enum ModelAlgorithm {
-  ARIMA
-  PROPHET
-  LSTM
-  TRANSFORMER
-  ENSEMBLE
 }
 
 enum AnomalySeverity {

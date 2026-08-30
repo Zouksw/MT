@@ -297,7 +297,7 @@ export async function getUserProfile(userId: string) {
 			preferences: true,
 			createdAt: true,
 			lastLoginAt: true,
-			_count: { select: { datasets: true, models: true } },
+			_count: { select: { datasets: true } },
 		},
 	});
 	if (!user) throw new NotFoundError("User");

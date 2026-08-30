@@ -397,7 +397,6 @@ router.post(
  *                           type: object
  *                           properties:
  *                             datasets: { type: integer }
- *                             models: { type: integer }
  *       401:
  *         description: Invalid token
  *       404:
