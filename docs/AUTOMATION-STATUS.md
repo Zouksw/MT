@@ -1,6 +1,6 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-08-16（round-105：部署断层修复 + cookie-parser 挂载；round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
+> 最后更新：2026-08-30（round-139：状态维护——测试基线三套复跑刷新 1390→1422 全绿、周度快照脚本登记〔待 cron 接线，v3.2.0 批 1〕；前值 2026-08-16：部署断层修复 + cookie-parser 挂载；round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
 > §九 数字严谨要求：下列计数为 live 实测（截至日期见各条），运行对应命令获取当前值。
 
@@ -123,6 +123,8 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 **敏感操作禁令**：`cron-cleanup.sh` 明确禁止 `pnpm store prune`（曾 3 次导致文件损坏，Round 5/7/10）。
 
+**周度快照（待接线，v3.2.0 批 1 / 决策 D9）**：`backend/scripts/weekly-track-snapshot.ts`（round-138 批 5c 建成，只读导出 `docs/snapshots/track-record-<date>.md`——30d 榜单 MAPE+方向 + 牛肉月度验证分布；首产物 2026-08-30 已入库）。**crontab 尚无条目**——接线节奏与自动提交策略见 IMPROVEMENT-PLAN v3.2.0 批 1。
+
 ## 三、应用内定时器（setInterval，backend server.ts）
 
 无 cron 库，全部原生 setInterval：
@@ -166,14 +168,14 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-07 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-30 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 97（2026-08-23） | **1004 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 35（2026-08-23） | **322 pass** |
-| inference | pytest 8 | conftest.py | 4（2026-08-22） | **64 pass** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 98（2026-08-30） | **1022 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 37（2026-08-30） | **334 pass** |
+| inference | pytest 8 | conftest.py | 4（2026-08-22） | **66 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 9 specs | chromium only |
 
-> 三者合计 **1390 全绿**（1004 + 322 + 64，截至 2026-08-23 round-126 实测，+5 为 D1 watchlist hooks/mutation 测试；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离；round-124 删除 manualImport 服务时其 7 条测试随功能同批移除，属删功能非覆盖回退）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1422 全绿**（1022 + 334 + 66，截至 2026-08-30 round-139 三套全量复跑实测；round-135-138 v3.1.0 七批净增来自月度生命周期/方向准确率/per-series 路由/牛肉预测中心页测试，round-132 D6 删三组孤儿端点时 -34 为随组删除的测试，属删功能非覆盖回退；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 

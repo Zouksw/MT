@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-139：状态维护轮 — 三套基线复跑全绿 + IMPROVEMENT-PLAN v3.2.0 第四波规划
+
+用户指令"维护项目状态，规划后续的开发计划"。**零代码改动轮（docs-only，无需重启）**；三套测试全量复跑作为状态确认：backend **1022+1**（98 文件）、frontend **334**（37 套件）、inference **66**，零回退；PM2 三服务在线（/health 200×3），git 树干净 @ `eba0402`。
+
+- **规划取证（live）**：① 牛肉月度预测 H=1 首批 7 行**下一验证到期 2026-08-31 00:00**（forecast_start 2026-07-31 + 1 月；实际值等 FRED 8 月点 ~9 月中发布 → 首批 verified 预计 2026-09 中下旬）；② **15 个 slug 被多源写入、权威声明仅 3 个**（brl_usd/corn_cme/natural_gas_cme）——aud_usd 等 12 个未声明者的同 interval 混源组被方向守卫整组排除，登记为 v3.2.0 批 2 + 决策项 D8；③ `weekly-track-snapshot.ts` 已建成但 **crontab 无条目**（既有 5 条任务）——批 1 接线 + 提交策略 D9。
+- **IMPROVEMENT-PLAN v3.2.0（第四波）**：证据成熟期三主线——**值守**（批 0a 2026-09 验证窗核查、批 1 快照 cron 自动化）、**解锁**（批 2 多源 provenance 声明 → 方向统计覆盖 FX 族）、**第二产品落点**（批 3 进口成本计算器 `/tools/landing-cost`，v3.0.0 批 A 升格）；另有批 0b 校准共识区间（样本门：首批 live verified 后，批 1 回测残差为主 + live 交叉核对）与批 4 决策项处置（D1-D4 承接）。全部批次带门控（时间/决策/样本量）；有机观察项单列（2026-08-31 到期 → 9 月中下旬首批 verified → 2026-10-31 H=3 → ~2026-11 per-series 激活评估 → 2028-11 活牛重评）。
+- **文档维护**：PROJECT-VISION 增 2026-08-30 状态指针（第二/三波全落地 + 基线刷新 + 里程碑预告）；AUTOMATION-STATUS 头注与测试基线刷新（1390→1422 全绿）+ 周度快照脚本登记（待接线）。
+
 ### 2026-08-30 — round-138（终）：批 6（免 key 牛肉/蛋白序列扩充）落地 — v3.1.0 全部七批执行完毕
 
 - **选型实测先行（`51b8853`）**：6 个候选 FRED 序列经**免 key CSV 端点实测探针**（fredgraph.csv），3 个存活且数据新鲜（月度到 2026-07）：**APU0000703112**（美国零售牛肉 ground chuck $/lb）、**PPORKUSDM**（世界银行猪肉指数）、**PPOULTUSDM**（世界银行禽类指数）；PCHICKUSDM/BEEFEXPDM/BEEFIMPDM 不存在（404 页）。牛肉预测面：月度侧 1 条基准 → 2 条牛肉 + 2 条替代蛋白交叉（猪/鸡），日更侧活牛/架子牛在线——批 2 per-series 路由即刻各有用武之地。

@@ -1,7 +1,7 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.1.0"
+version: "3.2.0"
 last_updated: "2026-08-30"
 status: "active"
 maintainer: "MT Team"
@@ -16,6 +16,91 @@ related_docs:
 ---
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
+
+> ## 第四波 v3.2.0（2026-08-30，round-139 规划）— 证据成熟期：值守、解锁、第二产品落点
+>
+> **指令来源**：用户"维护项目状态，规划后续的开发计划"。
+> **性质**：v3.1.0 七批（0/1/2/3/4/5/6）已全部落地——预测**机制**侧已无未决工程项（领先指标方向已经双臂门禁诚实关闭）。本波不造新机制，而是三件事：**① 让有机证据节律自动化**（快照 cron 接线、验证窗值守）；**② 解锁被数据形态锁住的既有能力**（多源 provenance 声明 → 方向统计覆盖 FX 族）；**③ 产品面第二落点**（进口成本计算器，v3.0.0 批 A 升格）。全部批次带明确门控（时间门 / 用户决策门 / 样本量门），杜绝"为做而做"。
+> **约束不变**：只用预训练模型不训练（§七.2）；不做支付/下单/交易（§九）；诚实优先——样本不足不显示、未校准不冒充。
+>
+> ### V4-一、现状基线（2026-08-30 实测，round-139 取证）
+>
+> | 维度 | 事实 | 证据 |
+> |------|------|------|
+> | 测试基线 | backend **1022 pass + 1 skip**（98 文件）、frontend **334**（37 套件）、inference **66** —— 三套全量复跑零回退 | 本轮 `pnpm test` / `pytest -q` 实跑 |
+> | 服务 | PM2 三进程在线；backend /health、inference /health、frontend / 全 200；git 树干净 @ `eba0402` | `pm2 list` + curl 实测（round-139） |
+> | 牛肉验证窗 | interval=monthly completed：H=1×7 / H=3×7 / H=10×7（另 7 条 NULL-interval stale）；**下一验证到期 2026-08-31 00:00**（forecast_start 2026-07-31 + H=1 月）；实际值等 2026-08 月度点（FRED 惯例 M+1 月中发布）→ 首批 verified 预计 **2026-09 中下旬** | psql GROUP BY + `MIN(forecast_start_at + make_interval(months=>horizon))` |
+> | 方向准确率 | live 30d 窗：chronos 三变体 68.7–70.4%（各 ~2170 判定行）、holtwinters 33.8%（分化弱点）、naive 恒 flat "—"；beef 0 行待 9 月 | `/api/signals/models/accuracy`（round-137 终值） |
+> | 多源 provenance | **15 个 slug 被 ≥2 源写入，仅 3 个已声明**（brl_usd→fred、corn_cme→usda_ams、natural_gas_cme→fred）；12 个未声明中 aud_usd（fred@00:00 + exchange_rate_api@16:00 同日双写）被方向守卫整组排除 | psql `HAVING COUNT(DISTINCT source)>1`；`authoritativeSources.ts` |
+> | 快照自动化 | `backend/scripts/weekly-track-snapshot.ts` 已建成（首产物 2026-08-30 入库），**crontab 5 条中无它** —— 未自动化 | `crontab -l` |
+> | 领先指标 | 方向已关闭：臂 A/臂 B 双 FAIL + 主假设数据不可行（重评 2028-11）；sarimax 维持 0 行（纪律正确） | `docs/backtests/beef-leading-indicator-2026-08.md` |
+>
+> ### V4-二、批次总览
+>
+> | 批 | 内容 | 价值 | 规模 | 门控 |
+> |----|------|------|------|------|
+> | **1（P0）** | 周度快照 cron 接线 + 提交策略（D9） | 证据节律自动化——9 月起每份 verified 自动留档 | XS | 无 |
+> | **2（P0）** | 多源 provenance 声明补全（D8）→ 方向统计解锁 | 方向指标覆盖 FX 族；训练/验证取数一致 | S | D8 用户点头 |
+> | **3** | 进口成本计算器 `/tools/landing-cost`（v3.0.0 批 A 升格） | 牧集结构性做不了的差异化工具（获客面） | M | 无 |
+> | **0a** | 验证窗值守（首批牛肉 verified 落地核查） | 证据链兑现或缺陷早暴露 | XS | 时间（2026-09 中下旬） |
+> | **0b** | 校准共识区间（批 5 诚实推迟项兑现） | 共识卡"模型分歧区间"→"校准 90% 区间" | S-M | 首批 live verified 落地（批 0a 后） |
+> | **4** | 工程卫生决策项处置（D1-D4 承接） | 债务清偿 + 口径收口 | S-M | 用户逐项点头 |
+>
+> **顺序**：批 1 → 批 2（D8 定案即做）→ 批 3 →【时间门】批 0a → 批 0b →【决策门】批 4（任意时点插入）。门禁沿用：tsc + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
+>
+> ### V4-三、批次详情
+>
+> **批 1 — 周度快照自动化（XS）**
+> cron 增一条（建议 `30 7 * * 1` 周一 07:30）：`cd /root/backend && npx tsx scripts/weekly-track-snapshot.ts`。**提交策略（D9）**：建议脚本产出后自动 `git -C /root add docs/snapshots/track-record-*.md && git commit`（仅该路径、固定 message；index.lock 存在时跳过留待下周）——保持"树干净"运维不变量，避免快照堆积未提交；备选仅写盘、由维护轮收编。验收：crontab +1 条并实跑一轮产出产物 + 自动 commit；AUTOMATION-STATUS §二 同步；脚本只读 DB、只写 snapshots 目录（既有契约不变）。
+>
+> **批 2 — 多源 provenance 声明补全（S，D8 前置）**
+> 现状：未声明多源 slug 的（同 interval）混源组被方向守卫整组排除（aud_usd 为 FX 代表——fred 与 exchange_rate_api 同日双写、价差 ≈ 日波动，anchor 无法判定）。内容：① 执行时先按 (slug × interval) 分组 SQL 核实**真混源**清单（fred+world_bank 多为日度/月度不同 interval 天然分道，不需声明）；② 对真混源逐个声明权威源（aud_usd 建议 → fred：官方 30 年长序列、方向正确、与 brl_usd 先例一致；代价是 currentPrice 时效降约 1 天——D8 一并确认）；③ `authoritativeSources` 契约测试 + track-record methodology provenance 条目同步。验收：声明后 `getModelDirectionStats` 的 ambiguousRows 相应下降、/ai/accuracy 出现 aud_usd 方向数字；每个声明的两源行数/量纲对比表留档（防声明引入量纲错）。**注意**：声明即改变该序列训练/MAPE actuals 取数源——brl_usd 先例（round-41）证明利大于弊，但每个新声明都要单独过量纲核查。
+>
+> **批 3 — 进口成本计算器（M，v3.0.0 批 A 升格）**
+> `/tools/landing-cost`：出口国（AU/BR/AR/US/UY…）× 库内活序列（活牛/胴体现货基准 + FX 汇率）× 可编辑参数（关税/增值税/运费/损耗/港杂）→ **RMB/kg 到岸参考区间**。纯信息计算不碰 §九红线；输入全部可溯源到库内序列，序列 stale 时诚实降级（显示"数据源维护中"，不硬编码兜价）。建议公开 + 全局限流（与 highlights 同款白名单纪律——只读白名单序列，不含用户私有数据）。验收：对活牛现价实算一组数字与手算一致；断流降级态有测试；未登录可用（若定公开）。规模：新页 + 1 只读计算端点（逻辑后端化以便测试）+ hook + 测试。
+>
+> **批 0a — 验证窗值守（XS，时间门 2026-09 中下旬）**
+> 2026-08-31 H=1 到期、8 月月度点 ~9 月中发布后的值守清单：① SQL 三查（status=verified 行数 / MAPE 分布 / 方向判定进入）；② 三面核查（/ai/accuracy、/ai/track-record、/beef/forecast 出现牛肉数字）；③ 若到期未验证——读 verifyDuePredictions 日志定位：发布滞后则登记等待（诚实），生命周期缺陷则修复（单批 commit）；④ 批 1 之后快照自动留档。验收：要么首批 verified 可见，要么缺陷修复后可见；阴阳结论均记 CHANGELOG。
+>
+> **批 0b — 校准共识区间（S-M，样本门：首批 live verified 落地）**
+> 批 5 诚实推迟项的兑现路径：校准源用**批 1 回测残差**（36 origins × 7 模型 × H=1/3，样本充分）为主，**live verified 行做交叉核对**（首批 7 行起，偏差大则回退显示并登记）；卡片注明校准依据与样本量。change-point 区间加宽等改进在此之后评估（见 V4-六）。验收：/beef/forecast 共识卡显示"校准 90% 区间（回测校准 + live 交叉核对 N 行）"；样本门与回退态有测试；不达标不显示（维持"模型分歧区间"现标注）。
+>
+> **批 4 — 工程卫生决策项处置（S-M，用户逐项点头）**
+> D1：PRODUCT-SPEC 增补（批 3 落地则顺带写入 landing-cost；批 B/C 数据层能力登记）。D2：休眠表（SecurityAuditLog/ForecastingModel/Forecast）一次性迁移删除 + 先备份。D3：portfolios 路由组 + `/api/inference/predict/batch` 孤儿（维持登记或删除）。D4：`predictionBeefCoverage24h` 口径修正（"beef 覆盖不限 24h + 最新预测时间戳"）。全部为 v3.0.0 以来登记未决项，逐项确认后一次打包轮执行。
+>
+> ### V4-四、决策项（不擅动，需用户点头）
+>
+> | # | 事项 | 建议 | 来源 |
+> |---|------|------|------|
+> | **D8（新，批 2）** | 真混源 slug 的权威源声明清单（首例 aud_usd→fred） | 建议：仅同 interval 真混源才声明；aud_usd→fred（官方长序列/方向正确/与 brl_usd 一致；代价 currentPrice 时效 −1 天）。逐 slug 附两源行数/量纲对比表后执行 | V4-一 多源行；round-137 批 4c 登记 |
+> | **D9（新，批 1）** | 周度快照提交策略 | 建议：脚本自动 commit（仅 docs/snapshots/track-record-*.md 路径，index.lock 冲突跳过）——保树干净不变量；备选仅写盘 | V4-一 快照行 |
+> | D1-D4（承 v3.0.0/v3.1.0） | PRODUCT-SPEC 增补 / 休眠表清理 / portfolios+predict-batch / predictionBeefCoverage24h 口径 | 见批 4 | round-134 |
+>
+> ### V4-五、有机观察项（零开发，日历驱动）
+>
+> - **2026-08-31**：牛肉月度 H=1 首批 7 行到期（实际值未发布属正常等待，非故障）。
+> - **2026-09 中**：FRED 月度 8 月点发布（M+1 惯例）→ 30min 刷新的新点守卫触发新月度预测轮。
+> - **2026-09 中下旬**：首批 beef verified 落地 → MAPE + 方向命中自动进 /ai/accuracy 榜单与快照（批 0a 值守）。
+> - **2026-10-31**：H=3 首批到期（季度视界证据）。
+> - **~2026-11**：per-series 权重激活评估点（beef 月均 +7×2 verified 行，180d 窗攒满 20 行约在 11 月；届时对照后端日志确认激活）。
+> - **2026-10/11**：三条新蛋白序列（beef_retail_us / pork_world / poultry_world）首批验证成熟。
+> - **2028-11**：活牛 × IMF 重叠 ≥ ~40 个月，领先指标主假设重评（批 3 登记）。
+>
+> ### V4-六、已登记不排期（研究门 / 外部阻塞）
+>
+> - **relational conformal**（联合区间）：研究门——待批 0b 单变量校准落地后评估必要性。
+> - **change-point 区间加宽**：待批 0b 评估其覆盖表现后决定。
+> - **LLM event-flag 实验**（market_news → 事件标志外生变量）：**外部阻塞——无 LLM API key**；用户提供后按门禁制单列实验（与批 3 领先指标同款纪律）。
+> - sarimax 维持暂缓（连续两次门禁阴性）；chronos-2 测过未采（维持）。
+>
+> ### V4-七、不做清单（红线重申 + 本波新增）
+>
+> - 继承 v3.1.0 V3-五 全部（训练/微调、未过门禁接入、放宽验证窗造 verified 数）。
+> - **新增**：不为凑校准样本放宽任何验证参数（批 0b 只用已自然成熟的证据 + 回测残差）；校准落地前不显示任何"90%"字样的未校准区间；无权威声明的混源序列不进方向聚合（维持批 4 守卫，直到 D8 声明）。
+>
+> ### V4-八、用户侧外部输入（非工程，不变 + 一项可选新增）
+>
+> 4 个空 API key（MLA / USDA_MARS / OPENWEATHER / FAO——beef_cut_prices 冻结 2026-04-30 已 4 个月，CSV 周更 runbook 就绪 `docs/guides/WEEKLY-DATA-IMPORT.md`）；种子用户 3→10 访谈；CI 部署 secrets（DEPLOY_*，见 AUTOMATION-STATUS §一）；**（可选新增）LLM API key**——若希望开启 V4-六 的 event-flag 方向。
 
 > ## 第三波 v3.1.0（2026-08-30，round-135 规划）— AI 预测牛肉价格·核心专轮
 >
