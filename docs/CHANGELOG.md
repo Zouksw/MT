@@ -44,15 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 2026-08-31 — round-149：规划轮 — 参照调研报告制定第七波 v3.5.0（国内数据破局 + 国际免费层补强 + 独占位强化）
 
-用户指令"参照调研报告的内容，制定后续的开发方向"。docs-only 规划轮（round-145/141 同例），输入 = round-148 调研报告 §九九条启示，全部规划前事实经只读复核。
-
-- **IMPROVEMENT-PLAN.md 新增第七波 v3.5.0**（版本 3.4.0→3.5.0，报告入 related_docs）：启示 9 条逐条处置——3 条转批次（新发地源接入 / MLA 90CL / 独占位强化）、2 条转决策项（规格维度 D19、watchlist 粒度 D20）、1 条登记候选（海关 HS D21）、1 条证据登记（卓创价格带，paywall 延后不变）、2 条无动作/不做确认（USDA 入口改版排除错误假设；PRA 转售红线）。
+用户指令"参照调研报告的内容，制定后续的开发方向"。docs-only 规划轮（round-145/141 同例），输入 = round-148 调研报告 §九九条启示，全部规划前事实经只读复核。- **IMPROVEMENT-PLAN.md 新增第七波 v3.5.0**（版本 3.4.0→3.5.0，报告入 related_docs）：启示 9 条逐条处置——3 条转批次（新发地源接入 / MLA 90CL / 独占位强化）、2 条转决策项（规格维度 D19、watchlist 粒度 D20）、1 条登记候选（海关 HS D21）、1 条证据登记（卓创价格带，paywall 延后不变）、2 条无动作/不做确认（USDA 入口改版排除错误假设；PRA 转售红线）。
 - **批 1（主战场）新发地国内部位级源**：国内价格维度 0→1 的唯一免费破局点。解析侧过滤 `prodPcat==='牛肉类'`（服务端参数不生效、"花牛"苹果反例钉测试）、品名→cutCode 走既有 normalizer（覆盖度已核实，补 牛上脑/牛百叶/牛柳 等别名）、落点=Factory 市场实体 XFD（D17，AU-NAT-MLA 先例、metadata.kind=wholesale_market）、元/斤→CNY/kg、beef 页国产筛选自动解除 + **口径诚实标注（国产批发价 ≠ 进口港口价）**、CN 部位预测随新鲜度门自动解锁。首步连通性探针（海外 egress 风险，chinaWholesale geo-block 先例）；ToS 未验证 → 限速 + KNOWN-ISSUES 登记。
 - **批 2 MLA 90CL 周度**：走免费公开页**不依赖空 MLA_API_KEY**（与 mlaNlrs services API 两路径独立，已核实）；CommodityPrice 新序列 beef_90cl_us（weekly）；世行口径三次切换史强制 provenance 注记；**不开周度预测**（ADR-0001 节奏语义不扩）。首步页面取证。
 - **批 3 独占位强化**：报告 §7.3 样本内无人公开对错档案 → track-record 叙事位与交叉入口（公开性已核实 PUBLIC_PATHS）；landing-cost 样本内独占 → 获客入口与场景文案。文案只陈述自身机制不点名竞品（D18）。
 - **批 4 规格维度前瞻（D19 建议 metadata 先行零迁移）**：牧集五维+惠农三维入 BeefCutPrice 既有 metadata Json 列；国际源词汇映射表入 docs；量级证明后再评估升列。
 - **决策项 D17-D21、不做清单新增五项**（PRA 转售/爬墙、周度预测、全量回溯滥用、竞品点名、五端分发）；批 0a/0b 与用户侧待办全部承接不变。执行顺序：批 1（探针先行）→ 2 → 3 → 4，每批全门禁。
 - **基线**：无代码改动；backend 1054+1 / frontend 349 / inference 61 不变。
+- **同日修订（用户方向澄清：主线=国外牛肉进口/国际贸易）**：初版把新发地设为批 1 主战场，与 PRODUCT-SPEC"进口在前"的定位错配 → 批次按进口轴线重排——**批 1=MLA 90CL**（唯一无需用户输入的进口到岸基准增量；主页面 200 实测 + 数据面定位 NLRS iframe `app.nlrsreports.mla.com.au/prices-markets/ninety-cl/`，实现首步为其数据接口探查；可选取证子项=纳入 landing-cost 白名单第四活价源）；批 2=独占位强化（landing-cost 上升为获客重心）；批 3=规格维度 metadata（进口盘口词汇）；**新发地降级为 D22 观察项**（取证已全部完成备查：接口 200、牛肉行 `prodPcat='牛肉类'` catid 1189/pcatid 1206 实证、"花牛"苹果反例可见；可选未来角色=进口利润空间对侧参照）；**海关源激活批不成立**（chinaCustomsStats.ts 代码完整 HS 0201/0202/0206×六国、生产库零行、stats.customs.gov.cn 000/0.06s 不可达实测——.gov.cn egress 封锁，登记环境阻塞）。新增**进口数据解阻清单**显式化：活的进口腿全是商品级（CME/汇率/IMF 月度），**部位级进口价全面冻结于 2026-04-30**（mla_nlrs 1440 行←空 key、cepea_export 960 行←Cloudflare+ToS、usda_ams 180 行←空 key）——解阻塞钥匙在用户侧（两把 key + CSV 周导入 runbook），不在开发侧。执行顺序修订为：批 1（NLRS 取证起步）→ 2 → 3。
 
 ### 2026-08-31 — round-148：调研轮 — 牧集及同类牛肉行情信息网站深度调研报告（RESEARCH-BEEF-INFO-LANDSCAPE v1.0.0）
 
