@@ -60,7 +60,8 @@ related_docs:
 > - **0d 遗留行处置**：牛肉序列 7 条 NULL-interval 行（08-23、horizon=6）标 `stale`（错配时代产物，保留历史不删除——同 R2 污染行先例）。并入 D5 确认。
 >
 > **批 1 — 牛肉月度滚动回测（证据，不是等待）**
-> `scripts/backtest-monthly-series.ts`：对 IMF 牛肉基准 195 点做 rolling-origin 回测——~36 个月度 origin × H=1/H=3 × 7 模型逐点推理（**纯推理零训练**），产出 per-model：MAPE 均值/中位、**方向命中率**、conformal 区间实际覆盖率。产物 `docs/backtests/beef-monthly-2026-08.md` + 数字进 `/ai/track-record` 牛肉专段。**这一步直接回答两个悬案**：① chronos 在长月度牛肉序列上是否真劣于 naive（当前淘汰结论来自 FX/CME 日更池，对牛肉不公也不准）；② 月度宏观序列的可预测上限在哪（若全员≈naive，诚实结论就是"统计基线即最优"，品牌叙事转向"可验证"——这本身就是答案，不是失败）。验收：回测可复跑（seed 固定）、与 `verify-monthly-lifecycle` 同源的取数口径、公开页出现牛肉专段。
+> **前置（规范 6，PREDICTION-STRATEGY §6.2）**：推理确定性——引擎 `predict_quantiles` 当前未固定采样种子（chronos 采样路径非确定性，round-135 读码发现），回测前先在 inference 引擎加 torch 种子固定（或提升采样数取中位），否则回测数字不可复现。
+> `scripts/backtest-monthly-series.ts`：对 IMF 牛肉基准 195 点做 rolling-origin 回测——~36 个月度 origin × H=1/H=3 × 7 模型逐点推理（**纯推理零训练**），产出 per-model：MAPE 均值/中位、**方向命中率**、conformal 区间实际覆盖率。产物 `docs/backtests/beef-monthly-2026-08.md` + 数字进 `/ai/track-record` 牛肉专段。**这一步直接回答两个悬案**：① chronos 在长月度牛肉序列上是否真劣于 naive（当前淘汰结论来自 FX/CME 日更池，对牛肉不公也不准）；② 月度宏观序列的可预测上限在哪（若全员≈naive，诚实结论就是"统计基线即最优"，品牌叙事转向"可验证"——这本身就是答案，不是失败）。验收：回测可复跑（seed 固定后逐位一致）、与 `verify-monthly-lifecycle` 同源的取数口径、公开页出现牛肉专段。
 >
 > **批 2 — 冠军路由（序列 × 模型，补 modelQuality 的序列维度）**
 > `resolveModelWeights` 现为全局 per-model。新增 per-series 滚动准确率（30d 窗，verified 行按序列分组，≥N 条才启用，不足回退全局权重——与等权兜底同模式）；共识生成单序列信号时优先用该序列自己的权重集/冠军模型集。批 1 回测结果作为牛肉序列的冷启动证据。验收：单测构造"模型 X 全局弱、序列 A 强"→ A 的共识用 X；live `/api/signals/forecast?commodity=beef_carcass_us` 与全局权重对照可观察差异。
