@@ -27,6 +27,8 @@ related_docs:
 >
 > **执行状态（2026-08-30 深夜，批 2 已落地，round-139 续2）**：D8 由用户目标指令"完成后续的开发任务"放行、按 V4-四 建案执行（live_cattle_cme → cme 新鲜度优先）。声明 `authoritativeSources.ts` 3→**18 条**（11 个月度孪生〔执行时实测为 11 非 10，多出 natural_gas_us〕+ aud_usd/usd_cny/crude_oil_cme → fred + live_cattle_cme → cme）；两源行数/量纲对比表留档 KNOWN-ISSUES R2。**执行中发现并同批根治 scale-guard 误杀**：守卫中位基线不分源 → fred→brl_usd 正确 ~5.1 写入被 api 0.19 行主导的中位拒绝、权威序列冻结 08-14；改按写入源自身基线后 live 实证回填 5 个交易日（7930→7935 行）。**live 验收**：chronos 方向判定 2268→2682（+414=排除行数恰等）、统计模型 +12、`[DIRECTION] excluded` 日志归零、aud_usd 样本现身公开 track-record、landing-cost USD/CNY 切 fred（08-21，stale 旗标如实）；**对 D8 原表述修正**：FX 时效代价实测为 H.10 周发布节律（约 1 周，非"−1 天"），缺 actuals 走重试不丢覆盖。配套：seed 已声明 slug 源标签 + 清除 round-114 遗留 `prisma.organizations` 死引用（mt_test --force 重播撞出）+ methodology 口径两处同步（publicTrackRecord / 周快照）。backend **1042+1**（+5），frontend/inference 零改动。
 >
+> **执行状态（2026-08-30 深夜，批 4 部分落地——D1+D4 执行、D2/D3 维持登记，round-139 续3）**：用户目标指令"完成后续的开发任务"同源放行；按各决策项建议案执行其中非破坏性两项。**D1** PRODUCT-SPEC 增补：§七 能力表 +3 行（进口到岸成本测算 ✅ 已上线、多源数据治理 ✅ 18 slugs 声明、批 C 贸易词汇五维 ◐ 设计登记未落地）+ M3 清单补记（计算器上线 ✅、批 B 周报候选方向未排期）。**D4** `predictionBeefCoverage24h`→`predictionBeefCoverage90d`（窗口 24h→90d：月度一轮 + 60d 验证冻结）+ 新增 `predictionBeefLatestAt`（末轮日志时间戳）；health 路由类型/赋值、cron-healthcheck 暴露行、回归钉（30 天前 beef 日志必计入）同改；live 验收 /health/ready = coverage90d 3 + latestAt 2026-08-30T06:09。**D2/D3 维持登记**（TECH-DEBT round-132 条目：休眠表删除属数据治理决定需用户明示；portfolios/predict-batch 维持登记为 D6 建议不动）——破坏性删除项不随通用目标放行，待用户逐项点头。backend **1042+1**（dataHealth 套件 9→10，换 1 加 1 净 0）。
+>
 > ### V4-一、现状基线（2026-08-30 实测，round-139 取证）
 >
 > | 维度 | 事实 | 证据 |

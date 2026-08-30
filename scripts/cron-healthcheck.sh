@@ -128,7 +128,9 @@ try:
     parts = ["{0}:latest={1}:stale={2}".format(
                  s.get("key"), s.get("daysSince"), s.get("stale"))
              for s in (d.get("beefSeries") or [])]
-    parts.append("predictionBeefCoverage24h={0}".format(d.get("predictionBeefCoverage24h")))
+    latest = d.get("predictionBeefLatestAt")
+    parts.append("predictionBeefCoverage90d={0}".format(d.get("predictionBeefCoverage90d")))
+    parts.append("predictionBeefLatestAt={0}".format(latest[:19] if latest else "never"))
     print("|".join(parts) if parts else "EMPTY")
 except Exception:
     print("PROBE_FAILED")

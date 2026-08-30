@@ -192,6 +192,9 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | 多模型共识 | generateForecast | ✅ 已具备 |
 | 资讯数据 | ✅ MarketNews model + route + service + 4 路由页 + dashboard 资讯条 | ✅ 已接入（M3/round-118）：Beef Central + USDA Federal Register RSS 每 6h 摄取入 market_news，sourceUrl 幂等去重——当前唯一自动更新的外部内容通道 |
 | 实时更新 | SWR 轮询 (30s/15s/60s) | ✅ 轮询已具备。~~socket.io WebSocket~~ **已移除（round-112 复核 2026-08-23）**：Socket.IO 服务长期零消费者被整体摘除（`app.ts` 注释、CHANGELOG、TECH-DEBT TD 有据），实时能力现状 = SWR 轮询 only；如需 WS 需重新立项 |
+| 进口到岸成本测算（获客工具） | 公开页 `/tools/landing-cost` + 只读端点 `GET /api/tools/landing-cost` | ✅ 已上线（2026-08-30，v3.2.0 批3）：白名单活价（IMF 牛肉基准 USC/lb 月度、CME 活牛/架子牛 USD/cwt 日更、USD/CNY，全部带日期/新鲜度旗标）× 用户自担关税/增值税/运费/损耗参数 → ¥/kg 到岸参考区间；**平台不内置各国税率（不造虚构数据）**，未知量纲拒绝换算、断流诚实降级 |
+| 多源数据治理 | `authoritativeSources` 权威源声明 + 写入侧量纲守卫 | ✅ 18 个混源 slug 已声明（2026-08-30 批2）——训练/MAPE 验证/最新价/相关性全链一致取数；写入侧按源 20× 量纲守卫；未声明混源不进方向聚合（provenance 守卫）。明细见 KNOWN-ISSUES R2 |
+| 贸易词汇五维（v3.0.0 批 C） | BeefCutPrice metadata 扩 feedingRegime/feedingDays/leanPct/breed/locationPort + CSV 模板扩展 + taxonomy 报盘俗名映射 | ◐ 设计登记未落地——数据解冻（KNOWN-ISSUES D1）即接上 |
 
 **结论（2026-08-09 核实，2026-08-23 round-120 修订）**: M1+M2 阶段（阶段 0-3）**已实现**——beef-only 叙事、6 区 IA、dashboard hero 重构、AI 预测融入行情行均已落地；~~WebSocket 实时~~（round-112 移除，见上表）。平台地基完成度 **>90%**。唯一硬阻塞是 D1 数据流（网络封锁/key 缺失），可通过 CSV 手动导入绕行。M3 资讯 RSS 已接入（round-118），品牌完善见 M3 清单。
 
@@ -212,8 +215,10 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 ### M3 — 完整的资讯+分析平台 (进行中)
 - 资讯模块 RSS 源接入 ✅（2026-08-22 round-118：Beef Central + USDA Federal Register 每 6h 拉取入 market_news，sourceUrl 去重幂等，live 首跑 +15 篇）
+- 进口到岸成本计算器上线 ✅（2026-08-30 v3.2.0 批3：`/tools/landing-cost` 公开获客工具，与 /beef/forecast 互链——牧集结构性做不了的差异化，活价可溯源、税费用户自担）
 - 阶段 4: 品牌完整 (about 清理 + 社交证明 + signature) ◐（2026-08-22：about 方法论口径修正为 Chronos 主力、site-stats 实测数字刷新（19 源）、死按钮清除；社交证明保持"官方数据源可信度"口径，无用户基数前不虚构证言）
 - 产地对比/相关性独立页 ✅ 已存在（`/dashboard/analysis/origin` + `/dashboard/analysis`）
+- 公开中文行情摘要页 + 每周真数据周报（v3.0.0 批 B）◐ 候选方向未排期——SEO 长尾打法，只做可溯源真数据、不打"分析师洞察"；用户确认优先级后再立项
 - **里程碑**: 类牧集的完整 数据+分析+资讯+AI预测 平台
 
 ---

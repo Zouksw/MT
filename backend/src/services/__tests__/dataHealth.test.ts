@@ -211,9 +211,38 @@ describe("getDataHealth — beef series staleness + prediction coverage (round-1
 		}
 	});
 
-	it("predictionBeefCoverage24h is a non-negative integer", async () => {
-		const snap = await getDataHealth();
-		expect(Number.isInteger(snap.predictionBeefCoverage24h)).toBe(true);
-		expect(snap.predictionBeefCoverage24h).toBeGreaterThanOrEqual(0);
+	it("predictionBeefCoverage90d counts a 30d-old beef log (monthly rounds no longer blink to 0) and surfaces the latest timestamp", async () => {
+		// D4 regression pin (round-139 批4): the old 24h window read an
+		// honest-but-misleading 0 for ~29 days between monthly prediction
+		// rounds — a log 30 days old must count under the 90d window.
+		const slug = `datahealth-beefcov-${Date.now()}`;
+		const commodity = await prisma.commodity.create({
+			data: {
+				slug,
+				name: "beef coverage fixture",
+				category: "beef_cuts",
+				unit: "USC/lb",
+				currency: "USD",
+			},
+		});
+		try {
+			await prisma.predictionLog.create({
+				data: {
+					modelId: `${slug}-model`,
+					commodityId: commodity.id,
+					horizon: 1,
+					predictedValues: [100],
+					status: "completed",
+					predictedAt: new Date(Date.now() - 30 * 86_400_000),
+				},
+			});
+			const snap = await getDataHealth();
+			expect(Number.isInteger(snap.predictionBeefCoverage90d)).toBe(true);
+			expect(snap.predictionBeefCoverage90d).toBeGreaterThanOrEqual(1);
+			expect(snap.predictionBeefLatestAt).toBeInstanceOf(Date);
+		} finally {
+			await prisma.predictionLog.deleteMany({ where: { commodityId: commodity.id } });
+			await prisma.commodity.delete({ where: { id: commodity.id } });
+		}
 	});
 });

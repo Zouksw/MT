@@ -81,11 +81,18 @@ export interface DataHealthSnapshot {
 		stale: boolean;
 	}>;
 	/** Beef-series commodities (category beef_cuts) with ≥1 prediction logged
-	 * in the last 24h — ANY path counts (background scheduler AND manual
-	 * /api/signals calls both write prediction_logs). Round-128 measured this
-	 * at 0 — every subscribed commodity was FX/CME — the single most
-	 * important number for "is the AI loop still about beef". */
-	predictionBeefCoverage24h: number;
+	 * within a cadence-aware window — ANY path counts (background scheduler
+	 * AND manual /api/signals calls both write prediction_logs). Round-128
+	 * measured this at 0 — every subscribed commodity was FX/CME — the single
+	 * most important number for "is the AI loop still about beef".
+	 * D4 (round-139 批4, 2026-08-30): the original 24h window read an
+	 * honest-but-misleading 0 for ~29 days between monthly rounds (only the
+	 * monthly benchmark beef_carcass_us drives it — cut series log under
+	 * synthetic cut: keys outside commodities). Window is now 90d (one
+	 * monthly round + the 60d verification freeze) and the latest log
+	 * timestamp rides along, so an operator sees WHEN the last round ran. */
+	predictionBeefCoverage90d: number;
+	predictionBeefLatestAt: Date | null;
 }
 
 /**
@@ -214,11 +221,11 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 			orderBy: { date: "desc" },
 			select: { date: true, interval: true },
 		}),
-		prisma.$queryRaw<Array<{ count: bigint }>>`
-			SELECT COUNT(DISTINCT pl.commodity_id) AS count
+		prisma.$queryRaw<Array<{ count: bigint; latest: Date | null }>>`
+			SELECT COUNT(DISTINCT pl.commodity_id) AS count, MAX(pl.predicted_at) AS latest
 			FROM prediction_logs pl
 			JOIN commodities c ON c.id = pl.commodity_id
-			WHERE pl.predicted_at > now() - interval '24 hours' AND c.category = 'beef_cuts'`,
+			WHERE pl.predicted_at > now() - interval '90 days' AND c.category = 'beef_cuts'`,
 	]);
 
 	const beefSeries: DataHealthSnapshot["beefSeries"] = [
@@ -250,6 +257,7 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 		verificationRatio,
 		hasVerificationDebt: verificationRatio < 0.05,
 		beefSeries,
-		predictionBeefCoverage24h: Number(coverageRows[0]?.count ?? 0),
+		predictionBeefCoverage90d: Number(coverageRows[0]?.count ?? 0),
+		predictionBeefLatestAt: coverageRows[0]?.latest ?? null,
 	};
 }

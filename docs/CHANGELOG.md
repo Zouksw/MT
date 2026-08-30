@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-139（续3）：v3.2.0 批 4 部分落地 — D1（PRODUCT-SPEC 增补）+ D4（健康指标口径修正）执行，D2/D3 维持登记
+
+用户目标指令"完成后续的开发任务"；批 4 决策项按各自建议案执行非破坏性两项，破坏性删除项（D2 休眠表 / D3 孤儿路由组）不随通用目标放行、维持登记待逐项点头。
+
+- **D1 — PRODUCT-SPEC 增补（纯增量，不碰"明确不做"）**：§七 数据层能力表 +3 行——进口到岸成本测算 ✅（2026-08-30 批3 上线的 `/tools/landing-cost`，平台不内置税率）、多源数据治理 ✅（18 slugs 权威源声明 + 按源量纲守卫 + 方向 provenance 守卫）、批 C 贸易词汇五维 ◐（设计登记未落地，数据解冻即接）；M3 清单补记计算器上线 + 批 B 周报候选方向（未排期，待用户确认优先级）。
+- **D4 — `predictionBeefCoverage24h` → `predictionBeefCoverage90d` + `predictionBeefLatestAt`**：原 24h 窗口对月度节律结构性眨眼（两次发布间 ~29 天诚实读 0，TECH-DEBT round-132 登记）；新口径覆盖窗 90d（月度一轮 + 60d 验证冻结窗）+ 末轮日志时间戳（运维直接看到"上次是何时"而非 0/1）。改动面：`dataHealth.ts`（类型+合并 count/max 查询）、`health.ts` 路由、`cron-healthcheck.sh` 暴露行、回归钉（30 天前 beef 日志必计入——旧口径该场景读 0）。**live 验收**：/health/ready 返回 `predictionBeefCoverage90d: 3` + `predictionBeefLatestAt: 2026-08-30T06:09`。
+- **D2/D3 维持登记**（不执行）：休眠表 SecurityAuditLog/ForecastingModel/Forecast 删除属数据治理决定（TECH-DEBT：预测/审计历史完整性原则，需用户明示）；portfolios 路由组 + `/api/inference/predict/batch` 维持登记（round-132 D6 建议不动）。
+- **门禁**：backend **1042+1** 全绿零回退（dataHealth 9→10：换 1 弱断言 + 1 语义回归钉）；tsc / biome（唯一警告为既有代码）/ build / PM2 重启 / health 200。
+
 ### 2026-08-30 — round-139（续2）：v3.2.0 批 2（D8 多源权威源声明）落地 — 方向统计解锁 + scale-guard 误杀根治
 
 用户目标指令"完成后续的开发任务"放行 D8（按 V4-四建案执行，live_cattle_cme → cme 新鲜度优先）。执行时实测混源组为 **17 组 = 已声明 3 + 未声明 14**（月度孪生实测 **11 组**非取证时的 10——多出 natural_gas_us；两源行数/量纲对比表留档 KNOWN-ISSUES R2）。

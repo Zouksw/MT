@@ -150,7 +150,8 @@ router.get(
 					daysSince: number | null;
 					stale: boolean;
 				}>;
-				predictionBeefCoverage24h: number;
+				predictionBeefCoverage90d: number;
+				predictionBeefLatestAt: Date | null;
 			},
 		};
 
@@ -231,7 +232,8 @@ router.get(
 				// round-129 batch 9: beef staleness + AI-loop beef coverage —
 				// the two numbers round-127/128 could only see by hand-written SQL.
 				beefSeries: dh.beefSeries,
-				predictionBeefCoverage24h: dh.predictionBeefCoverage24h,
+				predictionBeefCoverage90d: dh.predictionBeefCoverage90d,
+				predictionBeefLatestAt: dh.predictionBeefLatestAt,
 			};
 		} catch (error) {
 			// Data-health is observability; a failure here must not flip the
