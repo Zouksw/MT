@@ -251,7 +251,7 @@
 **对核心价值链的影响**：**无实际污染**——
 - 活跃模型清单由代码常量驱动（`getAllModels()`=3 chronos + `BASELINE_MODELS`=5 stat），不读 DB 的 `distinct model_id`，故 UI/共识/`/ai/accuracy` 对比页**不会**列或聚合 timer_xl/sundial。`tradingSignals.test.ts:68-69` 有守护测试断言两者被排除。
 - `getAllModelAccuracy` 只遍历 `getAllModels()+BASELINE_MODELS`（live 9 个），ghost 模型不进对比。
-- **唯一暴露面**：`GET /api/signals/models/:modelId/accuracy`（wildcard）+ `/predictions` + `/backtest`——直填 `timer_xl` 会返回该模型的真实 MAPE（timer_xl avg 0.728 / sundial avg 6.81）"像"活模型。但需鉴权 + 手填 URL，前端从不传 ghost id（模型列表来自 server），**实际不可达**。
+- **唯一暴露面**：`GET /api/signals/models/:modelId/accuracy`（wildcard）+ `/predictions` + `/backtest`——直填 `timer_xl` 会返回该模型的真实 MAPE（~~timer_xl avg 0.728 / sundial avg 6.81~~ **2026-08-30 复测**：verified 已各增至 16 条，avg MAPE timer_xl **41.4%** / sundial **20.4%**——08-07 口径系 10 条小样本，新增行含长尾离群；结论不变：样本脏且无正面证据，ghost 行处置见 R3 处置决策）"像"活模型。但需鉴权 + 手填 URL，前端从不传 ghost id（模型列表来自 server），**实际不可达**。
 **处置决策（round-72，遵循 §十.5 外科手术）**：不删 DB 行（非己所造的数据，先记录）；不加 wildcard guard（前端不可达，会"顺手改进相邻代码"违反 §十.5）。仅**文档记录**为本条。若日后 wildcard 可达性提升（如前端加自由文本 model 选择器）或需要干净的 MAPE 数据集，再评估：选项 A 路由层 404 unknown model id；选项 B `DELETE FROM prediction_logs WHERE model_id IN ('timer_xl','sundial')`（332 行，不可逆，需备份确认）。
 
 ---
