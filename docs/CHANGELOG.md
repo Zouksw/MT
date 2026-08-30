@@ -50,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **批 0a 前置检查（只读 SQL，判别"发布滞后 vs 生命周期缺陷"）**：最新牛肉月度点 2026-07-01（八月点未发布）；21 行月度预测全部锚定 2026-07-31，最早到期 H=1=2026-08-31（当日）但验证需八月实值（FRED ~09 月中旬发布）→ 零 verified 属正确状态、无过期未验证行，**生命周期无缺陷**，值守窗 2026-09 中下旬维持。
 - **`2adf1b3` /trading `?slug=` 深链（round-146 登记打磨项落地）**：`useTradingData(initialSlug)` 初始选中压过首商品自动选择，未知 slug 诚实回退默认商品（避免永久 "Loading..."）；页面 `useSearchParams`（Suspense 包裹，/trading 转 server-rendered-on-demand）+ 同路由 slug 变化同步效应（GlobalSearch 在 /trading 页内触发不重挂载；手动选择永不被覆写）；GlobalSearch 商品项与 Enter 首跳带 `?slug=`（共享 commodityHref）。门禁全过：tsc/biome/jest **40 套件 349**（+4）/build/PM2 重启/live（匿名 /trading 与 /trading?slug= 均 307 登录门不变、三服务健康、部署 chunk 含深链字面量）；本环境无浏览器后端，登录态行为由组件测试覆盖——如实记录。
 - **意外观察（待用户决策，未处理）**：工作区出现未跟踪文件 `docs/RESEARCH-BEEF-INFO-LANDSCAPE.md`（208 行牧集竞品调研草稿，mtime 2026-08-31 04:38 本会话进行中，非本会话命令所写，来源不明）——未并入任何 commit。
-- **基线**：backend 1054+1 / frontend **349** / inference 61 = **1464**；页面 44、路由 18/端点 126 不变（本轮无新增）。
+- **基线**：backend **1054+1**（05:23 窗口过期后复跑全绿）/ frontend **349** / inference 61 = **1464**；页面 44、路由 18/端点 126 不变（本轮无新增）。
+- **新诊断的测试环境约束（登记 AUTOMATION-STATUS）**：验证基线时发现连续快速全量跑 + 会话内手动生产登录会耗尽 `authRateLimiter`（10 次/15 分钟/IP，成功请求计数），`correlationAnalysis.test.ts`（唯一打 live :8000 登录的套件）beforeAll 429——5 连跑 2 败、窗口过期后全绿，非代码回归。
 
 ### 2026-08-31 — round-146：第六波 v3.4.0 执行 — 批 1（诚实化 IA 收敛）+ 批 2（预测粒度对齐）+ 批 3（触达补全）
 
