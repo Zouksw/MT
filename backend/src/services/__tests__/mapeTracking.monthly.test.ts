@@ -172,30 +172,51 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 	});
 
 	it("Pass A does NOT freeze a healthy monthly series — the round-129 B1 regression (daily-only probe used to freeze pure-monthly commodities)", async () => {
-		// Prediction 35d ago, horizon 1 → matured in monthly terms (~5d ago).
-		// Latest monthly point is 30d old — NEWER than the prediction and well
-		// inside the 60d monthly window → alive. The pre-ADR probe read daily
-		// prices only, found none, and marked rows like this unverifiable.
-		const c = await makeMonthlyCommodity(ctx, "alive", [
-			{ date: monthStart(-2), close: 100 },
-			{ date: monthStart(-1), close: 101 },
+		// Prediction 35d ago, horizon 1 → matured in monthly terms. Two alive
+		// shapes, both wall-clock-relative so the fixture never decays past the
+		// 60d window (calendar-anchored monthStart dates rotted on 2026-08-30):
+		//  a) publish-lag grace — latest point 40d old (OLDER than the
+		//     prediction) but still inside the 60d monthly window → alive;
+		//  b) actuals arriving — latest point 30d old (NEWER than the
+		//     prediction) → actuals exist after the prediction → alive.
+		// The pre-ADR probe read daily prices only, found none, and marked
+		// rows like these unverifiable.
+		const grace = await makeMonthlyCommodity(ctx, "alive-grace", [
+			{ date: new Date(Date.now() - 70 * DAY), close: 100 },
+			{ date: new Date(Date.now() - 40 * DAY), close: 101 },
 		]);
-		const prediction = await makeMonthlyPrediction(ctx, c.id, {
+		const arriving = await makeMonthlyCommodity(ctx, "alive-arriving", [
+			{ date: new Date(Date.now() - 70 * DAY), close: 200 },
+			{ date: new Date(Date.now() - 30 * DAY), close: 201 },
+		]);
+		const gracePrediction = await makeMonthlyPrediction(ctx, grace.id, {
 			horizon: 1,
 			forecastStartAt: monthStart(0),
 			predictedAt: new Date(Date.now() - 35 * DAY),
 			values: [101],
 		});
+		const arrivingPrediction = await makeMonthlyPrediction(ctx, arriving.id, {
+			horizon: 1,
+			forecastStartAt: monthStart(0),
+			predictedAt: new Date(Date.now() - 35 * DAY),
+			values: [201],
+		});
 
 		try {
 			await markUnverifiablePredictions();
-			const after = await ctx.prisma.predictionLog.findUnique({
-				where: { id: prediction.id },
+			const afterGrace = await ctx.prisma.predictionLog.findUnique({
+				where: { id: gracePrediction.id },
 				select: { status: true },
 			});
-			expect(after?.status).toBe("completed");
+			expect(afterGrace?.status).toBe("completed");
+			const afterArriving = await ctx.prisma.predictionLog.findUnique({
+				where: { id: arrivingPrediction.id },
+				select: { status: true },
+			});
+			expect(afterArriving?.status).toBe("completed");
 		} finally {
-			await cleanupCommodity(ctx, c.id);
+			await cleanupCommodity(ctx, grace.id);
+			await cleanupCommodity(ctx, arriving.id);
 		}
 	});
 
