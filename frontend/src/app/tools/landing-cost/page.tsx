@@ -29,6 +29,7 @@ import {
 } from "@/hooks/useLandingCost";
 
 const BASE_SERIES_OPTIONS: { value: LandingBaseSeries; label: string }[] = [
+	{ value: "beef_90cl_us", label: "美国进口 90CL 牛肉（USDA 周度）" },
 	{ value: "beef_carcass_us", label: "全球牛肉基准（IMF 月度）" },
 	{ value: "live_cattle_cme", label: "活牛期货（CME 日更）" },
 	{ value: "feeder_cattle_cme", label: "架子牛期货（CME 日更）" },

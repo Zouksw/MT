@@ -253,6 +253,17 @@ export default function AboutPage() {
 									ships with a calibrated confidence interval and is auto-verified against actuals
 									via MAPE once the horizon elapses.
 								</p>
+								<p className="text-body text-muted-foreground leading-relaxed mt-3">
+									And the scorecard is public: the{" "}
+									<Link
+										href="/ai/track-record"
+										className="text-primary underline underline-offset-2"
+									>
+										rolling track record
+									</Link>{" "}
+									publishes dated forecasts next to their verified actuals — right and wrong alike,
+									no login required.
+								</p>
 							</div>
 						</StaggerChild>
 						<StaggerChild>

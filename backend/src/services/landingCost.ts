@@ -26,6 +26,7 @@ import { getLatestPrice, getPriceHistory } from "@/services/marketService";
 /** Base series whitelist — public macro series only, same discipline as
  * PUBLIC_HIGHLIGHT_SLUGS (marketData.ts): nothing user-private may appear. */
 export const LANDING_COST_BASE_SERIES = {
+	beef_90cl_us: { label: "美国进口 90CL 周度到岸基准（USDA NW_LS421）", unit: "USD/cwt" },
 	beef_carcass_us: { label: "全球牛肉月度基准（IMF via FRED）", unit: "USC/lb" },
 	live_cattle_cme: { label: "活牛期货（CME）", unit: "USD/cwt" },
 	feeder_cattle_cme: { label: "架子牛期货（CME）", unit: "USD/cwt" },
@@ -195,8 +196,9 @@ export async function getLandingCostQuote(input: {
 		);
 	}
 
-	// Recent-window band: daily → last 30 closes, monthly → last 3 (a quarter).
-	const limit = interval === "monthly" ? 3 : 30;
+	// Recent-window band scaled to cadence: daily → last 30 closes, weekly →
+	// last 12 (~a quarter), monthly → last 3 (a quarter).
+	const limit = interval === "monthly" ? 3 : interval === "weekly" ? 12 : 30;
 	const { prices } = await getPriceHistory(input.baseSeries, { interval, limit });
 	const closes = prices
 		.filter((p) => p.close != null)
@@ -208,7 +210,11 @@ export async function getLandingCostQuote(input: {
 		notes.push("基准价近窗点数不足，区间退化为最新单点。");
 	}
 	const windowDescription =
-		interval === "monthly" ? "近 3 个月度点" : `近 ${Math.max(closes.length, 1)} 个日度点`;
+		interval === "monthly"
+			? "近 3 个月度点"
+			: interval === "weekly"
+				? `近 ${Math.max(closes.length, 1)} 个周度点`
+				: `近 ${Math.max(closes.length, 1)} 个日度点`;
 
 	const fxRate = await latestUsdCny();
 	if (!fxRate) {

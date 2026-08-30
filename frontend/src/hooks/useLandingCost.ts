@@ -14,7 +14,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
 
-export type LandingBaseSeries = "beef_carcass_us" | "live_cattle_cme" | "feeder_cattle_cme";
+export type LandingBaseSeries =
+	| "beef_90cl_us"
+	| "beef_carcass_us"
+	| "live_cattle_cme"
+	| "feeder_cattle_cme";
 export type LandingOriginFx = "none" | "aud_usd" | "brl_usd";
 
 export interface LandingCostParamsState {

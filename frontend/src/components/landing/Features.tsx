@@ -4,7 +4,19 @@ import type React from "react";
 import { MotionReveal, StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 import { SITE_STATS } from "@/lib/site-stats";
 
-const features = [
+interface Feature {
+	title: string;
+	description: string;
+	details: string[];
+	span: string;
+	visual: "cuts" | "trade" | null;
+	goldAccent?: boolean;
+	/** Optional public cross-entry (track record, landing-cost tool). */
+	href?: string;
+	hrefLabel?: string;
+}
+
+const features: Feature[] = [
 	{
 		title: "Cut-Level Pricing",
 		description: `${SITE_STATS.beefCuts} standardized beef cuts — IMPS-coded, multilingual — priced at factory level across ${SITE_STATS.factories} export plants in ${SITE_STATS.sourceCountries} countries.`,
@@ -23,6 +35,18 @@ const features = [
 		span: "",
 		visual: null,
 		goldAccent: true,
+		href: "/ai/track-record",
+		hrefLabel: "See the public track record →",
+	},
+	{
+		title: "Landing Cost Calculator",
+		description:
+			"FX × benchmark × duty → landed RMB/kg. Build your own import cost reference from whitelisted live series (weekly US 90CL import benchmark, IMF monthly beef, CME cattle) plus your own tariff, freight, and loss assumptions — every input dated and traceable. Free, no account required.",
+		details: ["Public tool", "Weekly 90CL benchmark", "Traceable inputs"],
+		span: "md:col-span-2",
+		visual: null,
+		href: "/tools/landing-cost",
+		hrefLabel: "Open the calculator →",
 	},
 	{
 		title: "Export Trade Flows",
@@ -198,6 +222,15 @@ export const Features: React.FC = () => {
 										</span>
 									))}
 								</div>
+
+								{feature.href && feature.hrefLabel && (
+									<a
+										href={feature.href}
+										className="mt-4 inline-block text-sm font-medium text-primary hover:underline underline-offset-2"
+									>
+										{feature.hrefLabel}
+									</a>
+								)}
 							</div>
 						</StaggerChild>
 					))}
