@@ -42,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-149：规划轮 — 参照调研报告制定第七波 v3.5.0（国内数据破局 + 国际免费层补强 + 独占位强化）
+
+用户指令"参照调研报告的内容，制定后续的开发方向"。docs-only 规划轮（round-145/141 同例），输入 = round-148 调研报告 §九九条启示，全部规划前事实经只读复核。
+
+- **IMPROVEMENT-PLAN.md 新增第七波 v3.5.0**（版本 3.4.0→3.5.0，报告入 related_docs）：启示 9 条逐条处置——3 条转批次（新发地源接入 / MLA 90CL / 独占位强化）、2 条转决策项（规格维度 D19、watchlist 粒度 D20）、1 条登记候选（海关 HS D21）、1 条证据登记（卓创价格带，paywall 延后不变）、2 条无动作/不做确认（USDA 入口改版排除错误假设；PRA 转售红线）。
+- **批 1（主战场）新发地国内部位级源**：国内价格维度 0→1 的唯一免费破局点。解析侧过滤 `prodPcat==='牛肉类'`（服务端参数不生效、"花牛"苹果反例钉测试）、品名→cutCode 走既有 normalizer（覆盖度已核实，补 牛上脑/牛百叶/牛柳 等别名）、落点=Factory 市场实体 XFD（D17，AU-NAT-MLA 先例、metadata.kind=wholesale_market）、元/斤→CNY/kg、beef 页国产筛选自动解除 + **口径诚实标注（国产批发价 ≠ 进口港口价）**、CN 部位预测随新鲜度门自动解锁。首步连通性探针（海外 egress 风险，chinaWholesale geo-block 先例）；ToS 未验证 → 限速 + KNOWN-ISSUES 登记。
+- **批 2 MLA 90CL 周度**：走免费公开页**不依赖空 MLA_API_KEY**（与 mlaNlrs services API 两路径独立，已核实）；CommodityPrice 新序列 beef_90cl_us（weekly）；世行口径三次切换史强制 provenance 注记；**不开周度预测**（ADR-0001 节奏语义不扩）。首步页面取证。
+- **批 3 独占位强化**：报告 §7.3 样本内无人公开对错档案 → track-record 叙事位与交叉入口（公开性已核实 PUBLIC_PATHS）；landing-cost 样本内独占 → 获客入口与场景文案。文案只陈述自身机制不点名竞品（D18）。
+- **批 4 规格维度前瞻（D19 建议 metadata 先行零迁移）**：牧集五维+惠农三维入 BeefCutPrice 既有 metadata Json 列；国际源词汇映射表入 docs；量级证明后再评估升列。
+- **决策项 D17-D21、不做清单新增五项**（PRA 转售/爬墙、周度预测、全量回溯滥用、竞品点名、五端分发）；批 0a/0b 与用户侧待办全部承接不变。执行顺序：批 1（探针先行）→ 2 → 3 → 4，每批全门禁。
+- **基线**：无代码改动；backend 1054+1 / frontend 349 / inference 61 不变。
+
 ### 2026-08-31 — round-148：调研轮 — 牧集及同类牛肉行情信息网站深度调研报告（RESEARCH-BEEF-INFO-LANDSCAPE v1.0.0）
 
 用户指令：对牧集网等同类牛肉交易信息收集网站深度探查，形成完备调研报告，初版后 review 确保理解正确、角度广、深度深。纯文档轮（无代码改动，测试基线不受影响）。

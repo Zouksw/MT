@@ -1,7 +1,7 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.4.0"
+version: "3.5.0"
 last_updated: "2026-08-31"
 status: "active"
 maintainer: "MT Team"
@@ -13,9 +13,75 @@ related_docs:
   - "Competitive Analysis": "COMPETITIVE-ANALYSIS-MOOKET.md"
   - "Product Spec": "PRODUCT-SPEC.md"
   - "Tech Debt": "TECH-DEBT.md"
+  - "Research Landscape": "RESEARCH-BEEF-INFO-LANDSCAPE.md"
 ---
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
+
+> ## 第七波 v3.5.0（2026-08-31，round-149 规划）— 调研驱动：国内数据破局 + 国际免费层补强 + 独占位强化
+>
+> **输入**：[RESEARCH-BEEF-INFO-LANDSCAPE.md](RESEARCH-BEEF-INFO-LANDSCAPE.md) v1.0.0（round-148，17 家供给全景 + §九九条启示，经独立复审）。本波把启示逐条转译为批次/决策/登记/不做，规划前事实均已只读复核（见各条括注）。
+>
+> ### V7-一、基线（2026-08-31 05:49 只读实测）
+>
+> 三服务在线（宿主机 ~05:20 重启后 PM2 自愈）、测试基线 **1464**（backend 1054+1 / frontend 349 / inference 61）、树干净 @ `d7b9e06`。页面 44、路由 18/端点 126、爬虫 18、推理模型 9；牛肉价 2,401 行冻结 2026-04-30（5 厂 16 部位），21 注册厂 **CN 价格行=0**；批 0a/0b 门控未到；用户侧（域名/SMTP/4 把空 key/CSV 导入）不变。`/ai/track-record` 已在 middleware PUBLIC_PATHS（公开性核实 ✓）。
+>
+> ### V7-二、报告 §九 启示 → 行动映射（9 条逐条处置）
+>
+> | # | 启示 | 处置 |
+> |---|---|---|
+> | 1 | 新发地免费部位级日更源【实测】 | **批 1**（本波主战场） |
+> | 2 | USDA 网页入口改版、MARS 路径无恙 | 无开发动作（根因空 key 属用户侧；PRODUCT-SPEC 过期括注 round-148 已修） |
+> | 3 | MLA 90CL 周度指标（免费） | **批 2** |
+> | 4 | 报价维度对齐行业词汇（牧集五维+惠农三维） | **批 4**（决策项 D19） |
+> | 5 | watchlist 按部位×厂号×国家订阅 | 决策项 **D20**（建议排后观察） |
+> | 6 | 卓创 ¥588-1998/年价格带 | 证据登记（paywall 延后决策不变，PRODUCT-SPEC §九） |
+> | 7 | 两空位交叉印证（免登录行情 web / 可验证预测档案）+ landing-cost 独占 | **批 3** |
+> | 8 | 不做再确认（PRA 转售/爬墙） | V7-五 不做清单 |
+> | 9 | 海关总署 HS 月度进口均价 | 决策项 **D21**（仅登记：报告为转述级证据、站点可达性未复核；交叉引用 数据源梳理报告 P0） |
+>
+> ### V7-三、批次详情
+>
+> **批 0a/0b 承接（不变）**：验证窗 2026-09 中下旬 / 样本门，处置流程同 V6。
+>
+> **批 1 — 新发地国内部位级源接入（国内价格维度 0→1 的唯一免费破局点）**
+> - 新源 `sources/xinfadi.ts`（爬虫 18→19）：`POST www.xinfadi.com.cn/getPriceData.html` 无需登录；**解析侧过滤 `prodPcat === '牛肉类'`**（报告实测：服务端类目参数均不生效，count 仍全量；`prodName=牛` 模糊匹配会混入"花牛"苹果——反例测试钉死）。首拉回溯按日期分批限速（日 1-2 次增量），**ToS 未验证**（报告 §7.4）→ 限速内置 + KNOWN-ISSUES 登记复核项，源可随时关停。
+> - 品名→cutCode 走既有 beefCutNormalizer（已核实覆盖：牛腱/牛腩/牛舌/牛肚/牛心/牛尾/金钱腱→FORESHANK/肥牛→BRISKET_NAVEL/整牛→HALF_CARCASS 等）；补别名：牛上脑/牛百叶（HONEYCOMB_TRIPE）/牛柳/精牛柳/下水；**未映射品名跳过+日志计数，不硬塞**（死别名守护测试既有模式扩展）。
+> - 数据落点（D17）：**新发地作为 Factory 市场实体**（code `XFD`、country CN、region 北京、metadata `kind=wholesale_market`——AU-NAT-MLA national-entity 先例沿用）；价格 ×2 斤→kg 转 `CNY/kg`（sourceRef 记 元/斤 原始值）；unique 键 [factoryId, cutCode, date, source] 天然匹配（已核 schema）。
+> - 联动：beef 页国产筛选（round-146 D16 disabled）依 CN 行自动解除；**口径诚实标注**——新发地=国产批发市场价 ≠ 进口港口价（列表/卡片 source 标注）；日更数据天然过新鲜度门（STALE_WINDOW_DAYS=7）→ **CN 部位预测自动解锁，预测卡须标"国产批发价口径"**。
+> - 风险：本机为海外 egress，国内站连通性未验证（chinaWholesale geo-block 先例）→ **批 1 首步为连通性探针**，不可达则整批降级为登记不阻塞本波其余批次。
+>
+> **批 2 — MLA 90CL 周度指标接入（国际免费层补强）**
+> - 走**公开页**（mla.com.au/prices-markets/overseas-markets/us-imported-beef/，报告证实免费），**不依赖空 MLA_API_KEY**（mlaNlrs.ts 的 services API 是另一条腿，key 到位后可切换/并存——已核实两路径独立）。
+> - 落点：CommodityPrice 新序列（slug `beef_90cl_us`、interval `weekly`、source `mla_90cl`）——与 PBEEFUSDM 月度构成"周度现势 + 月度长史"互补。
+> - **口径注记强制**：世行/FRED 序列口径三次切换史（2024-01 起新西兰 90CL c.i.f.；2021-09~2023-12 澳 85CL c.i.f.；更早 FOB）——两序列并排展示处 provenance 注记（DataSourcePanel/序列页）。
+> - 边界：仅数据+展示；**不开周度预测**（mapeTracking 节奏感知仅 daily/monthly，ADR-0001 horizon=步长语义不扩——周度预测需独立设计，本波不做）。
+> - 风险：90CL 页面数据获取路径未取证（报告只证页面与免费性）→ **批 2 首步为页面取证**（fetch 探查数据接口/表格结构），取证失败则降级为登记。
+>
+> **批 3 — 独占位强化（轻产品批，获客导向）**
+> - 报告 §7.3：可取证样本 17 家内**无人公开"预测-实际值对错档案"** → track-record 公开性已核实，补强交叉入口与叙事位（landing/about 增"敢公开对错"机制陈述；digest→track-record 链接核实补齐）。**文案只陈述自身机制与事实，不点名竞品**（D18）。
+> - 报告 §八.7：landing-cost 是样本内独占的公开获客工具 → landing/digest 增工具入口与场景文案（"汇率×期货×关税→到岸成本"决策场景）。
+>
+> **批 4 — 报价规格维度前瞻（决策项 D19，建议轻量做）**
+> - 牧集五维（饲养方式/天数/VL/品种/仓位）+ 惠农三维（肥瘦比/出水率/调理）入 **BeefCutPrice 既有 `metadata Json` 列**（已核 schema 存在该列——**零迁移**）；CSV 导入支持可选规格字段写入 metadata；展示层有则渲染无则不显（诚实降级）。
+> - 国际源词汇映射表（IMPS/cut-out/chemical lean ↔ 国内行话，报告 §6.2）入 docs 作对齐参照。
+> - 量级证明（真实导入数据持续携带规格）后再评估升独立列——避免为不存在的数据建列（过度工程化红线）。
+>
+> ### V7-四、决策项（不擅动，需用户点头）
+>
+> - **D17 新发地数据落点**：建议案=Factory 市场实体（XFD）；备选=CommodityPrice 每品名序列——后者使国内部位价脱离 beef 侧 UI/预测/价差体系，不取。
+> - **D18 批 3 文案尺度**：只陈述自身机制不点名竞品（诚实 + 不树敌）。建议直接采用。
+> - **D19 规格维度载体**：metadata Json 先行（零迁移）vs 直接新增列。建议前者。
+> - **D20 watchlist 部位×厂号粒度进化**：数据模型已支持（factoryId+cutCode+country），但建议**观察批 1 数据落地后的使用面再定**，本波不排。
+> - **D21 海关 HS 月度源**：仅登记候选（转述级证据、stats.customs.gov.cn 可达性未复核），不排期。
+>
+> ### V7-五、不做清单（继承 + 本波新增）
+>
+> 继承全部既有红线（PRODUCT-SPEC §九：不做支付/下单/交易撮合；只用预训练模型）。本波新增显式：**买 PRA 数据转售 / 爬任何付费墙**（报告 §7.4/§9.8 合规红线——对华 CFR/港口盘口无法合规免费获得，"国际免费源+诚实标注"是唯一自持路径）；**周度预测节奏**（ADR-0001 语义不扩）；**新发地全量回溯滥用**（ToS 未验证前只做限速增量）；**竞品点名文案**；**五端分发**（web-only 维持，SEO 内容路线已被报告印证）。
+>
+> ### V7-六、门控与用户侧承接（不变）
+>
+> 批 0a/0b 门控不变；4 把空 key（MLA/USDA_MARS/OPENWEATHER/FAO）+ FRED key、域名、SMTP、beef CSV 周导入、seed 用户 3→10 均待用户输入。执行顺序建议：**批 1（探针先行）→ 批 2 → 批 3 → 批 4**；每批门禁：tsc + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
 
 > ## 第六波 v3.4.0（2026-08-31，round-145 规划）— 功能设计缺陷收敛：诚实化 IA、预测粒度对齐、触达补全
 >
