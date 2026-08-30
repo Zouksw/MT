@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-137 执行轮：IMPROVEMENT-PLAN v3.1.0 批 2（冠军路由：序列 × 模型）落地
+
+用户指令"继续后续的开发"。批 1 回测结论（arima 牛肉月度冷启动冠军、全局 chronos 淘汰对牛肉过严）进入机制化：共识权重从全局 per-model 升级为**按序列路由**——序列自己的验证证据足够时，权重表与淘汰判定都换成该序列自己的。
+
+- **2a 路由核心（`a4fac8b`）**：`resolveModelWeights(modelIds, days, seriesId?)` 第三参。激活阈值 `MIN_SERIES_VERIFIED_TO_ACTIVATE = 20`（窗口内该序列 verified 总行数，防薄证据噪声——月度序列每月仅成熟 ~9 行）；激活后整套权重机械（中位 MAPE、未知模型中性默认、naive 淘汰线、1/max(mape,2%) 归一）**逐字复用**于序列本地统计表——提取纯函数 `computeWeightsFromAccuracies` 全局/序列两路共享，语义零漂移。序列本地淘汰意味着：全局被淘汰的模型在其强序列**重新获得投票权**（全局淘汰是池结论不是序列结论），反之亦然。证据不足静默回退全局（与等权兜底同模式），debug 级日志记回退、info 级记激活。单测 17→20，含计划验收用例"模型 X 全局弱、序列 A 强 → A 的共识用 X"+ 序列本地淘汰 + 薄证据回退（断言两次取数调用序列）。
+- **2b 接线（`9a9cf00`）**：`cadence.accuracyWindowDays`——证据窗按节奏缩放（daily 30d / weekly 90d / monthly 180d；月度序列 30d 窗内最多 ~9 行永远够不到激活线，180d ≈ 6 个成熟月 ~50 行稳态）；`generateForecast` 传 `req.commodityId` + 节奏窗；`getAllModelAccuracy` 增 **64 键有界 60s per-series 缓存**——`/signals/batch` 50 序列 × 9 模型 × 2 查询的扇出正是全局单键缓存当年要防的形态，溢出全清（最坏一个 TTL 窗一次突发）。
+- **live 验收（真实生产数据演示计划场景，beef 差异诚实降级）**：计划验收写"`/api/signals/forecast?commodity=beef_carcass_us` 与全局权重对照可观察差异"——beef 当前 **0 verified 行**（首批成熟 2026-09/10），诚实结果是**回退可观察**：beef 权重表与全局逐项一致（chronos 三兄弟全局淘汰、4 统计模型各 25%），激活预计 **~2026-11**（180d 窗内 ≥20 行：H1 九/十月各 7 + H3 十一月 7）。而验收场景本身在其他序列上由真实数据坐实：全局池淘汰 chronos 全家，但 **live_cattle_cme**（747 verified 行/30d）启用自身权重表——chronos 三模型各 14.8% 投票权复活、arima 反而最弱 11.1%；**aud_usd**（7082 行）只剩 naive+exponential_smoothing 各 50%。PM2 日志实证 live 路由调用走新逻辑（14:45:51 beef 全局淘汰线 / 14:45:54 `per-series routing active: live_cattle uuid`）。批 1 回测仅作冷启动**文档证据**，未硬编码进权重——权重严格由 verified 行驱动，不造先验。
+- **门禁**：tsc 干净；backend 全量 **1011 pass + 1 skip 首跑全绿**（基线 1008+1，+3 为批 2 新单测，零回退）；build + PM2 重启 + `/health` 200；`/api/signals/beef_carcass_us`、`/api/signals/live_cattle_cme` 铸 token 实测 200 且 7/7 模型可用。frontend/inference 本轮零改动未重跑（基线沿用 round-136 的 327/66）。
+
 ### 2026-08-30 — round-136 执行轮：IMPROVEMENT-PLAN v3.1.0 批 0（P0 月度验证生命周期修复）全部落地
 
 用户指令"/goal 开始按照计划实施"。批 0 四件套按 0b→0c→0a→0d 顺序执行（守卫先行，数据修复在守卫保护下进行），三个独立 commit + 一次 build/PM2 重启/live 验证：
