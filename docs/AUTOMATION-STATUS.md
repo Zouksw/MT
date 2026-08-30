@@ -171,12 +171,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-31 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 100（2026-08-31） | **1041 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 39（2026-08-31） | **341 pass** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 101（2026-08-31） | **1054 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 40（2026-08-31） | **345 pass** |
 | inference | pytest 8 | conftest.py | 4（2026-08-31） | **61 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 9 specs | chromium only |
 
-> 三者合计 **1443 全绿**（1041 + 341 + 61，截至 2026-08-31 round-144 实测；round-144 轨迹：1029+1/338/61〔round-140 基线〕→ round-142 三批 1036+1/341/61=1438 → round-144 批 A +5〔beefCutNormalizer 死别名守护 4 + /spreads 币种分组 1，新文件第 100 个〕；批 1 首跑复现已知 flake ×3 后四次全量全绿〔--force 重建后 Redis 预测缓存全空的冷启动机制，round-136 首例、round-140 定位机理〕；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1460 全绿**（1054 + 345 + 61，截至 2026-08-31 round-146 实测；round-146 轨迹：1041+1/341/61〔round-144 基线〕→ 批 1 +6/+4（/api/search 6 + GlobalSearch 组件 4，jest 第 40 套件）→ 批 2 +5（factoryCode 钉住门控/钉住语义/未知厂 404/region×2）→ 批 3 +2（channels-status）= 1054+1/345/61；已知首跑 flake 机制同前〔--force 重建后 Redis 预测缓存冷启动，round-136 首例〕；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（**mt_test**——`src/test/helpers/testApp.ts` 显式拒绝 mt_db 并在无 DATABASE_URL 时默认 mt_test，round-144 复核修正本段旧文"mt_db"的失实表述）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 

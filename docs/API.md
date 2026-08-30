@@ -21,8 +21,9 @@ REST API documentation for the MT beef-price platform.
 > `/api/forecasts*`, `/api/cache/*`, `/api/datasets/:id/export`), used the wrong
 > `/api/apikeys` prefix, and omitted ~95 real endpoints. This version was
 > regenerated from the actual route files (`backend/src/routes/*.ts`, mounts in
-> `backend/src/app.ts`): **17 routers, 124 endpoints**（round-140 复测 123；2026-08-31
-> round-142 批 1 增公开 `/api/market/public/digest` 为 124——
+> `backend/src/app.ts`): **18 routers, 126 endpoints**（round-140 复测 123；2026-08-31
+> round-142 批 1 增公开 `/api/market/public/digest` 为 124；round-146 批 1 增 `/api/search`、
+> 批 3 增 `/api/alerts/channels-status` 为 126——
 > `grep -hE "router\.(get|post|put|patch|delete)\(" backend/src/routes/*.ts` 排除 test）,
 > all verified against code.
 
@@ -155,7 +156,7 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/beef/cuts` | GET | Cut taxonomy (74 cuts) |
 | `/api/beef/cuts/by-primal` | GET | Cuts grouped by primal (API-only) |
 | `/api/beef/cuts/:cutCode` | GET | Cut detail |
-| `/api/beef/prices` | GET | Paginated price rows (API-only) |
+| `/api/beef/prices` | GET | Paginated price rows (`?cutCode=&factoryCode=&country=&region=&source=&grade=&days=`, API-only) |
 | `/api/beef/prices/latest` | GET | Latest price per cut + 3-layer freshness + origin trend |
 | `/api/beef/by-country` | GET | Import-origin aggregates (used by origin analysis page) |
 | `/api/beef/prices/history/:cutCode` | GET | Price history (`?days=`) |
@@ -163,7 +164,7 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/beef/cold-storage` | GET | Cold-storage inventory |
 | `/api/beef/spreads` | GET | Cut-price spreads, grouped per (source, country, **currency**) — mixed-currency rows never share a bucket (round-144) |
 | `/api/beef/forecasts` | GET | Batch 7-day consensus forecasts for all forecastable cuts |
-| `/api/beef/forecasts/:cutCode` | GET | Single-cut consensus forecast |
+| `/api/beef/forecasts/:cutCode` | GET | Single-cut consensus forecast (`?factoryCode=` pins ONE factory's series through the same honesty gate — round-146 批 2; default = representative factory) |
 | `/api/beef/import/template` | GET | CSV import template (D1 manual backfill path) |
 | `/api/beef/import` | POST | Admin CSV import (invalidates stale prediction caches) |
 
@@ -204,6 +205,7 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 |----------|--------|-------------|
 | `/api/alerts` | GET | Alert list (`?page=&limit=`, `?severity=`, `?unread=`) |
 | `/api/alerts/stats` | GET | Counts by severity/status |
+| `/api/alerts/channels-status` | GET | Per-channel delivery availability + actionable reasons (email without SMTP degrades silently — round-146 批 3 makes it visible) |
 | `/api/alerts/rules` | GET | Own alert rules |
 | `/api/alerts/rules` | POST | Create rule (timeseries must exist and be owned — round-119) |
 | `/api/alerts/rules/:id` | PATCH | Update / enable / disable |
@@ -262,6 +264,14 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/tools/landing-cost` | GET | 进口到岸成本测算（query：`baseSeries`/`originFx?`/`tariffPct?`/`vatPct?`/`freightUsdPerKg?`/`feesUsdPerKg?`/`lossPct?`）；白名单活价带日期/新鲜度旗标，税费为用户假设，平台不内置各国税率 |
+
+## Search — `/api/search`
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/search?q=` | GET | Topbar global search — three whitelisted sources (beef cut taxonomy incl. CJK names / commodities / published news), per-source cap 5, auth required (round-146 批 1/D15) |
+
+---
 
 ## Docs — `/api/docs`
 

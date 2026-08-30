@@ -19,6 +19,8 @@ related_docs:
 
 > ## 第六波 v3.4.0（2026-08-31，round-145 规划）— 功能设计缺陷收敛：诚实化 IA、预测粒度对齐、触达补全
 >
+> **执行状态（2026-08-31，批 1+2+3 全部落地，round-146）**：用户指令"按照规划和你自己的决策进行后续的开发"（D14/D15/D16 按各建议案放行）。**批 1** `b72bff9`——模型可信度 **7 入口→2**（删 /ai、/ai/models、/ai/backtest、/dashboard/models 四页，308→/ai/accuracy；后端 API 全保留；[modelId] 详情本就含 backtest 窗口；导航/面包屑/快捷入口重指向）+ **顶栏全局搜索兑现**（`GET /api/search` 鉴权三源白名单〔部位四语/商品/已发布资讯〕每源封顶 5，GlobalSearch 组件 300ms 防抖 + 分组下拉 + "暂不可用"与"无匹配"两种诚实降级）+ 国产筛选诚实禁用（无 CN 行时 disabled+title，空态文案保留为纵深防御）。**批 2** `e64222b`——`?factoryCode=` 钉住单厂预测（evaluateFactoryForCut 抽取，同门控：≥2 真实点+新鲜度；未知厂 404；工厂作用域理由；响应回显 factoryCode）+ region 查询维度（/prices 与 /prices/latest，与 country AND 组合）+ CutForecastSection 工厂选择器（auto=代表厂）。**批 3** `e06c2d2`——`GET /api/alerts/channels-status`（email/slack 可用性+可行动理由；rules 页警示横幅——静默降级可见化）+ 反馈通道（公开仓库 github.com/Zouksw/MT 匿名 200 实证；MarketingFooter Feedback 链接 + digest 页脚〔置于数据加载分支外——数据坏时才最需要反馈，且入 SSR HTML〕）。**审计修正两处**（诚实性同样适用于自己的分析）：V6-二.1 表述过重——/beef 渲染层本就有国产专属空态文案（round-145 只查了过滤逻辑未查渲染）；V6-二.6 "页面不展示 region" 不实——factories 卡片本就渲染 region（查询维度缺失属实）。测试基线 backend **1054+1**（101 文件，+13 全为新测）、frontend **345**（40 套件，+4）、inference 61 不变 = **1460**；页面 48→44、路由 17→18/端点 124→126。live：四路 308、匿名搜索 401、牛舌→TONGUE 中文匹配、region=NSW 全 AU-847、钉住 AU-847 如实拒绝冻结数据（latest 2026-04-30）、channels-status email=false+SMTP 理由、digest SSR 含反馈链接。**剩余：批 0a（时间门 2026-09 中下旬）/ 批 0b（样本门）；打磨项登记：/trading ?slug= 深链（商品搜索结果现落选择器）。**
+>
 > ### V6-一、基线（2026-08-31 只读实测）
 >
 > 三服务在线、测试基线 **1443**（backend 1041+1 / frontend 341 / inference 61）、树干净 @ `0065918`。页面 48、路由 17/端点 124；用户 **3（全 seed）**；牛肉价 2,401 行冻结于 2026-04-30（5 厂 16 部位，AU/BR）；6 国 21 注册厂（AR3/AU6/BR5/CN1/US4/UY2）但 **CN 价格行=0**；批 0a/0b 门控未到；域名/SMTP/4 把 API key 仍待用户输入。第五波（分发期）批 1-3 + round-144 补课全落地。

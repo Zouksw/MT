@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-146：第六波 v3.4.0 执行 — 批 1（诚实化 IA 收敛）+ 批 2（预测粒度对齐）+ 批 3（触达补全）
+
+用户指令"按照规划和你自己的决策进行后续的开发"（round-145 规划的第六波；D14/D15/D16 按建议案放行）。三个独立 commit，每批全门禁。
+
+- **批 1 `b72bff9`（诚实化 IA，净 -535 行）**：① **D14 模型页 7→2**——删 /ai（纯枢纽）、/ai/models、/ai/backtest、/dashboard/models 四页（-1,026 行），next.config 308 永久重定向→/ai/accuracy；后端 signals/backtest API 全保留；[modelId] 详情页本就含 backtest 窗口对比；导航项/面包屑/快捷入口全部重指向。② **D15 顶栏搜索兑现**（原 "PLANNED" 占位徽章）——`GET /api/search?q=`（鉴权；三源白名单：beefCutTaxonomy 四语 contains / commodities slug·name·nameCn / market_news 已发布 title·summary；每源 take 5；空 q 返回空集不 4xx）+ GlobalSearch 组件（300ms 防抖、分组下拉〔部位/商品/资讯〕、Enter 跳首条、"搜索暂不可用"与"无匹配"两态诚实降级、点击外关闭）；商品命中落 /trading 选择器（?slug= 深链登记为打磨项）。③ **D16 国产筛选诚实禁用**——无 CN 行时 domestic 按钮 disabled+title 提示（空态文案保留纵深防御）。
+- **批 2 `e64222b`（预测粒度对齐）**：`GET /api/beef/forecasts/:cutCode?factoryCode=`——钉住单厂序列出预测（tradingSignals 抽取 evaluateFactoryForCut，与代表厂同一道 ≥2 真实点+新鲜度门；未知厂 404；理由按工厂作用域；响应回显 factoryCode），闭合"价差按厂、预测不按厂"的不对称；region 查询维度（/prices?region=、/prices/latest?region=，大小写不敏感精确匹配、与 country AND）；CutForecastSection 工厂选择器（auto=代表厂，选项来自已有价格行零额外请求）。
+- **批 3 `e06c2d2`（触达补全）**：`GET /api/alerts/channels-status`（email/slack 每渠道可用性+可行动理由；rules 页在 email 不可用时显示警示横幅——"设了规则等邮件、实际只有站内"的静默降级从此可见）；反馈通道（仓库公开性匿名 200 实证后，MarketingFooter 增 Feedback 链接覆盖 landing/about/pricing，digest 页脚增反馈链接且置于数据分支外——数据坏时最需要反馈、并进 SSR HTML）。
+- **审计修正（对 round-145 自身分析）**：V6-二.1 表述过重（/beef 渲染层本就有国产空态文案）；V6-二.6 "页面不展示 region" 不实（factories 卡片本就渲染）。修正记录于 V6 执行状态块。
+- **门禁与基线**：tsc×2 每批 / biome 触达文件 0 新告警（存量 forecast! 断言留置）/ backend **1054+1**（101 文件，+13：search 6 + 钉住×2+404+region×2 + channels-status×2）/ frontend **345**（40 套件，+4 GlobalSearch）/ inference 61；双 build 每批、PM2 重启×3 轮、live 全验（四路 308、匿名搜索 401、牛舌→TONGUE、beef 5/5/5 封顶、region=NSW 全 AU-847、钉住 AU-847 如实拒绝冻结数据、channels-status、digest SSR 反馈链接、三服务 200）。**页面 48→44、路由 17→18、端点 124→126**（AGENTS/API.md/AUTOMATION-STATUS 同步）。
+- **批 0a/0b 未到期**：值守窗 2026-09 中下旬不变；用户侧待办不变（域名/SMTP/keys）。
+
 ### 2026-08-31 — round-145：第六波 v3.4.0 规划 — 功能设计缺陷分析 + 收敛批次设计（docs-only）
 
 用户指令"分析当前项目在功能设计上存在的缺陷，规划后续的开发计划"。只读取证（PRODUCT-SPEC 对照实测：页面 48 清点、生产库 factory/cut/CN 行 SQL、AppShell/告警链路/预测路由代码读）后成文 IMPROVEMENT-PLAN **V6**（版本 3.3.0→3.4.0）。
