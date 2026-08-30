@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-145：第六波 v3.4.0 规划 — 功能设计缺陷分析 + 收敛批次设计（docs-only）
+
+用户指令"分析当前项目在功能设计上存在的缺陷，规划后续的开发计划"。只读取证（PRODUCT-SPEC 对照实测：页面 48 清点、生产库 factory/cut/CN 行 SQL、AppShell/告警链路/预测路由代码读）后成文 IMPROVEMENT-PLAN **V6**（版本 3.3.0→3.4.0）。
+
+- **缺陷清单（9 项，全部带 live/代码证据）**：A 数据-承诺断层——"国产牛肉"筛选在 CN 价格行=0（6 国 21 厂、CN 仅注册无数据）下永远空结果（违反诚实缺席）；hero 能力（部位级预测）因 beef 数据冻结与公开首屏（5 宏观序列 digest）断层。B IA 冗余——"模型可信度"主题 **7 个入口**（/ai 枢纽、accuracy(+[modelId])、models、backtest、dashboard/models、track-record）三处 MAPE 近似重复；顶栏全局搜索是 "PLANNED" 占位徽章（spec §四 承诺未兑现）。C 预测粒度不对称——forecasts 内部只取代表性工厂单厂预测（findForecastableFactoryForCut），与 /spreads 按厂价差、cuts 详情 by-factory 对比线不对称；Factory.region 有数据但无查询维度、页面不展示。D 触达断层——告警 email 渠道无 SMTP 静默死配置（UI 无告知，用户以为有邮件）；SEO 基建空转待域名；3 用户零反馈通道。
+- **批次设计**：批 1 诚实化 IA 收敛（国产空态 + 模型页 7→2 + 搜索占位处置）；批 2 预测粒度对齐（?factoryCode= 预测 + region 维度）；批 3 触达补全（渠道状态透明化 + mailto 反馈）；批 0a/0b 承 V5 门控不变。
+- **决策项**：D14 模型页收敛方案（建议 accuracy 吸收 + 301）、D15 全局搜索实现 vs 撤占位（建议实现最小三源跨搜）、D16 国产数据路线（建议入口保留 + 空态诚实化）。
+- 零代码改动；测试基线 1443 不变；待用户"按计划执行"放行 D14/D15/D16。
+
 ### 2026-08-31 — round-144：问题解决轮 — 登记残留四项收口（/spreads 币种 + D13 + lifespan + metrics 定案）
 
 用户指令"解决当前项目存在的问题"。先盘点（KNOWN-ISSUES/TECH-DEBT/V5 缓办清单 × 只读核实）后分类执行：用户输入阻塞（4 空 key/域名/CSV 导入）与时间门（批 0a/0b）不动，已有定案项（R3 保留等）不重开，登记可解决项全部落地。

@@ -1,8 +1,8 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.3.0"
-last_updated: "2026-08-30"
+version: "3.4.0"
+last_updated: "2026-08-31"
 status: "active"
 maintainer: "MT Team"
 tags:
@@ -16,6 +16,62 @@ related_docs:
 ---
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
+
+> ## 第六波 v3.4.0（2026-08-31，round-145 规划）— 功能设计缺陷收敛：诚实化 IA、预测粒度对齐、触达补全
+>
+> ### V6-一、基线（2026-08-31 只读实测）
+>
+> 三服务在线、测试基线 **1443**（backend 1041+1 / frontend 341 / inference 61）、树干净 @ `0065918`。页面 48、路由 17/端点 124；用户 **3（全 seed）**；牛肉价 2,401 行冻结于 2026-04-30（5 厂 16 部位，AU/BR）；6 国 21 注册厂（AR3/AU6/BR5/CN1/US4/UY2）但 **CN 价格行=0**；批 0a/0b 门控未到；域名/SMTP/4 把 API key 仍待用户输入。第五波（分发期）批 1-3 + round-144 补课全落地。
+>
+> ### V6-二、功能设计缺陷分析（全部 live/代码实证，2026-08-31）
+>
+> **A. 数据-承诺断层（最重，产品诚实性层面）**
+> 1. **"国产牛肉"入口空转**：PRODUCT-SPEC §四 IA 承诺 进口/国产分视图；`/beef` 页 originFilter（domestic= factory.country==="CN"）在 CN 行=0 的现实下**永远返回空列表**——呈现一个不可能有结果的筛选，违反"诚实缺席"原则（对比：forecastable:false 带理由的先例）。国产数据唯一活通道是 CSV 手动导入（china 源地域封锁维持结论）。
+> 2. **hero 能力与数据面断层**：digest 公开页只展示 5 宏观/期货/汇率序列（诚实降级），而产品的核心差异化（部位级 AI 预测）因 beef_cut_prices 冻结全部 forecastable:false——分发期拉来的用户看到的第一屏与 hero 能力无关。这是 D1 的产品面后果，非新问题，但**波 6 内所有公开面改动都必须在此约束下设计**（不造数据、不预支承诺）。
+>
+> **B. IA 冗余（导航债，非代码债）**
+> 3. **"模型可信度"主题 7 入口**：`/ai`（纯导航枢纽,8 链接）、`/ai/accuracy`、`/ai/accuracy/[modelId]`、`/ai/models`（accuracy/coverage/trend）、`/ai/backtest`（"Compare model predictions against actual outcomes"）、`/dashboard/models`（"Model Comparison ... MAPE"）、`/ai/track-record`（公开）。同一主题六种切片、三处 MAPE 对比近似重复——用户面对 7 个入口无法建立"去哪看模型可信度"的心智。收敛方向：**track-record=公开承诺面（不动）+ accuracy=鉴权内唯一可信度页（吸收 [modelId] 详情）**，其余并入或重定向。
+> 4. **顶栏全局搜索占位**：spec §四 承诺"顶栏: 搜索(商品/部位)"；`AppShell.tsx:163` 实现为标注 "PLANNED, not yet wired" 的徽章——一个长期挂在顶栏的未实现承诺。
+>
+> **C. 预测粒度不对称**
+> 5. **代表性工厂预测**：`/api/beef/forecasts/:cutCode` 内部 `findForecastableFactoryForCut` 只选"数据最多最新"的**一家厂**做代表（响应带 factoryId 说明）；而 `/spreads`（厂间价差）与 cuts 详情页 by-factory 对比线已证明厂间价差是真实分析维度。价差按厂、预测不按厂——粒度不对称，用户无法回答"这家厂的_STRIPLOIN_会怎么走"。
+> 6. **region 维度未暴露**：`Factory.region` 有真实数据（NSW/QLD/SA/Santa Fe/Córdoba…）但 API 无 region 查询参数、factories 页只按国家分组不展示 region——"场地"区分只到国家层（round-144 评估时已发现）。
+>
+> **D. 触达/运营断层**
+> 7. **告警邮件通道死配置**：`notificationChannels.getEmailTransport` 无 SMTP 时返回 null（warn 每进程一次，round-142 已降噪），alert 规则的 email 渠道**静默降级为不发送**——用户设了规则、以为会收到邮件、实际只有站内通知，且 UI 无任何告知。
+> 8. **SEO 基建空转**：sitemap/robots/OG 仍输出 localhost（`NEXT_PUBLIC_APP_URL` 占位守卫，round-142）——域名是前置（用户输入，承 V5-九）。
+> 9. **无反馈通道**：3 个 seed 用户、about/landing/digest 无任何联系方式或反馈入口——产品在零用户信号下迭代，与分发期目标矛盾。
+>
+> ### V6-三、批次总览
+>
+> | 批 | 主题 | 内容 | 门控 |
+> |---|---|---|---|
+> | 批 1 | 诚实化 IA 收敛 | 国产筛选空态治理 + 模型页 7→2 收敛 + 顶栏搜索占位处置 + /ai 枢纽处置 | D14/D15 放行即做 |
+> | 批 2 | 预测粒度对齐 | forecasts?factoryCode= 参数（默认代表厂兼容）+ cuts 详情 by-factory 组挂预测 + region 查询维度/展示 | 无门，批 1 后 |
+> | 批 3 | 触达补全 | 告警渠道状态透明化（"仅站内"标注）+ 公开页反馈通道（mailto，不做表单后端） | 无门，可并行 |
+> | 批 0a/0b | 承 V5 原文 | FRED 8 月点三查三面 / 校准共识区间 | 时间门 2026-09 中下旬 / 样本门 |
+>
+> ### V6-四、批次明细
+>
+> 1. **批 1（诚实化 IA 收敛，前端为主 + 路由重定向）**：① `/beef` originFilter 动态化——无 CN 行时国产筛选禁用并显示"暂无国产数据源（国产通道：管理员 CSV 导入）"空态说明（诚实缺席先例：forecastable:false+reason）；② 模型页收敛（依 D14 方案）：/ai/track-record 保持公开承诺面；/ai/accuracy 成唯一鉴权内可信度页（吸收 [modelId] 详情、models 页的 coverage/trend 独有价值、backtest 的时间窗对比价值），/ai/models、/ai/backtest、/dashboard/models 重定向并入，导航与 sitemap 同步；③ 顶栏搜索（依 D15）：实现最小跨搜（部位+商品+资讯，后端一个 /api/search 白名单端点）或撤除占位徽章；④ /ai 纯枢纽页并入侧栏后删除或降级。
+> 2. **批 2（预测粒度对齐，后端为主）**：① `GET /api/beef/forecasts/:cutCode?factoryCode=`——指定厂则对该厂序列出预测（同样过 ≥2 真实点+新鲜度门，不过门 forecastable:false+reason），不指定维持代表厂行为（向后兼容，batch 端点同步评估）；② cuts 详情页 by-factory 分组线旁挂该厂预测入口；③ `/api/beef/prices?region=` 查询维度 + factories 页按 country 分组下展示 region（数据已在库）。
+> 3. **批 3（触达补全，小批）**：① 告警设置/规则页渠道状态透明化——后端暴露 email 渠道可用性（SMTP 未配→"仅站内通知"标签，不静默）；② landing/digest/about 页脚加反馈 mailto（静态链接，不做表单/后端存储——无基数不做空壳）。
+>
+> ### V6-五、决策项（不擅动，需用户点头）
+>
+> | # | 事项 | 建议 | 来源 |
+> |---|------|------|------|
+> | **D14（批 1）** | 模型可信度页收敛方案 | 建议：accuracy 吸收合并 + 其余 301 重定向（保 SEO 与旧链）；/ai 枢纽页删除（侧栏已导航） | V6-二.3 |
+> | **D15（批 1）** | 顶栏全局搜索：实现 or 撤占位 | 建议：**实现最小版**（部位+商品+资讯三源、白名单端点、≤3 跳转结果）——分发期获客页与站内找数断层的最短补法；若用户判断无搜索需求则撤徽章 | V6-二.4；spec §四 |
+> | **D16（批 1 附带）** | 国产数据路线：CSV 运营节奏 / 等源解冻 / 暂下架国产入口 | 建议：保留入口但空态诚实化（批 1 ①），运营节奏随用户安排 | V6-二.1 |
+>
+> ### V6-六、有机日历（承 V5-六，零开发）
+>
+> 2026-09 中 FRED 8 月点发布 → 批 0a 三查三面；digest 5 序列随 CME/汇率自动更新；模型页收敛后 sitemap 联动刷新；2026-10-31 H=3 首批到期。
+>
+> ### V6-七、本波明确不做
+>
+> 交易/支付/订单（§九 不变）；虚构分析师观点或周报文案（只做可溯源真数据）；邮件订阅/分发（无订阅者基数，空壳不做）；原生 App；对 .gov.cn/Cloudflare 源上反爬采集（维持网络出口与 ToS 结论）；国产数据不造合成行（等真实通道）。
 
 > ## 第五波 v3.3.0（2026-08-30，round-141 规划）— 分发期：公开面、SEO 基建、卫生收尾
 >
