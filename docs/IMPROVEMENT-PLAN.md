@@ -29,6 +29,8 @@ related_docs:
 >
 > **执行状态（2026-08-30 晚，批 3 已落地，round-138 续）**：`b778429` 双臂门禁实验执行完毕，**两臂均未过门禁——领先指标方向诚实关闭**。臂 A sarimax lagged-exog 四组 FAIL（rel 0.963–1.005）；臂 B chronos-2 协变量四组 FAIL（rel 0.955–1.317，brl H=3 劣化 +32%）；主假设（活牛期货）数据不可行（10 个月重叠，重评 2028-11）。sarimax 维持暂缓、chronos-2 测过未采（D6 例外条款履行）。报告 `docs/backtests/beef-leading-indicator-2026-08.md`。至此 v3.1.0 **执行顺序内的六批（0/1/2/4/5/3）全部落地，仅剩批 6（FRED 免 key 序列扩充）未执行**。测试基线：backend **1021+1**、frontend **334**、inference **66**，零回退。
 >
+> **执行状态（2026-08-30 晚，批 6 已落地，round-138 终）**：`51b8853` 三条免 key FRED 月度序列接入 `FRED_MONTHLY`（beef_retail_us 零售牛肉 $/lb + pork_world/poultry_world 替代蛋白指数；**先实测探针后接线**——6 候选 3 存活，均到 2026-07）+ 一次性 10 年回填（各 ~124 点）+ 契约测试（含指数量纲例外）。boot 订阅实证 **9 条月度序列**（6+3）进 ADR-0001 循环。**v3.1.0 七批全部执行完毕**（0/1/2/3/4/5/6）。测试基线：backend **1022+1**、frontend **334**、inference **66**，零回退。AGENTS.md 页面计数 45→46。
+>
 > **指令来源**：用户"结合当前项目最核心的功能，利用 AI 大模型预测牛肉价格的变化，制定后续的开发计划"。
 > **依据**：引擎与生产库 2026-08-30 实测（见 V3-一）+ [PREDICTION-STRATEGY](PREDICTION-STRATEGY.md)（含本轮补写的失效标注——其 §五 实验序列实为比特币错标数据）+ [COMPETITIVE-ANALYSIS §八](COMPETITIVE-ANALYSIS-MOOKET.md)。
 > **核心论断**：预测**机制**已经成熟（质量加权共识 + 劣于-naive 淘汰制 + split-conformal 区间 + cadence 感知验证环，全部 live），当前缺口是**证据、序列适配、产品面**三件事——牛肉预测此刻拿不出一条可展示的验证证据（被误杀 + horizon 过长）；模型质量权重是全局的而非按序列的；方向准确率（采购择时真正要的指标）没有度量。
