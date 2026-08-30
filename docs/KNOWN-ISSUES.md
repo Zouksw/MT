@@ -96,6 +96,8 @@
 | `www.mla.com.au` | **200** | 200 | **Cloudflare 403 已消失**（直连即可达，无需代理）；但 `statistics/api/` 是 SPA 壳，真实 grid 端点契约仍需 key 才能核实。A1 维持"调研完成、卡 key" |
 | 订阅 51 节点地区分布 | — | — | 21 日本 / 10 美国 / 5 新加坡 / 2 香港 / 2 英国 / 荷兰法国巴西各 1-3 / **无中国大陆节点** → `.gov.cn` 族（chinaWholesale/chinaCustoms/dce/sse）维持"需中国出口"结论，除非订阅加大陆节点 |
 
+**round-150 复核（2026-08-31，主机粒度细化 + V7 批1 取证）**：USDA 封锁结论从"USDA 000"细化为**同域主机分层**——`mymarketnews.ams.usda.gov` 与 `marsapi.marketnews.usda.gov` 直连 **000**（主机级 egress 封锁，与 `.gov.cn` 族同类），但 **`www.ams.usda.gov` 200 可达**（免 key mnreports PDF 路径）且 `mpr.datamart.ams.usda.gov` 200（API 需免费账户，未采）。另两项取证：① MLA 90CL 公开页数据面为 **Power BI Embedded**（`app.nlrsreports.mla.com.au/.../getembedinfo` 返回 accessToken + app.powerbi.com embedUrl，导出按钮禁用）——无浏览器不可程序化取数，二手载体判死；② `lm_xb403.txt` 编号已改挂**每日箱装牛肉 cutout**（ams_2453.pdf，实测 2026-08-28 现势），非进口 90CL 报告。**处置（已落地）**：周度进口基准改由 `www.ams.usda.gov/mnreports/ams_2823.pdf`（NW_LS421 Import Beef Trade，免 key）承载 → 新源 `usda_import_beef`（V7 批1，commit e59a751，序列 beef_90cl_us weekly）。
+
 ---
 
 ### D2 — MAPE 验证环断裂（数据层后果）

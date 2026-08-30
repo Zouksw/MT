@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-150：执行轮 — 第七波 v3.5.0 批 1+2+3 全落地（进口周度基准 + 独占位强化 + 规格维度载体）
+
+用户指令"按照计划开始"。三个独立 commit，每批全门禁（tsc/biome/全量测试/构建/PM2 重启/live 验证）。
+
+- **批 1 `e59a751` — 进口周度到岸基准（计划主批，载体经取证置换）**：批 1 首步取证即推翻原计划载体——MLA 90CL 页的数据面是 **Power BI Embedded**（壳体 `getembedinfo` 端点返回 accessToken + app.powerbi.com embedUrl；导出按钮被 `export_functionality:false` 禁用；无浏览器 + JS SDK `visual.exportData()` 拿不到数据，cron 摄取不可行）→ 按计划降级条款登记。替代载体为**同市场的官方原始上游**：USDA AMS **NW_LS421「Import Beef Trade」周报**（`www.ams.usda.gov/mnreports/ams_2823.pdf`，免 key、稳定 URL、固定版式；TXT 路径 2020 年已死，现行载体即 PDF）。新源 `usda_import_beef`：PDF → `pdftotext -layout` 管道（宿主 poppler-utils，setup.sh 已登记依赖）→ 状态机解析（跨页 section、可选西岸列、坏区间丢弃；真实 2026-08-28 文本为 fixture 的 10 个解析测试）→ **全有或全无写入**（版式漂移=0 行 + warning，绝不写错形数据）→ `CommodityPrice` 新序列 **`beef_90cl_us`**（weekly / USD/cwt / AU-NZ Cow Meat 90% East Coast 0-15d 区间中值）。**口径注记**写死在 commodity metadata（世行月度 2024-01 起新西兰 90CL c.i.f.，与本序列 F.O.B/T.I.S. 措辞不同且历史不可拼接）。weekly cadence 全链路：`getPriceHistory` 回退链 daily→weekly→monthly、`batchLatestPrices` cadence 循环（周链接通前商品列表 interval 显示 daily 且无最新价——live 发现并修复）、/trading timeframe 选择器对非 daily 系列诚实隐藏（+3 前端测试）。**noChange 新契约**（ScraperResult 可选字段）：周报挂日更周期的确认无变化重扫（upsertPrice samePrice 0/0）分类为 success/healthy 而非 empty/silent-failure——否则周度源 6/7 天被误报"疑似静默失败"。预测订阅硬门（daily / monthly-and-not-daily）结构上排除 weekly，ADR-0001 horizon=步长语义零扩张（计划边界兑现）。live：boot runAll 写入 90CL 2026-08-28 342-354（close 348）、手动刷新幂等（0/0 unchanged）、sources 面板 healthy/direct、`/commodities` interval=weekly+latestPrice 348、daily 请求回退返回周行、匿名 /trading 307 登录门不变。
+- **批 2 `0b7f391` — 独占位强化（进口获客导向）**：`/tools/landing-cost` 白名单第四源 `beef_90cl_us`（"美国进口 90CL 周度到岸基准（USDA NW_LS421）"，周度窗口 12 点 + 周度点文案 + 单点诚实降级注记；live：348 USD/cwt → 7.6721 USD/kg → 51.56 CNY/kg）。landing Features 新增公开计算器卡（FX × 基准 × 关税 → 到岸 RMB/kg 决策场景文案）+ AI 预测卡挂公开 track-record 链接；about 方法论卡补"战绩公开——对错都发"机制陈述并链接 /ai/track-record。文案只陈述自身机制与事实，不点名竞品（D18 兑现）。digest→track-record / digest→landing-cost 双入口核实已在（round-146 批 3），无需重复。
+- **批 3 `1a99695` — 报价规格维度载体（进口盘口词汇对齐，零迁移）**：CSV 导入五个**可选**规格列 `feedingMethod / feedingDays / vendorLabel(VL) / breed / storage`（白名单约束键、值保持运营者原文）→ `BeefCutPrice.metadata`（该 Json 列一直存在未用）；`extractSpecDims` 纯函数（5 单测：全规格/部分规格/空单元格丢弃/坏 feedingDays 报错/未知列忽略）+ 导入集成测试（mt_test，2 例：全/部分规格行落库验证、坏 feedingDays 跳行）；模板端点与导入页文档列清单同步；cut 详情价格表新增 **Spec 列**（有则渲染、无则 "—"）——部位级数据复活（key/CSV）前的载体准备，不做展示承诺（计划边界兑现）。
+- **网络封锁图谱细化（KNOWN-ISSUES 登记）**：同域不同主机可达性分层实锤——`mymarketnews.ams.usda.gov` 与 `marsapi.marketnews.usda.gov` **000 主机级封锁**，而 `www.ams.usda.gov` 与 `mpr.datamart.ams.usda.gov` 200 可达（后者 API 需登录，未采）；批 1 的载体选择正建立在这张图谱上。`lm_xb403.txt` 编号已改挂每日箱装牛肉 cutout 报告（ams_2453.pdf 2026-08-28 现势实测）。
+- **基线**：backend **1072+1**（101→102 文件，+18）、frontend **352**（40 套件，+3）、inference **61** 不变 = **1485**（1464→+21，零回退）。爬虫 18→**19**（AGENTS.md 已复核更新）。三服务 PM2 重启后在线，healthcheck 绿。
+- **剩余**：批 0a（时间门 2026-09 中下旬）/ 批 0b（样本门）未到；D20（watchlist 粒度）/D22（新发地，默认不做）维持；用户侧进口解阻清单不变（MLA/USDA key、CSV 周导入、域名/SMTP）。
+
 ### 2026-08-31 — round-149：规划轮 — 参照调研报告制定第七波 v3.5.0（国内数据破局 + 国际免费层补强 + 独占位强化）
 
 用户指令"参照调研报告的内容，制定后续的开发方向"。docs-only 规划轮（round-145/141 同例），输入 = round-148 调研报告 §九九条启示，全部规划前事实经只读复核。- **IMPROVEMENT-PLAN.md 新增第七波 v3.5.0**（版本 3.4.0→3.5.0，报告入 related_docs）：启示 9 条逐条处置——3 条转批次（新发地源接入 / MLA 90CL / 独占位强化）、2 条转决策项（规格维度 D19、watchlist 粒度 D20）、1 条登记候选（海关 HS D21）、1 条证据登记（卓创价格带，paywall 延后不变）、2 条无动作/不做确认（USDA 入口改版排除错误假设；PRA 转售红线）。

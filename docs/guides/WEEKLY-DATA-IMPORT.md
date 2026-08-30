@@ -1,8 +1,8 @@
 ---
 title: "牛肉价格数据周度导入 Runbook"
 en_title: "Weekly Beef Price Import Runbook"
-version: "1.0.0"
-last_updated: "2026-08-23"
+version: "1.1.0"
+last_updated: "2026-08-31"
 status: "active"
 maintainer: "MT Team"
 tags:
@@ -49,6 +49,11 @@ related_docs:
    | `currency` | ⬜ | 如 `USD`（默认） | |
    | `unit` | ⬜ | 如 `USD/kg`（默认） | |
    | `grade` | ⬜ | | |
+   | `feedingMethod` | ⬜ | 如 `Grain-fed` / `Grass-fed` | 报价规格维度（round-150 批 3）：写入行 metadata，部位页 Spec 列有则展示 |
+   | `feedingDays` | ⬜ | 整数天数，如 `150` | 非整数会整行被拒（宁缺勿错） |
+   | `vendorLabel` | ⬜ | 如 `MSA`（VL 厂牌线） | |
+   | `breed` | ⬜ | 如 `Angus` | |
+   | `storage` | ⬜ | 如 `Port` / `Warehouse`（仓位） | |
 
 3. 注意事项：
    - **不要混单位**——同一工厂+部位的历史序列若以 USD/kg 记录，续入请保持同单位（round-115 起 upsert 有 >20× 中位数的价格尺度护栏，混单位会被拒并留 warn 日志）。
