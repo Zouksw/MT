@@ -45,6 +45,9 @@ export interface NotificationPayload {
 
 // Lazy-initialized transport
 let emailTransport: nodemailer.Transporter | null = null;
+// Warn about missing SMTP config once per process, not per dispatch call
+// (v3.3.0 batch 3, round-106 registered warn spam).
+let smtpMissingWarned = false;
 
 /**
  * Get email transport (singleton)
@@ -58,7 +61,10 @@ function getEmailTransport(): nodemailer.Transporter | null {
 	const pass = process.env.SMTP_PASS;
 
 	if (!host || !user || !pass) {
-		logger.warn("SMTP not configured — email notifications disabled");
+		if (!smtpMissingWarned) {
+			smtpMissingWarned = true;
+			logger.warn("SMTP not configured — email notifications disabled");
+		}
 		return null;
 	}
 

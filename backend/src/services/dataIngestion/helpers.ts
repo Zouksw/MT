@@ -313,10 +313,15 @@ export function parseMonth(str: string): Date | null {
 /** Generate month list YYYYMM between two dates. */
 export function monthRange(start: Date, end: Date): string[] {
 	const months: string[] = [];
-	const d = new Date(start);
-	while (d <= end) {
-		months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
-		d.setMonth(d.getMonth() + 1);
+	// Normalize to month starts in UTC before stepping: setMonth on a
+	// month-end date skips months (Jan 31 +1 month = Mar 3, never Feb).
+	// Latent while callers pass parseMonth output (month starts); fixed with
+	// the month-start clamp anyway (v3.3.0 batch 3, round-106 registered).
+	const d = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+	const endMonth = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1);
+	while (d.getTime() <= endMonth) {
+		months.push(`${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+		d.setUTCMonth(d.getUTCMonth() + 1);
 	}
 	return months;
 }

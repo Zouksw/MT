@@ -94,7 +94,9 @@ export async function aggregateBeefByCountry(
 			const min = b.prices.length > 0 ? Math.min(...b.prices) : 0;
 			const max = b.prices.length > 0 ? Math.max(...b.prices) : 0;
 			const topCuts = Array.from(b.cuts.entries())
-				.sort((a, z) => z[1] - a[1]) // highest price first
+				// highest price first; cutCode as deterministic tiebreaker
+				// (equal prices otherwise order by map insertion = row order)
+				.sort((a, z) => z[1] - a[1] || a[0].localeCompare(z[0]))
 				.slice(0, limit)
 				.map(([cutCode, price]) => ({ cutCode, price: Math.round(price * 100) / 100 }));
 			return {

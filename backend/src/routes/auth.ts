@@ -9,7 +9,11 @@ import {
 	TooManyRequestsError,
 	UnauthorizedError,
 } from "@/middleware/errorHandler";
-import { authRateLimiter, registrationRateLimiter } from "@/middleware/rateLimiter";
+import {
+	authActionRateLimiter,
+	authRateLimiter,
+	registrationRateLimiter,
+} from "@/middleware/rateLimiter";
 import { validate, validationSchemas } from "@/middleware/security";
 import {
 	checkAccountLockout,
@@ -342,7 +346,7 @@ router.post(
 // POST /api/auth/refresh - Refresh access token
 router.post(
 	"/refresh",
-	authRateLimiter,
+	authActionRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const { refreshToken } = req.body;
 
@@ -511,7 +515,7 @@ router.put(
 // POST /api/auth/change-password - Change password
 router.post(
 	"/change-password",
-	authRateLimiter,
+	authActionRateLimiter,
 	asyncHandler(async (req: Request, res: Response) => {
 		const authHeader = req.headers.authorization;
 		const userId = await getUserIdFromToken(authHeader);

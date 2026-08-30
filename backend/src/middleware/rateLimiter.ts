@@ -38,13 +38,29 @@ export const createRateLimiter = (options: {
 };
 
 /**
- * Strict rate limiter for authentication endpoints
+ * Strict rate limiter for CREDENTIAL verification endpoints (login)
  * 10 requests per 15 minutes per IP
  */
 export const authRateLimiter = createRateLimiter({
 	windowMs: 15 * 60 * 1000, // 15 minutes
 	max: 10,
 	message: "Too many authentication attempts, please try again later.",
+});
+
+/**
+ * Looser limiter for token-holding auth actions (refresh, change-password).
+ *
+ * v3.3.0 batch 3: these previously shared authRateLimiter with login. Unlike
+ * login they already require a valid token, so brute-force pressure is lower
+ * — but token refresh fires routinely per client session, and behind a NAT
+ * several users' refreshes + one person's failed logins pooled into the same
+ * 10/15min bucket and locked the whole office out (round-106 registered).
+ * 30/15min separates the pools while staying abuse-resistant.
+ */
+export const authActionRateLimiter = createRateLimiter({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 30,
+	message: "Too many auth actions, please try again later.",
 });
 
 /**

@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
+import { classifyIngestionStatus, monthRange } from "@/services/dataIngestion/helpers";
 
 describe("classifyIngestionStatus — 0-row honesty contract", () => {
 	it("classifies a run that wrote rows as 'success'", () => {
@@ -75,5 +75,24 @@ describe("classifyIngestionStatus — 0-row honesty contract", () => {
 			status: "error",
 			errorMessage: "skipped",
 		});
+	});
+});
+
+describe("monthRange — month-start clamp (v3.3.0 batch 3)", () => {
+	it("does not skip months on a month-end start date (Jan 31 must reach Feb)", () => {
+		// Pre-fix behavior: new Date(Jan 31).setMonth(+1) lands on Mar 3,
+		// silently skipping February entirely.
+		const months = monthRange(new Date("2026-01-31T00:00:00Z"), new Date("2026-03-10T00:00:00Z"));
+		expect(months).toEqual(["202601", "202602", "202603"]);
+	});
+
+	it("unclamped month-start inputs keep the same output as before", () => {
+		const months = monthRange(new Date("2026-05-01T00:00:00Z"), new Date("2026-07-01T00:00:00Z"));
+		expect(months).toEqual(["202605", "202606", "202607"]);
+	});
+
+	it("end mid-month still includes that month", () => {
+		const months = monthRange(new Date("2026-01-01T00:00:00Z"), new Date("2026-02-15T00:00:00Z"));
+		expect(months).toEqual(["202601", "202602"]);
 	});
 });

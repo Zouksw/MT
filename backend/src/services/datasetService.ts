@@ -274,9 +274,18 @@ export async function importDatasetData(
 		}
 	}
 
+	// rowsCount reflects the dataset's ACTUAL datapoint population (counted
+	// post-import), not the inserted batch size — a re-import with
+	// skipDuplicates inserts 0 and would otherwise zero the counter, and a
+	// 0-row import would report success while erasing the true count
+	// (v3.3.0 batch 3, round-106 registered).
+	const actualRows = await prisma.datapoint.count({
+		where: { timeseries: { datasetId } },
+	});
+
 	const updatedDataset = await prisma.dataset.update({
 		where: { id: datasetId },
-		data: { isImported: true, rowsCount: totalDatapoints, lastAccessedAt: new Date() },
+		data: { isImported: true, rowsCount: actualRows, lastAccessedAt: new Date() },
 	});
 
 	return {

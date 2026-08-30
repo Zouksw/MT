@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
 	userUpdate: vi.fn(),
 	sessionCreate: vi.fn(),
 	sessionFindMany: vi.fn(),
+	sessionCount: vi.fn(),
 	sessionUpdate: vi.fn(),
 	sessionUpdateMany: vi.fn(),
 	auditLogCreate: vi.fn(),
@@ -52,6 +53,7 @@ vi.mock("@/lib", () => ({
 		session: {
 			create: mocks.sessionCreate,
 			findMany: mocks.sessionFindMany,
+			count: mocks.sessionCount,
 			update: mocks.sessionUpdate,
 			updateMany: mocks.sessionUpdateMany,
 		},
@@ -298,9 +300,22 @@ describe("verifyTokenSession", () => {
 		// Generate a real token so verify passes, then assert the session check fails.
 		const { jwtUtils } = await import("@/lib/jwt");
 		const token = jwtUtils.generateToken("user-1");
-		mocks.sessionFindMany.mockResolvedValueOnce([]); // no active sessions
+		mocks.sessionCount.mockResolvedValueOnce(0); // no active sessions
 
 		await expect(verifyTokenSession(token)).rejects.toBeInstanceOf(UnauthorizedError);
+		// Existence check only — count (not findMany) since v3.3.0 batch 3.
+		expect(mocks.sessionCount).toHaveBeenCalled();
+		expect(mocks.sessionFindMany).not.toHaveBeenCalled();
+	});
+
+	it("returns the payload when at least one active session exists", async () => {
+		const { jwtUtils } = await import("@/lib/jwt");
+		const token = jwtUtils.generateToken("user-1");
+		mocks.sessionCount.mockResolvedValueOnce(1);
+
+		const result = await verifyTokenSession(token);
+		expect(result.userId).toBe("user-1");
+		expect(typeof result.exp).toBe("number");
 	});
 
 	it("throws UnauthorizedError when the token is blacklisted", async () => {

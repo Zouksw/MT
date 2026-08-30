@@ -4,31 +4,48 @@
  * The route is thin (swagger-ui-express middleware + raw spec JSON), but a
  * suite still guards two real failure modes: the mount disappearing from
  * app.ts, and swaggerSpec generation throwing at import time (it reflects
- * over route annotations). DEVELOPMENT-PLAN D2 evaluated simply documenting
- * a skip; a 3-case suite is cheaper than the argument and matches the
- * fail-loud route-suite pattern used everywhere else.
+ * over route annotations). Since v3.3.0 batch 3 the surface is
+ * AUTHENTICATED (D12): the spec maps the full endpoint surface, which is
+ * reconnaissance value for anonymous crawlers and none for users.
  */
 
 import type { Express } from "express";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createTestApp } from "@/test/helpers/testApp";
+import { createTestApp, getAdminToken, requireDb } from "@/test/helpers/testApp";
 
 let app: Express;
+let adminToken: string;
 
 describe("Docs Routes", () => {
-	beforeAll(() => {
+	beforeAll(async () => {
 		app = createTestApp();
+		await requireDb("docs routes");
+		adminToken = await getAdminToken(app);
 	});
 
-	it("GET /api/docs serves the Swagger UI (HTML, no auth gate)", async () => {
-		const res = await request(app).get("/api/docs/").expect("Content-Type", /html/);
+	it("GET /api/docs requires authentication (401 without token)", async () => {
+		const res = await request(app).get("/api/docs/");
+
+		expect(res.status).toBe(401);
+	});
+
+	it("GET /api/docs serves the Swagger UI (HTML) when authenticated", async () => {
+		const res = await request(app)
+			.get("/api/docs/")
+			.set("Authorization", `Bearer ${adminToken}`)
+			.expect("Content-Type", /html/);
 
 		expect(res.status).toBe(200);
 	});
 
-	it("GET /api/docs/json returns the raw OpenAPI spec", async () => {
-		const res = await request(app).get("/api/docs/json");
+	it("GET /api/docs/json is gated too and returns the spec when authenticated", async () => {
+		const anon = await request(app).get("/api/docs/json");
+		expect(anon.status).toBe(401);
+
+		const res = await request(app)
+			.get("/api/docs/json")
+			.set("Authorization", `Bearer ${adminToken}`);
 
 		expect(res.status).toBe(200);
 		expect(res.body).toHaveProperty("openapi");
@@ -39,7 +56,9 @@ describe("Docs Routes", () => {
 	});
 
 	it("spec advertises an auth scheme (bearer for the JWT flow)", async () => {
-		const res = await request(app).get("/api/docs/json");
+		const res = await request(app)
+			.get("/api/docs/json")
+			.set("Authorization", `Bearer ${adminToken}`);
 
 		expect(res.status).toBe(200);
 		expect(res.body.components?.securitySchemes).toBeDefined();

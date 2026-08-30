@@ -25,8 +25,22 @@ export interface NotificationEvent {
 	timestamp: string;
 }
 
-// Track last forecast direction per commodity for change detection
+// Track last forecast direction per commodity for change detection.
+// Process-local by design: a restart forgets prior directions, which only
+// SUPPRESSES (never fabricates) one change notification — acceptable for a
+// best-effort notifier. Explicitly bounded (v3.3.0 batch 3, round-106
+// registered unbounded growth) with FIFO eviction beyond the commodity
+// population size; eviction is as harmless as a restart.
+const LAST_DIRECTIONS_MAX = 512;
 const lastDirections = new Map<string, Direction>();
+
+function rememberDirection(commodityId: string, direction: Direction): void {
+	if (lastDirections.size >= LAST_DIRECTIONS_MAX && !lastDirections.has(commodityId)) {
+		const oldest = lastDirections.keys().next().value;
+		if (oldest !== undefined) lastDirections.delete(oldest);
+	}
+	lastDirections.set(commodityId, direction);
+}
 
 const DIRECTION_LABEL: Record<Direction, string> = {
 	up: "上涨",
@@ -46,7 +60,7 @@ export async function checkSignalChange(
 	const previous = lastDirections.get(commodityId);
 
 	// Update tracked direction
-	lastDirections.set(commodityId, newDirection);
+	rememberDirection(commodityId, newDirection);
 
 	if (!previous || previous === newDirection) return;
 

@@ -71,10 +71,12 @@ export async function verifyTokenSession(token: string): Promise<{
 		if (await isTokenBlacklisted(token)) {
 			throw new UnauthorizedError("Token has been revoked");
 		}
-		const sessions = await prisma.session.findMany({
+		// Existence check only — count instead of loading every active
+		// session row into Node (v3.3.0 batch 3, round-106 registered).
+		const activeSessions = await prisma.session.count({
 			where: { userId: payload.userId, isActive: true },
 		});
-		if (sessions.length === 0) {
+		if (activeSessions === 0) {
 			throw new UnauthorizedError("No active session");
 		}
 		return { userId: payload.userId, exp: payload.exp ?? 0 };
