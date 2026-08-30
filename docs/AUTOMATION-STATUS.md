@@ -171,14 +171,14 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-31 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 99（2026-08-31） | **1036 pass / 1 skip** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 100（2026-08-31） | **1041 pass / 1 skip** |
 | frontend | jest 29 + Testing Library | jest.config.js | 39（2026-08-31） | **341 pass** |
-| inference | pytest 8 | conftest.py | 4（2026-08-30） | **61 pass** |
+| inference | pytest 8 | conftest.py | 4（2026-08-31） | **61 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 9 specs | chromium only |
 
-> 三者合计 **1438 全绿**（1036 + 341 + 61，截至 2026-08-31 round-142 第五波执行后实测；当日轨迹 1029+1/338/61 → 批 1 digest +2/+3 → 批 2 seed 对齐 ±0 → 批 3 收尾包 +5/+0〔docs 3→5、monthRange +3、verifyTokenSession 正路径 +1，authService mock 修正零净变化〕；批 1 首跑复现已知 flake ×3 后四次全量全绿〔--force 重建后 Redis 预测缓存全空的冷启动机制，round-136 首例、round-140 定位机理〕；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1443 全绿**（1041 + 341 + 61，截至 2026-08-31 round-144 实测；round-144 轨迹：1029+1/338/61〔round-140 基线〕→ round-142 三批 1036+1/341/61=1438 → round-144 批 A +5〔beefCutNormalizer 死别名守护 4 + /spreads 币种分组 1，新文件第 100 个〕；批 1 首跑复现已知 flake ×3 后四次全量全绿〔--force 重建后 Redis 预测缓存全空的冷启动机制，round-136 首例、round-140 定位机理〕；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
-**集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
+**集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（**mt_test**——`src/test/helpers/testApp.ts` 显式拒绝 mt_db 并在无 DATABASE_URL 时默认 mt_test，round-144 复核修正本段旧文"mt_db"的失实表述）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
 **测试系统重构（round-60，2026-08-01）**——目标"先进测试系统：只保留真正有意义的测试"。三准则贯穿：每个留存的测试 ① 真测生产代码 ② 真行为断言 ③ 失败显式报红。
 - **同义反复根治**：`alertRules.test.ts` 17 case 改测**真** `isConditionMet`（export 出来；mutation 验证能捕生产漂移，原测本地副本 = 永绿）；`injection-auth.test.ts` 删 SQLi/XSS 同义反复块（测测试内手写对象/Prisma 保证，非本仓代码；backend 无 sanitizer 可 redirect），保留 7 真 authz 测试。

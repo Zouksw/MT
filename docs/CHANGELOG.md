@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-144：问题解决轮 — 登记残留四项收口（/spreads 币种 + D13 + lifespan + metrics 定案）
+
+用户指令"解决当前项目存在的问题"。先盘点（KNOWN-ISSUES/TECH-DEBT/V5 缓办清单 × 只读核实）后分类执行：用户输入阻塞（4 空 key/域名/CSV 导入）与时间门（批 0a/0b）不动，已有定案项（R3 保留等）不重开，登记可解决项全部落地。
+
+- **批 A `b6a2882`（后端正确性）**：① `/api/beef/spreads` 币种进分组键——原按 (cutCode, source, country) 聚 min/max/avg，USD/kg 与 BRL/kg 同桶是数字噪音（注释还错写按 date 分组）；现键含 `[currency]`，+1 集成测试（同源双币种必须分桶）。② **D13 闭**：beef cheek 别名从非规范 OFFAL 重指规范 `BEEF_CHEEK`（Offal primal、四语元数据、HS 0206.10 与同区一致），mt_db+mt_test taxonomy 幂等 upsert（两库各 INSERT 0 1），**死别名结构守护测试**（ALIASES 全量值必须解析到 CUT_MAPPINGS 规范码 + 规范码自反归一，杜绝下一处 OFFAL）——此前 cheek 行会被静默写成 taxonomy 不认识的 cutCode，下游永远不可见。③ vitest coverage 排除项陈旧路径修正（`src/test-helpers.ts`〔不存在〕→ `src/test/helpers/**`〔round-117 后真实位置〕）。④ beef.ts 陈旧注释（beefImport.ts→beefIngest.ts）。backend **1041+1**（100 文件，+5 全新，零回退）。
+- **批 B `7e87a98`（inference lifespan）**：`@app.on_event("startup")`（FastAPI 已弃用）→ `asynccontextmanager` lifespan；助手函数上移、启动序不变（torch 线程预算 → 串行 Chronos 预加载）。ruff 全过、pytest 61 绿（**warning 22→20**，弃用告警对消失）、重启后 live `/ready` chronos **3/3 经 lifespan 预加载**（若 lifespan 未触发则不可能 3 pipeline loaded）。
+- **metrics GET 提权——定案不提（决策关闭）**：载荷实测为纯聚合运维指标（内存/CPU/uptime/延迟分位/请求计数），无用户级数据；唯一消费者 `/dashboard/performance` 面向全体登录用户是有意设计；提权需引入全库零先例的前端 role-gate 或让普通用户页 403——负收益。载荷若日后引入用户级数据则重开（TECH-DEBT 留档）。
+- **顺带修正**：AUTOMATION-STATUS §五"集成测试用真实 PostgreSQL（mt_db）"失实表述（testApp helper 显式拒绝 mt_db、默认 mt_test）；API.md /spreads 行补币种分组说明。
+- **门禁**：tsc（backend）×每批、biome 触达文件 0 警告、backend 全量 **1041+1**、inference 全量 **61**（批 B 门禁实测）、frontend 本轮零改动未触（最近全量 341 绿于 round-143 评估轮实测在案）、backend build、PM2 重启×2（backend+inference）、live（/cuts 含 BEEF_CHEEK〔牛颊肉〕、/spreads 匿名 401 + 带权 33 桶全带 `[币种]`、/health×3、/ready chronos 3/3）。基线 **1443**（1041+1 + 341 + 61）。
+
 ### 2026-08-31 — round-143：状态维护轮 — ops 全量扫描 + healthcheck 哨兵误报根治
 
 用户指令"维护当前项目状态"。只读诊断扫描（ops-check）+ 一处监控修复。

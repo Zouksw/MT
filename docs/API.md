@@ -161,7 +161,7 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/beef/prices/history/:cutCode` | GET | Price history (`?days=`) |
 | `/api/beef/weekly-kill` | GET | Weekly slaughter volumes |
 | `/api/beef/cold-storage` | GET | Cold-storage inventory |
-| `/api/beef/spreads` | GET | Cut-price spreads (API-only) |
+| `/api/beef/spreads` | GET | Cut-price spreads, grouped per (source, country, **currency**) — mixed-currency rows never share a bucket (round-144) |
 | `/api/beef/forecasts` | GET | Batch 7-day consensus forecasts for all forecastable cuts |
 | `/api/beef/forecasts/:cutCode` | GET | Single-cut consensus forecast |
 | `/api/beef/import/template` | GET | CSV import template (D1 manual backfill path) |
