@@ -1,8 +1,8 @@
 ---
 title: "牧集（Mooket）对标分析"
 en_title: "Competitive Analysis: MT vs Mooket"
-version: "1.1.1"
-last_updated: "2026-08-23"
+version: "1.2.0"
+last_updated: "2026-08-30"
 status: "active"
 maintainer: "MT Team"
 tags:
@@ -21,6 +21,8 @@ related_docs:
 > 取证方式：MT 侧 = 生产库 `mt_db` psql 实测 + 代码事实（命令见附录）；牧集侧 = 公开页面与应用商店详情（付费内页无法未登录验证，局限声明见附录）。本文所有数字附取证日期。
 >
 > **v1.1.0（2026-08-23 晚，第二轮复评）**：同日 rounds 124-127 落地后对全文复核。三处实质性修订：① **撤回一项优势声明**——初版 §四.2 所称"beef_carcass_us 美国胴体价、日更、全站唯一日更牛肉序列"实为 CBBTCUSD 比特币错标（round-126 发现并修复，详见 §四.2 修订注）；② 新增 §七"第二轮复评结论"——含比初版更严重的新发现：**背景预测循环当前与牛肉零交集**（17 个在预测商品全是汇率/CME）；③ 初版全部表面数字按当前实测刷新（45 页 / 18 源 / 1390 测试），牧集版本证据更新（App Store V2.26.5，2026-06-10）。
+>
+> **v1.2.0（2026-08-30，round-134 深度探查）**：新增 §八——牧集 web SPA 公共 JS 构建产物的**全量路由图**（~50 条）、bundle 技术栈、首页报盘真实样例（行业数据词汇）、工商/融资/招聘事实；§七.1 的"预测循环与牛肉零交集"缺口已在 rounds 128-132 闭合（ADR-0001 Accepted，月度序列进循环，live `+ 6 monthly series`），见该节修订注。落地方案见 [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) v3.0.0。
 
 ---
 
@@ -210,6 +212,7 @@ SELECT count(*) FROM market_news;                              -- 22（RSS 持�
 ### 差距：一项加深，四项不变
 
 1. **【加深】预测循环与牛肉零交集**——比初版认知更严重的价值错位。初版以为有一条例行预测的日更牛肉序列；复评实测：背景预测 24h 覆盖 17 个商品**全部是汇率/CME**，`beef_carcass_us` **0 条预测**（6165 条错标清除后，月度序列被调度器 7 天新鲜度门控排除，round-127 已登记决策项）。"AI 牛肉预测平台"的自动化产出当前没有一条落在牛肉价格上——下游前端/信号/相关性继承同样的空洞。**这是 P0（数据解冻）+ 月度序列管线决策项的共同缺口，比 v1.0.0 描述的"冻结"更根本。**
+   > **已闭合（2026-08-30 补记，rounds 128-132）**：round-129/131 批 6a/6b/6c 落地月度序列语义（ADR-0001 Accepted：horizon 按月、验证窗按月、仅新实际点后重预测、cadence 感知订阅），round-132 修复双节奏泄漏与 60→90d 窗口。live 实测：调度器 `Subscribed 15 daily + 6 monthly`（含 beef_carcass_us），`predictionBeefCoverage24h` 0→1，月度预测 MAPE 验证环端到端通过（`verify-monthly-lifecycle.ts` 硬验收）。本条不再是开放缺口；月度节律导致的指标"眨眼"另行登记（TECH-DEBT round-132）。
 2. 数据新鲜度：核心部位 2401 行冻结 115 天不变；全站日更牛肉序列从"以为有"变为"确认为无"（§四.2 撤回）。
 3. 结构性错配（场外现货不可爬）、分发（3 用户 vs App+运营）、获客闭环（红线禁交易、飞轮不可复制）、内容运营（22 条 vs 分析师研报）——四项与初版相同。牧集 App Store V2.26.5（2026-06-10）证明其迭代仍在继续。
 
@@ -222,4 +225,50 @@ SELECT count(*) FROM market_news;                              -- 22（RSS 持�
 
 ### 净结论
 
-差距的本质（资产型 vs 能力型）与落实路径（P0 解冻 → P1 公信力 → P2 分发）复评后**不变且更清晰**；变化在两处：① 初版的一项能力型优势（日更牛肉序列）被证明是数据错标假象，复评后 MT 的全部优势主张均有可复现实测支撑；② 新识别的最高优先工程缺口是**让预测循环重新覆盖牛肉**（月度序列门控语义 + 部位数据解冻双管齐下），它同时是 P0 与 P1 的交点。
+差距的本质（资产型 vs 能力型）与落实路径（P0 解冻 → P1 公信力 → P2 分发）复评后**不变且更清晰**；变化在两处：① 初版的一项能力型优势（日更牛肉序列）被证明是数据错标假象，复评后 MT 的全部优势主张均有可复现实测支撑；② 新识别的最高优先工程缺口是**让预测循环重新覆盖牛肉**（月度序列门控语义 + 部位数据解冻双管齐下），它同时是 P0 与 P1 的交点（**2026-08-30 补记：已闭合，见 §七.1 修订注**）。
+
+---
+
+## 八、深度探查：web SPA 路由图与实现证据（2026-08-30，round-134）
+
+> 取证方法：本环境无可用浏览器后端（`agent.browsers.list()` 为空，SPA 无法真渲染），故改用**公共静态构建产物取证**——`curl` 拉取 web.mooket.com 的 HTML 壳与公共 JS bundle（`/assets/index-*.js` 1.6MB），从中提取全量前端路由表与依赖技术栈；辅以搜索引擎缓存的首页渲染内容、工商信息（天眼查/投资界）、BOSS 直聘在招数、App Store 结构化数据。**全部为公开资产，未触碰任何需登录/付费的接口**；付费墙内结论仍不可验证（局限同初版）。
+
+### 8.1 Web 端全量路由图（SPA bundle 提取，~50 条，按业务分组）
+
+| 业务面 | 路由 | 解读 |
+|--------|------|------|
+| **交易撮合（~20 条，web 端的主体）** | `/trading`、`/offer/list`（报盘大厅）、`/offer/details`、`/myOffer/{add,edit,detail,success}`、`/myPurchase`（我的求购）、`/mySale/{add,edit,detail}`、`/noGroupOffer`、`/noGroupPurchase`、`/buyer/{list,details}`、`/merchant/details`（商家主页）、`/bussiness/{settleIn,bussinessBaseEdit,bussinessHomeEdit}`（入驻+店铺资料/门面编辑）、`/myBussiness` | 报盘/求购双向市场 + 商家店铺体系 + 入驻流程，闭环完整 |
+| **行情（仅 2 条）** | `/marketTrends/index`、`/marketTrends/details` | 行情在 web 端只是**引流面**，非主体 |
+| **关注（watchlist 对应物）** | `/followProduct`、`/followProduct/{add,edit}` | 牧集有"关注产品"功能——MT 的 `/watchlists`（round-126）存在直接对等物，**方向被竞品验证** |
+| **资讯/研报** | `/information/index`、`/information/hot/list`、`/information/report/{list,search}`、`/information/details/:id`、`/information/search` | 研报是独立子模块（带检索）——对应其"付费研报订阅"定位；bundle 含 wangEditor 富文本（人工撰写发布） |
+| **IM 沟通** | `/chat/index`（bundle 含 TencentCloudChat SDK） | 交易沟通是核心基建 |
+| **SK/金融风控面** | `/factorData/index`（保理数据）、`/financialInformation`、`/creditInformation`、`/documentInformation`（单证） | mujidigital.com 所述 SK 系统（冻品资产风险管理）的 web 面：供应链金融基建 |
+| **B2B 多角色** | `/personnelManagement`、`/roleConfiguration`、`/user/details`、`/workLayout`、`/platformLayout` | 企业客户子账号与权限体系 |
+| **通用** | `/login`、`/register`、`/userCenter(/edit)`、`/privacy`、`/mujiprivacy`、`/userAgreement`、`/home` | — |
+
+**结构性结论（路由数量比）**：交易面 ~20 : 行情面 2——牧集 web 端本质是**市场优先**，行情是内容引流。这与 §一 的"数据是交易副产品"判断在实现层得到直接证实。
+
+### 8.2 技术栈与获客证据（bundle + meta）
+
+- **栈**：Vue 3 + Vite（`vue-*.js`/`index-*.js` 命名指纹）、TencentCloudChat（IM）、wangEditor（富文本内容发布）、腾讯云 COS（对象存储——单证/报告/图片）、alicdn iconfont。无 SSR/prerender 迹象（robots.txt、sitemap.xml 均回退 SPA 壳，未公开站点地图）。
+- **SEO 策略**：meta description/keywords 堆砌**长尾疑问词**（"为什么进口牛肉比国产便宜"、"中国进口牛肉的8个国家"、"俄罗斯进口牛肉价格"……）——获客含自然搜索路线，吃进口牛肉常识性长尾查询。MT 目前公开面（landing + /ai/track-record）无中文长尾内容策略。
+
+### 8.3 报盘数据词汇（首页真实样例，搜索引擎缓存提取）
+
+> 眼肉盖（**谷饲，100D+ 安格斯75VL**）阿根廷 **3270 厂** —— 特价 **59元/千克**，**25吨**；牛霖（草饲**97VL**）巴西 **SIF2924** —— 58元/千克，27吨；西冷肋条（草饲75VL）巴西 SIF2583 —— 上海市特价
+
+一条中国牛肉贸易的报价 = **部位名 × 饲养方式（谷饲/草饲）× 饲养天数（100D+）× 品种（安格斯）× 瘦肉率（VL）× 厂号（3270/SIF…）× 计价（RMB/kg）× 吨数 × 仓位（上海市）**。这是行业数据的真实 schema——MT 的 `BeefCutPrice`（factoryId + cutCode + price + currency + unit）覆盖了部位/工厂/价格，**缺饲养方式、天数、瘦肉率、品种、仓位五维**。这是本轮深探最有操作价值的发现：数据词汇对齐是 MT 数据模型的下一步（落地方案见 IMPROVEMENT-PLAN v3.0.0 批 1）。
+
+### 8.4 公司与运营事实（工商/招聘/App Store，2026-08-30 检索）
+
+- 牧集网络科技（上海）有限公司：**2021-10-14 成立，注册资本 1000 万，法人李晨唯**；**天使轮 2024-02-07（金额未披露，投资界口径）**；对外投资 2 家；商标 16 条。关联企业上海牧集科技（集团）有限公司（2023-06 成立，肉类蛋白流通冷链生态）。
+- BOSS 直聘在招 **2 个岗位**（小团队体量，与天使轮阶段一致）；App Store **4.8/43 评分**（2026-08-30 结构化数据复核，与 08-23 一致；版本 V2.26.5/2026-06-10 为 08-23 口径）。
+- **校准**："百万用户"系自我宣传（初版已声明未经核实）；43 条 App Store 评分 + 2 在招岗位 + 天使轮，共同指向其实际体量为**早期 B2B SaaS 公司**（真身是 SK 系统 + 冷链 SaaS 的企业服务，toC App 是获客门面）。MT 与之竞争的平面（数据/分析/预测）上，对方并非不可追赶的巨头——差距在**国内现货数据网络与运营人力**，这恰是 MT 明确不拼的面。
+
+### 8.5 深探后的五条战略含义
+
+1. **"不拼撮合"从定位选择升级为实现层证据**：交易面是牧集 web 的 ~20 条路由主体、IM/店铺/入驻/金融全套基建；MT 复制这套需运营+合规+人力，且与 §九 红线冲突——维持不做，专注其薄弱面（行情深度 × 预测）。
+2. **watchlist 方向被竞品验证**：`/followProduct` 存在 add/edit 完整功能；MT round-126 的 `/watchlists` 是对等能力，继续作为留存钩子运营。
+3. **数据词汇缺口是最可操作的差距**：饲养/VL/品种/仓位五维是行业报价的"普通话"（§8.3）；MT 的国际源数据（USDA/MLA）天然携带部分维度（grading/lean），导入与展示对齐后，"国际行情"才真正可被国内贸易商阅读。
+4. **内容面打法分化**：牧集 = 人力研报（wangEditor）+ 长尾 SEO；MT 的诚实应法 = **真数据自动摘要 + 公开预测对错档案**（已有 track-record 基建），补一张中文公开行情面吃长尾流量（零人力、真数据、可验证）。
+5. **牧集体量现实消解"巨头威慑"**：天使轮/2 岗/43 评分——其在数据/分析/预测平面的投入有限（行情仅 2 条路由）；MT 在自己选定的平面上（国际源管道 + 9 模型可验证预测 + 131 端点全栈）**工程能力并不落后**，落后的是数据资产与分发（§二 结论不变，但量级感校准）。
