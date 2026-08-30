@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-133 冗余清理 + 状态维护轮
+
+用户指令"清理当前项目的冗余项，维护项目状态"。全仓只读审计（文件级零引用 + 双端依赖逐包 + inference 对照真实导入名）后分三批执行，每批独立门禁。**审计结论：代码库文件级已经很紧**——backend 102 文件零死文件，frontend 仅 1 个真死项，依赖面仅 1 个可删包。
+
+- **批 1 `015766f`（backend 依赖）**：删 `pg`——全仓 0 引用（raw SQL 全走 Prisma 引擎），lockfile -111 行。tsc + backend **1004+1**（97 文件，与 round-132 基线逐位一致）+ build + PM2 重启 + live /health、login 均 200。
+- **批 2 `b3ae606`（frontend 空壳）**：删 `src/app/api/web-vitals/route.ts`——37 行 TODO-stub（只 console.log + "In production you would send this to your analytics service"注释）；真实数据汇是后端 `/api/metrics/web-vitals`（WebVitals.tsx beacon，经 Next rewrite 代理），该前端路由 0 调用方且是 `src/app/api/` 唯一文件（目录连带清空）。jest **324**（35 套）不变 + build（产物路由表已无该项）+ `pm2 restart mt-frontend` + live：旧路径直连/经 rewrite 均 404、真实 beacon 200、首页 200。
+- **批 3 `786b094`（运维断裂修复）**：审计顺带发现 `scripts/user-management.sh` 两处 `require('bcrypt')` **从未能解析**（全仓只有 bcryptjs；从 backend cwd 实测 MODULE_NOT_FOUND）——create-admin / change-password 两条密码路径一直是坏的。对齐 `bcryptjs`（与 authService 同 `hash(pw, 12)`，$2a$ 前缀实测）+ 删 root 残留 `@types/bcrypt`（给从未安装的包的类型）。`list-users` 只读路径实跑验证。
+- **状态维护（TECH-DEBT）**：round-106 登记的"死代码类"六项经逐条 grep 复核**全数已在历史轮次清理**（modelService→round-132、cache null 路径/tokenBlacklist 三函数/auth 采样查询/_importSchema→各轮、ForecastTrendChart→f131707）——登记文本滞后本轮补记关闭；`topCuts` 登记地址同步至合并后的 `beefQueries.ts`；metrics 提权项中 `/api/security/audit` 对照失效标注；新增 §十六 本轮记录。
+- **排除的误报（防后续重扫再踩）**：前端零引用扫描 9/10 命中为目录导入（`ui/*/index.tsx` 经 `@/components/ui/X` 存活）或框架约定文件（middleware.ts、LoadingState→Skeleton 相对导入）；inference 的 sklearn/pandas 系 sktime/statsmodels 硬传递依赖的显式钉版、chronos 系函数内懒加载导入——均不可删。
+
 ### 2026-08-30 — round-132 收尾轮：watchlist 月度价格、D6 孤儿端点三组删除、D7 定案
 
 用户指令"继续完成剩余的任务"。收尾第二波遗留的三项（TECH-DEBT 登记 watchlist 修复 + D6/D7 决策项），每批独立门禁：

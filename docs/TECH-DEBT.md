@@ -269,25 +269,25 @@ round-106 四路并行审查（路由+中间件 / 服务层 / 前端 / 推理+�
 
 **产品/设计决策类（等方向）：**
 - **套餐限额从未执行**：`usageService.checkLimit/trackUsage` 零生产 caller（仅测试引用）——广告的 watchlists/AI 模型/signals 限额从不强制，`UsageRecord` 从不写入，`GET /billing/usage` 永远空数组。要么接入 watchlist/signal/predict 路由，要么停止广告限额（诚实优先）。
-- **ForecastTrendChart 待真数据源**：dashboard 槽位已移除（组件保留），需后端逐日预测计数端点（如 `/stats/forecasts-per-day`）后重接。
+- **ForecastTrendChart 待真数据源**：~~dashboard 槽位已移除（组件保留）~~ **组件本体已删（f131707，-390 行三死文件批次之一；2026-08-30 复核）**。若未来做逐日预测计数端点需重建组件。
 - **datasets 全员共享硬编码 org**：`datasetService.ts:106` `default-org-id` upsert——所有用户的 dataset 落进同一个 org（schema 明确 org 应 per-user）。需 per-user org 或 org 可选迁移。
 - **/spreads 混币种统计**：beef.ts spreads 按 source+country 聚合 min/max/avg，但 currency 列存在多币种（BRL/USD 混算）。需按币种分组或先归一。
 - **beef cheek → OFFAL 死别名**：beefCutNormalizer.ts:764 映射到不存在的 cutCode，行被静默丢弃。需 taxonomy 决策（加 CHEEK 码或删别名）。
 
-**死代码类（AGENTS §十.5：先记录不删）：**
-- `modelService.createModelRecord` 零 caller（模型列表完全依赖 seed）。
-- `cache.ts` null-cache 读路径（无人写 `null:` 键，白付一次 EXISTS RT）。
-- `tokenBlacklist` 的 getBlacklistStats/clearBlacklist/checkTokenBlacklist 零生产 caller；stats 永远返回 null。
-- `middleware/auth.ts:91` 1% 采样的 session-count 查询结果被丢弃（每次白付一次 count）。
-- `marketData.ts:54` `_importSchema` 定义未用；前端 `ui/select.tsx` 零导入；`ui/button.tsx`+`ui/card.tsx` 与 `ui/Button/`+`ui/Card/` 双实现并存。
-- `alertNotifications.lastDirections` 内存 Map：重启即失（首比较不通知）且无界增长；`beefAggregation.topCuts` 无 orderBy 非确定 + bridge 代理行混入国家均值未标注。
+**死代码类（2026-08-30 round-133 全量复核：六项全部已在历史轮次清理，登记文本滞后——本轮逐项 grep 实证后关闭）：**
+- ~~`modelService.createModelRecord` 零 caller~~ → **整个 modelService 已随 D6 删除（round-132 d9c4e10）**。
+- ~~`cache.ts` null-cache 读路径~~ → **已删**（cache.ts:30 留有决策注释：无人写 `null:` 键，miss 即 miss，不付 EXISTS 往返）。
+- ~~`tokenBlacklist` 的 getBlacklistStats/clearBlacklist/checkTokenBlacklist~~ → **已删**；现存 `blacklistToken`/`isTokenBlacklisted` 两函数 authService 在用（+3 测试文件）。
+- ~~`middleware/auth.ts` 1% 采样 session-count 查询被丢弃~~ → **已删**（auth.ts 现无任何 count/采样残留，grep 实证）。
+- ~~`marketData.ts _importSchema`；`ui/select.tsx`；button/card 双实现~~ → **均已清**（_importSchema grep 零命中；select.tsx 系误报、TD-9 已 RESCINDED；button/card 双实现 round-114 87cf1ec 收敛）。
+- `alertNotifications.lastDirections` 内存 Map（重启即失 + 无界增长）**仍开**（行为缺陷非死代码，文件 alertNotifications.ts:29 现存）；`topCuts` 排序无次级 orderBy **仍开**，文件已迁 `beefQueries.ts:96`（round-117 合并）；bridge 代理行混入国家均值未标注**仍开**。
 
 **低优先级正确性/加固（后续批次可做）：**
 - `datasetService` 0 数据点导入返回 success 且 rowsCount 被覆盖（非累加）。
 - `notificationChannels` 每次调用打 "SMTP not configured" 警告（应打一次）。
 - `helpers.monthRange` 31 日 setMonth 跳月（现两 caller 均传月初，latent）；`normalizer.ts:114` 回退路径本地时区构 Date（其余 UTC）。
 - `authService.verifyTokenSession` findMany 全量 session（应 count）；`renameWatchlist` 撞唯一名 P2002 → 500。
-- metrics GET 仅 authenticate（/api/security/audit 是 ADMIN 门）——是否提权待定；socket `join-timeseries` 房间名未校验且不计入 20 房上限；`/api/docs` Swagger 无鉴权暴露全端点面。
+- metrics GET 仅 authenticate（~~/api/security/audit 是 ADMIN 门~~ 该组端点已删 round-132，此对照失效）——是否提权待定；socket `join-timeseries` 房间名未校验且不计入 20 房上限；`/api/docs` Swagger 无鉴权暴露全端点面。
 - `authRateLimiter`（10/15min/IP）被 login+refresh+change-password 共用——NAT 环境误锁。
 - inference: `@app.on_event` 已弃用（应 lifespan）；负价格未拒（边界设计决策）；批量 gc.collect() 每项一次（可提升为每批一次）。
 - 前端剩余 biome 警告 10 条（noExplicitAny 等 judgment-call 规则，均存量）。
@@ -583,3 +583,21 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **测试口径说明**：backend 1011+1 → **1004+1**（97 文件）——减少的 7 条全部是被删服务 manualImport 自带的测试（删除功能的测试随功能走，非覆盖回退）；frontend **317** 不变；e2e 规格 10→9。合计 **1385 全绿**。
 
 **明确不动（有登记依据或属核心/决策项）**：watchlists/portfolios 后端（D1 决策项，仅删了前端死 hooks，端点保留）；`/api/models`(8)/`/api/security`(3)/`/api/analytics`(2)（产品决策）；`/api/inference/predict/batch`（推理服务侧联动，单列）；inacData.ts（D1 源复活候选，登记休眠）；beefCutNormalizer 的 detectFieldMapping（normalizer 模块活体、有测试）；EDGE Prisma 模型 coldStorage/weeklyKill/usageRecord（牛肉产业链数据，1 引用 LIVE，删除需迁移单列轮次）。
+
+## 十六、冗余清理 + 状态维护轮（round-133，2026-08-30，用户指令："清理当前项目的冗余项，维护项目状态"）
+
+方法：全仓只读审计（backend/frontend 文件级零引用扫描 + 双端依赖逐包 grep + inference requirements 对照真实导入名 + root 工具链），登记项逐条新鲜复核，可删项分三批独立门禁执行。
+
+**审计结论（代码库文件级已经很紧）**：backend src 102 文件零死文件（唯一命中 test-setup.ts 系 vitest setupFiles 误报）；frontend 零引用扫描仅 1 个真死项（其余 9 个命中均为目录导入/框架约定文件误报——middleware.ts、ui/*/index.tsx 经 `@/components/ui/X` 目录导入存活，Skeleton 经 LoadingState 相对导入存活）；依赖面 backend 仅 `pg`、frontend 全部在用（tw-animate-css 与 shadcn/tailwind.css 均被 globals.css 导入）、inference 无可删（sklearn/pandas 系 sktime/statsmodels 硬传递依赖的显式钉版，chronos 为函数内懒加载导入）。
+
+| 批 | 提交 | 内容 |
+|----|------|------|
+| 1 | `015766f` | backend 删未用依赖 `pg`（全仓 0 引用，raw SQL 全走 Prisma 引擎） |
+| 2 | `b3ae606` | frontend 删空壳路由 `src/app/api/web-vitals/route.ts`（37 行 TODO-stub 只 console.log；真实数据汇是后端 `/api/metrics/web-vitals`，前端零调用方；连带 `src/app/api/` 目录清空） |
+| 3 | `786b094` | **修复顺带发现的真断裂**：`scripts/user-management.sh` 两处 `require('bcrypt')` 全仓无此包（backend 只有 bcryptjs）——create-admin/change-password 两条密码路径从未能跑通；对齐 bcryptjs（与 authService 同 hash(pw,12)）+ 删 root 残留 `@types/bcrypt`（给从未安装的包的类型） |
+
+**live 验证**：批2 路由删除后 `/api/web-vitals` 直连与经 Next rewrite 均 404、真实 beacon `/api/metrics/web-vitals` 200、首页 200；批3 `list-users` 只读路径实跑通、bcryptjs hash($2a$/12 轮)/compare 与 authService 同参验证；批1 /health+login 200。**测试**：backend **1004+1**（97 文件）、frontend **324**（35 套）均与 round-132 基线逐位一致，零回退。
+
+**顺带登记**：PM2 管理的生产前端不可用 `pnpm restart:frontend`（restart.sh 会拒绝并提示先 `pm2 delete`）——正确路径是 `cd frontend && pnpm build && pm2 restart mt-frontend`（本轮实际操作序）。
+
+**round-106 "死代码类" 登记六项全数关闭**（详见上文该节 2026-08-30 复核批注）——实际清理发生在 round-112~132 各轮，登记文本一直未同步，本轮补记。
