@@ -10,8 +10,9 @@ import { swrFetcher } from "@/lib/swr-fetcher";
  * The backend surface (7 endpoints, backend/src/routes/watchlist.ts) shipped
  * with zero frontend consumers; this hook + the /watchlists page are the
  * minimal consuming UI: list watchlists, add/remove a commodity, see its
- * latest quote. Deliberately NOT built: rename/delete-list UI and the
- * /api/portfolios analysis groups (still API-only, TECH-DEBT §十五).
+ * latest quote. Deliberately NOT built: rename/delete-list UI. (The
+ * /api/portfolios analysis groups never gained a consumer either and were
+ * removed with their tables — round-140 D3.)
  */
 
 export interface WatchlistItem {

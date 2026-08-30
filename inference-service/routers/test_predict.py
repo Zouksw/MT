@@ -14,8 +14,6 @@ Run:  cd inference-service && source venv/bin/activate && pytest -q
 
 from typing import Any
 
-from routers.predict import BATCH_MAX_WORKERS
-
 # A minimal valid payload reused across tests. Two values + two timestamps is
 # the smallest input the schema accepts (min_length=2 on `values`).
 BASE_PAYLOAD: dict[str, Any] = {
@@ -124,72 +122,7 @@ def test_predict_step_inference_from_irregular_timestamps(client, monkeypatch):
     assert ts == [12_000, 13_000, 14_000]
 
 
-def test_predict_batch_returns_one_result_per_request(client, monkeypatch):
-    """/predict/batch preserves order and never aborts the whole batch on one
-    failure — errors come back inline as {error, model_id}."""
 
-    call_count = {"n": 0}
-
-    def fake_predict(**kwargs):
-        call_count["n"] += 1
-        if call_count["n"] == 2:
-            raise RuntimeError("simulated model failure")
-        return {"values": [1.0] * kwargs["horizon"]}
-
-    monkeypatch.setattr("routers.predict.predict", fake_predict)
-
-    requests = [
-        {**BASE_PAYLOAD, "model_id": "arima"},
-        {**BASE_PAYLOAD, "model_id": "holtwinters"},  # will raise → inline error
-        {**BASE_PAYLOAD, "model_id": "naive_forecaster"},
-    ]
-    resp = client.post("/predict/batch", json=requests)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert len(body) == 3
-    # First and third succeed; second is an inline error object.
-    assert "values" in body[0]
-    assert "error" in body[1] and body[1]["model_id"] == "holtwinters"
-    assert "values" in body[2]
-
-
-def test_predict_batch_parallel_preserves_order_and_runs_concurrently(client, monkeypatch):
-    """round-105: the batch runs items on a thread pool but must remain
-    order-stable. The barrier proves concurrency: it only releases once
-    BATCH_MAX_WORKERS items are simultaneously in flight — under the old
-    serial loop the barrier would time out and this test fails fast."""
-
-    import threading
-    import time
-
-    entered = threading.Barrier(BATCH_MAX_WORKERS, timeout=10)
-
-    def fake_predict(**kwargs):
-        entered.wait()  # block until BATCH_MAX_WORKERS items are in flight
-        return {"values": [1.0] * kwargs["horizon"]}
-
-    monkeypatch.setattr("routers.predict.predict", fake_predict)
-
-    requests = [
-        {**BASE_PAYLOAD, "model_id": f"model_{i}"} for i in range(BATCH_MAX_WORKERS)
-    ]
-    start = time.monotonic()
-    resp = client.post("/predict/batch", json=requests)
-    elapsed = time.monotonic() - start
-
-    assert resp.status_code == 200
-    body = resp.json()
-    # Response order mirrors request order regardless of completion order.
-    assert [item["model_id"] for item in body] == [r["model_id"] for r in requests]
-    # The barrier released, so BATCH_MAX_WORKERS items overlapped — under the
-    # pre-round-105 serial loop this would have raised BrokenBarrierError.
-    assert elapsed < 10
-
-
-def test_predict_batch_rejects_non_list_body(client):
-    """/predict/batch expects a JSON array; a single object is a 422."""
-    resp = client.post("/predict/batch", json=BASE_PAYLOAD)
-    assert resp.status_code == 422
 
 
 # ─── Input robustness (round-19): bad inputs must 422, not 500 ───────────────
@@ -214,12 +147,6 @@ def test_predict_rejects_oversized_values(client):
     resp = client.post("/predict", json=payload)
     assert resp.status_code == 422
 
-
-def test_predict_batch_rejects_oversized_batch(client):
-    """/predict/batch capped at MAX_BATCH_SIZE (50). 51 → 422."""
-    requests = [{**BASE_PAYLOAD} for _ in range(51)]
-    resp = client.post("/predict/batch", json=requests)
-    assert resp.status_code == 422
 
 
 def test_predict_maps_engine_value_error_to_422(client, monkeypatch):
@@ -358,28 +285,3 @@ def test_predict_maps_linalg_error_to_503(client, monkeypatch):
     assert resp.status_code == 503
     assert "numerical failure" in resp.json()["detail"]
 
-
-def test_predict_batch_contains_nan_item_as_error_not_whole_batch_500(client, monkeypatch):
-    """Before the finite guard, one NaN item blew up the whole batch AFTER the
-    handler returned (json.dumps allow_nan=False); the other items' results
-    were lost. The guard turns the item into a per-item error object."""
-
-    def fake_predict(**kwargs):
-        if kwargs["model_id"] == "arima":
-            return {"values": [1.0, 2.0, 3.0, 4.0, 5.0]}
-        return {"values": [1.0, float("nan"), 3.0, 4.0, 5.0]}
-
-    monkeypatch.setattr("routers.predict.predict", fake_predict)
-    resp = client.post(
-        "/predict/batch",
-        json=[
-            {**BASE_PAYLOAD, "model_id": "arima"},
-            {**BASE_PAYLOAD, "model_id": "holtwinters"},
-            {**BASE_PAYLOAD, "model_id": "arima"},
-        ],
-    )
-    assert resp.status_code == 200
-    items = resp.json()
-    assert items[0]["values"] == [1.0, 2.0, 3.0, 4.0, 5.0]
-    assert "error" in items[1] and "non-finite" in items[1]["error"]
-    assert items[2]["values"] == [1.0, 2.0, 3.0, 4.0, 5.0]

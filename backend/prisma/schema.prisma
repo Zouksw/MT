@@ -29,7 +29,6 @@ model User {
   datasets            Dataset[]
   sessions            Session[]
   watchlists          Watchlist[]
-  portfolios          Portfolio[]
   subscription        Subscription?
   news                MarketNews[]
 
@@ -355,7 +354,6 @@ model Commodity {
   updatedAt      DateTime?        @updatedAt @map("updated_at")
   prices         CommodityPrice[]
   watchlistItems WatchlistItem[]
-  groupMembers   GroupMember[]
 
   @@index([category])
   @@index([originCountry])
@@ -408,7 +406,7 @@ model MarketFactor {
   @@map("market_factors")
 }
 
-// ─── Phase 2: Watchlist & Portfolio ───
+// ─── Phase 2: Watchlist ───
 
 model Watchlist {
   id        String          @id @default(uuid())
@@ -438,40 +436,6 @@ model WatchlistItem {
   @@index([watchlistId])
   @@index([commodityId])
   @@map("watchlist_items")
-}
-
-model Portfolio {
-  id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  name        String
-  description String?
-  isDefault   Boolean       @default(false) @map("is_default")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime?     @updatedAt @map("updated_at")
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  members     GroupMember[]
-
-  @@unique([userId, name])
-  @@index([userId])
-  @@map("portfolios")
-}
-
-/// A commodity tracked within an analysis group. Pure observation (no
-/// positions, sides, quantities, or P&L) — reuses the group only for
-/// correlation overlay (see GET /api/analytics/correlation).
-model GroupMember {
-  id          String    @id @default(uuid())
-  portfolioId String    @map("portfolio_id")
-  commodityId String    @map("commodity_id")
-  notes       String?
-  addedAt     DateTime  @default(now()) @map("added_at")
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-  commodity   Commodity @relation(fields: [commodityId], references: [id])
-
-  @@unique([portfolioId, commodityId])
-  @@index([portfolioId])
-  @@index([commodityId])
-  @@map("group_members")
 }
 
 // ─── Phase 7: Monetization ───

@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-140：批 4 收官 — D2（休眠表五模型处置）+ D3（portfolios 组 + predict/batch 两端删除）+ cbOT 孤儿清理
+
+用户指令"继续剩余事项"——对上轮列出的 D2/D3 决策请求逐项放行（round-132"继续完成剩余的任务"同款先例）。批 0a/0b 仍受时间/样本门（8 月月度点 ~9 月中发布）。
+
+- **D2 休眠表处置（`03fd1c7`）**：先定向备份 `backups/round140-d2/dormant-tables.sql`（生产实测：forecasts 0 / forecasting_models 0 / security_audit_logs 49——预测脚手架从未离开 seed 环境）→ 迁移 `20260830213000` DROP 三表 + 孤儿枚举 `ModelAlgorithm`，生产与 mt_test 双应用、`pg_tables` live 复核为空。schema 摘 SecurityAuditLog/ForecastingModel/Forecast 三模型 + User/Timeseries 四处反向关系；seed 整段摘除（模型/预测点播种、25 行安全审计夹具、MODEL_DEFS、汇总行——org 死引用教训：整段清非只清崩溃点）；`getUserProfile` 去 models 计数（无消费方）+ /api/auth/me openapi 同步。
+- **D3 孤儿两面删除（本条与 D2 各一独立 commit）**：① `/api/portfolios` 路由组 7 端点 + 13 测试 + app 挂载，**连同 Portfolio/GroupMember 两表**（迁移 `20260830220000`；0 行数据、0 前端消费（useWatchlists 仅注释提及，已同步）；GroupMember 的"correlation overlay"注释所引 `/api/analytics/correlation` 早在 round-132 已删——两表与路由组互为唯一消费方，留表即立刻再造 D2 类休眠债，故同批收口）；② `/api/inference/predict/batch` 与推理服务 `POST /predict/batch` 两端及各自 batch 测试（backend −13 随组删、pytest −5 随端点删；Python 有限值守卫**保留**——单预测同依赖，其测试留）。live：404×3（backend 两处 + Python）+ /predict 200 + 三服务在线。**schema 模型 30→25、路由 18→17**；API.md 17 routers/123 endpoints 复测 + 补记批 3 遗漏的 /api/tools 节。
+- **cbOT 孤儿清理（数据操作，无代码）**：生产库删 `corn_cbOT`/`soybeans_cbOT` 两错误大小写 commodity 及各 4 行 world_bank 月度行（round-105 配置修正前的历史 typo 遗留；0 预测/0 关注引用，正确大小写 twin 的 fred 415 行 + usda_ams 180 行完好；现行小写配置不会重建）。
+- **门禁**：backend **1029+1**（99 文件，−13 恰为随组删除的 portfolios 测试，非覆盖回退——round-132 -34 同例）、frontend **338**（注释级改动复跑全绿）、inference **61**（−5 随端点删）；tsc×2 / biome×2 / ruff / 双 build / 三服务重启全过。**首跑 flake 复现并定位**：--force 重建 mt_test 后 Redis 预测缓存全空，首个全量并行跑中两个最重推理测试（beef forecasts / wheat_cme signals）冷启动超 30s，隔离与复跑均绿（round-136 已登记同类）。
+- **文档**：TECH-DEBT 两条登记转已解决；IMPROVEMENT-PLAN 批 4 执行状态收官块；AGENTS.md 模型 30→25 / 路由 18→17。
+
 ### 2026-08-30 — round-139（续3）：v3.2.0 批 4 部分落地 — D1（PRODUCT-SPEC 增补）+ D4（健康指标口径修正）执行，D2/D3 维持登记
 
 用户目标指令"完成后续的开发任务"；批 4 决策项按各自建议案执行非破坏性两项，破坏性删除项（D2 休眠表 / D3 孤儿路由组）不随通用目标放行、维持登记待逐项点头。

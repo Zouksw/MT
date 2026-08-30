@@ -21,7 +21,10 @@ REST API documentation for the MT beef-price platform.
 > `/api/forecasts*`, `/api/cache/*`, `/api/datasets/:id/export`), used the wrong
 > `/api/apikeys` prefix, and omitted ~95 real endpoints. This version was
 > regenerated from the actual route files (`backend/src/routes/*.ts`, mounts in
-> `backend/src/app.ts`): **17 routers, 131 endpoints**, all verified against code.
+> `backend/src/app.ts`): **17 routers, 123 endpoints**（2026-08-30 round-140 复测：
+> `grep -hE "router\.(get|post|put|patch|delete)\(" backend/src/routes/*.ts` 排除 test——
+> round-139 批 3 增 /api/tools、round-140 D3 删 portfolios 组 7 端点 + /predict/batch）,
+> all verified against code.
 
 ---
 
@@ -107,8 +110,7 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/inference/status` | GET | Inference service health summary (API-only) |
-| `/api/inference/predict` | POST | Run one model on a commodity (`{ commodityId, horizon, algorithm?, confidenceLevel? }`) |
-| `/api/inference/predict/batch` | POST | Batch variant (serial per-item; API-only) |
+| `/api/inference/predict` | POST | Run one model on a commodity (`{ commodityId, horizon, algorithm?, confidenceLevel? }`; cached, calibrated bounds) |
 | `/api/inference/predict/visualize` | POST | Predict + chart payload (used by `/ai/predict` page) |
 | `/api/inference/anomalies` | POST | Detect anomalies on a series (API-only) |
 | `/api/inference/anomalies/visualize` | POST | Anomalies + chart payload (used by `/ai/anomalies` page) |
@@ -241,18 +243,6 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/metrics/api-latency` | GET | API latency stats |
 | `/api/metrics/summary` | GET | Dashboard rollup (API-only) |
 
-## Portfolios — `/api/portfolios`（关注分组，API-only）
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/portfolios` | GET | List own portfolios |
-| `/api/portfolios` | POST | Create portfolio |
-| `/api/portfolios/:id` | GET | Portfolio detail |
-| `/api/portfolios/:id/members` | POST | Add member commodity |
-| `/api/portfolios/:id/members/:memberId` | PATCH | Update member |
-| `/api/portfolios/:id/members/:memberId` | DELETE | Remove member |
-| `/api/portfolios/:id` | DELETE | Delete portfolio |
-
 ## Watchlists — `/api/watchlists`（关注列表，API-only）
 
 | Endpoint | Method | Description |
@@ -264,6 +254,12 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/watchlists/:id/items` | POST | Add commodity |
 | `/api/watchlists/:id/items/:commodityId` | DELETE | Remove commodity |
 | `/api/watchlists/:id/quotes` | GET | Latest quotes for watched commodities |
+
+## Tools — `/api/tools`（公开只读工具，v3.2.0 批 3）
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/tools/landing-cost` | GET | 进口到岸成本测算（query：`baseSeries`/`originFx?`/`tariffPct?`/`vatPct?`/`freightUsdPerKg?`/`feesUsdPerKg?`/`lossPct?`）；白名单活价带日期/新鲜度旗标，税费为用户假设，平台不内置各国税率 |
 
 ## Docs — `/api/docs`
 
@@ -361,8 +357,9 @@ Error body shape:
   placeholder page was removed round-124 rather than kept waiting on them).
 - No `/api/billing/checkout` — billing is informational only by design.
 - ~~`/api/market/import` + `/preview`~~ removed round-124 (double-orphan:
-  no frontend consumer, no route test); `/api/inference/predict/batch`
-  remains the only untested API-only endpoint.
+  no frontend consumer, no route test); ~~`/api/inference/predict/batch`~~
+  removed round-140 D3 along with the inference service's own
+  `POST /predict/batch` (batch capability idle at both ends).
 
 ---
 

@@ -39,7 +39,6 @@ import { inferenceRouter } from "@/routes/inference";
 import { marketDataRouter } from "@/routes/marketData";
 import { marketNewsRouter } from "@/routes/marketNews";
 import { metricsRouter } from "@/routes/metrics";
-import { portfolioRouter } from "@/routes/portfolios";
 import { signalsRouter } from "@/routes/signals";
 import { timeseriesRouter } from "@/routes/timeseries";
 import { toolsRouter } from "@/routes/tools";
@@ -210,7 +209,6 @@ export function createApp(): AppInstance {
 	app.use("/api/market", marketDataRouter);
 	app.use("/api/news", marketNewsRouter);
 	app.use("/api/watchlists", watchlistRouter);
-	app.use("/api/portfolios", portfolioRouter);
 	app.use("/api/billing", billingRouter);
 
 	// API documentation

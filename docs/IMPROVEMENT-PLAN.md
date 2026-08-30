@@ -29,6 +29,8 @@ related_docs:
 >
 > **执行状态（2026-08-30 深夜，批 4 部分落地——D1+D4 执行、D2/D3 维持登记，round-139 续3）**：用户目标指令"完成后续的开发任务"同源放行；按各决策项建议案执行其中非破坏性两项。**D1** PRODUCT-SPEC 增补：§七 能力表 +3 行（进口到岸成本测算 ✅ 已上线、多源数据治理 ✅ 18 slugs 声明、批 C 贸易词汇五维 ◐ 设计登记未落地）+ M3 清单补记（计算器上线 ✅、批 B 周报候选方向未排期）。**D4** `predictionBeefCoverage24h`→`predictionBeefCoverage90d`（窗口 24h→90d：月度一轮 + 60d 验证冻结）+ 新增 `predictionBeefLatestAt`（末轮日志时间戳）；health 路由类型/赋值、cron-healthcheck 暴露行、回归钉（30 天前 beef 日志必计入）同改；live 验收 /health/ready = coverage90d 3 + latestAt 2026-08-30T06:09。**D2/D3 维持登记**（TECH-DEBT round-132 条目：休眠表删除属数据治理决定需用户明示；portfolios/predict-batch 维持登记为 D6 建议不动）——破坏性删除项不随通用目标放行，待用户逐项点头。backend **1042+1**（dataHealth 套件 9→10，换 1 加 1 净 0）。
 >
+> **执行状态（2026-08-30 深夜，批 4 收官——D2+D3 由用户"继续剩余事项"指令逐项放行，round-140）**：**D2** `03fd1c7` 休眠表处置——定向备份 `backups/round140-d2/dormant-tables.sql`（生产行数 forecasts/forecasting_models 0、security_audit_logs 49）→ 迁移 DROP 三表 + ModelAlgorithm 枚举（生产/mt_test 双应用、live 复核空表）；seed 整段摘除（模型/预测点播种、安全审计夹具、MODEL_DEFS、汇总行）+ `getUserProfile` 去 models 计数。**D3** 删 `/api/portfolios` 路由组（7 端点 + 13 测试）**连同 Portfolio/GroupMember 两表**（0 行 0 前端消费，迁移 20260830220000，同备份文件）；删 `/api/inference/predict/batch` 与推理服务 `POST /predict/batch` 两端及 batch 测试（backend 1042+1→**1029+1**〔−13 随组删，非覆盖回退，round-132 同例〕、pytest 66→**61**〔−5 随端点删〕；Python 有限值守卫保留——单预测同依赖）；live 验收 404×3（backend 两处 + Python）+ /predict 200 + 三服务在线。schema 模型 30→**25**、路由 18→**17**（AGENTS/API.md 同步；API.md 补记批 3 遗漏的 /api/tools 节）。门禁：tsc×2 / biome×2 / ruff / 双 build / 三服务重启；**首跑 flake 复现并定位**——--force 重建 mt_test 后 Redis 预测缓存全空，首个全量并行跑中两个最重推理测试（beef forecasts / wheat_cme signals）冷启动超 30s，隔离与复跑均绿（round-136 已登记同类）。
+>
 > ### V4-一、现状基线（2026-08-30 实测，round-139 取证）
 >
 > | 维度 | 事实 | 证据 |
