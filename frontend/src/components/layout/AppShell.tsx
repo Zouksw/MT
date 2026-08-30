@@ -3,7 +3,6 @@
 import {
 	Activity,
 	Bell,
-	Boxes,
 	ChartLine,
 	Crosshair,
 	Database,
@@ -11,7 +10,6 @@ import {
 	LayoutGrid,
 	Menu,
 	Newspaper,
-	Search,
 	Settings,
 	Sparkles,
 	Star,
@@ -22,6 +20,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
+import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { cn } from "@/lib/utils";
 
 // ─── Navigation model (PRODUCT-SPEC.md §4 — beef-focused IA) ─────────────
@@ -62,7 +61,6 @@ const NAV_SECTIONS: NavSection[] = [
 		items: [
 			{ label: "价格预测", href: "/ai/predict", icon: Sparkles },
 			{ label: "模型准确率", href: "/ai/accuracy", icon: Crosshair },
-			{ label: "模型列表", href: "/dashboard/models", icon: Boxes },
 			{ label: "异常检测", href: "/ai/anomalies", icon: Bell },
 		],
 	},
@@ -160,16 +158,8 @@ function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 				<Menu className="size-5" />
 			</button>
 
-			{/* Global search — PLANNED, not yet wired. Rendered as a labeled badge
-			    (not a fake input) so it reads as a roadmap item, not a broken control.
-			    Implementation: commodity + news search over the backend (see roadmap). */}
-			<div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 text-xs text-muted-foreground">
-				<Search className="size-3.5" />
-				<span>搜索</span>
-				<span className="ml-1 px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium uppercase tracking-wide">
-					Planned
-				</span>
-			</div>
+			{/* Global search (round-146/D15): three whitelisted sources via /api/search */}
+			<GlobalSearch />
 
 			<div className="flex-1" />
 

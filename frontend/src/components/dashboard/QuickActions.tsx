@@ -28,7 +28,7 @@ const quickActions: QuickAction[] = [
 		title: "AI Price Signals",
 		description: `${SITE_STATS.aiModels}-model engine forecasting beef`,
 		icon: <BrainCircuit className="size-5" />,
-		path: "/ai",
+		path: "/ai/accuracy",
 	},
 	{
 		key: "market-charts",

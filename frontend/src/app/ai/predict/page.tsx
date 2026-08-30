@@ -205,8 +205,8 @@ export default function AIPredictPage() {
 							Home
 						</a>
 						<ChevronRight className="size-3" />
-						<a href="/ai" className="hover:text-primary">
-							AI & Anomaly Detection
+						<a href="/ai/accuracy" className="hover:text-primary">
+							AI
 						</a>
 						<ChevronRight className="size-3" />
 						<span>AI Prediction</span>
@@ -219,11 +219,11 @@ export default function AIPredictPage() {
 				<Button
 					variant="ghost"
 					onClick={() => {
-						window.location.href = "/ai/models";
+						window.location.href = "/ai/accuracy";
 					}}
 					disabled={AI_DISABLED}
 				>
-					{!isMobile && "View Models"}
+					{!isMobile && "Model Accuracy"}
 				</Button>
 			</div>
 

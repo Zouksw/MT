@@ -58,6 +58,13 @@ export default function BeefOverview() {
 	// shows an empty state rather than fabricating CN data.
 	type OriginFilter = "all" | "imported" | "domestic";
 	const [originFilter, setOriginFilter] = useState<OriginFilter>("all");
+	// Domestic (CN) rows currently exist only via manual CSV import — until one
+	// arrives the domestic filter can only ever show the empty state, so it is
+	// disabled upfront rather than letting users discover the emptiness by
+	// clicking (the empty state below stays as defense in depth).
+	const hasDomestic = latestPrices.some(
+		(p: { factory?: { country?: string } }) => p.factory?.country === "CN",
+	);
 	const [search, setSearch] = useState("");
 	type SortKey = "cutCode" | "price" | "source";
 	const [sortKey, setSortKey] = useState<SortKey>("price");
@@ -281,20 +288,27 @@ export default function BeefOverview() {
 							<div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
 								{/* Origin filter — PRODUCT-SPEC IA 进口/国产 split */}
 								<div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs">
-									{(["all", "imported", "domestic"] as const).map((opt) => (
-										<button
-											key={opt}
-											type="button"
-											onClick={() => setOriginFilter(opt)}
-											className={`px-3 py-1.5 font-medium capitalize transition-colors ${
-												originFilter === opt
-													? "bg-primary text-primary-foreground"
-													: "text-muted-foreground hover:bg-muted"
-											}`}
-										>
-											{opt}
-										</button>
-									))}
+									{(["all", "imported", "domestic"] as const).map((opt) => {
+										const unavailable = opt === "domestic" && !hasDomestic;
+										return (
+											<button
+												key={opt}
+												type="button"
+												onClick={() => setOriginFilter(opt)}
+												disabled={unavailable}
+												title={
+													unavailable ? "暂无国产（CN）数据——CSV 导入通道可写入后启用" : undefined
+												}
+												className={`px-3 py-1.5 font-medium capitalize transition-colors ${
+													originFilter === opt
+														? "bg-primary text-primary-foreground"
+														: "text-muted-foreground hover:bg-muted"
+												} ${unavailable ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}`}
+											>
+												{opt}
+											</button>
+										);
+									})}
 								</div>
 								{/* Search box */}
 								<div className="relative flex-1 max-w-xs">

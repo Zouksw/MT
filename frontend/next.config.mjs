@@ -49,6 +49,19 @@ const nextConfig = {
     ];
   },
 
+  // Model-trust IA consolidation (round-146 批1/D14): /ai/accuracy is the one
+  // authed trust page (it already carries trend icons, sample-size-gated MAPE
+  // and direction-hit); /ai/track-record stays the public promise surface.
+  // The four retired entrances 308 here — their backing APIs are untouched.
+  async redirects() {
+    return [
+      { source: '/ai', destination: '/ai/accuracy', permanent: true },
+      { source: '/ai/models', destination: '/ai/accuracy', permanent: true },
+      { source: '/ai/backtest', destination: '/ai/accuracy', permanent: true },
+      { source: '/dashboard/models', destination: '/ai/accuracy', permanent: true },
+    ];
+  },
+
   // Security Headers
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';

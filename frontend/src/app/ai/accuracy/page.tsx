@@ -360,11 +360,7 @@ export default function AccuracyPage() {
 				<PageHeader
 					title="Prediction Accuracy"
 					description="Monitor AI model performance and prediction accuracy over time"
-					breadcrumbs={[
-						{ label: "Home", href: "/dashboard" },
-						{ label: "AI", href: "/ai/models" },
-						{ label: "Accuracy" },
-					]}
+					breadcrumbs={[{ label: "Home", href: "/dashboard" }, { label: "Accuracy" }]}
 				/>
 				<ErrorDisplay error={error} retry={retry} context="accuracy data" />
 			</PageContainer>
@@ -376,11 +372,7 @@ export default function AccuracyPage() {
 			<PageHeader
 				title="Prediction Accuracy"
 				description="Monitor AI model performance and prediction accuracy over time"
-				breadcrumbs={[
-					{ label: "Home", href: "/dashboard" },
-					{ label: "AI", href: "/ai/models" },
-					{ label: "Accuracy" },
-				]}
+				breadcrumbs={[{ label: "Home", href: "/dashboard" }, { label: "Accuracy" }]}
 			/>
 
 			<LoadingState loading={loading} skeletonType="stats">

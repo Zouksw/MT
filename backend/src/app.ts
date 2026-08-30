@@ -39,6 +39,7 @@ import { inferenceRouter } from "@/routes/inference";
 import { marketDataRouter } from "@/routes/marketData";
 import { marketNewsRouter } from "@/routes/marketNews";
 import { metricsRouter } from "@/routes/metrics";
+import searchRouter from "@/routes/search";
 import { signalsRouter } from "@/routes/signals";
 import { timeseriesRouter } from "@/routes/timeseries";
 import { toolsRouter } from "@/routes/tools";
@@ -222,6 +223,9 @@ export function createApp(): AppInstance {
 
 	// Public trade tools (landing-cost calculator — v3.2.0 批 3)
 	app.use("/api/tools", toolsRouter);
+
+	// Topbar global search (v3.4.0 批 1/D15): 部位/商品/资讯 three whitelisted sources
+	app.use("/api/search", searchRouter);
 
 	// Error handling
 	app.use(errorHandler);
