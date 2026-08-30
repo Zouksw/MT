@@ -32,6 +32,16 @@ export interface ModelAccuracy {
 	 * records by design — see commit 8992154).
 	 */
 	isPrimary?: boolean;
+	/**
+	 * Rolling direction-hit rate [0,1] (round-137 批4): share of verified rows
+	 * whose end-of-horizon up/down move vs the pre-forecast anchor matched the
+	 * actual move. null when directionCount is 0 — naive_forecaster is always
+	 * null here (flat predictions carry no direction to hit). Optional for
+	 * backward compatibility with older API responses / mocks.
+	 */
+	directionHitRate?: number | null;
+	/** Rows that produced a definite direction hit or miss. */
+	directionCount?: number | null;
 }
 
 /**

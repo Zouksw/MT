@@ -23,6 +23,9 @@ interface LeaderRow {
 	verifiedCount: number;
 	predictionCount: number;
 	lastVerifiedAt: string | null;
+	/** Rolling direction-hit rate [0,1] (round-137 批4); null = no judged rows. */
+	directionHitRate: number | null;
+	directionCount: number;
 }
 
 interface SampleRow {
@@ -46,12 +49,21 @@ interface TrackRecord {
 		verification: string;
 		window: string;
 		metric: string;
+		direction: string;
 		consensus: string;
 	};
 }
 
 function fmtMape(v: number | null): string {
 	return v == null ? "—" : `${v.toFixed(2)}%`;
+}
+
+/** Direction-hit cell text (批4): naive is structurally flat, thin samples
+ * are withheld rather than shown as a noisy percentage. */
+function fmtDirection(rate: number | null, count: number, modelId: string): string {
+	if (modelId === "naive_forecaster") return "— (flat)";
+	if (rate == null || count < 5) return "—";
+	return `${(rate * 100).toFixed(1)}%`;
 }
 
 function fmtNum(v: number | null): string {
@@ -136,6 +148,7 @@ export default function TrackRecordPage() {
 											<th className="px-4 py-3">Model</th>
 											<th className="px-4 py-3">Median MAPE</th>
 											<th className="px-4 py-3">Mean MAPE</th>
+											<th className="px-4 py-3">Direction</th>
 											<th className="px-4 py-3">Verified</th>
 											<th className="px-4 py-3">Last verified</th>
 										</tr>
@@ -152,6 +165,9 @@ export default function TrackRecordPage() {
 													<td className="px-4 py-2.5 tabular-nums">{fmtMape(row.medianMape)}</td>
 													<td className="px-4 py-2.5 tabular-nums text-muted-foreground">
 														{fmtMape(row.avgMape)}
+													</td>
+													<td className="px-4 py-2.5 tabular-nums">
+														{fmtDirection(row.directionHitRate, row.directionCount, row.modelId)}
 													</td>
 													<td className="px-4 py-2.5 tabular-nums">{row.verifiedCount}</td>
 													<td className="px-4 py-2.5 text-muted-foreground">
@@ -219,6 +235,7 @@ export default function TrackRecordPage() {
 							<ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
 								<li>{record.methodology.verification}</li>
 								<li>{record.methodology.metric}</li>
+								<li>{record.methodology.direction}</li>
 								<li>{record.methodology.consensus}</li>
 								<li>{record.methodology.window}</li>
 							</ul>

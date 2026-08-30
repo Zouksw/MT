@@ -242,3 +242,50 @@ describe("AccuracyPage — honesty rendering", () => {
 		});
 	});
 });
+
+describe("Direction column (round-137 批4)", () => {
+	it("shows the direction-hit rate when directionCount >= MIN_VERIFIED_SAMPLE", () => {
+		mockReturnValue.models = [
+			makeModel({
+				modelId: "arima",
+				displayName: "ARIMA",
+				verifiedCount: 100,
+				directionHitRate: 0.611,
+				directionCount: 36,
+			}),
+		];
+		render(<AccuracyPage />);
+		// 0.611 → 61.1% (formatPercentValue 1dp). Distinct from any MAPE cell.
+		expect(screen.getByText("61.1%")).toBeInTheDocument();
+	});
+
+	it("withholds the number below the judged-sample floor", () => {
+		mockReturnValue.models = [
+			makeModel({
+				modelId: "chronos_tiny",
+				displayName: "Chronos-T5-Tiny",
+				verifiedCount: 100,
+				directionHitRate: 0.8,
+				directionCount: 3,
+				isPrimary: true,
+			}),
+		];
+		render(<AccuracyPage />);
+		expect(screen.getByText("(3 judged)")).toBeInTheDocument();
+		expect(screen.queryByText("80.0%")).not.toBeInTheDocument();
+	});
+
+	it("marks naive_forecaster as structurally flat instead of a dash", () => {
+		mockReturnValue.models = [
+			makeModel({
+				modelId: "naive_forecaster",
+				displayName: "Naive",
+				verifiedCount: 133,
+				directionHitRate: null,
+				directionCount: 0,
+			}),
+		];
+		render(<AccuracyPage />);
+		expect(screen.getByText("— (flat)")).toBeInTheDocument();
+	});
+});

@@ -97,6 +97,38 @@ function MapeBadge({ mape, verifiedCount = 0 }: { mape: number | null; verifiedC
 }
 
 /**
+ * Direction-hit cell (round-137 批4): share of verified rows whose
+ * end-of-horizon up/down call vs the pre-forecast anchor matched the actual
+ * move. Same honesty gate as MapeBadge — below MIN_VERIFIED_SAMPLE judged
+ * rows the number is withheld. naive_forecaster is structurally flat (it
+ * repeats the anchor), so it shows an explicit "— (flat)" instead of a
+ * misleading 0%-or-null dash.
+ */
+function DirectionCell({
+	model,
+}: {
+	model: Pick<ModelWithBacktest, "modelId" | "directionHitRate" | "directionCount">;
+}) {
+	if (model.modelId === "naive_forecaster") {
+		return <span className="text-sm text-muted-foreground/70">— (flat)</span>;
+	}
+	const count = model.directionCount ?? 0;
+	if (model.directionHitRate == null || count < MIN_VERIFIED_SAMPLE) {
+		return (
+			<span className="inline-flex flex-col items-end leading-tight">
+				<span className="text-sm text-muted-foreground">Insufficient data</span>
+				<span className="text-[10px] text-muted-foreground/70">({count} judged)</span>
+			</span>
+		);
+	}
+	return (
+		<span className="text-sm font-medium tabular-nums text-foreground">
+			{formatPercentValue(model.directionHitRate * 100, 1)}
+		</span>
+	);
+}
+
+/**
  * Honesty callout shown during the chronos-consensus transition window.
  *
  * After commit 8992154 the primary consensus runs on chronos-only, so the
@@ -267,6 +299,13 @@ const columns = [
 		render: (value: unknown, record: ModelWithBacktest) => (
 			<MapeBadge mape={value as number | null} verifiedCount={record.verifiedCount} />
 		),
+	},
+	{
+		key: "directionHitRate",
+		title: "Direction",
+		dataIndex: "directionHitRate" as const,
+		align: "right" as const,
+		render: (_value: unknown, record: ModelWithBacktest) => <DirectionCell model={record} />,
 	},
 	{
 		key: "lastVerifiedAt",
