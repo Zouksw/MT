@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-138 执行轮：IMPROVEMENT-PLAN v3.1.0 批 5（牛肉预测中心）落地
+
+用户指令"/goal 继续完成规划的任务"。核心预测链（批 0 月度循环 → 批 1 回测 → 批 2 per-series 路由 → 批 4 方向准确率）的用户可见汇合面：
+
+- **新页 `/beef/forecast`（`7ba03cc`，牛肉行情区导航入口）**：① **下月共识卡**——IMF PBEEFUSDM 月度基准 H=1 个月的质量加权共识（方向/幅度/模型分歧区间/置信度/模型一致度，horizon 单位"个月"）；**校准 90% 区间诚实推迟**——beef 零验证行时接 conformal 只会输出未校准数字（回测实测 chronos 原生区间欠覆盖 58-78%），卡片明示"待首批滚动验证（2026-09 起）成熟后接入"。② **回测证据面板**（复用批 1 公开组件 BeefBacktestSection，与 track-record 同源）。③ **验证时间线**——诚实预告 2026-09/10 首个 H=1 验证、2026-11 H=3 到期 + 序列自身权重激活门槛，附"可预测上限就在 naive 附近"的回测结论。④ **上游面板**——活牛/架子牛期货日更收盘（批 3 领先指标实验的候选，/api/market/commodities/:slug/latest）。+4 页面测试（共识数字/诚实空态/时间线/证据面板与上游）。
+- **dashboard hero 改挂牛肉月度共识（同 commit）**："AI 7日预测"（首个可预测 cut 的 7 日口径）→ **"AI 牛肉月度预测"**；新共享 hook `useBeefMonthlyConsensus` 是页与卡的**唯一数据源**（同一端点 `/api/signals/beef_carcass_us?horizon=1`、同一服务端缓存）——**数字一致由构造保证**。cut 预测仍供 hotCuts 表。hook 测试补 mock（新 hook 的真实 fetch 会搅动渲染，暴露了 /alerts 去重断言的双触发——mock 后归位，334 全绿）。
+- **周度快照脚本（`61a149d`，并入 v3.0.0 "track-record 周度快照物料"——该件原只有规划无实现，本轮补齐）**：`backend/scripts/weekly-track-snapshot.ts` 只读导出 `docs/snapshots/track-record-<date>.md`（日期文件名=追加式历史）——30d 榜单（MAPE+方向命中）+ 牛肉专段（月度行 status×horizon 分布、下一验证到期 2026-08-31〔anchor+horizon 精确口径〕、冻结回测指针含 md5）。首份产物已入库并实跑验证；脚本运行日志顺带实证了批 4 来源守卫在工作（`[DIRECTION] ... excluded — undeclared multi-source provenance`）。
+- **live 验证**：未登录 `/beef/forecast` → **307 → /login?redirect=…**（与行情页一致，middleware 公开路径不含它；track-record 牛肉段仍公开）；共识端点实测 `flat / −0.28% / 331.78→331.78 / 区间 327.31–332.54 / 57% / 3/7 / H=1 month`。**门禁**：frontend **334**（330→+4）全绿、tsc 干净、build + PM2 重启；backend 仅新增只读脚本（tsc 干净 + 实跑验证），源零改动未重跑（基线 1021+1 沿用）。
+
 ### 2026-08-30 — round-137（续）：批 4（方向准确率）落地 — 读侧推导 + 三次实测纠偏
 
 用户指令"继续"。计划条文"验证环在记 MAPE 的同时记方向命中——读侧聚合（不加列）"落地为**纯读侧推导**：`prediction_logs` 无需迁移，方向判定在读时从已存值 + anchor 收盘重建，与批 1 回测同口径（末步涨跌符号相对 anchor 点；flat 排除不计 miss）。

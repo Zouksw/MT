@@ -25,6 +25,8 @@ related_docs:
 >
 > **执行状态（2026-08-30 晚，批 4 已落地，round-137 续）**：4a `715fa82`（读侧方向聚合——`directionVerdict` 纯函数 + `getModelDirectionStats`，`directionHitRate/Count` 流经两 API，零迁移；+10 测试）· 4b `af23766`（两页 Direction 列 + methodology 口径条目，naive 显式 "— (flat)"；frontend 327→330）· 4c `64cf0ad`（**三次实测纠偏**：公共步配对〔CME 周末跳空 actuals 短于步数〕、anchor 取 forecastStartAt 的 UTC 日界〔16:00/00:00 盖章混用会把 anchor 抓成 actual[0]，chronos 一度虚高 82-90%〕、无 forecastStartAt 行排除〔predictedAt 回退 anchor 落窗内，crude 遗留行实测 12.9%〕+ 混源无权威声明序列整组排除〔aud_usd 现状，登记为数据决策候选〕）。**live 终值**：chronos 68-70%（~2170 行）、holtwinters 33.8%（弱点分化）、arima 58.9%、naive "—"；beef 待 2026-09/10 首批成熟。backend **1021+1 全绿**、frontend **330**。
 >
+> **执行状态（2026-08-30 晚，批 5 已落地，round-138）**：`7ba03cc`（新页 `/beef/forecast`：下月共识卡〔calibrated 区间诚实推迟至 2026-09 证据成熟——回测已证原生区间欠覆盖 58-78%，不显未校准数字〕+ 回测证据面板 + 验证时间线〔2026-09/10、2026-11 到期预告〕+ 活牛/架子牛上游面板 + /beef 导航入口；dashboard hero 改挂牛肉月度共识，新 hook `useBeefMonthlyConsensus` 为页/卡唯一数据源——一致由构造保证）· `61a149d`（周度快照脚本 + 牛肉专段 + 首份产物 `docs/snapshots/track-record-2026-08-30.md`——v3.0.0 "track-record 周度快照物料" 原仅有规划，本轮补齐）。live：未登录 307→/login ✓；共识端点 flat/−0.28%/331.78→331.78/区间 327.31–332.54/57%/3-7。frontend **334**（+4）；backend 源零改动（1021+1 沿用）。
+>
 > **指令来源**：用户"结合当前项目最核心的功能，利用 AI 大模型预测牛肉价格的变化，制定后续的开发计划"。
 > **依据**：引擎与生产库 2026-08-30 实测（见 V3-一）+ [PREDICTION-STRATEGY](PREDICTION-STRATEGY.md)（含本轮补写的失效标注——其 §五 实验序列实为比特币错标数据）+ [COMPETITIVE-ANALYSIS §八](COMPETITIVE-ANALYSIS-MOOKET.md)。
 > **核心论断**：预测**机制**已经成熟（质量加权共识 + 劣于-naive 淘汰制 + split-conformal 区间 + cadence 感知验证环，全部 live），当前缺口是**证据、序列适配、产品面**三件事——牛肉预测此刻拿不出一条可展示的验证证据（被误杀 + horizon 过长）；模型质量权重是全局的而非按序列的；方向准确率（采购择时真正要的指标）没有度量。
