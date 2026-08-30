@@ -38,12 +38,47 @@ describe("authoritative source resolution", () => {
 			expect(getAuthoritativeSource("natural_gas_cme")).toBe("fred");
 		});
 
+		// v3.2.0 批2 (D8): the remaining true mixed-source groups, declared
+		// 2026-08-30 after SQL forensics (per-source row counts / value ranges
+		// archived in KNOWN-ISSUES R2). Pinned so a regression cannot silently
+		// re-freeze direction stats or mixed reads.
+		it("resolves the 11 monthly twins → fred (world_bank re-writes fred's own FRED series, 4 rows)", () => {
+			for (const slug of [
+				"aluminum_lme",
+				"coffee_arabica",
+				"copper_lme",
+				"crude_oil_wti",
+				"iron_ore_cfr",
+				"natural_gas_us",
+				"rice_thai",
+				"rubber_tsr20",
+				"soybeans_cbot",
+				"sugar_world",
+				"wheat_us_srw",
+			]) {
+				expect(getAuthoritativeSource(slug)).toBe("fred");
+			}
+		});
+
+		it("resolves the FX daily family → fred (DEX* 30y history vs api's 68 rows)", () => {
+			expect(getAuthoritativeSource("aud_usd")).toBe("fred");
+			expect(getAuthoritativeSource("usd_cny")).toBe("fred");
+		});
+
+		it("resolves crude_oil_cme → fred (10231 rows vs cme's 2 stale rows)", () => {
+			expect(getAuthoritativeSource("crude_oil_cme")).toBe("fred");
+		});
+
+		it("resolves live_cattle_cme → cme (freshness-first: usda_ams froze 2026-04-29, cme daily since 2026-08-14)", () => {
+			expect(getAuthoritativeSource("live_cattle_cme")).toBe("cme");
+		});
+
 		it("returns null for single-source commodities (no preference → read all)", () => {
 			// The vast majority of commodities have one source. Null means
 			// the reader must NOT filter (legacy behaviour, correct here).
 			expect(getAuthoritativeSource("beef_carcass_us")).toBeNull();
-			expect(getAuthoritativeSource("usd_cny")).toBeNull();
-			expect(getAuthoritativeSource("crude_oil_wti")).toBeNull();
+			expect(getAuthoritativeSource("eur_usd")).toBeNull();
+			expect(getAuthoritativeSource("gold_cme")).toBeNull();
 		});
 
 		it("returns null for unknown / empty input", () => {
@@ -55,15 +90,18 @@ describe("authoritative source resolution", () => {
 	});
 
 	describe("hasSourceConflict", () => {
-		it("flags the three known-conflict slugs", () => {
+		it("flags the known-conflict slugs (round-41 originals + v3.2.0 批2 additions)", () => {
 			expect(hasSourceConflict("brl_usd")).toBe(true);
 			expect(hasSourceConflict("corn_cme")).toBe(true);
 			expect(hasSourceConflict("natural_gas_cme")).toBe(true);
+			expect(hasSourceConflict("aud_usd")).toBe(true);
+			expect(hasSourceConflict("live_cattle_cme")).toBe(true);
+			expect(hasSourceConflict("wheat_us_srw")).toBe(true);
 		});
 
 		it("does not flag clean single-source slugs", () => {
 			expect(hasSourceConflict("beef_carcass_us")).toBe(false);
-			expect(hasSourceConflict("usd_cny")).toBe(false);
+			expect(hasSourceConflict("eur_usd")).toBe(false);
 		});
 	});
 });

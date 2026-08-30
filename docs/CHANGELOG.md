@@ -42,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-139（续2）：v3.2.0 批 2（D8 多源权威源声明）落地 — 方向统计解锁 + scale-guard 误杀根治
+
+用户目标指令"完成后续的开发任务"放行 D8（按 V4-四建案执行，live_cattle_cme → cme 新鲜度优先）。执行时实测混源组为 **17 组 = 已声明 3 + 未声明 14**（月度孪生实测 **11 组**非取证时的 10——多出 natural_gas_us；两源行数/量纲对比表留档 KNOWN-ISSUES R2）。
+
+- **声明 `authoritativeSources.ts` 3→18 条**：11 个月度孪生（fred vs world_bank 同一 FRED 序列，wb 4 行值域 ⊂ fred 值域，零风险）+ FX 日度 aud_usd/usd_cny（fred 30 年史 vs api 68 行，同量纲）+ crude_oil_cme（fred 10231 vs cme 2）→ **fred**；live_cattle_cme（usda_ams 128 行冻结 2026-04-29 vs cme 08-14 起日更）→ **cme**。声明即训练/MAPE actuals/latest price/相关性全链一致取数。
+- **执行中发现并根治 scale-guard 误杀（live 事故）**：守卫 20× 中位基线不分源 → brl_usd 近窗被 exchange_rate_api 反向 0.19 行主导 → **fred 的正确 ~5.1 写入被连环拒绝、权威序列冻结在 2026-08-14**（PM2 日志实证 08-03..08-21 rejected）。修复：基线改按**写入源自身**近 30 点——同源变纲（wheat_cme 形态）仍拦、异源量纲分歧归声明机制管；+1 回归钉（以被拒的 5.1469 实值入测）。live 实证解冻：fred brl_usd 7930→**7935 行**、最新 08-14→**08-21**（恰好回填被拒 5 个交易日）。
+- **live 验收（重启清缓存后）**：chronos 三变体方向判定 **2268→2682（+414 = 排除行数恰等）**、hit 69.8/70.0/68.6%→62.0/63.2/62.5%（覆盖扩大诚实回落）；统计模型 73/74→85/86（+12 恰等）；`[DIRECTION] excluded` 日志零新增；aud_usd verified 样本现身公开 track-record；landing-cost USD/CNY 切 fred（08-21，stale 旗标如实）。
+- **对 D8 原表述的实测修正**：FX 时效代价非"约 −1 天"——FRED DEX* 走 **H.10 周发布节律**（约 1 周滞后，数据止于上周五）；缺 actuals 时验证走 `skippedNoActuals` 重试（延迟不丢覆盖）。
+- **配套**：seed.ts 已声明 slug 合成行带权威源标签（读侧过滤后仍可见；mt_test 经 `bootstrap-test-db.sh --force` 重建实测）+ **顺带清除 round-114 拆多租户遗留的 `prisma.organizations` 死引用两处**（首次重播 seed 即撞出 `deleteMany/create` undefined）；tools 路由测试 FX 夹具改 fred 标签 + 未来日期限定清理；publicTrackRecord 与周快照 methodology 口径同步"混源按声明取数"。
+- **门禁**：backend **1042+1**（100 文件，+5：4 契约钉 + 1 守卫回归钉）全绿零回退；tsc / biome（无新增告警）/ build / PM2 重启 / health 200；frontend/inference 零改动未重跑（338/66 不变）。
+- **另登记不动**：world_bank 爬虫曾以错误大小写 slug 另建 `corn_cbOT`/`soybeans_cbOT` 孤儿 commodity（单源非混源、无预测）——清理归独立卫生轮。
+
 ### 2026-08-30 — round-139（续）：v3.2.0 批 1（快照 cron 自动化）+ 批 3（进口成本计算器）落地
 
 用户指令"开始"（执行 v3.2.0 执行顺序：批 1 → 批 2〔D8 门〕→ 批 3）。批 2 的声明本身待 D8 点头，本轮已完成其取证（见下）。

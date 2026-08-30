@@ -462,7 +462,8 @@ async function main() {
 	await prisma.securityAuditLog.deleteMany();
 	await prisma.apiKey.deleteMany();
 	await prisma.session.deleteMany();
-	await prisma.organizations.deleteMany();
+	// prisma.organizations went with the model itself (round-114 multi-tenant
+	// teardown) — the stale deleteMany crashed the first re-seed after it.
 	await prisma.user.deleteMany();
 	console.log("       All tables cleared.");
 
@@ -493,24 +494,6 @@ async function main() {
 	const editorUser = users[1];
 
 	// ------------------------------------------------------------------
-	// 3. Create organizations and memberships
-	// ------------------------------------------------------------------
-	console.log("[3/9] Creating organizations...");
-
-	const org = await prisma.organizations.create({
-		data: {
-			id: "org-trademind",
-			owner_id: adminUser.id,
-			name: "TradeMind AI Corp",
-			slug: "trademind-corp",
-			description: "Primary organization for TradeMind AI platform development and operations.",
-			logo_url: "https://api.dicebear.com/7.x/identicon/svg?seed=trademind&backgroundColor=3b82f6",
-			settings: { defaultTimezone: "UTC", dataRetentionDays: 365 },
-		},
-	});
-	console.log(`       Created: ${org.name}`);
-
-	// ------------------------------------------------------------------
 	// 4. Create datasets and timeseries
 	// ------------------------------------------------------------------
 	console.log("[4/9] Creating datasets and timeseries...");
@@ -529,7 +512,6 @@ async function main() {
 		const owner = pick(users);
 		const dataset = await prisma.dataset.create({
 			data: {
-				organization_id: org.id,
 				ownerId: owner.id,
 				name: ds.name,
 				slug: slugify(ds.name),
@@ -2297,6 +2279,30 @@ async function main() {
 	const commodities = await prisma.commodity.findMany();
 	const BATCH_SIZE = 500;
 
+	// Synthetic-row source labels for declared multi-source slugs (mirror of
+	// AUTHORITATIVE_SOURCES minus brl_usd, which the ternary below handles).
+	// v3.2.0 批2: read paths filter by the declared authoritative source, so
+	// seeded history for those slugs must carry that label to stay visible.
+	const DECLARED_SOURCES: Record<string, string> = {
+		corn_cme: "usda_ams",
+		natural_gas_cme: "fred",
+		aluminum_lme: "fred",
+		coffee_arabica: "fred",
+		copper_lme: "fred",
+		crude_oil_wti: "fred",
+		iron_ore_cfr: "fred",
+		natural_gas_us: "fred",
+		rice_thai: "fred",
+		rubber_tsr20: "fred",
+		soybeans_cbot: "fred",
+		sugar_world: "fred",
+		wheat_us_srw: "fred",
+		aud_usd: "fred",
+		usd_cny: "fred",
+		crude_oil_cme: "fred",
+		live_cattle_cme: "cme",
+	};
+
 	for (const commodity of commodities) {
 		const baseline = PRICE_BASELINES[commodity.slug];
 		if (!baseline) continue;
@@ -2348,8 +2354,13 @@ async function main() {
 				volume: commodity.category === "futures" ? Math.floor(Math.random() * 20000 + 5000) : null,
 				// brl_usd's baseline rows carry the inverted exchange_rate_api
 				// scale — label them as that source so the conflict with the
-				// authoritative fred fixture below is realistic.
-				source: commodity.slug === "brl_usd" ? "exchange_rate_api" : "seed",
+				// authoritative fred fixture below is realistic. Other declared
+				// slugs carry their authoritative label (DECLARED_SOURCES above)
+				// so authority-filtered reads still see the seeded history.
+				source:
+					commodity.slug === "brl_usd"
+						? "exchange_rate_api"
+						: (DECLARED_SOURCES[commodity.slug] ?? "seed"),
 				metadata,
 			});
 

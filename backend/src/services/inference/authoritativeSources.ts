@@ -39,7 +39,8 @@ import { prisma } from "@/lib";
  * environments. Only slugs with a known multi-source conflict need an entry.
  *
  * Selection rationale (each picks the source with the longest, cleanest,
- * correctly-unitted daily series):
+ * correctly-unitted series; the v3.2.0 批2 additions are annotated inline in
+ * the map below with their 2026-08-30 SQL evidence):
  *   - brl_usd         → fred DEXBZUS (30-year daily, official central-bank rate,
  *                       correct direction). exchange_rate_api's inverted value
  *                       is excluded from prediction training/verification.
@@ -57,6 +58,38 @@ const AUTHORITATIVE_SOURCES: Record<string, string> = {
 	brl_usd: "fred",
 	corn_cme: "usda_ams",
 	natural_gas_cme: "fred",
+	// v3.2.0 批2 (D8, 2026-08-30): every remaining TRUE mixed-source group
+	// (same slug × same interval, SQL-verified — per-source row counts and
+	// value-range checks archived in docs/KNOWN-ISSUES.md R2).
+	//
+	// Monthly twins — world_bank writes 4 rows of the SAME FRED monthly series
+	// fred already carries (415-432 rows; world_bank's 4-row value range sits
+	// inside fred's), so fred is the zero-risk pick and single-series reads
+	// stop interleaving duplicate months.
+	aluminum_lme: "fred",
+	coffee_arabica: "fred",
+	copper_lme: "fred",
+	crude_oil_wti: "fred",
+	iron_ore_cfr: "fred",
+	natural_gas_us: "fred",
+	rice_thai: "fred",
+	rubber_tsr20: "fred",
+	soybeans_cbot: "fred",
+	sugar_world: "fred",
+	wheat_us_srw: "fred",
+	// FX daily family — fred DEX* 30-year history (11k-14k rows, correct
+	// direction) vs exchange_rate_api's 68 rows (same dimension). Accepted
+	// cost: currentPrice follows FRED's H.10 weekly release (~1 week lag)
+	// instead of the api's next-day; staleness windows flag it honestly.
+	aud_usd: "fred",
+	usd_cny: "fred",
+	// fred DCOILBRENT 10231 rows vs cme's 2 stale rows (2026-05-20 era).
+	crude_oil_cme: "fred",
+	// The one real trade-off (D8): usda_ams froze 2026-04-29 (128 rows,
+	// 177-199 USD/cwt cash) while cme writes futures daily since 2026-08-14.
+	// Freshness wins — the undeclared mixed read spliced a 3.5-month gap
+	// between two different price families (cash → futures jump 199→212).
+	live_cattle_cme: "cme",
 };
 
 /**

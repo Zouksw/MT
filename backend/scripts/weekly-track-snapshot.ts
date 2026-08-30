@@ -60,6 +60,9 @@ async function main() {
 	lines.push(
 		"> 与公开页 /ai/track-record 同源（30d 窗）；方向口径 = 末步涨跌符号 vs 窗前 anchor，flat 排除。",
 	);
+	lines.push(
+		"> 混源序列按权威源声明取数（v3.2.0 批2 起 18 slugs 已声明）；未声明混源组无明确 anchor，方向整组排除、MAPE 不受影响。",
+	);
 	lines.push("");
 	lines.push("## Model leaderboard — 30d verified window");
 	lines.push("");

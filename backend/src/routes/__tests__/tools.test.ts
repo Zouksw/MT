@@ -26,6 +26,17 @@ const FIXTURE_SOURCE = "test:landing-cost";
  * the only date choice that is deterministic in both environments. */
 const FUTURE_MS = Date.now() + 2 * 86_400_000;
 
+/** Remove fixture rows: the FIXTURE_SOURCE-labeled ones plus the fred-labeled
+ * FX fixtures (usd_cny/aud_usd are declared→fred, 批2) — the latter scoped by
+ * the future date only fixtures use, never seed history. */
+async function cleanupFixtures() {
+	await prisma.commodityPrice.deleteMany({
+		where: {
+			OR: [{ source: FIXTURE_SOURCE }, { source: "fred", date: { gte: new Date(Date.now()) } }],
+		},
+	});
+}
+
 async function seedFixtures() {
 	const beef = await prisma.commodity.findUnique({ where: { slug: "beef_carcass_us" } });
 	const cny = await prisma.commodity.findUnique({ where: { slug: "usd_cny" } });
@@ -62,14 +73,16 @@ async function seedFixtures() {
 		});
 	}
 	// USD/CNY fixture at a clean 7.0; aud reference at 0.72. Both dated to
-	// dominate the synthetic seed rows.
+	// dominate the synthetic seed rows. Source must be "fred" — both slugs are
+	// declared authoritative→fred (v3.2.0 批2), so getLatestPrice filters to
+	// fred rows and any other label would be invisible to the quote.
 	await prisma.commodityPrice.create({
 		data: {
 			commodityId: cny.id,
 			interval: "daily",
 			date: new Date(FUTURE_MS - 86_400_000),
 			close: 7,
-			source: FIXTURE_SOURCE,
+			source: "fred",
 		},
 	});
 	await prisma.commodityPrice.create({
@@ -78,7 +91,7 @@ async function seedFixtures() {
 			interval: "daily",
 			date: new Date(FUTURE_MS - 86_400_000),
 			close: 0.72,
-			source: FIXTURE_SOURCE,
+			source: "fred",
 		},
 	});
 }
@@ -89,14 +102,14 @@ describe("Tools Routes — GET /api/tools/landing-cost (public)", () => {
 	beforeAll(async () => {
 		app = createTestApp();
 		await requireDb("tools routes");
-		await prisma.commodityPrice.deleteMany({ where: { source: FIXTURE_SOURCE } });
+		await cleanupFixtures();
 		const beef = await prisma.commodity.findUnique({ where: { slug: "beef_carcass_us" } });
 		originalBeefUnit = beef?.unit;
 		await seedFixtures();
 	});
 
 	afterAll(async () => {
-		await prisma.commodityPrice.deleteMany({ where: { source: FIXTURE_SOURCE } });
+		await cleanupFixtures();
 		await prisma.commodity
 			.update({
 				where: { slug: "beef_carcass_us" },

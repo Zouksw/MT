@@ -162,10 +162,17 @@ export async function upsertPrice(data: {
 	// freshness board surfaces the anomaly instead of silently storing it.
 	// Skipped when the series has <5 points (a new series' first values have
 	// no median to compare against) and on the samePrice no-op path above.
+	// Round-139 批2: the baseline is PER SOURCE. A mixed median let
+	// exchange_rate_api's inverted ≈0.19 rows dominate brl_usd's recent
+	// window, so the guard rejected fred's CORRECT ≈5.1 DEXBZUS writes and
+	// froze the authoritative series at 2026-08-14 (live incident). Sibling
+	// sources at different scales are the declaration map's problem
+	// (authoritativeSources.ts), not the guard's; a same-source scale flip
+	// (the wheat_cme shape) still trips the 20× check.
 	const SCALE_GUARD_FACTOR = 20;
 	const SCALE_GUARD_MIN_HISTORY = 5;
 	const recent = await prisma.commodityPrice.findMany({
-		where: { commodityId: data.commodityId, interval },
+		where: { commodityId: data.commodityId, interval, source: data.source },
 		orderBy: { date: "desc" },
 		take: 30,
 		select: { close: true },

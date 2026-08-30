@@ -171,7 +171,7 @@
 
 ---
 
-### R2 — brl_usd / corn_cme / natural_gas_cme 单位冲突（核心价值链潜伏 bug）
+### R2 — 多源单位冲突与权威源声明（3 → 18 slugs，读侧全量过滤）
 
 **来源**：`docs/reviews/2026-07-12-round-28.md` R28-3（commit 447b655 删除了该 round 文件，bug 未重新登记；本条 2026-07-27 重新核实并登记）
 **现状（截至 2026-07-27 live 核实）**：同一 commodity 由两个源写入、单位/量纲/方向冲突，混在同一张表：
@@ -236,6 +236,22 @@
 - **聚合诚实化**：`getModelAccuracy` 增 `medianMape`（PERCENTILE_CONT 单查询），前端 4 个数据入口 `avgMape = medianMape ?? avgMape`——残余离群不再污染页面展示。
 - **数据修复（backup 可回滚）**：wheat_cme 2026-06-01 前 2 行 OHLC ÷100 + metadata `unitNormalized`；52 条污染 verified→stale。
 - live 验证：修复后 chronos avg 1.36-1.49 / **median 0.82-0.86**（%），预训练基座路线被数据问题冤枉的结论反转。完整取证链见 TECH-DEBT §十。
+
+**round-139 批2（2026-08-30，D8 权威源声明补全——R2 全量收口 + scale-guard 误杀修复，live 验证）**：SQL 按 (slug × interval) 实测真混源 **17 组** = 已声明 3（brl_usd/corn_cme/natural_gas_cme）+ 未声明 14 组，全部按 D8 建案声明（`authoritativeSources.ts` 3→**18 条**）。**两源行数/量纲对比表（2026-08-30 实测留档，防声明引入量纲错）**：
+
+| 组 | 源 A（行数, 值域, 最新） | 源 B | 量纲核验 | 声明 |
+|---|---|---|---|---|
+| 11 个月度孪生（aluminum_lme/coffee_arabica/copper_lme/crude_oil_wti/iron_ore_cfr/natural_gas_us/rice_thai/rubber_tsr20/soybeans_cbot/sugar_world/wheat_us_srw） | fred 415-432 行 | world_bank 4 行 | wb 4 行值域全部 ⊂ fred 值域（同一 FRED 月度序列重写） | → **fred** |
+| `aud_usd` daily | fred 13945 行（0.48-1.49，止 08-21） | exchange_rate_api 68 行（0.69-0.72） | 同量纲同方向（AUD→USD） | → **fred** |
+| `usd_cny` daily | fred 11392 行（1.53-8.74，止 08-21） | exchange_rate_api 68 行（6.73-6.85） | 同量纲 | → **fred** |
+| `crude_oil_cme` daily | fred 10231 行（止 08-25） | cme 2 行（2026-05-20 死时代） | 同量纲 USD/bbl | → **fred** |
+| `live_cattle_cme` daily | usda_ams 128 行（177-199，**冻结 2026-04-29**） | cme 13 行（211-247，2026-08-14 起日更） | 同量纲 USD/cwt（现货 vs 期货族） | → **cme**（新鲜度优先；混读=3.5 月断档拼接） |
+
+- **注意（对 D8 原表述的实测修正）**：FX 时效代价不是"约 −1 天"——FRED DEX* 系列走 **H.10 周发布节律**（周一发布上周数据，实测 fred FX 止于上周五、滞后约 1 周），stale 旗标如实提示；缺 actuals 时验证走 `skippedNoActuals` 重试（延迟验证、不丢覆盖）。
+- **scale-guard 误杀（live 事故，同批根治）**：守卫中位基线不分源 → brl_usd 近窗被 exchange_rate_api 反向 0.19 行主导 → fred 正确 ~5.1 写入被拒、权威序列**冻结在 2026-08-14**（PM2 日志 08-03..08-21 连环 rejected 实证）。修复：基线改**按写入源自身近 30 点**（`helpers.ts`）——同源变纲（wheat_cme 形态）仍拦，异源量纲分歧归声明机制管。live 实证：修复后 fred brl_usd **7930→7935 行、最新 08-14→08-21**（恰好回填被拒的 5 个交易日）。
+- **方向统计解锁（live 验收）**：重启清缓存后 chronos 三变体 directionCount **2268→2682（+414 恰等于排除行）**、hit 69.8/70.0/68.6%→62.0/63.2/62.5%（覆盖扩大后诚实回落）；统计模型 +12（73/74→85/86）；`[DIRECTION] ... excluded` 日志重启后零新增；aud_usd verified 样本现身公开 track-record（seriesKey 可见）。
+- **配套**：seed.ts 已声明 slug 合成行改带权威源标签（读侧过滤后仍可见）+ 顺带清除 round-114 拆多租户后遗留的 `prisma.organizations` 死引用（`--force` 重建 mt_test 首次重播时撞出）；`/ai/track-record` methodology 与周快照口径行同步"混源按声明取数"；backend **1042+1**（+5 契约/回归钉）。
+- 另发现（登记不动）：world_bank 爬虫曾以错误大小写 slug 另建 `corn_cbOT`/`soybeans_cbOT` 孤儿 commodity（单源、非混源、无预测）——数据清理归独立卫生轮。
 
 ---
 

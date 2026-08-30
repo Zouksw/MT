@@ -136,4 +136,27 @@ describe("upsertPrice — scale guard (round-115)", () => {
 		const r = await upsertPrice({ ...BASE, date: new Date(Date.UTC(2026, 5, 10)), close: 5000 });
 		expect(r).toEqual({ inserted: 1, updated: 0 });
 	});
+
+	it("per-source baseline: a sibling source's scale must not block correct writes (brl_usd incident)", async () => {
+		// Live incident (2026-08-30, round-139 批2): brl_usd's recent window was
+		// dominated by exchange_rate_api's inverted ≈0.19 rows, so the guard
+		// rejected fred's CORRECT ≈5.1 DEXBZUS writes and froze the
+		// authoritative series at 2026-08-14. The median must be computed from
+		// the WRITING source's own rows — cross-source scale disagreements are
+		// the declaration map's job (authoritativeSources.ts), not the guard's.
+		for (let i = 0; i < 8; i++) {
+			await upsertPrice({
+				...BASE,
+				date: new Date(Date.UTC(2026, 5, 1 + i)),
+				source: "exchange_rate_api",
+				close: 0.19 + i * 0.001,
+			});
+		}
+		const r = await upsertPrice({
+			...BASE,
+			date: new Date(Date.UTC(2026, 5, 20)),
+			close: 5.1469, // the exact DEXBZUS value the guard rejected live
+		});
+		expect(r).toEqual({ inserted: 1, updated: 0 });
+	});
 });
