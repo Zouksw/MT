@@ -23,6 +23,8 @@ related_docs:
 > **性质**：v3.1.0 七批（0/1/2/3/4/5/6）已全部落地——预测**机制**侧已无未决工程项（领先指标方向已经双臂门禁诚实关闭）。本波不造新机制，而是三件事：**① 让有机证据节律自动化**（快照 cron 接线、验证窗值守）；**② 解锁被数据形态锁住的既有能力**（多源 provenance 声明 → 方向统计覆盖 FX 族）；**③ 产品面第二落点**（进口成本计算器，v3.0.0 批 A 升格）。全部批次带明确门控（时间门 / 用户决策门 / 样本量门），杜绝"为做而做"。
 > **约束不变**：只用预训练模型不训练（§七.2）；不做支付/下单/交易（§九）；诚实优先——样本不足不显示、未校准不冒充。
 >
+> **执行状态（2026-08-30 晚，批 1 + 批 3 已落地，批 2① 取证完毕，round-139 续）**：批 1 `ee36c41`（crontab 5→6 条：`cron-track-snapshot.sh` 周一 07:30 驱动只读导出器 + **路径限定自动提交**〔D9 推荐案：pathspec 只提交 docs/snapshots 快照、index.lock 存在跳过〕；实跑自动提交 `1cee1c1` 且新脚本自身未被卷入——守卫生效）· 批 3 `b209de2`（**进口成本计算器**：公开 `GET /api/tools/landing-cost` + 公开页 `/tools/landing-cost` + forecast 互链；活输入仅白名单基准价〔IMF USC/lb 月度 + CME 活牛/架子牛 USD/cwt 日更〕与 USD/CNY 且全部带日期/新鲜度旗标，**税率运费为用户假设、平台不内置各国税率**；公式 关税×CIF基数 → 增值税×(基数+关税) → 损耗完税后乘算；区间=同公式跑近窗最低↔最高；backend +15 / frontend +4 测试；live 匿名双面 200、活牛 211.73 USD/cwt → 带参 ¥45.96/kg 逐项手验、400 门实测）。**批 2① D8 取证**：真混源组实测 **17 个**（FX 日度族 aud_usd〔fred 13945 vs api 68，同量纲〕/usd_cny + 10 个月度孪生〔fred vs world_bank 同一 FRED 序列〕+ crude_oil_cme〔fred 10231 vs cme 2〕+ live_cattle_cme〔**唯一真权衡组**：usda_ams 128 行冻结 2026-04-29 vs cme 2026-05-18 起日更，现状混读=3.5 月断档拼接〕）；排除代价 live 实证 **每 chronos 变体 410 行方向判定被守卫排除**。声明清单待 D8 点头（建议已入 V4-四）。测试基线 backend **1037+1**（100 文件）、frontend **338**（38 套件）、inference **66**，零回退。
+>
 > ### V4-一、现状基线（2026-08-30 实测，round-139 取证）
 >
 > | 维度 | 事实 | 证据 |
@@ -72,7 +74,7 @@ related_docs:
 >
 > | # | 事项 | 建议 | 来源 |
 > |---|------|------|------|
-> | **D8（新，批 2）** | 真混源 slug 的权威源声明清单（首例 aud_usd→fred） | 建议：仅同 interval 真混源才声明；aud_usd→fred（官方长序列/方向正确/与 brl_usd 一致；代价 currentPrice 时效 −1 天）。逐 slug 附两源行数/量纲对比表后执行 | V4-一 多源行；round-137 批 4c 登记 |
+> | **D8（新，批 2）** | 真混源 slug 的权威源声明清单（17 组，round-139 续 SQL 实测：FX 日度 aud_usd/usd_cny〔fred 30 年史 1.1-1.4 万行 vs api 68 行，同量纲〕、10 个月度孪生〔fred 415-432 行 vs world_bank 4 行，同一 FRED 序列——声明 fred 零风险〕、crude_oil_cme〔fred 10231 vs cme 2〕、live_cattle_cme〔唯一真权衡：usda_ams 128 行冻结 2026-04-29 @177-199 vs cme 2026-05-18 起日更 @211-247，现状混读=3.5 月断档拼接〕） | 建议：月度孪生 + FX + crude_oil_cme → **fred**（10+2+1 组，官方长序列、其中孪生本就是同一序列）；live_cattle_cme → **cme**（新鲜度优先，日更累积中；usda_ams 冻结 4 个月）。代价：FX currentPrice 时效约 −1 天。声明即解锁方向统计（现每 chronos 变体 410 行被排除） | V4-一 多源行；round-137 批 4c 登记；round-139 续 取证 |
 > | **D9（新，批 1）** | 周度快照提交策略 | 建议：脚本自动 commit（仅 docs/snapshots/track-record-*.md 路径，index.lock 冲突跳过）——保树干净不变量；备选仅写盘 | V4-一 快照行 |
 > | D1-D4（承 v3.0.0/v3.1.0） | PRODUCT-SPEC 增补 / 休眠表清理 / portfolios+predict-batch / predictionBeefCoverage24h 口径 | 见批 4 | round-134 |
 >

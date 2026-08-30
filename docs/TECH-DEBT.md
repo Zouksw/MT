@@ -601,3 +601,7 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **顺带登记**：PM2 管理的生产前端不可用 `pnpm restart:frontend`（restart.sh 会拒绝并提示先 `pm2 delete`）——正确路径是 `cd frontend && pnpm build && pm2 restart mt-frontend`（本轮实际操作序）。
 
 **round-106 "死代码类" 登记六项全数关闭**（详见上文该节 2026-08-30 复核批注）——实际清理发生在 round-112~132 各轮，登记文本一直未同步，本轮补记。
+
+## 十七、round-139 顺带登记（2026-08-30，批 3 执行中发现，未动）
+
+**seed.ts 的 beef_carcass_us 身份停留在 round-126 之前**：`prisma/seed.ts:2031` 仍是 "US Beef Carcass Price (FRED)" / `unit: "USD/cwt"` + 合成日度价生成（`base: 260, volatility: 8`，180 天日更 seed 行）——而生产库与代码自 round-126 D4 起该序列实为 **IMF 全球牛肉月度基准 PBEEFUSDM（USC/lb，月度）**。影响：mt_test / CI 全新种子库中该序列的元数据与节奏均与生产漂移（landing-cost 路由测试需在 beforeAll 临时把 unit 改为 USC/lb 并用未来日期 fixture 压制合成行）。处置：登记未动（改 seed 属独立卫生轮——需同步改 COMMODITIES 元数据 + 合成价策略〔月度序列不应生成日度合成行〕并复核依赖该 slug 的既有测试断言）。

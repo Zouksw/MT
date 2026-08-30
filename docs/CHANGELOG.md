@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-139（续）：v3.2.0 批 1（快照 cron 自动化）+ 批 3（进口成本计算器）落地
+
+用户指令"开始"（执行 v3.2.0 执行顺序：批 1 → 批 2〔D8 门〕→ 批 3）。批 2 的声明本身待 D8 点头，本轮已完成其取证（见下）。
+
+- **批 1 周度快照自动化（`ee36c41`，crontab 5→6 条）**：`scripts/cron-track-snapshot.sh` 每周一 07:30 驱动既有只读导出器 + **路径限定自动提交**（D9 推荐案落地：`git commit -- docs/snapshots/` pathspec 只提交快照文件、不卷入无关暂存；index.lock 存在则跳过留下周）。**实跑端到端验证**：重生成快照自动提交为 `1cee1c1`，而新脚本自身保持未暂存——路径守卫生效。
+- **批 2① D8 取证（live SQL，声明待用户点头）**：真混源组实测 **17 个**（slug×interval 口径，此前 slug 级查询被 head 截断漏了 usd_cny/sugar/wheat 等）：FX 日度族 aud_usd（fred 13945 行 30 年史 vs exchange_rate_api 68 行，同量纲 0.69-0.72）、usd_cny（fred 11392 vs api 68）；**10 个月度孪生**（fred 415-432 行 vs world_bank 4 行，同一 FRED 序列）；crude_oil_cme（fred 10231 vs cme 2）；**live_cattle_cme 是唯一真权衡组**（usda_ams 128 行冻结于 2026-04-29 @177-199 vs cme 自 2026-05-18 日更 @211-247——现状混读 = 3.5 个月断档拼接）。快照脚本运行日志同场实证排除代价：**每个 chronos 变体 410 行方向判定正被混源守卫排除**——D8 声明即可解锁。建议清单已入 IMPROVEMENT-PLAN v3.2.0 V4-四。
+- **批 3 进口成本计算器（`b209de2`，v3.0.0 批 A 升格）**：公开端点 `GET /api/tools/landing-cost`（zod 校验 400 门 + 全局限流，白名单序列纪律同 highlights）+ 公开页 `/tools/landing-cost`（middleware PUBLIC_PATHS + /beef/forecast 互链）。**诚实设计**：活输入仅白名单基准价（IMF 牛肉 USC/lb 月度 / CME 活牛/架子牛 USD/cwt 日更，USC/lb 与 USD/cwt 恰同走 ÷100→USD/lb→USD/kg，未知量纲拒绝换算）+ USD/CNY，全部带日期与新鲜度旗标；**关税/增值税/运费/损耗为用户假设参数——平台不内置各国税率（不造虚构数据）**；公式关税乘 CIF 类基数、增值税按（基数+关税）中国进口口径、损耗完税后乘算；区间 = 同公式跑近窗（日更 30 点 / 月度 3 点）最低↔最高，非拍脑袋 ±%。降级诚实：无数据 insufficient_data+原因、无汇率只显示美元口径。+15 后端测试（9 纯函数 + 6 路由，fixture 用未来日期压制 seed 合成行保证 CI 确定性）+4 前端页测。**live**：匿名双面 200；活牛 211.73 USD/cwt → 4.6677 USD/kg → 带参（12% 关税/9% 增值税/0.75 运杂/3% 损耗）→ **¥45.96/kg**，逐项手验一致；非法序列/越界参数 400。
+- **顺带登记（TECH-DEBT §十七）**：seed.ts 的 beef_carcass_us 身份仍是 round-126 之前的"US 胴体/USD/cwt+合成日更"，与生产的 IMF 月度基准漂移——批 3 路由测试以临时 unit 修正 + 未来日期 fixture 规避，seed 修正属独立卫生轮。
+- **门禁**：backend **1037+1**（100 文件，+15）、frontend **338**（38 套件，+4）全绿零回退；tsc×2 / biome×2 干净；双 build + PM2 重启；AGENTS.md 路由 17→**18**、页面 46→**47**（实测复核）。
+
 ### 2026-08-30 — round-139：状态维护轮 — 三套基线复跑全绿 + IMPROVEMENT-PLAN v3.2.0 第四波规划
 
 用户指令"维护项目状态，规划后续的开发计划"。**零代码改动轮（docs-only，无需重启）**；三套测试全量复跑作为状态确认：backend **1022+1**（98 文件）、frontend **334**（37 套件）、inference **66**，零回退；PM2 三服务在线（/health 200×3），git 树干净 @ `eba0402`。

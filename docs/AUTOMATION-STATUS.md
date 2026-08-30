@@ -1,6 +1,6 @@
 # 自动化基础设施状态
 
-> 最后更新：2026-08-30（round-139：状态维护——测试基线三套复跑刷新 1390→1422 全绿、周度快照脚本登记〔待 cron 接线，v3.2.0 批 1〕；前值 2026-08-16：部署断层修复 + cookie-parser 挂载；round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
+> 最后更新：2026-08-30（round-139 续：批 1 快照 cron 接线〔crontab 5→6 条〕+ 批 3 landing-cost 计算器〔测试基线 1422→1441 全绿〕；同日早 round-139：状态维护——三套基线复跑刷新 1390→1422；前值 2026-08-16：部署断层修复 + cookie-parser 挂载；round-104：全栈审计修复 9 批；round-102：CI 修复——三周红根因 + 空库迁移漂移 + deploy/rollback 守护；正文逐轮记录至 round-79，头注 2026-08-08 修正对齐）
 > 这份文档是给未来维护者的地图，避免重复审计。每个护栏标注它守护什么、为什么存在。
 > §九 数字严谨要求：下列计数为 live 实测（截至日期见各条），运行对应命令获取当前值。
 
@@ -109,7 +109,7 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 ## 二、定时任务（系统 crontab）
 
-`crontab -l` 共 5 条：
+`crontab -l` 共 6 条：
 
 | 频率 | 脚本 | 作用 |
 |---|---|---|
@@ -118,12 +118,13 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 | `*/5 * * * *` | `cron-healthcheck.sh` | 每 5 分钟探测 backend/frontend/inference + 自动重启 + **数据新鲜度探针**（round-49：读 /health/ready 的 dataLayer，anyDataFlowing=false 或 verification debt 高时记入 healthcheck.log，不重启） |
 | `0 3 * * *` | `cron-cleanup.sh` | 每日 3AM 磁盘清理（tmp/core/playwright/旧日志） |
 | `0 4 * * 0` | `cron-db-maintenance.sh` | 每周日 4AM VACUUM ANALYZE + session 清理 |
+| `30 7 * * 1` | `cron-track-snapshot.sh` | 每周一 07:30 周度 track-record 快照：跑只读 tsx 导出器 + **路径限定自动提交**（仅 `docs/snapshots/track-record-*.md`，git pathspec 不卷入无关暂存；index.lock 存在则跳过留下周；round-139 v3.2.0 批 1/D9，实跑验证自动提交 `1cee1c1`） |
 
 **round-28 变更**：cron-healthcheck.sh 新增 inference(10810) 探测。现在 3 个服务都受 cron 自动重启保护。
 
 **敏感操作禁令**：`cron-cleanup.sh` 明确禁止 `pnpm store prune`（曾 3 次导致文件损坏，Round 5/7/10）。
 
-**周度快照（待接线，v3.2.0 批 1 / 决策 D9）**：`backend/scripts/weekly-track-snapshot.ts`（round-138 批 5c 建成，只读导出 `docs/snapshots/track-record-<date>.md`——30d 榜单 MAPE+方向 + 牛肉月度验证分布；首产物 2026-08-30 已入库）。**crontab 尚无条目**——接线节奏与自动提交策略见 IMPROVEMENT-PLAN v3.2.0 批 1。
+**周度快照（已接线，round-139 批 1）**：`backend/scripts/weekly-track-snapshot.ts`（round-138 批 5c 建成，只读导出 `docs/snapshots/track-record-<date>.md`——30d 榜单 MAPE+方向 + 牛肉月度验证分布）由 `scripts/cron-track-snapshot.sh` 每周一 07:30 驱动并路径限定自动提交（见 §二 表）。首份产物 2026-08-30 入库；接线实跑自动提交 `1cee1c1`。
 
 ## 三、应用内定时器（setInterval，backend server.ts）
 
@@ -170,12 +171,12 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 | 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-30 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 98（2026-08-30） | **1022 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 37（2026-08-30） | **334 pass** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 100（2026-08-30 晚） | **1037 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 38（2026-08-30 晚） | **338 pass** |
 | inference | pytest 8 | conftest.py | 4（2026-08-22） | **66 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 9 specs | chromium only |
 
-> 三者合计 **1422 全绿**（1022 + 334 + 66，截至 2026-08-30 round-139 三套全量复跑实测；round-135-138 v3.1.0 七批净增来自月度生命周期/方向准确率/per-series 路由/牛肉预测中心页测试，round-132 D6 删三组孤儿端点时 -34 为随组删除的测试，属删功能非覆盖回退；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1441 全绿**（1037 + 338 + 66，截至 2026-08-30 晚 round-139 续 批 3 落地后实测；当日轨迹 1022+1/334/66 → +15 后端 landing-cost 纯函数+路由 / +4 前端页测；round-135-138 v3.1.0 七批净增来自月度生命周期/方向准确率/per-series 路由/牛肉预测中心页测试，round-132 D6 删三组孤儿端点时 -34 为随组删除的测试，属删功能非覆盖回退；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 
