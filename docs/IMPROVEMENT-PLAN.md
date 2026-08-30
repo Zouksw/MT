@@ -66,8 +66,8 @@ related_docs:
 > **批 2 — 冠军路由（序列 × 模型，补 modelQuality 的序列维度）**
 > `resolveModelWeights` 现为全局 per-model。新增 per-series 滚动准确率（30d 窗，verified 行按序列分组，≥N 条才启用，不足回退全局权重——与等权兜底同模式）；共识生成单序列信号时优先用该序列自己的权重集/冠军模型集。批 1 回测结果作为牛肉序列的冷启动证据。验收：单测构造"模型 X 全局弱、序列 A 强"→ A 的共识用 X；live `/api/signals/forecast?commodity=beef_carcass_us` 与全局权重对照可观察差异。
 >
-> **批 3 — 领先指标实验（lagged exog，门禁制，sarimax 接线前置）**
-> 经济假设：CME 活牛期货**领先** IMF 现货牛肉基准（期货价格发现），汇率滞后项次之。实验脚本扩展（`experiments/` 既有参数化先例）：monthly beef ← lag(1..3 月) 的活牛月均 / aud_usd 月均，rolling 门禁与 PRED-STRATEGY §五 相同（**增量不显著就不上**——该纪律 08-17 已挡过一次错误接线）。通过门禁才接 sarimax（engine exog 接口已实现，prediction_logs 0 行是纪律不是缺陷）。验收：实验报告入 docs/backtests/；未过门禁则登记结论关闭该方向。
+> **批 3 — 领先指标实验（lagged exog，门禁制，双臂：sarimax + chronos-2 协变量）**
+> 经济假设：CME 活牛期货**领先** IMF 现货牛肉基准（期货价格发现），汇率滞后项次之。**双臂设计（round-135 检索新增，PREDICTION-STRATEGY §7.1）**：臂 A = sarimax lagged-exog（统计路线，`experiments/` 既有参数化先例）；臂 B = **chronos-2 协变量零样本**（Amazon 2025-10 发布，120M encoder，原生支持 past/future covariates——同家族升级，接入成本低，CPU 可跑，且完全符合预训练约束）。两臂同一 rolling 门禁（与 PRED-STRATEGY §五 相同，**增量不显著就不上**——该纪律 08-17 已挡过一次错误接线）。臂 A 通过才接 sarimax（engine exog 接口已实现）；臂 B 通过则以候选模型身份走准入门禁（规范 1）。验收：实验报告入 docs/backtests/（含"两臂均未过门禁"的诚实结论分支）；未过门禁则登记结论关闭该方向。
 >
 > **批 4 — 方向准确率（采购择时的真指标）**
 > 验证环（`verifyDuePredictions`）在记 MAPE 的同时记**方向命中**（预测涨跌方向 vs 实际，相对 anchor 点）——读侧聚合（不加列，避免迁移），`/ai/accuracy` 与 `/ai/track-record` 增"方向命中率"列。回测（批 1）同口径产出历史方向命中，页面冷启动即有数。PROJECT-VISION §3.3 遗留建议的落地。验收：新验证行带方向判定；两页出现该列且与回测口径一致。
@@ -83,7 +83,7 @@ related_docs:
 > | # | 事项 | 建议 | 来源 |
 > |---|------|------|------|
 > | D5（新，批 0） | 月度 horizon 默认 [1,3]（替代 daily 默认 10）；7 条 NULL-interval 遗留行标 stale | 建议：照批 0c/0d 执行——证据链 9 月起成熟 vs 2027-05，差距是数量级的 | V3-一 缺口 2/3 |
-> | D6（新） | 是否引入第二预训练 TSFM 家族（TimesFM/Moirai 零样本） | 建议：**暂不**——chronos 在现有池已劣于 naive，先用批 1 建立牛肉自身证据；若牛肉上全员≈naive，"大模型"叙事应让位"可验证"叙事（诚实优先）；引入须过批 1 同款回测门禁 | V3-一；约束 §七.2 |
+> | D6（新） | 是否引入第二预训练 TSFM 家族（TimesFM/Moirai 零样本） | 建议：**暂不**——chronos 在现有池已劣于 naive，先用批 1 建立牛肉自身证据；若牛肉上全员≈naive，"大模型"叙事应让位"可验证"叙事（诚实优先）；引入须过批 1 同款回测门禁。**例外细化（round-135 检索，PRED-STRATEGY §7.1）**：chronos-2（2025-10）属现有家族升级而非新家族，且原生协变量能力正是批 3 所需——随批 3 臂 B 门禁评估，"一次一个挑战者"纪律不变 | V3-一；约束 §七.2；§7.1 |
 > | D1-D4（承 v3.0.0） | PRODUCT-SPEC 增补 / 休眠表清理 / portfolios+predict-batch / predictionBeefCoverage24h 口径 | 见下文并行轨 D 表（不变） | round-134 |
 >
 > ### V3-五、不做清单（红线重申 + 本波新增）
