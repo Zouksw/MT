@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-137（续）：批 4（方向准确率）落地 — 读侧推导 + 三次实测纠偏
+
+用户指令"继续"。计划条文"验证环在记 MAPE 的同时记方向命中——读侧聚合（不加列）"落地为**纯读侧推导**：`prediction_logs` 无需迁移，方向判定在读时从已存值 + anchor 收盘重建，与批 1 回测同口径（末步涨跌符号相对 anchor 点；flat 排除不计 miss）。
+
+- **4a 读侧聚合（`715fa82`）**：`mapeTracking` 新增 `directionVerdict`（纯函数：sign(pred) vs sign(actual) 相对 anchor，flat/非有限值返回 null）+ `getModelDirectionStats`（SQL 只取配对值不搬数组）；`directionHitRate/directionCount` 流经 `getModelAccuracy → getAllModelAccuracy → /api/signals/models/accuracy`（登录）与 `/api/signals/models/accuracy/public`（公开榜单）。+10 测试（5 纯函数 + 5 真库 mt_test，fixture 前缀刻意不含 "test" 以穿过聚合自身的排除守卫）。
+- **4b 两页增列（`af23766`）**：`/ai/accuracy` 模型对比表 Direction 列（DirectionCell——与 MapeBadge 同款 MIN_VERIFIED_SAMPLE=5 诚实门禁，naive 显式 "— (flat)"）；公开页 `/ai/track-record` 榜单增列 + methodology 增 `direction` 条目写明口径。前端 327→**330**。
+- **4c 三次实测纠偏（`64cf0ad`，首部署数字暴露三个数据形态现实）**：① **公共步配对**——CME 周末跳空使 actuals（6-9 点）短于 horizon 步数（10），原"长度不等即丢弃"误杀几乎全部日更行；改在**最后一个公共已验证步**配对（与验证环 MAPE 的 overlap 口径一致）。② **anchor 日界**——forecastStartAt 常为 16:00 盖章而收盘价 00:00 盖章，"严格早于时间戳"会抓到首步当日自己的收盘（= actual[0]，chronos 被抬高到 82-90%）；anchor 边界改为 forecastStartAt 的 **UTC 日历日零点**（两种盖章约定下都正确取到"首步前一日收盘"= 真训练末点）。③ **无 forecastStartAt 行排除**——predictedAt 回退使 anchor 落进实际窗口内部（crude 遗留行实测 12.9%，低于掷硬币）；这些行 MAPE 保留、方向不可判。另：`interval=''`（空串遗留）归一为 daily；**来源不明守卫**——anchor 窗内混多源且无权威声明的序列（aud_usd 现状：fred@00:00 与 exchange_rate_api@16:00 同表交错，同日价差 ≈ 日波动）整组排除方向（MAPE 不受影响，登记为数据决策候选）；naive 按定义恒 flat（live 实测 aud_usd 上 0/730 行 pred=anchor——值级 flat 判定在多源/回填下不可复现，模型级强制与回测结论一致）。
+- **live 终值（公开 API，30d 窗）**：chronos_tiny/mini/base **70.4%/70.0%/68.7%**（各 ~2170 判定行）、exponential_smoothing 68.9%、arima 58.9%（73 行——统计模型在 CME 序列 30d 内 verified 行本就少，数据量而非过滤）、holtwinters **33.8%**（74 行，低于掷硬币的差异化弱点）、naive "—"。方向技能分化真实可见。beef 月度 0 行（首批 2026-09/10 成熟后自动进入判定）。
+- **门禁**：backend 全量 **1021 pass + 1 skip 全绿**（1019+1 基线 + 2 来源守卫测试；中间一轮全量 1 例瞬态失败、终轮全绿）；frontend **330**；tsc × 2 干净；双服务 build + PM2 重启；live：公开/auth 两 API 均带 direction 字段实测 200，track-record 页 200。
+
 ### 2026-08-30 — round-137 执行轮：IMPROVEMENT-PLAN v3.1.0 批 2（冠军路由：序列 × 模型）落地
 
 用户指令"继续后续的开发"。批 1 回测结论（arima 牛肉月度冷启动冠军、全局 chronos 淘汰对牛肉过严）进入机制化：共识权重从全局 per-model 升级为**按序列路由**——序列自己的验证证据足够时，权重表与淘汰判定都换成该序列自己的。
