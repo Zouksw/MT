@@ -18,8 +18,11 @@ const BEEF_API = API_BASE;
 
 type Timeframe = "daily" | "weekly" | "monthly";
 
-export function useTradingData() {
-	const [selectedSlug, setSelectedSlug] = useState<string>("");
+export function useTradingData(initialSlug?: string) {
+	// initialSlug is the ?slug= deep link — an INITIAL value only; same-route
+	// URL changes (search fired while already on /trading) are synced by the
+	// page, which is the only caller that can observe them.
+	const [selectedSlug, setSelectedSlug] = useState<string>(initialSlug ?? "");
 	const [timeframe, setTimeframe] = useState<Timeframe>("daily");
 	const [chartType, setChartType] = useState<ChartType>("candlestick");
 	const [showMultiSource, setShowMultiSource] = useState(false);
@@ -86,8 +89,13 @@ export function useTradingData() {
 			// rows, so signals degraded and the AI column stayed empty
 			// (round-129 batch 7, TECH-DEBT §十四 F3).
 			setSelectedSlug("beef_carcass_us");
-		} else if (!beefMode && !selectedSlug && commodities.length > 0) {
-			setSelectedSlug(commodities[0].slug);
+		} else if (!beefMode && commodities.length > 0) {
+			// Auto-select the first commodity. A selected slug missing from the
+			// list can only originate from a stale/typo'd ?slug= deep link —
+			// degrade to the default instead of a permanent "Loading..." chart.
+			if (!selectedSlug || !commodities.some((c) => c.slug === selectedSlug)) {
+				setSelectedSlug(commodities[0].slug);
+			}
 		}
 	}, [selectedSlug, commodities, beefMode]);
 

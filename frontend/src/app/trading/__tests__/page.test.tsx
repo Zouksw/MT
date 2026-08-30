@@ -15,11 +15,16 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type React from "react";
 
-// Mock the data hook with a controllable return value.
+// Mock the data hook with a controllable return value; the initial-slug
+// argument is captured so the deep-link test can assert the pass-through.
 let mockTradingData: Record<string, unknown>;
+let lastInitialSlug: string | undefined;
 
 jest.mock("@/hooks/useTradingData", () => ({
-	useTradingData: () => mockTradingData,
+	useTradingData: (initialSlug?: string) => {
+		lastInitialSlug = initialSlug;
+		return mockTradingData;
+	},
 }));
 
 // Mock chart components that pull in lightweight-charts (heavy native dep).
@@ -42,9 +47,11 @@ jest.mock("recharts", () => ({
 	ReferenceLine: () => null,
 }));
 
-// Mock next/navigation.
+// Mock next/navigation. mockSearch is read lazily so the deep-link test can
+// retarget the query string per test.
+let mockSearch = "";
 jest.mock("next/navigation", () => ({
-	useSearchParams: () => new URLSearchParams(),
+	useSearchParams: () => new URLSearchParams(mockSearch),
 	useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 	usePathname: () => "/trading",
 }));
@@ -53,6 +60,7 @@ import TradingPage from "../page";
 
 describe("Trading page — signal=null honesty (round-85)", () => {
 	beforeEach(() => {
+		mockSearch = "";
 		mockTradingData = {
 			signalLoading: false,
 			signal: null, // no AI signal — the round-85 fix scenario
@@ -103,5 +111,69 @@ describe("Trading page — signal=null honesty (round-85)", () => {
 		// levels render that used currentPrice * 0.97/1.03/1.04).
 		expect(screen.queryByText(/Predicted Price/i)).not.toBeInTheDocument();
 		expect(screen.queryByText(/Support Level/i)).not.toBeInTheDocument();
+	});
+});
+
+describe("Trading page — ?slug= deep link (round-147)", () => {
+	beforeEach(() => {
+		mockSearch = "";
+		mockTradingData = {
+			signalLoading: false,
+			signal: null,
+			loading: false,
+			error: null,
+			currentPrice: 5.0,
+			selectedSlug: "",
+			setSelectedSlug: jest.fn(),
+			commodities: [],
+			commoditiesLoading: false,
+			prices: [],
+			chartData: [],
+			chartType: "professional",
+			multiSources: {},
+			indicators: {},
+			factors: [],
+			factorsLoading: false,
+			factorSources: [],
+			predictionHistory: [],
+			predictionOverlays: {},
+			anomalies: [],
+			bestModelId: null,
+			previousDirection: null,
+			beefMode: false,
+			setBeefMode: jest.fn(),
+			setSelectedCut: jest.fn(),
+			setBeefFactoryFilter: jest.fn(),
+			beefPrices: [],
+			beefCuts: [],
+			beefFactories: [],
+			beefFactoryFilter: "",
+			beefChartData: [],
+			beefMultiSources: {},
+			beefCutInfo: null,
+		};
+	});
+
+	it("passes ?slug= to the hook as the initial selection", () => {
+		mockSearch = "slug=feeder_cattle";
+		render(<TradingPage />);
+
+		expect(lastInitialSlug).toBe("feeder_cattle");
+	});
+
+	it("syncs same-route slug changes to the selection (page does not remount on /trading -> /trading?slug=)", () => {
+		mockSearch = "slug=feeder_cattle";
+		render(<TradingPage />);
+
+		// The sync effect must drive setSelectedSlug on URL slug arrival —
+		// the hook's initial value alone would miss same-route navigation.
+		expect(mockTradingData.setSelectedSlug).toHaveBeenCalledWith("feeder_cattle");
+	});
+
+	it("no slug param: neither initial value nor selection sync fires", () => {
+		render(<TradingPage />);
+
+		expect(lastInitialSlug).toBeUndefined();
+		expect(mockTradingData.setSelectedSlug).not.toHaveBeenCalled();
 	});
 });

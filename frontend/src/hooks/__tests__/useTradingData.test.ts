@@ -225,6 +225,24 @@ describe("useTradingData", () => {
 		]);
 	});
 
+	it("deep link: initialSlug is honored (beats first-commodity auto-select); unknown slug degrades to the default", async () => {
+		mockFetchRoute(happyRoutes());
+		md.commodities = [
+			{ id: "c1", slug: "beef_carcass_us", name: "Beef Carcass (US)" },
+			{ id: "c2", slug: "corn_cme", name: "Corn" },
+		];
+
+		const { result } = renderHook(() => useTradingData("corn_cme"));
+		// The deep-linked commodity, NOT the auto-selected first one.
+		await waitFor(() => expect(result.current.selectedSlug).toBe("corn_cme"));
+		expect(result.current.selected?.slug).toBe("corn_cme");
+
+		// A stale/typo'd slug falls back to the first commodity instead of a
+		// permanent "Loading..." chart title.
+		const { result: stale } = renderHook(() => useTradingData("no_such_slug"));
+		await waitFor(() => expect(stale.current.selectedSlug).toBe("beef_carcass_us"));
+	});
+
 	it("surfaces an AI-signal error when the signal payload can't be parsed", async () => {
 		const routes = happyRoutes();
 		routes["/api/signals/beef_carcass_us?"] = {

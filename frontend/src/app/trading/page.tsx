@@ -1,6 +1,8 @@
 "use client";
 
 import { BarChart3, Beef, Zap } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import AnomalyAlertBanner from "@/components/trading/AnomalyAlertBanner";
 import BeefCutSelector from "@/components/trading/BeefCutSelector";
@@ -22,8 +24,19 @@ import { useTradingData } from "@/hooks/useTradingData";
 import { formatPercent, formatPercentValue, formatPrice, formatPriceRange } from "@/lib/format";
 import { MODEL_NAME_MAP } from "@/types/accuracy";
 
-export default function TradingPage() {
-	const d = useTradingData();
+function TradingPageInner() {
+	const searchParams = useSearchParams();
+	const deepSlug = searchParams.get("slug") ?? undefined;
+	const d = useTradingData(deepSlug);
+
+	// Same-route deep links (search fired while already on /trading) do not
+	// remount this page, so the hook's initial value alone would miss them.
+	// Run on actual slug changes only — manual selector picks leave the URL
+	// stale and must not be clobbered by re-renders.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: deliberate run-on-URL-change trigger; setSelectedSlug is a stable state setter, and keying on selectedSlug would overwrite manual commodity picks
+	useEffect(() => {
+		if (deepSlug) d.setSelectedSlug(deepSlug);
+	}, [deepSlug]);
 
 	return (
 		<PageContainer>
@@ -501,5 +514,21 @@ export default function TradingPage() {
 				performance does not guarantee future results.
 			</p>
 		</PageContainer>
+	);
+}
+
+export default function TradingPage() {
+	return (
+		// useSearchParams opts the page into client-side rendering during
+		// prerender — the Suspense boundary is Next 15's required shell for it.
+		<Suspense
+			fallback={
+				<div className="flex items-center justify-center py-24">
+					<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+				</div>
+			}
+		>
+			<TradingPageInner />
+		</Suspense>
 	);
 }

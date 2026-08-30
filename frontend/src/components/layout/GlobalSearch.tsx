@@ -6,8 +6,8 @@
  * Minimal three-source cross-search backed by GET /api/search (authed,
  * whitelisted: beef cut taxonomy / commodities / published news). Debounced
  * contains-match; Enter jumps to the first hit, Escape closes. Commodity hits
- * land on /trading (its selector is the page's primary interaction — deep
- * link ?slug= is a registered polish item, not silently faked here).
+ * deep-link to /trading?slug=<slug>, which preselects the commodity
+ * (round-147).
  */
 
 import { Search } from "lucide-react";
@@ -41,6 +41,9 @@ interface SearchPayload {
 }
 
 const DEBOUNCE_MS = 300;
+
+/** Deep link that preselects the commodity on /trading (round-147). */
+const commodityHref = (slug: string) => `/trading?slug=${slug}`;
 
 export function GlobalSearch() {
 	const [q, setQ] = useState("");
@@ -89,7 +92,7 @@ export function GlobalSearch() {
 		? payload.cuts[0]
 			? `/beef/cuts/${payload.cuts[0].cutCode}`
 			: payload.commodities[0]
-				? "/trading"
+				? commodityHref(payload.commodities[0].slug)
 				: payload.news[0]
 					? `/market-news/show/${payload.news[0].id}`
 					: null
@@ -148,7 +151,11 @@ export function GlobalSearch() {
 							{payload.commodities.length > 0 && (
 								<Section label="商品">
 									{payload.commodities.map((c) => (
-										<Item key={c.slug} href="/trading" onNavigate={() => setOpen(false)}>
+										<Item
+											key={c.slug}
+											href={commodityHref(c.slug)}
+											onNavigate={() => setOpen(false)}
+										>
 											{c.nameCn || c.name}
 											<span className="text-muted-foreground">{c.slug}</span>
 										</Item>

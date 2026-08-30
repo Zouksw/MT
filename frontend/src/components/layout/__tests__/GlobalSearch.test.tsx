@@ -37,6 +37,13 @@ describe("GlobalSearch", () => {
 		expect(screen.getByText("牛肉")).toBeInTheDocument();
 		expect(screen.getByText("Beef exports steady")).toBeInTheDocument();
 		expect(mockedFetch).toHaveBeenCalledWith("/api/search?q=beef");
+
+		// Commodity hits deep-link with the slug — /trading preselects it
+		// (round-147); landing on the bare selector would silently drop it.
+		expect(screen.getByRole("link", { name: /牛肉/ })).toHaveAttribute(
+			"href",
+			"/trading?slug=beef_carcass_us",
+		);
 	});
 
 	it("shows the honest empty message when nothing matches", async () => {
