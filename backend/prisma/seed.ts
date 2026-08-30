@@ -1862,9 +1862,14 @@ async function main() {
 		},
 		{
 			slug: "beef_carcass_us",
-			name: "US Beef Carcass Price (FRED)",
+			// §十七 fix (v3.3.0 批2): seed mirrors the post-round-126 PROD
+			// identity — IMF global beef monthly benchmark (PBEEFUSDM),
+			// USC/lb. The old "US Beef Carcass (FRED) / USD/cwt" was the
+			// pre-fix mislabel era (CBBTCUSD Bitcoin rows).
+			name: "Global Beef Price (IMF via FRED)",
+			nameCn: "全球牛肉价格（IMF 月度）",
 			category: "beef_cuts",
-			unit: "USD/cwt",
+			unit: "USC/lb",
 			currency: "USD",
 		},
 		{
@@ -1989,7 +1994,7 @@ async function main() {
 		// CN wholesale + CBOT + FRED carcass (slugs above)
 		apple_wholesale_cn: { base: 6.0, volatility: 0.3 },
 		banana_wholesale_cn: { base: 4.0, volatility: 0.3 },
-		beef_carcass_us: { base: 260, volatility: 8 },
+		beef_carcass_us: { base: 330, volatility: 6 },
 		beef_wholesale_cn: { base: 60, volatility: 2.5 },
 		cabbage_wholesale_cn: { base: 1.6, volatility: 0.2 },
 		carp_wholesale_cn: { base: 12, volatility: 0.6 },
@@ -2105,7 +2110,17 @@ async function main() {
 				factoryCode: c.factoryCode ?? null,
 				unit: c.unit,
 				currency: c.currency,
-				metadata: { source: "seed", importType: c.category === "forex" ? "api" : "manual" },
+				// §十七 fix (v3.3.0 批2): beef_carcass_us mirrors its PROD
+				// metadata (fred / PBEEFUSDM); other slugs keep the generic
+				// seed marker.
+				metadata:
+					c.slug === "beef_carcass_us"
+						? {
+								source: "fred",
+								seriesId: "PBEEFUSDM",
+								note: "seed mirrors prod identity (round-126 fix)",
+							}
+						: { source: "seed", importType: c.category === "forex" ? "api" : "manual" },
 			},
 		});
 		commodityCount++;
@@ -2159,6 +2174,34 @@ async function main() {
 		if (!baseline) continue;
 
 		let price = baseline.base;
+
+		// §十七 fix (v3.3.0 批2): beef_carcass_us is a MONTHLY series in prod
+		// — seeding 180 daily rows for it is a cadence lie (mt_test drifted
+		// from prod until landing-cost tests needed a beforeAll unit hack).
+		// Generate month-start points instead, labeled "fred" as in prod.
+		if (commodity.slug === "beef_carcass_us") {
+			let monthlyPrice = baseline.base;
+			for (let m = 5; m >= 0; m--) {
+				const date = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() - m, 1));
+				monthlyPrice = Math.max(
+					monthlyPrice * 0.9,
+					Math.min(monthlyPrice * 1.1, monthlyPrice + (Math.random() - 0.48) * baseline.volatility),
+				);
+				priceBatch.push({
+					commodityId: commodity.id,
+					date,
+					interval: "monthly",
+					open: null,
+					high: null,
+					low: null,
+					close: parseFloat(monthlyPrice.toFixed(4)),
+					volume: null,
+					source: "fred",
+					metadata: null,
+				});
+			}
+			continue;
+		}
 
 		for (let d = 0; d < DAYS; d++) {
 			const date = new Date(NOW.getTime() - (DAYS - d) * 24 * 60 * 60 * 1000);

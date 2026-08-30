@@ -46,16 +46,10 @@ async function seedFixtures() {
 			`seed commodities missing (beef_carcass_us=${!!beef}, usd_cny=${!!cny}, aud_usd=${!!aud}) — run prisma db seed`,
 		);
 	}
-	// Mirror prod metadata (round-126 renamed the series to the IMF benchmark,
-	// USC/lb; the seed still carries the pre-fix "USD/cwt" identity — restored
-	// in afterAll). Note both dimensions convert via /100, so the numbers hold
-	// either way; this keeps the metadata assertion honest.
-	await prisma.commodity.update({
-		where: { slug: "beef_carcass_us" },
-		data: { unit: "USC/lb" },
-	});
-	// Monthly window = last 3 monthly points (300/310/330 USC/lb). Only these
-	// rows are monthly for this slug, so the window is fully deterministic.
+	// Beef identity comes from the seed itself since v3.3.0 批2 (§十七 fix):
+	// beef_carcass_us is seeded as the IMF monthly benchmark, USC/lb — no
+	// beforeAll unit patch needed anymore. The monthly window fixtures below
+	// are FUTURE-dated so they still dominate the seeded monthly history.
 	const monthAgo = (days: number) => new Date(FUTURE_MS - days * 86_400_000);
 	for (const [date, close] of [
 		[monthAgo(60), 300],
@@ -97,25 +91,15 @@ async function seedFixtures() {
 }
 
 describe("Tools Routes — GET /api/tools/landing-cost (public)", () => {
-	let originalBeefUnit: string | null | undefined;
-
 	beforeAll(async () => {
 		app = createTestApp();
 		await requireDb("tools routes");
 		await cleanupFixtures();
-		const beef = await prisma.commodity.findUnique({ where: { slug: "beef_carcass_us" } });
-		originalBeefUnit = beef?.unit;
 		await seedFixtures();
 	});
 
 	afterAll(async () => {
 		await cleanupFixtures();
-		await prisma.commodity
-			.update({
-				where: { slug: "beef_carcass_us" },
-				data: { unit: originalBeefUnit ?? "USD/cwt" },
-			})
-			.catch(() => undefined);
 	});
 
 	it("defaults (all-zero params): landed = base, CNY = base × fx", async () => {
