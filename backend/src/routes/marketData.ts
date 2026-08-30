@@ -5,7 +5,8 @@ import { MS_PER_DAY } from "@/lib/constants";
 import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate, authorize } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
-import { asyncHandler, BadRequestError, NotFoundError } from "@/middleware/errorHandler";
+import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
+import { stalenessWindowDays } from "@/services/cadence";
 import { scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import {
@@ -112,6 +113,95 @@ router.get(
 			}),
 		);
 		success(res, { highlights });
+	}),
+);
+
+/**
+ * Slugs exposed WITHOUT authentication on /public/digest — the public
+ * Chinese market digest page (/market/digest, IMPROVEMENT-PLAN v3.3.0
+ * batch 1). Same whitelist discipline as /public/highlights: curated
+ * public macro/cattle/FX series only; user datasets/timeseries must never
+ * appear here. Reads go through the authoritative-source filter
+ * (getLatestPrice/getPriceHistory), so multi-source slugs serve their
+ * declared source.
+ */
+const PUBLIC_DIGEST_SLUGS = [
+	"beef_carcass_us",
+	"live_cattle_cme",
+	"feeder_cattle_cme",
+	"usd_cny",
+	"brl_usd",
+] as const;
+
+router.get(
+	"/public/digest",
+	cacheRoute("market:public-digest", 300),
+	asyncHandler(async (_req, res) => {
+		const series = await Promise.all(
+			PUBLIC_DIGEST_SLUGS.map(async (slug) => {
+				try {
+					const { commodity, price } = await getLatestPrice(slug);
+					if (!price || price.close == null) {
+						return {
+							slug,
+							name: commodity.name,
+							nameCn: commodity.nameCn,
+							unit: commodity.unit,
+							category: commodity.category,
+							status: "no_data" as const,
+						};
+					}
+					// The latest row's own cadence decides the history window
+					// and the change semantics — daily series get DoD/WoW,
+					// monthly get MoM (a weekly window on a monthly series
+					// would be fabricated precision).
+					const interval = (price.interval ?? "daily") as "daily" | "weekly" | "monthly";
+					const { prices } = await getPriceHistory(slug, { interval, limit: 30 });
+					const points = prices
+						.filter((p) => p.close != null)
+						.map((p) => ({ date: p.date, close: Math.round(Number(p.close) * 100) / 100 }));
+					const close = Math.round(Number(price.close) * 100) / 100;
+					const pct = (from: number) =>
+						from > 0 ? Math.round(((close - from) / from) * 10000) / 100 : null;
+					const prevPointChangePct =
+						points.length >= 2 ? pct(points[points.length - 2].close) : null;
+					// 本周变化 (the digest page's weekly-report section): for
+					// daily series, vs the newest point ≥6 days older than the
+					// latest (≈a 7-day window); monthly series report null and
+					// the page falls back to MoM.
+					const wowChangePct =
+						interval === "monthly"
+							? null
+							: (() => {
+									const cutoff = new Date(new Date(price.date).getTime() - 6 * MS_PER_DAY);
+									const base = [...points].reverse().find((p) => new Date(p.date) <= cutoff);
+									return base ? pct(base.close) : null;
+								})();
+					const ageDays = (Date.now() - new Date(price.date).getTime()) / MS_PER_DAY;
+					return {
+						slug,
+						name: commodity.name,
+						nameCn: commodity.nameCn,
+						unit: commodity.unit,
+						category: commodity.category,
+						status: "ok" as const,
+						latest: { date: price.date, close, source: price.source },
+						interval,
+						seriesId: (commodity.metadata as { seriesId?: string } | null)?.seriesId ?? null,
+						prevPointChangePct,
+						wowChangePct,
+						momChangePct: interval === "monthly" ? prevPointChangePct : null,
+						stale: ageDays > stalenessWindowDays(interval),
+						series: points,
+					};
+				} catch {
+					// Unknown slug or DB hiccup — degrade to a status marker so
+					// one bad entry can't break the whole public digest.
+					return { slug, status: "error" as const };
+				}
+			}),
+		);
+		success(res, { digest: { generatedAt: new Date().toISOString(), series } });
 	}),
 );
 

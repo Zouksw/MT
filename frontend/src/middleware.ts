@@ -15,6 +15,9 @@ const PUBLIC_PATHS = [
 	// Public landing-cost calculator (v3.2.0 批 3) — acquisition tool; the
 	// API behind it is whitelisted-series-only like /public/highlights.
 	"/tools/landing-cost",
+	// Public Chinese market digest (v3.3.0 批 1) — SEO acquisition surface;
+	// auto-aggregated whitelisted series only, no user-private data.
+	"/market/digest",
 ];
 
 export function middleware(request: NextRequest) {

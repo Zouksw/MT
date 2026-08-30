@@ -7,6 +7,7 @@ import AppProviders from "@/components/AppProviders";
 import { WebVitals } from "@/components/WebVitals";
 import "@/styles/globals.css";
 import { SITE_STATS } from "@/lib/site-stats";
+import { SITE_URL } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 
 // Beef-only positioning (PRODUCT-SPEC §一, §六 阶段0). Generic "55+ commodities"
@@ -14,6 +15,15 @@ import { cn } from "@/lib/utils";
 const BEEF_DESCRIPTION = `AI-powered beef price intelligence: ${SITE_STATS.beefCuts} beef cuts, ${SITE_STATS.sourceCountries} import markets, multi-model price forecasting for the China beef trade`;
 
 export const metadata: Metadata = {
+	// Absolute-URL base for canonical/OG resolution (v3.3.0 batch 1a SEO
+	// substrate); guarded so a malformed env value can't crash the build.
+	metadataBase: (() => {
+		try {
+			return new URL(SITE_URL);
+		} catch {
+			return undefined;
+		}
+	})(),
 	title: {
 		default: "MT — AI-Powered Beef Market Intelligence",
 		template: "%s | MT",
@@ -39,7 +49,9 @@ export const metadata: Metadata = {
 	openGraph: {
 		type: "website",
 		locale: "en_US",
-		url: "https://mt.ai",
+		// Same origin as sitemap/robots/canonical — no hardcoded domain that
+		// can drift from the deployed reality (v3.3.0 batch 1a).
+		url: "/",
 		title: "MT — AI-Powered Beef Market Intelligence",
 		description: BEEF_DESCRIPTION,
 		siteName: "MT",

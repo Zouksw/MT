@@ -169,6 +169,65 @@ describe("Market Data Routes", () => {
 		});
 	});
 
+	describe("GET /api/market/public/digest", () => {
+		// IMPROVEMENT-PLAN v3.3.0 batch 1: the public Chinese market digest
+		// page's data source. Same defining contract as /public/highlights —
+		// PUBLIC access with a FIXED whitelist; the response must never
+		// contain anything beyond the curated public series (no user
+		// datasets/timeseries, no private identifiers).
+		const DIGEST_WHITELIST = [
+			"beef_carcass_us",
+			"live_cattle_cme",
+			"feeder_cattle_cme",
+			"usd_cny",
+			"brl_usd",
+		];
+
+		test("is accessible WITHOUT authentication and only whitelisted slugs appear", async () => {
+			const res = await request(app).get("/api/market/public/digest");
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			const series = res.body.data.digest.series;
+			expect(Array.isArray(series)).toBe(true);
+			expect(series).toHaveLength(DIGEST_WHITELIST.length);
+			// Whitelist equality — any extra slug would be a privacy leak.
+			expect(series.map((s: { slug: string }) => s.slug).sort()).toEqual(
+				[...DIGEST_WHITELIST].sort(),
+			);
+			for (const entry of series) {
+				expect(["ok", "no_data", "error"]).toContain(entry.status);
+				// No private fields ever ride along on the public payload.
+				expect(entry).not.toHaveProperty("commodityId");
+				expect(entry).not.toHaveProperty("id");
+			}
+		});
+
+		test("ok entries carry interval-aware changes + numeric series + stale flag", async () => {
+			const res = await request(app).get("/api/market/public/digest");
+			expect(res.status).toBe(200);
+			for (const entry of res.body.data.digest.series) {
+				if (entry.status !== "ok") continue; // degrade markers covered above
+				expect(typeof entry.latest.close).toBe("number");
+				expect(entry.latest.date).toBeTruthy();
+				expect(["daily", "weekly", "monthly"]).toContain(entry.interval);
+				expect(typeof entry.stale).toBe("boolean");
+				expect(
+					entry.prevPointChangePct === null || typeof entry.prevPointChangePct === "number",
+				).toBe(true);
+				expect(entry.wowChangePct === null || typeof entry.wowChangePct === "number").toBe(true);
+				// A monthly series must not fake a weekly window.
+				if (entry.interval === "monthly") {
+					expect(entry.wowChangePct).toBeNull();
+					expect(entry.momChangePct === null || typeof entry.momChangePct === "number").toBe(true);
+				}
+				for (const point of entry.series) {
+					expect(typeof point.close).toBe("number");
+					expect(Number.isNaN(point.close)).toBe(false);
+				}
+			}
+		});
+	});
+
 	describe("GET /api/market/factors/exchange-rates", () => {
 		test("returns exchange-rate factors", async () => {
 			const res = await request(app).get("/api/market/factors/exchange-rates").set(authHeaders());
