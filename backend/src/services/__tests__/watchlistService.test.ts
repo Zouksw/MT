@@ -30,6 +30,7 @@ let ownerId: string;
 let otherUserId: string;
 const createdUserIds: string[] = [];
 const createdWatchlistIds: string[] = [];
+const createdCommodityIds: string[] = [];
 
 beforeEach(async () => {
 	ownerId = (
@@ -58,11 +59,20 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-	// Clean watchlists then users (FK order).
+	// Clean watchlists then users (FK order), plus fixture commodities (prices first).
 	await prisma.watchlist.deleteMany({ where: { userId: { in: createdUserIds } } }).catch(() => {});
 	await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } }).catch(() => {});
+	if (createdCommodityIds.length > 0) {
+		await prisma.commodityPrice
+			.deleteMany({ where: { commodityId: { in: createdCommodityIds } } })
+			.catch(() => {});
+		await prisma.commodity
+			.deleteMany({ where: { id: { in: createdCommodityIds } } })
+			.catch(() => {});
+	}
 	createdUserIds.length = 0;
 	createdWatchlistIds.length = 0;
+	createdCommodityIds.length = 0;
 });
 
 // Helpers ---------------------------------------------------------------
@@ -211,5 +221,99 @@ describe("watchlistService — ownership enforcement", () => {
 		// fred scale (~5.0), NOT exchange_rate_api scale (~0.197).
 		expect(Number(price)).toBeGreaterThan(4);
 		expect(Number(price)).toBeLessThan(6);
+	});
+
+	it("listWatchlists resolves a monthly-only commodity's latestPrice via the monthly fallback (round-132)", async () => {
+		// Round-132 regression: the watchlist-local latest-price copy was
+		// daily-only, so monthly-only series showed "（暂无价格）". listWatchlists
+		// must now fall back to the latest monthly close.
+		const slug = `wl-monthly-${Date.now()}`;
+		const commodity = await prisma.commodity.create({
+			data: {
+				slug,
+				name: "WL Monthly Fixture",
+				category: "beef",
+				unit: "CNY/kg",
+				prices: {
+					create: [
+						{
+							close: 100,
+							date: new Date("2026-06-01T00:00:00Z"),
+							interval: "monthly",
+							source: "fixture",
+						},
+						{
+							close: 110,
+							date: new Date("2026-07-01T00:00:00Z"),
+							interval: "monthly",
+							source: "fixture",
+						},
+					],
+				},
+			},
+		});
+		createdCommodityIds.push(commodity.id);
+		const wl = await makeList(ownerId, "monthly-latest");
+		await prisma.watchlistItem.create({
+			data: { watchlistId: wl.id, commodityId: commodity.id },
+		});
+
+		const lists = await listWatchlists(ownerId);
+		const item = lists
+			.find((l) => l.id === wl.id)!
+			.items.find((it) => it.commodityId === commodity.id)!;
+		// Raw-SQL numerics arrive as Prisma Decimal — compare numerically
+		// (same convention as the round-67 test below/above).
+		expect(Number(item.latestPrice)).toBe(110);
+		expect(item.latestDate).toEqual(new Date("2026-07-01T00:00:00Z"));
+	});
+
+	it("getWatchlistQuotes resolves a monthly-only commodity's price + month-over-month change (round-132)", async () => {
+		// Round-132 regression: batchRecentPricePairs was daily-only too, so the
+		// quotes view showed no price for monthly series. The fallback yields the
+		// latest 2 monthly closes: change becomes month-over-month.
+		const slug = `wl-monthly-q-${Date.now()}`;
+		const commodity = await prisma.commodity.create({
+			data: {
+				slug,
+				name: "WL Monthly Quotes Fixture",
+				category: "beef",
+				unit: "CNY/kg",
+				prices: {
+					create: [
+						{
+							close: 200,
+							date: new Date("2026-05-01T00:00:00Z"),
+							interval: "monthly",
+							source: "fixture",
+						},
+						{
+							close: 220,
+							date: new Date("2026-06-01T00:00:00Z"),
+							interval: "monthly",
+							source: "fixture",
+						},
+						{
+							close: 231,
+							date: new Date("2026-07-01T00:00:00Z"),
+							interval: "monthly",
+							source: "fixture",
+						},
+					],
+				},
+			},
+		});
+		createdCommodityIds.push(commodity.id);
+		const wl = await makeList(ownerId, "monthly-quotes");
+		await prisma.watchlistItem.create({
+			data: { watchlistId: wl.id, commodityId: commodity.id },
+		});
+
+		const quotes = await getWatchlistQuotes(wl.id, ownerId);
+		expect(quotes).toHaveLength(1);
+		expect(quotes[0].price).toBe(231);
+		expect(quotes[0].previousPrice).toBe(220);
+		expect(quotes[0].change).toBe(11);
+		expect(quotes[0].changePercent).toBe(5);
 	});
 });

@@ -12,6 +12,7 @@
 import { prisma } from "@/lib";
 import { BadRequestError, NotFoundError } from "@/middleware/errorHandler";
 import {
+	batchLatestPrices,
 	getAuthoritativeSource,
 	getConflictSlugs,
 } from "@/services/inference/authoritativeSources";
@@ -122,49 +123,12 @@ async function partitionBySource(
 }
 
 /**
- * Batch-fetch the latest daily close per commodity, applying authoritative-
- * source resolution per commodity. Used by listWatchlists.
- *
- * Round-67: previously a single raw query with `commodity_id = ANY(...)` and
- * no source filter, which for conflict commodities picked whichever source
- * wrote most recently (e.g. brl_usd got exchange_rate_api's inverted ~0.2).
- * Now splits plain vs conflict ids and runs a filtered query per conflict
- * source.
- */
-async function batchLatestPrices(
-	commodityIds: string[],
-): Promise<Map<string, { close: number; date: Date }>> {
-	const out = new Map<string, { close: number; date: Date }>();
-	if (commodityIds.length === 0) return out;
-	const { plainIds, conflictBySource } = await partitionBySource(commodityIds);
-
-	if (plainIds.length > 0) {
-		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
-      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
-      FROM commodity_prices
-      WHERE commodity_id = ANY(${plainIds}::text[]) AND interval = 'daily'
-      ORDER BY commodity_id, date DESC
-    `;
-		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
-	}
-	// One filtered query per conflict source (at most 2 sources today: fred,
-	// usda_ams). Each restricts to that source's commodity ids + source name.
-	for (const [source, ids] of conflictBySource) {
-		const rows = await prisma.$queryRaw<Array<{ commodityId: string; close: number; date: Date }>>`
-      SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date
-      FROM commodity_prices
-      WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'daily' AND source = ${source}
-      ORDER BY commodity_id, date DESC
-    `;
-		for (const p of rows) out.set(p.commodityId, { close: p.close, date: p.date });
-	}
-	return out;
-}
-
-/**
  * Batch-fetch the latest 2 daily closes per commodity, applying authoritative-
  * source resolution per commodity. Used by getWatchlistQuotes to compute
- * day-over-day change. Same plain/conflict split as batchLatestPrices.
+ * day-over-day change. Same plain/conflict split as the shared
+ * batchLatestPrices; monthly-only commodities (no daily rows) fall back to
+ * their latest 2 monthly closes so the change becomes month-over-month
+ * instead of "no price" (round-132).
  */
 async function batchRecentPricePairs(
 	commodityIds: string[],
@@ -208,6 +172,42 @@ async function batchRecentPricePairs(
     `;
 		ingest(rows);
 	}
+
+	// Monthly fallback for commodities the daily queries could not resolve
+	// (monthly-only series). Mirrors the daily partition above.
+	const missing = commodityIds.filter((id) => !pairs.has(id));
+	if (missing.length > 0) {
+		const { plainIds: monthlyPlain, conflictBySource: monthlyBySource } =
+			await partitionBySource(missing);
+		if (monthlyPlain.length > 0) {
+			const rows = await prisma.$queryRaw<
+				Array<{ commodity_id: string; close: number; date: Date }>
+			>`
+        SELECT commodity_id, close, date FROM (
+          SELECT commodity_id, close, date,
+                 ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
+          FROM commodity_prices
+          WHERE commodity_id = ANY(${monthlyPlain}::text[]) AND interval = 'monthly'
+        ) ranked
+        WHERE rn <= 2
+      `;
+			ingest(rows);
+		}
+		for (const [source, ids] of monthlyBySource) {
+			const rows = await prisma.$queryRaw<
+				Array<{ commodity_id: string; close: number; date: Date }>
+			>`
+        SELECT commodity_id, close, date FROM (
+          SELECT commodity_id, close, date,
+                 ROW_NUMBER() OVER (PARTITION BY commodity_id ORDER BY date DESC) AS rn
+          FROM commodity_prices
+          WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'monthly' AND source = ${source}
+        ) ranked
+        WHERE rn <= 2
+      `;
+			ingest(rows);
+		}
+	}
 	return pairs;
 }
 
@@ -226,8 +226,12 @@ export async function listWatchlists(userId: string): Promise<WatchlistSummary[]
 		orderBy: { createdAt: "desc" },
 	});
 
-	const commodityIds = watchlists.flatMap((wl) => wl.items.map((it) => it.commodityId));
-	const priceMap = await batchLatestPrices(commodityIds);
+	// Shared batchLatestPrices takes {id, slug} pairs for authoritative-source
+	// resolution and falls back to monthly closes for monthly-only series.
+	const commodities = watchlists.flatMap((wl) =>
+		wl.items.map((it) => ({ id: it.commodityId, slug: it.commodity.slug })),
+	);
+	const priceMap = await batchLatestPrices(commodities);
 
 	return watchlists.map((wl) => ({
 		id: wl.id,
