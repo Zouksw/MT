@@ -102,6 +102,17 @@ else
 	fi
 fi
 
+# --- pdftotext (poppler-utils, NW_LS421 weekly import-beef PDF source) ---
+step "Checking pdftotext (poppler-utils)"
+if command -v pdftotext &>/dev/null; then
+	ok "pdftotext $(pdftotext -v 2>&1 | head -1 | grep -oP '[\d.]+')"
+else
+	warn "pdftotext not found (usda_import_beef source needs it: apt-get install poppler-utils)"
+	if [ "$CHECK_ONLY" = false ]; then
+		apt-get install -y poppler-utils && ok "poppler-utils installed" || warn "apt install failed — install manually"
+	fi
+fi
+
 # --- Environment files ---
 step "Checking environment configuration"
 if [ -f "$PROJECT_DIR/backend/.env" ]; then

@@ -132,11 +132,12 @@ function TradingPageInner() {
 
 			{/* Toolbar: Timeframe + Chart Type + Indicators + Multi-Source Toggle */}
 			<div className="flex items-center gap-4 mb-4 flex-wrap">
-				{/* Monthly series (round-129 batch 7): daily/weekly timeframe options
-				 * are meaningless when the series only has monthly points — the
-				 * backend serves the series' real cadence regardless, so hide the
-				 * selector to keep the UI honest. */}
-				{!d.beefMode && d.selected?.interval !== "monthly" && (
+				{/* Non-daily series (round-129 batch 7; weekly added round-149):
+				 * daily/weekly/monthly timeframe options are meaningless when the
+				 * series only has weekly (beef_90cl_us) or monthly points — the
+				 * backend serves the series' real cadence regardless, so hide
+				 * the selector to keep the UI honest. */}
+				{!d.beefMode && d.selected?.interval === "daily" && (
 					<TimeframeSelector value={d.timeframe} onChange={d.setTimeframe} />
 				)}
 				<ChartToolbar

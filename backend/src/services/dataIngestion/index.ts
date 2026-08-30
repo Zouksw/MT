@@ -21,6 +21,7 @@ import { mlaNlrsScraper } from "./sources/mlaNlrs";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
 import { usdaAmsScraper } from "./sources/usdaAms";
+import { usdaImportBeefScraper } from "./sources/usdaImportBeef";
 import { usdaPsdScraper } from "./sources/usdaPsd";
 import { weatherScraper } from "./sources/weatherData";
 import { worldBankScraper } from "./sources/worldBankPrices";
@@ -44,6 +45,10 @@ export function registerAllScrapers(): void {
 	scraperManager.registerSource("secex", secexScraper);
 	scraperManager.registerSource("abares", abaresScraper);
 	scraperManager.registerSource("usda_ams", usdaAmsScraper);
+	// Weekly US import manufacturing-beef benchmark (NW_LS421 PDF, keyless —
+	// the MARS API behind usda_ams is key-gated and mymarketnews hosts are
+	// egress-blocked from this machine; V7 批1, round-149).
+	scraperManager.registerSource("usda_import_beef", usdaImportBeefScraper);
 	scraperManager.registerSource("usda_psd", usdaPsdScraper);
 
 	// Tier 3 — China domestic & import data

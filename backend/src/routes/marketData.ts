@@ -406,6 +406,13 @@ router.get(
 				tier: "2",
 				beefRelevance: "direct",
 			},
+			usda_import_beef: {
+				label: "USDA AMS NW_LS421",
+				description:
+					"US import manufacturing-beef trade, weekly PDF (ams_2823) — AU/NZ 90CL East Coast benchmark → beef_90cl_us",
+				tier: "2",
+				beefRelevance: "direct",
+			},
 			secex: {
 				label: "SECEX Brazil",
 				description:

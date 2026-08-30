@@ -177,3 +177,79 @@ describe("Trading page — ?slug= deep link (round-147)", () => {
 		expect(mockTradingData.setSelectedSlug).not.toHaveBeenCalled();
 	});
 });
+
+describe("Trading page — timeframe selector cadence honesty (round-149)", () => {
+	// A weekly-only series (beef_90cl_us) has no meaningful daily/monthly
+	// timeframe: the backend serves the series' real cadence regardless
+	// (getPriceHistory fallback), so the selector must hide for any
+	// non-daily cadence — the round-129 monthly logic extended to weekly.
+	const baseData = {
+		signalLoading: false,
+		signal: null,
+		loading: false,
+		error: null,
+		currentPrice: 348,
+		selectedSlug: "beef_90cl_us",
+		setSelectedSlug: jest.fn(),
+		commodities: [],
+		commoditiesLoading: false,
+		prices: [],
+		chartData: [],
+		chartType: "professional",
+		multiSources: {},
+		indicators: {},
+		factors: [],
+		factorsLoading: false,
+		factorSources: [],
+		priceSources: [],
+		predictionHistory: [],
+		predictionOverlays: {},
+		anomalies: [],
+		bestModelId: null,
+		previousDirection: null,
+		beefMode: false,
+		setBeefMode: jest.fn(),
+		setSelectedCut: jest.fn(),
+		setBeefFactoryFilter: jest.fn(),
+		beefPrices: [],
+		beefCuts: [],
+		beefFactories: [],
+		beefFactoryFilter: "",
+		beefChartData: [],
+		beefMultiSources: {},
+		beefCutInfo: null,
+	};
+
+	it("hides the timeframe selector for a weekly-only series", () => {
+		mockSearch = "";
+		mockTradingData = {
+			...baseData,
+			selected: { slug: "beef_90cl_us", name: "US Imported 90CL Beef", interval: "weekly" },
+		};
+		render(<TradingPage />);
+
+		expect(screen.queryByLabelText("Timeframe selector")).not.toBeInTheDocument();
+	});
+
+	it("hides the timeframe selector for a monthly-only series (round-129 behavior kept)", () => {
+		mockSearch = "";
+		mockTradingData = {
+			...baseData,
+			selected: { slug: "beef_carcass_us", name: "Beef Carcass", interval: "monthly" },
+		};
+		render(<TradingPage />);
+
+		expect(screen.queryByLabelText("Timeframe selector")).not.toBeInTheDocument();
+	});
+
+	it("shows the timeframe selector for a daily series", () => {
+		mockSearch = "";
+		mockTradingData = {
+			...baseData,
+			selected: { slug: "live_cattle_cme", name: "Live Cattle", interval: "daily" },
+		};
+		render(<TradingPage />);
+
+		expect(screen.getByLabelText("Timeframe selector")).toBeInTheDocument();
+	});
+});

@@ -214,11 +214,14 @@ export async function batchLatestPrices(
 			out.set(p.commodityId, { close: p.close, date: p.date, interval: p.interval });
 	}
 
-	// Monthly fallback for commodities the daily queries could not resolve.
-	// Mirrors the source partition: one plain query + per-conflict-source
-	// queries, all restricted to the still-missing ids.
-	const missing = commodities.filter((c) => !out.has(c.id));
-	if (missing.length > 0) {
+	// Cadence fallback for commodities the daily queries could not resolve
+	// (round-129 monthly; weekly link added round-149 for beef_90cl_us — chain
+	// order matches getPriceHistory: daily → weekly → monthly). Mirrors the
+	// source partition: one plain query + per-conflict-source queries per
+	// interval, all restricted to the still-missing ids.
+	let missing = commodities.filter((c) => !out.has(c.id));
+	for (const interval of ["weekly", "monthly"] as const) {
+		if (missing.length === 0) break;
 		const missingPlain = missing.filter((c) => !getAuthoritativeSource(c.slug)).map((c) => c.id);
 		if (missingPlain.length > 0) {
 			const rows = await prisma.$queryRaw<
@@ -226,7 +229,7 @@ export async function batchLatestPrices(
 			>`
         SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date, interval
         FROM commodity_prices
-        WHERE commodity_id = ANY(${missingPlain}::text[]) AND interval = 'monthly'
+        WHERE commodity_id = ANY(${missingPlain}::text[]) AND interval = ${interval}
         ORDER BY commodity_id, date DESC
       `;
 			for (const p of rows)
@@ -246,12 +249,13 @@ export async function batchLatestPrices(
 			>`
         SELECT DISTINCT ON (commodity_id) commodity_id AS "commodityId", close, date, interval
         FROM commodity_prices
-        WHERE commodity_id = ANY(${ids}::text[]) AND interval = 'monthly' AND source = ${source}
+        WHERE commodity_id = ANY(${ids}::text[]) AND interval = ${interval} AND source = ${source}
         ORDER BY commodity_id, date DESC
       `;
 			for (const p of rows)
 				out.set(p.commodityId, { close: p.close, date: p.date, interval: p.interval });
 		}
+		missing = commodities.filter((c) => !out.has(c.id));
 	}
 
 	return out;

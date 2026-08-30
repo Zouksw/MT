@@ -133,11 +133,23 @@ export async function getPriceHistory(slug: string, params: PriceHistoryParams) 
 		take: params.limit,
 	});
 
-	// Monthly fallback (round-129 batch 7): monthly-only series (beef_carcass_us
-	// = IMF monthly, the world_bank group) have no daily/weekly rows — a daily
-	// request returned [] and the trading page rendered an empty chart. Same
-	// pattern as fetchHistoryWithFallback (round-127) and public highlights.
+	// Cadence fallback (round-129 batch 7, extended round-149): series whose
+	// only rows are monthly (beef_carcass_us = IMF monthly, the world_bank
+	// group) or weekly (beef_90cl_us = USDA NW_LS421) return [] for a daily
+	// request and the trading page rendered an empty chart. Same pattern as
+	// fetchHistoryWithFallback (round-127) and public highlights: daily falls
+	// to weekly then monthly; a weekly request only falls to monthly.
 	if (prices.length === 0 && params.interval !== "monthly") {
+		prices = await prisma.commodityPrice.findMany({
+			where: {
+				...where,
+				interval: params.interval === "daily" ? "weekly" : "monthly",
+			},
+			orderBy: { date: "desc" },
+			take: params.limit,
+		});
+	}
+	if (prices.length === 0 && params.interval === "daily") {
 		prices = await prisma.commodityPrice.findMany({
 			where: { ...where, interval: "monthly" },
 			orderBy: { date: "desc" },

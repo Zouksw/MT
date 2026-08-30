@@ -10,6 +10,12 @@ export interface ScraperResult {
 	/** Set when runSource threw (caught by runSourcesAndLog) so the status
 	 * classifier records a hard failure as `error`, not `warning`. */
 	error?: string;
+	/** True when the source fetched and parsed successfully but every write
+	 * hit upsertPrice's samePrice no-op — the stored row was already identical
+	 * (the weekly-report-on-daily-cycle shape). A CONFIRMED-unchanged cycle,
+	 * not a 0-row silent failure: classifiers treat it as success and the
+	 * freshness board keeps `healthy` (round-149, usda_import_beef). */
+	noChange?: boolean;
 }
 
 export interface Scraper {
@@ -113,8 +119,9 @@ export class ScraperManager {
 			// silent failure (Cloudflare block, page reformat, upstream empty).
 			// Flag it so the freshness board can show `empty` instead of lying
 			// with `healthy`. Key-skips are already handled above and never
-			// reach here.
-			const emptyAfterRun = result.inserted === 0 && result.updated === 0;
+			// reach here. `noChange` (confirmed-unchanged re-scrape) is exempt:
+			// the write path ran and the row already matched.
+			const emptyAfterRun = result.inserted === 0 && result.updated === 0 && !result.noChange;
 
 			this.health.set(name, {
 				lastRun: new Date(),

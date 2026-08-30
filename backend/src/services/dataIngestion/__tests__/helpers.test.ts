@@ -41,6 +41,20 @@ describe("classifyIngestionStatus — 0-row honesty contract", () => {
 		});
 	});
 
+	it("classifies a noChange 0-row run as 'success' — confirmed-unchanged, not silent failure (round-149)", () => {
+		// Weekly-report source on the daily cycle: the write path ran and
+		// upsertPrice's samePrice no-op confirmed the stored row identical.
+		// Treating that as "warning" would flag the source 6 days of 7.
+		expect(classifyIngestionStatus({ inserted: 0, updated: 0, noChange: true })).toEqual({
+			status: "success",
+		});
+		// noChange never rescues a run that actually wrote rows — irrelevant
+		// there, but the contract stays count-first.
+		expect(classifyIngestionStatus({ inserted: 1, updated: 0, noChange: true })).toEqual({
+			status: "success",
+		});
+	});
+
 	it("classifies a skipped run (e.g. missing API key) as 'error' with the reason", () => {
 		expect(
 			classifyIngestionStatus({

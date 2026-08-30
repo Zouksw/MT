@@ -141,6 +141,10 @@ function backgroundJobs(): ScheduledJob[] {
 		"china_customs_stats",
 		"secex",
 		"usda_ams",
+		// Weekly NW_LS421 report on the daily cycle: the PDF always holds the
+		// current week, so the six non-publication days re-scrape the same row
+		// and upsertPrice's samePrice path no-ops (V7 批1).
+		"usda_import_beef",
 	];
 
 	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for

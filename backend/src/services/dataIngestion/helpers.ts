@@ -45,7 +45,10 @@ export async function latestUsdRate(slug: string): Promise<number | null> {
  * @returns status + optional errorMessage (for skipped/error cases)
  */
 export function classifyIngestionStatus(
-	result: Pick<ScraperResult, "inserted" | "updated" | "skipped" | "skipReason" | "error">,
+	result: Pick<
+		ScraperResult,
+		"inserted" | "updated" | "skipped" | "skipReason" | "error" | "noChange"
+	>,
 ): { status: string; errorMessage?: string } {
 	if (result.skipped) {
 		return { status: "error", errorMessage: result.skipReason ?? "skipped" };
@@ -55,7 +58,10 @@ export function classifyIngestionStatus(
 		return { status: "error", errorMessage: result.error };
 	}
 	if (result.inserted === 0 && result.updated === 0) {
-		return { status: "warning" };
+		// noChange = the write path ran and upsertPrice's samePrice no-op
+		// confirmed the stored row identical (weekly series re-scraped on the
+		// daily cycle) — success with nothing to do, not a silent failure.
+		return { status: result.noChange ? "success" : "warning" };
 	}
 	return { status: "success" };
 }
