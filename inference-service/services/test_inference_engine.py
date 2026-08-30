@@ -223,3 +223,120 @@ def test_chronos_concurrency_limit_default_and_env(monkeypatch):
     # lock guarding _get_chronos_pipeline's double-checked path.
     with _pipeline_init_lock:
         pass
+
+
+def test_chronos_request_seed_stable_and_payload_sensitive():
+    """批1 prerequisite: the seed must be a pure function of the request
+    payload — identical payloads replay identical seeds (bit-level
+    reproducibility for sequential backtests), any payload dimension change
+    decorrelates the stream, and the value fits torch's 31-bit seed space."""
+    from services.inference_engine import _chronos_request_seed
+
+    base = _chronos_request_seed(
+        "amazon/chronos-t5-tiny", [1.0, 2.0, 3.0], 3, [0.1, 0.5, 0.9]
+    )
+    assert base == _chronos_request_seed(
+        "amazon/chronos-t5-tiny", [1.0, 2.0, 3.0], 3, [0.1, 0.5, 0.9]
+    )
+    assert 0 <= base < 2**31
+
+    # Each payload dimension changes the stream.
+    assert base != _chronos_request_seed(
+        "amazon/chronos-t5-mini", [1.0, 2.0, 3.0], 3, [0.1, 0.5, 0.9]
+    )
+    assert base != _chronos_request_seed(
+        "amazon/chronos-t5-tiny", [1.0, 2.0, 3.1], 3, [0.1, 0.5, 0.9]
+    )
+    assert base != _chronos_request_seed(
+        "amazon/chronos-t5-tiny", [1.0, 2.0, 3.0], 1, [0.1, 0.5, 0.9]
+    )
+    assert base != _chronos_request_seed(
+        "amazon/chronos-t5-tiny", [1.0, 2.0, 3.0], 3, [0.05, 0.5, 0.95]
+    )
+
+
+def test_predict_chronos_seeds_torch_before_sampling(monkeypatch):
+    """_predict_chronos must call torch.manual_seed with the payload-derived
+    seed BEFORE predict_quantiles — the sampling path reads the global RNG,
+    so seeding after would leave the draw unseeded. Order is asserted via
+    call sequence on recorded stubs (FakePipeline pattern reused from the
+    quantile-slicing test)."""
+    calls = []
+
+    class FakeColumn:
+        def __init__(self, values):
+            self._values = values
+
+        def tolist(self):
+            return self._values
+
+    class FakeQuantiles:
+        def __init__(self, data):
+            self._data = data
+
+        def __getitem__(self, key):
+            if isinstance(key, tuple) and len(key) == 3:
+                _batch, _full_slice, col = key
+                return FakeColumn([row[col] for row in self._data])
+            raise TypeError(f"unexpected key: {key}")
+
+    class FakeMean:
+        def __init__(self, data):
+            self._data = data
+
+        def __getitem__(self, key):
+            if key == 0:
+                return FakeColumn(self._data)
+            raise TypeError
+
+    class FakePipeline:
+        def predict_quantiles(self, inputs, prediction_length, quantile_levels):
+            calls.append("predict")
+            horizon = prediction_length
+            n_q = len(quantile_levels)
+            quantile_data = [
+                [100.0 + i * 10 + j for j in range(n_q)] for i in range(horizon)
+            ]
+            return FakeQuantiles(quantile_data), FakeMean([200.0 + i for i in range(horizon)])
+
+    class FakeTorchModule:
+        inference_mode = staticmethod(lambda: _nullcontext())
+        float32 = "float32"
+
+        @staticmethod
+        def manual_seed(seed):
+            calls.append(("seed", seed))
+
+        @staticmethod
+        def tensor(values, dtype=None):
+            return values
+
+    import contextlib
+
+    def _nullcontext():
+        return contextlib.nullcontext()
+
+    import sys
+
+    monkeypatch.setitem(sys.modules, "torch", FakeTorchModule)
+    monkeypatch.setattr(
+        inference_engine,
+        "_chronos_pipelines",
+        {"amazon/chronos-t5-tiny": FakePipeline()},
+    )
+    monkeypatch.setattr(inference_engine, "CHRONOS_AVAILABLE", True)
+
+    from services.inference_engine import _chronos_request_seed
+
+    expected_seed = _chronos_request_seed(
+        "amazon/chronos-t5-tiny", [1.0, 2.0, 3.0], 3, [0.1, 0.5, 0.9]
+    )
+
+    result = inference_engine._predict_chronos(
+        "amazon/chronos-t5-tiny", values=[1.0, 2.0, 3.0], horizon=3, confidence_level=0.9
+    )
+
+    # Seed fired first, with the exact payload-derived value.
+    assert calls[0] == ("seed", expected_seed)
+    assert calls[1] == "predict"
+    assert result["values"] == [200.0, 201.0, 202.0]

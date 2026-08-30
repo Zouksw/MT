@@ -12,6 +12,8 @@ No model is trained from scratch on request — the previous Timer-XL/Sundial
 online-training path was removed as an anti-pattern.
 """
 
+import hashlib
+import json
 import logging
 import os
 import threading
@@ -156,6 +158,31 @@ def predict(
     return result
 
 
+def _chronos_request_seed(
+    repo_id: str,
+    values: list[float],
+    horizon: int,
+    quantile_levels: list[float],
+) -> int:
+    """Stable 31-bit torch seed derived from the full request payload.
+
+    Deterministic inference (round-136, IMPROVEMENT-PLAN v3.1.0 批1
+    prerequisite / PREDICTION-STRATEGY §6.2 规范 6): chronos's quantile
+    path SAMPLES from the predicted distribution — unseeded, two calls on
+    identical inputs disagree, so rolling backtests are non-reproducible
+    and model MAPE comparisons carry sampling noise. A payload-derived
+    seed makes identical requests replay identical outputs while different
+    requests get decorrelated streams.
+
+    Reproducibility contract: bit-level identical output holds for
+    SEQUENTIAL callers (the backtest harness issues one request at a
+    time). Concurrent draws still interleave on the process-global RNG —
+    the live refresh path trades that for throughput.
+    """
+    payload = json.dumps([repo_id, values, horizon, quantile_levels], separators=(",", ":"))
+    return int.from_bytes(hashlib.sha256(payload.encode()).digest()[:8], "big") % (2**31 - 1)
+
+
 def _predict_chronos(
     repo_id: str,
     values: list[float],
@@ -180,6 +207,12 @@ def _predict_chronos(
     # standard remedy for inference-only workloads and is strictly cheaper than
     # no_grad (it also disables version counting + dispatch).
     with _chronos_semaphore, torch.inference_mode():
+        # Seed BEFORE the sampling path — see _chronos_request_seed. Inside
+        # the semaphore so at most _CHRONOS_MAX_CONCURRENCY seeds/draw races
+        # coexist; sequential callers are fully deterministic.
+        torch.manual_seed(
+            _chronos_request_seed(repo_id, values, horizon, quantile_levels)
+        )
         ctx = torch.tensor(values, dtype=torch.float32)
         quantiles, mean = pipeline.predict_quantiles(
             inputs=[ctx],
