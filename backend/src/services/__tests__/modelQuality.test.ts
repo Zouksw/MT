@@ -121,6 +121,96 @@ describe("resolveModelWeights — elimination bar (round-110)", () => {
 	});
 });
 
+describe("resolveModelWeights — per-series champion routing (round-137 批2)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	// Plan acceptance: a model that is GLOBALLY weak (eliminated by the global
+	// naive bar) but strong on series A must vote with real weight in A's
+	// consensus — the global elimination verdict must not leak into the series.
+	it("model X globally eliminated but series-A strong votes with top weight in A's consensus", async () => {
+		const globalAcc = [
+			acc("naive_forecaster", 3.0, 40), // active global bar
+			acc("model_x", 5.0, 40), // globally worse than naive, thick evidence
+			acc("model_y", 4.0, 40),
+		];
+		const seriesAcc = [
+			acc("naive_forecaster", 2.5, 30),
+			acc("model_x", 1.2, 30), // series champion
+			acc("model_y", 4.0, 25),
+		];
+		mocks.getAllModelAccuracy.mockImplementation((cid?: unknown) =>
+			cid === undefined ? globalAcc : seriesAcc,
+		);
+
+		const global = await resolveModelWeights(["model_x", "model_y", "naive_forecaster"]);
+		expect(global.get("model_x")).toBe(0); // sanity: globally eliminated
+
+		const series = await resolveModelWeights(
+			["model_x", "model_y", "naive_forecaster"],
+			30,
+			"series-a",
+		);
+		expect(mocks.getAllModelAccuracy).toHaveBeenCalledWith("series-a", 30);
+		expect(series.get("model_x")).toBeGreaterThan(0);
+		// 1/2(floor) vs 1/2.5 vs 1/4 → X heaviest of the three.
+		expect(series.get("model_x")).toBeGreaterThan(series.get("naive_forecaster") as number);
+		expect(series.get("naive_forecaster")).toBeGreaterThan(series.get("model_y") as number);
+	});
+
+	it("series-local elimination: fine globally but worse-than-naive ON the series loses its series vote", async () => {
+		const globalAcc = [
+			acc("naive_forecaster", 4.0, 40),
+			acc("model_x", 3.0, 40), // globally fine
+		];
+		const seriesAcc = [
+			acc("naive_forecaster", 2.0, 40), // active series bar
+			acc("model_x", 5.0, 40), // worse than naive ON this series
+		];
+		mocks.getAllModelAccuracy.mockImplementation((cid?: unknown) =>
+			cid === undefined ? globalAcc : seriesAcc,
+		);
+
+		const global = await resolveModelWeights(["model_x", "naive_forecaster"]);
+		expect(global.get("model_x")).toBeGreaterThan(0);
+
+		const series = await resolveModelWeights(["model_x", "naive_forecaster"], 30, "series-b");
+		expect(series.get("model_x")).toBe(0);
+		expect(series.get("naive_forecaster")).toBe(1);
+	});
+
+	it("thin series evidence (below MIN_SERIES_VERIFIED_TO_ACTIVATE) falls back to the global pool", async () => {
+		const globalAcc = [
+			acc("naive_forecaster", 3.0, 40),
+			acc("model_x", 5.0, 40),
+			acc("model_y", 4.0, 40),
+		];
+		// 8 + 6 = 14 total verified rows — under the 20-row activation guard,
+		// even though model_x looks like a champion here (1.2 vs naive 2.5).
+		const seriesAcc = [acc("naive_forecaster", 2.5, 8), acc("model_x", 1.2, 6)];
+		mocks.getAllModelAccuracy.mockImplementation((cid?: unknown) =>
+			cid === undefined ? globalAcc : seriesAcc,
+		);
+
+		const w = await resolveModelWeights(
+			["model_x", "model_y", "naive_forecaster"],
+			30,
+			"series-thin",
+		);
+
+		// Global semantics apply — model_x globally eliminated.
+		expect(w.get("model_x")).toBe(0);
+		const calls = mocks.getAllModelAccuracy.mock.calls;
+		expect(calls[0]).toEqual(["series-thin", 30]); // series probe first
+		expect(calls[1]).toEqual([undefined, 30]); // then the global pool
+	});
+});
+
 describe("weightedMedian", () => {
 	it("returns the plain median when all weights are equal", () => {
 		// 5 prices, equal weights → median is the middle (3rd) value = 30.

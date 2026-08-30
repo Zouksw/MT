@@ -22,6 +22,15 @@
  * MIN_VERIFIED_TO_ELIMINATE on BOTH the model and naive so elimination never
  * fires on thin evidence. If every requested model is eliminated, the
  * existing equal-weight fallback applies (documented edge, not a signal).
+ *
+ * Per-series champion routing (round-137 批2, IMPROVEMENT-PLAN v3): when the
+ * series being forecast has enough verified evidence of its own
+ * (MIN_SERIES_VERIFIED_TO_ACTIVATE total rows in the window), the SAME
+ * weighting + elimination machinery runs on that series' accuracy instead of
+ * the global pool — a model globally weak but strong on this series votes
+ * with full weight (and vice versa). The global elimination verdict is a
+ * POOL statement, not a series statement. Thin series evidence falls back
+ * to the global weights — same graceful pattern as the equal-weight floor.
  */
 
 import { logger } from "@/lib";
@@ -37,6 +46,16 @@ const MAPE_FLOOR_PCT = 2;
  */
 const MIN_VERIFIED_TO_ELIMINATE = 20;
 
+/**
+ * Minimum TOTAL verified rows a series must have in the window before its
+ * own accuracy may replace the global pool (round-137 批2). The guard exists
+ * because per-model MAPE on a thin series is noise: beef_carcass_us gains
+ * ~9 verified rows/month (7 models × H∈{1,3}), so its per-series routing
+ * activates only once several maturity months have accumulated — not on the
+ * first verified row.
+ */
+const MIN_SERIES_VERIFIED_TO_ACTIVATE = 20;
+
 export interface ModelWeight {
 	modelId: string;
 	/** Normalized weight in [0,1], summing to 1 across the voting set. */
@@ -49,8 +68,13 @@ export interface ModelWeight {
 
 /**
  * Resolve per-model quality weights for a set of voting model IDs.
- * Fetches the 30-day MAPE per model (median, mean fallback — round-115) and
+ * Fetches the rolling MAPE per model (median, mean fallback — round-115) and
  * normalizes to sum=1.
+ *
+ * With seriesId (round-137 批2): a series with enough verified evidence of
+ * its own is weighted by ITS accuracy table — the champion-model set and the
+ * elimination verdict both become series-local. Insufficient evidence (or an
+ * unknown series) silently uses the global pool.
  *
  * Failures (e.g. DB unreachable) degrade gracefully to equal weights — quality
  * weighting is an enhancement, not a hard dependency. The caller always gets a
@@ -59,80 +83,114 @@ export interface ModelWeight {
 export async function resolveModelWeights(
 	modelIds: readonly string[],
 	days = 30,
+	seriesId?: string,
 ): Promise<Map<string, number>> {
 	const weights = new Map<string, number>();
 
 	if (modelIds.length === 0) return weights;
 
 	try {
-		const accuracies = await getAllModelAccuracy(undefined, days);
-		const accByModel = new Map(accuracies.map((a) => [a.modelId, a]));
-		// Robust stat (round-115): prefer the median, fall back to the mean.
-		// The mean was polluted by unit-mismatch outliers (wheat_cme rows at
-		// MAPE≈9500), which would both mis-weight and wrongly eliminate models.
-		const statOf = (a?: { medianMape?: number | null; avgMape?: number | null }): number | null =>
-			a?.medianMape ?? a?.avgMape ?? null;
-		const mapeByModel = new Map<string, number>();
-		for (const a of accuracies) {
-			const stat = statOf(a);
-			if (stat != null && stat > 0) {
-				mapeByModel.set(a.modelId, stat);
+		if (seriesId) {
+			const seriesAccuracies = await getAllModelAccuracy(seriesId, days);
+			const seriesVerified = seriesAccuracies.reduce((s, a) => s + a.verifiedCount, 0);
+			if (seriesVerified >= MIN_SERIES_VERIFIED_TO_ACTIVATE) {
+				logger.info(
+					`[WEIGHTS] per-series routing active: ${seriesId} (${seriesVerified} verified rows/${days}d override the global pool)`,
+				);
+				return computeWeightsFromAccuracies(modelIds, seriesAccuracies);
 			}
-		}
-
-		// Default weight for models with no empirical MAPE = the median of known
-		// MAPEs (neutral — neither rewarded nor penalized for being new).
-		// True median: average of the two middle values on even-length pools
-		// (round-113 review — the old upper-middle pick biased by pool parity).
-		const knownMapes = Array.from(mapeByModel.values()).sort((a, b) => a - b);
-		let defaultMape = MAPE_FLOOR_PCT * 4; // 8% if nothing is known at all
-		if (knownMapes.length > 0) {
-			const mid = Math.floor(knownMapes.length / 2);
-			defaultMape =
-				knownMapes.length % 2 !== 0 ? knownMapes[mid] : (knownMapes[mid - 1] + knownMapes[mid]) / 2;
-		}
-
-		// Elimination bar: naive_forecaster's verified MAPE (when the evidence
-		// is thick enough to trust). A model strictly worse than this loses its
-		// vote entirely; naive itself and thin-evidence models are exempt.
-		const naiveBar = accByModel.get("naive_forecaster");
-		const naiveBarStat = statOf(naiveBar);
-		const barActive =
-			naiveBarStat != null && (naiveBar?.verifiedCount ?? 0) >= MIN_VERIFIED_TO_ELIMINATE;
-
-		// Raw weight = 1 / max(mape, floor); eliminated models get 0.
-		const raw: Array<{ id: string; w: number; eliminated: boolean }> = [];
-		for (const id of modelIds) {
-			const acc = accByModel.get(id);
-			const stat = statOf(acc);
-			const mape = stat ?? defaultMape;
-			const eliminated =
-				barActive &&
-				id !== "naive_forecaster" &&
-				stat != null &&
-				(acc?.verifiedCount ?? 0) >= MIN_VERIFIED_TO_ELIMINATE &&
-				stat > (naiveBarStat as number);
-			raw.push({ id, w: eliminated ? 0 : 1 / Math.max(mape, MAPE_FLOOR_PCT), eliminated });
-		}
-
-		const eliminatedIds = raw.filter((r) => r.eliminated).map((r) => r.id);
-		if (eliminatedIds.length > 0) {
-			logger.info(
-				`[WEIGHTS] Eliminated from consensus (worse than naive bar): ${eliminatedIds.join(", ")}`,
+			logger.debug(
+				`[WEIGHTS] per-series evidence thin for ${seriesId} (${seriesVerified}/${MIN_SERIES_VERIFIED_TO_ACTIVATE} verified rows/${days}d) — global weights`,
 			);
 		}
 
-		// Normalize to sum=1.
-		const total = raw.reduce((s, r) => s + r.w, 0);
-		for (const r of raw) {
-			weights.set(r.id, total > 0 ? r.w / total : 1 / modelIds.length);
-		}
+		const accuracies = await getAllModelAccuracy(undefined, days);
+		return computeWeightsFromAccuracies(modelIds, accuracies);
 	} catch (err) {
 		// Graceful degradation — equal weights. Log so the failure is observable.
 		logger.warn(`[WEIGHTS] resolveModelWeights fell back to equal weights: ${err}`);
 		for (const id of modelIds) {
 			weights.set(id, 1 / modelIds.length);
 		}
+	}
+
+	return weights;
+}
+
+/** One accuracy row as returned by mapeTracking.getAllModelAccuracy. */
+type ModelAccuracy = Awaited<ReturnType<typeof getAllModelAccuracy>>[number];
+
+/**
+ * The weight computation itself — shared verbatim by the global and per-series
+ * paths so both get identical semantics: robust MAPE stat, neutral median
+ * default for unknown models, naive elimination bar, 1/max(mape, floor)
+ * normalized. Pure — takes the accuracy table, returns the weight map.
+ */
+function computeWeightsFromAccuracies(
+	modelIds: readonly string[],
+	accuracies: ModelAccuracy[],
+): Map<string, number> {
+	const weights = new Map<string, number>();
+	const accByModel = new Map(accuracies.map((a) => [a.modelId, a]));
+	// Robust stat (round-115): prefer the median, fall back to the mean.
+	// The mean was polluted by unit-mismatch outliers (wheat_cme rows at
+	// MAPE≈9500), which would both mis-weight and wrongly eliminate models.
+	const statOf = (a?: { medianMape?: number | null; avgMape?: number | null }): number | null =>
+		a?.medianMape ?? a?.avgMape ?? null;
+	const mapeByModel = new Map<string, number>();
+	for (const a of accuracies) {
+		const stat = statOf(a);
+		if (stat != null && stat > 0) {
+			mapeByModel.set(a.modelId, stat);
+		}
+	}
+
+	// Default weight for models with no empirical MAPE = the median of known
+	// MAPEs (neutral — neither rewarded nor penalized for being new).
+	// True median: average of the two middle values on even-length pools
+	// (round-113 review — the old upper-middle pick biased by pool parity).
+	const knownMapes = Array.from(mapeByModel.values()).sort((a, b) => a - b);
+	let defaultMape = MAPE_FLOOR_PCT * 4; // 8% if nothing is known at all
+	if (knownMapes.length > 0) {
+		const mid = Math.floor(knownMapes.length / 2);
+		defaultMape =
+			knownMapes.length % 2 !== 0 ? knownMapes[mid] : (knownMapes[mid - 1] + knownMapes[mid]) / 2;
+	}
+
+	// Elimination bar: naive_forecaster's verified MAPE (when the evidence
+	// is thick enough to trust). A model strictly worse than this loses its
+	// vote entirely; naive itself and thin-evidence models are exempt.
+	const naiveBar = accByModel.get("naive_forecaster");
+	const naiveBarStat = statOf(naiveBar);
+	const barActive =
+		naiveBarStat != null && (naiveBar?.verifiedCount ?? 0) >= MIN_VERIFIED_TO_ELIMINATE;
+
+	// Raw weight = 1 / max(mape, floor); eliminated models get 0.
+	const raw: Array<{ id: string; w: number; eliminated: boolean }> = [];
+	for (const id of modelIds) {
+		const acc = accByModel.get(id);
+		const stat = statOf(acc);
+		const mape = stat ?? defaultMape;
+		const eliminated =
+			barActive &&
+			id !== "naive_forecaster" &&
+			stat != null &&
+			(acc?.verifiedCount ?? 0) >= MIN_VERIFIED_TO_ELIMINATE &&
+			stat > (naiveBarStat as number);
+		raw.push({ id, w: eliminated ? 0 : 1 / Math.max(mape, MAPE_FLOOR_PCT), eliminated });
+	}
+
+	const eliminatedIds = raw.filter((r) => r.eliminated).map((r) => r.id);
+	if (eliminatedIds.length > 0) {
+		logger.info(
+			`[WEIGHTS] Eliminated from consensus (worse than naive bar): ${eliminatedIds.join(", ")}`,
+		);
+	}
+
+	// Normalize to sum=1.
+	const total = raw.reduce((s, r) => s + r.w, 0);
+	for (const r of raw) {
+		weights.set(r.id, total > 0 ? r.w / total : 1 / modelIds.length);
 	}
 
 	return weights;
