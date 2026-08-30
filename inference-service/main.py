@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 # HF_ENDPOINT must be set BEFORE importing the engine — huggingface_hub bakes
 # ENDPOINT into a module constant at import time, so a setdefault that runs
@@ -16,24 +17,6 @@ from services.inference_engine import MODEL_IDS
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 logger = logging.getLogger(__name__)
-
-app = FastAPI(title="MT Inference Service", version="1.0.0")
-
-app.include_router(predict.router, tags=["predict"])
-app.include_router(models.router, tags=["models"])
-app.include_router(health.router, tags=["health"])
-
-
-@app.on_event("startup")
-def startup():
-    logger.info(f"Inference service starting on {settings.host}:{settings.port}")
-    logger.info(f"Available models: {', '.join(MODEL_IDS)}")
-    _apply_torch_thread_budget()
-    # Preload Chronos pipelines so the first /predict isn't a 30s cold load.
-    # Without this, the consensus pipeline fires 3 variants in parallel on
-    # first request, each cold-loading ~30s on CPU, and the backend client
-    # times out before any completes. Preloading serializes the loads at boot.
-    preload_chronos_pipelines()
 
 
 def _apply_torch_thread_budget() -> None:
@@ -81,6 +64,26 @@ def preload_chronos_pipelines():
                 logger.info(f"Skipping preload for {vid} — weights not cached")
     except Exception as e:
         logger.warning(f"Chronos preload skipped: {e}")
+
+
+# Lifespan replaces the deprecated @app.on_event("startup") (round-144).
+# Same boot sequence: thread budget first, then serialized Chronos preload —
+# without the preload the first /predict fires 3 variants in parallel, each
+# cold-loading ~30s on CPU, and the backend client times out first.
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    logger.info(f"Inference service starting on {settings.host}:{settings.port}")
+    logger.info(f"Available models: {', '.join(MODEL_IDS)}")
+    _apply_torch_thread_budget()
+    preload_chronos_pipelines()
+    yield
+
+
+app = FastAPI(title="MT Inference Service", version="1.0.0", lifespan=lifespan)
+
+app.include_router(predict.router, tags=["predict"])
+app.include_router(models.router, tags=["models"])
+app.include_router(health.router, tags=["health"])
 
 
 if __name__ == "__main__":
