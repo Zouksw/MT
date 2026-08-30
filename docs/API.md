@@ -21,7 +21,7 @@ REST API documentation for the MT beef-price platform.
 > `/api/forecasts*`, `/api/cache/*`, `/api/datasets/:id/export`), used the wrong
 > `/api/apikeys` prefix, and omitted ~95 real endpoints. This version was
 > regenerated from the actual route files (`backend/src/routes/*.ts`, mounts in
-> `backend/src/app.ts`): **20 routers, 142 endpoints**, all verified against code.
+> `backend/src/app.ts`): **17 routers, 131 endpoints**, all verified against code.
 
 ---
 
@@ -116,23 +116,6 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/inference/models/:id` | GET | Single model status (API-only) |
 | `/api/inference/models/train` | POST | **410 Gone** — training was removed (pretrained-only, PRODUCT-SPEC §九) |
 
-## Forecasting Models (legacy registry) — `/api/models`
-
-User-trained-model registry kept for the datasets/timeseries workspace; the
-AI pages use `/api/signals/models` + `/api/inference` instead. **Entire group
-has no frontend consumer** (API-only).
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/models` | GET | List models (owner- or ADMIN-scoped since round-119) |
-| `/api/models/:id` | GET | Model detail (trainer or ADMIN) |
-| `/api/models/train` | POST | **410 Gone** tombstone |
-| `/api/models/:modelId/predict` | POST | Run a registry model (writes ownership-checked forecast) |
-| `/api/models/:modelId/forecasts` | GET | Model's forecasts (trainer or ADMIN) |
-| `/api/models/:id` | PATCH | Update (rename / isActive toggle — owner or ADMIN) |
-| `/api/models/:id` | DELETE | Delete model |
-| `/api/models/:modelId/forecasts` | DELETE | Delete forecasts |
-
 ## Trading Signals & Analytics — `/api/signals`
 
 | Endpoint | Method | Description |
@@ -148,13 +131,6 @@ has no frontend consumer** (API-only).
 | `/api/signals/batch` | POST | Batch consensus signals (legacy path; superseded by beef forecasts) |
 | `/api/signals/:commodityId` | GET | Multi-model consensus signal for a commodity |
 | `/api/signals/:commodityId/predictions` | GET | Cached per-model predictions for a commodity |
-
-## Analytics — `/api/analytics`（API-only，无前端消费）
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/analytics/seasonality/:commoditySlug` | GET | Seasonal price statistics (authoritative source only) |
-| `/api/analytics/correlation` | GET | Two-series correlation |
 
 ## Anomalies — `/api/anomalies`
 
@@ -264,14 +240,6 @@ has no frontend consumer** (API-only).
 | `/api/metrics/web-vitals/history` | GET | Vitals time series |
 | `/api/metrics/api-latency` | GET | API latency stats |
 | `/api/metrics/summary` | GET | Dashboard rollup (API-only) |
-
-## Security Audit — `/api/security`（API-only，前端从未上报）
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/security/audit` | POST | Ingest a client audit event (no frontend sender wired) |
-| `/api/security/audit` | GET | Query audit log (ADMIN) |
-| `/api/security/audit/stats` | GET | Audit stats (ADMIN) |
 
 ## Portfolios — `/api/portfolios`（关注分组，API-only）
 

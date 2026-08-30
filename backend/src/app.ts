@@ -27,7 +27,6 @@ import { errorLoggingMiddleware, loggingMiddleware } from "@/middleware/logging"
 import { globalRateLimiter, healthRateLimiter } from "@/middleware/rateLimiter";
 import { securityHeaders } from "@/middleware/security";
 import alertsRouter from "@/routes/alerts";
-import { analyticsRouter } from "@/routes/analytics";
 import { anomaliesRouter } from "@/routes/anomalies";
 import apiKeysRouter from "@/routes/apiKeys";
 import { authRouter } from "@/routes/auth";
@@ -40,9 +39,7 @@ import { inferenceRouter } from "@/routes/inference";
 import { marketDataRouter } from "@/routes/marketData";
 import { marketNewsRouter } from "@/routes/marketNews";
 import { metricsRouter } from "@/routes/metrics";
-import { modelsRouter } from "@/routes/models";
 import { portfolioRouter } from "@/routes/portfolios";
-import securityRouter from "@/routes/security";
 import { signalsRouter } from "@/routes/signals";
 import { timeseriesRouter } from "@/routes/timeseries";
 import { watchlistRouter } from "@/routes/watchlist";
@@ -204,7 +201,6 @@ export function createApp(): AppInstance {
 	app.use("/api/auth", authRouter);
 	app.use("/api/datasets", datasetsRouter);
 	app.use("/api/timeseries", timeseriesRouter);
-	app.use("/api/models", modelsRouter);
 	app.use("/api/anomalies", anomaliesRouter);
 	app.use("/api/inference", inferenceRouter);
 	app.use("/api/api-keys", apiKeysRouter);
@@ -214,9 +210,7 @@ export function createApp(): AppInstance {
 	app.use("/api/news", marketNewsRouter);
 	app.use("/api/watchlists", watchlistRouter);
 	app.use("/api/portfolios", portfolioRouter);
-	app.use("/api/analytics", analyticsRouter);
 	app.use("/api/billing", billingRouter);
-	app.use("/api/security", securityRouter);
 
 	// API documentation
 	app.use("/api/docs", docsRouter);

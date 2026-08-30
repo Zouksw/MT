@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-08-24"
+last_updated: "2026-08-30"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-08-30 — round-132 收尾轮：watchlist 月度价格、D6 孤儿端点三组删除、D7 定案
+
+用户指令"继续完成剩余的任务"。收尾第二波遗留的三项（TECH-DEBT 登记 watchlist 修复 + D6/D7 决策项），每批独立门禁：
+
+- **批 A `15b2af9`（watchlist 月度价格，round-130 登记项）**：`watchlistService` 删本地 daily-only `batchLatestPrices` 副本，`listWatchlists` 改用共享 helper（月度回退 + interval 字段）；`batchRecentPricePairs` 同步补月度回退（rn≤2 monthly——quotes 的 change 对月度序列即环比；页面取价优先 quotes 端点，只修 list 会让收起态出价、展开态仍"暂无价格"）。+2 集成测试（自建 fixture，随测随清）。live：`beef_carcass_us` quotes 331.78 / 环比 -2.87% / 2026-07-01，list latestPrice 同步出值。
+- **`c3170fc`（测试基建）**：`mapeTracking.monthly.test.ts` 健康月度 fixture 由日历锚（`monthStart(-1)`=07-01，随真实时间于 08-30 越过 60 天宽限而腐烂）改为壁钟相对日期（40d/30d），并补齐宽限分支（点龄 40d）与"实际值仍在到货"分支（点比预测新）双形态。
+- **批 B（D6 处置，三组孤儿端点删除）**：五问全量重评后——`/api/security`(3，audit 前端从未发送)、`/api/models`(8，"与公开档案页互补"假设未成立——档案页用 `/api/signals/models/accuracy/public`；连带删除唯一消费者 `modelService.ts` 与 schemas 三条 ML 校验)、`/api/analytics`(2，correlation 为 live signals 版之外的第三套实现、seasonality 0 消费且 PRODUCT-SPEC 无规划)整组移除（路由 + 测试 + app.ts 挂载）；portfolios 维持登记；schema 与数据保留（`SecurityAuditLog` 49 行、`ForecastingModel`/`Forecast` 休眠表登记）。live 404×3、`/api/signals/correlation/matrix` 200；后端路由 20→17（AGENTS.md/API.md 同步，142→131 端点）。
+- **批 C（D7 定案）**：sundial/timer_xl 残留 ~332 行**保留**（结构性隔离已钉住；删除属数据治理，未来用户明示再动）。
+- 测试：backend 1034+1 → **1036+1**（批 A +2）→ 批 B 删组后 **1002+1**（97 文件；-34 全部为随组删除：security 8 + models 15 + analytics 6 + 散落引用 5，零失败）；frontend/inference 未动。门内自纠 1 处：新测试首轮 `toBe(110)` 撞上 raw SQL Decimal（既有约定为 `Number()` 包裹）。
 
 ### 2026-08-24 — round-131 批 6b/6c 落地：月度序列进预测链闭环（D5 已确认，ADR-0001 Accepted）
 

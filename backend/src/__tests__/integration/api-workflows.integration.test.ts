@@ -350,20 +350,6 @@ describe("API Workflow Integration Tests", () => {
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
 		});
-
-		// /api/analytics/correlation (a separate endpoint from /signals/correlation
-		// above) has NO dedicated route test — this is its only coverage. Moved
-		// here from the deleted Portfolio section so the analytics correlation
-		// contract stays pinned (core value chain: correlation analysis).
-		test("should compute pairwise correlation between commodities", async () => {
-			const res = await request(app)
-				.get("/api/analytics/correlation?slugs=wheat_cme,corn_cme,gold_cme")
-				.set("Authorization", `Bearer ${token}`);
-
-			expect(res.status).toBe(200);
-			expect(res.body.success).toBe(true);
-			expect(res.body.data).toHaveProperty("correlations");
-		});
 	});
 
 	// ─── Alerts & Anomalies Workflow ──────────────────────────────────
@@ -427,7 +413,7 @@ describe("API Workflow Integration Tests", () => {
 	//   - Billing    → routes/__tests__/billing.test.ts (5 tests, plan/limits contract)
 	//   - API Keys   → routes/__tests__/apiKeys.test.ts (6 tests)
 	//   - Portfolio  → /api/portfolios list (no unique assertions beyond 200)
-	// The Portfolio section's ONE valuable assertion (/api/analytics/correlation,
-	// the only route-layer coverage of that endpoint) was moved into the Signals
-	// block above so the correlation contract is not lost.
+	// round-132: the /api/analytics/correlation assertion moved here in round-65
+	// was removed with the deleted endpoint (duplicate of /api/signals/correlation,
+	// which the matrix test above covers live).
 });

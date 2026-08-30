@@ -86,14 +86,6 @@ describe("Cross-user ownership guards (IDOR)", () => {
 				context: { z: 3.5 },
 			},
 		});
-		const model = await prisma.forecastingModel.create({
-			data: {
-				timeseriesId: timeseries.id,
-				trainedById: userA.id,
-				algorithm: "ARIMA",
-				hyperparameters: {},
-			},
-		});
 
 		ids = {
 			userA: userA.id,
@@ -101,7 +93,6 @@ describe("Cross-user ownership guards (IDOR)", () => {
 			dataset: dataset.id,
 			timeseries: timeseries.id,
 			anomaly: anomaly.id,
-			model: model.id,
 		};
 	});
 
@@ -149,15 +140,6 @@ describe("Cross-user ownership guards (IDOR)", () => {
 				.send({ isResolved: true });
 			expect(res.status).toBe(200);
 			expect(res.body.data.anomaly.isResolved).toBe(true);
-		});
-	});
-
-	describe("models", () => {
-		it("foreign DELETE /:id/forecasts → 403 (sibling convention)", async () => {
-			const res = await request(app)
-				.delete(`/api/models/${ids.model}/forecasts`)
-				.set({ Authorization: `Bearer ${tokenB}` });
-			expect(res.status).toBe(403);
 		});
 	});
 

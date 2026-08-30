@@ -202,8 +202,8 @@ B2B 撮合 / 国内现货采价网络 / 冷链硬件 SaaS / 支付/下单/交易
 ## §C 决策项（不擅动，需用户点头）
 
 - **D5 月度序列预测语义（批 6a-6c 总纲，批 6b 前置）——已定案**：[`docs/adr/ADR-0001-monthly-series-prediction-semantics.md`](adr/ADR-0001-monthly-series-prediction-semantics.md) **Accepted（2026-08-24 用户确认）**，批 6b/6c 已按此执行完毕（见上方 round-131 执行状态）。五点语义包：① horizon 单位 = 步长（月度序列 1 步 = 1 个月）；② 验证到期与实际值窗按步长（`make_interval(months=>horizon)`）；③ `prediction_logs` 增可空 `interval` 列（NULL=daily 时代旧行，不回填）；④ 月度刷新节律 = 仅新实际点后重预测；⑤ 订阅谓词 monthly = 最新点 ≤60 天 且 ≥3 点。correlationAnalysis/analytics 显式不做月度（理由经评审 m4 纠错：daily-only 读取与跨节奏对齐，非点数不足）。
-- **D6 孤儿端点处置**：按 `deprecation-and-migration` 决策五问逐组评估（唯一价值/消费者数/替代品/迁移成本/持有成本）。建议：`/api/security` 3 端点（audit 上报，前端从未发送）为**收敛首选候选**；/api/models、/api/analytics 待批 8 口径统一后重评（可能与公开档案页互补）；portfolios 组维持登记。"不删非己所造"红线 → 全部先出处置建议等用户点头。
-- **D7 死模型残留数据（sundial/timer_xl 共 332 行）**：已结构性隔离（注册表枚举 + R3 守卫 + 批 8 钉住），**建议保留数据**（预测历史完整性）不删；若删属数据治理决定，需用户点头。
+- **D6 孤儿端点处置——已定案（2026-08-30 round-132 执行，"继续完成剩余的任务"指令）**：五问重评（全量核实见 TECH-DEBT §十四 round-132 记录）：`/api/security` 3 端点**删除**（audit 前端从未发送）；`/api/models` 8 端点**删除**（重评结论：公开档案页用的是 `/api/signals/models/accuracy/public` 而非本组，"互补"假设未成立；`modelService` 唯一消费者即本组路由，连带删除；`ForecastingModel`/`Forecast` schema 与数据保留为休眠表）；`/api/analytics` 2 端点**删除**（correlation 为 live signals 版之外的第三套重复实现、seasonality 0 消费且 PRODUCT-SPEC 无规划）；portfolios 组**维持登记**（0 页面消费，暂缓）。测试 1036+1→1002+1（-34 全部为随组删除的测试，零失败），live 404×3 + 替代面 200。
+- **D7 死模型残留数据（sundial/timer_xl 共 332 行）——已定案（2026-08-30 round-132）：保留**。已结构性隔离（注册表枚举 + R3 守卫 + 批 8 钉住），数据不删（预测历史完整性）；未来如用户明示删除属数据治理决定再单列轮次。
 
 **用户侧外部输入（非工程，不变）**：4 个空 API key（MLA/USDA_MARS/OPENWEATHER + FRED 免 key 已用）；beef_cut_prices CSV 周更（runbook 就绪）；3→10 种子用户访谈与档案周更。
 

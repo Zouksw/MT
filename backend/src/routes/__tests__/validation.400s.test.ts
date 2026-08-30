@@ -54,30 +54,6 @@ describe("Input validation — garbage params must not 500", () => {
 		expect(res.status).toBe(200);
 	});
 
-	it("security audit list with page=abc&limit=-1 is not a 500", async () => {
-		const res = await request(app)
-			.get("/api/security/audit?page=abc&limit=-1")
-			.set({ Authorization: `Bearer ${token}` });
-		expect(res.status).toBe(200);
-	});
-
-	it("security audit POST with invalid timestamp is a 400, not 500", async () => {
-		const res = await request(app)
-			.post("/api/security/audit")
-			.set({ Authorization: `Bearer ${token}` })
-			.send({
-				logs: [
-					{
-						event: "LOGOUT",
-						sessionId: "validation-400s",
-						severity: "low",
-						timestamp: "not-a-date",
-					},
-				],
-			});
-		expect(res.status).toBe(400);
-	});
-
 	it("beef prices with unknown factoryCode → 404 (filter never silently dropped)", async () => {
 		const res = await request(app)
 			.get("/api/beef/prices?factoryCode=NO-SUCH-FACTORY-999")
@@ -90,12 +66,5 @@ describe("Input validation — garbage params must not 500", () => {
 			.get("/api/beef/prices/history/BARBECUE?from=abc")
 			.set({ Authorization: `Bearer ${token}` });
 		expect(res.status).toBe(400);
-	});
-
-	it("analytics correlation with repeated slugs param is not a 500", async () => {
-		const res = await request(app)
-			.get("/api/analytics/correlation?slugs=brl_usd&slugs=wheat_cme")
-			.set({ Authorization: `Bearer ${token}` });
-		expect([200, 404]).toContain(res.status);
 	});
 });
