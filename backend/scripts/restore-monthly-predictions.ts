@@ -21,8 +21,9 @@
  * still exits 0. Exit 1 = shape mismatch (inspect manually; nothing was
  * partially committed — each step is a single statement).
  *
- * Backup BEFORE running: pg_dump prediction_logs (see docs/CHANGELOG round
- * entry for the artifact path). Usage: cd backend && npx tsx scripts/restore-monthly-predictions.ts
+ * Executed against production 2026-08-30 13:34 local CST (05:34 UTC), after
+ * a pg_dump of prediction_logs (artifact path in the CHANGELOG round entry).
+ * Usage: cd backend && npx tsx scripts/restore-monthly-predictions.ts
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -31,7 +32,7 @@ import { restoreVerifiablePredictions } from "@/services/mapeTracking";
 
 const prisma = new PrismaClient();
 const GRACE_DAYS = stalenessWindowDays("monthly");
-/** Expected shapes, measured 2026-08-30 13:20 UTC (pre-script SELECT). */
+/** Expected shapes, measured 2026-08-30 13:20 local CST (pre-script SELECT). */
 const EXPECT_FROZEN_MONTHLY = 42; // 6 series × 7 models
 const EXPECT_NULL_LEGACY = 7; // beef_carcass_us, horizon 6, interval NULL
 
