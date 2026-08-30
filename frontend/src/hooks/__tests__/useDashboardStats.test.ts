@@ -34,9 +34,22 @@ jest.mock("@/hooks/useRetryableFetch", () => ({
 }));
 
 // Mock useBeefCutForecasts so we can control the per-cut forecast data that
-// feeds both the aiSummary hero card and the hotCuts forecast column.
+// feeds the hotCuts forecast column.
 jest.mock("@/hooks/useBeefCutForecasts", () => ({
 	useBeefCutForecasts: jest.fn(() => ({ forecasts: undefined, isLoading: false })),
+}));
+
+// Mock the beef monthly consensus (round-138 批5 hero source) — its fetch
+// behavior belongs to its own concern; here null keeps the hero in its
+// honest empty state and stops a real apiFetch from churning renders (which
+// double-fired the /alerts dedup assertion below).
+jest.mock("@/hooks/useBeefMonthlyConsensus", () => ({
+	useBeefMonthlyConsensus: jest.fn(() => ({
+		consensus: null,
+		loading: false,
+		error: null,
+		retry: jest.fn(),
+	})),
 }));
 
 import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";

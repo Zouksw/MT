@@ -212,6 +212,13 @@ export default function BeefOverview() {
 				actions={
 					<div className="flex items-center gap-2">
 						<a
+							href="/beef/forecast"
+							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+						>
+							<Target className="size-4" />
+							AI 预测
+						</a>
+						<a
 							href="/beef/factories"
 							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 						>

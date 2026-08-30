@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import { type CutForecastSummary, useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
+import { useBeefMonthlyConsensus } from "@/hooks/useBeefMonthlyConsensus";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { API_BASE as API_ORIGIN } from "@/lib/config";
 import type { Alert, Forecast } from "@/types/api";
@@ -356,37 +357,26 @@ export const useDashboardStats = () => {
 	const aiTotal = forecastsData?.total ?? forecastsData?.data?.length ?? 0;
 	const aiActive = activeModelsData?.total ?? activeModelsData?.pagination?.total ?? 0;
 
-	// AI 7-day summary for the dashboard hero (PRODUCT-SPEC §5.1 AI 7日预测 card).
-	// Sourced from the dual-backend cut-forecast batch (useBeefCutForecasts),
-	// NOT the legacy commodity-slug path — keeps the dashboard consistent with
-	// the /beef board and cut-detail page (all keyed by cutCode). Takes the
-	// first forecastable cut, resolves its display name from the cut taxonomy,
-	// and surfaces consensus direction + change + confidence + model agreement.
-	// Null when no cut is forecastable (stale data / no token) → honest empty.
+	// AI hero card (round-138 批5): the beef MONTHLY consensus — IMF
+	// PBEEFUSDM benchmark, H=1 MONTH — from the same useBeefMonthlyConsensus
+	// source /beef/forecast reads, so the dashboard card and the forecast
+	// center agree by construction. Replaces the first-forecastable-cut
+	// 7-day summary (cut forecasts still feed the hot-cuts table below).
+	// Null when the benchmark has no forecastable price / no token → honest
+	// empty state on the card.
 	const { forecasts: cutForecasts } = useBeefCutForecasts(7);
+	const { consensus: beefConsensus } = useBeefMonthlyConsensus(1);
 	const aiSummary = useMemo(() => {
-		if (!cutForecasts) return null;
-		// Name lookup from the taxonomy (already fetched above as cutsData).
-		const cuts = (cutsData?.data?.cuts ?? cutsData?.cuts ?? []) as Array<{
-			cutCode: string;
-			nameZh?: string;
-			nameEn?: string;
-		}>;
-		const nameByCode = new Map(cuts.map((c) => [c.cutCode, c.nameZh || c.nameEn]));
-		const entry = Object.entries(cutForecasts).find(
-			([, fc]) => fc.direction != null && fc.predictedChange != null && fc.confidence != null,
-		);
-		if (!entry) return null;
-		const [cutCode, fc] = entry;
+		if (!beefConsensus) return null;
 		return {
-			direction: fc.direction,
-			changePct: fc.predictedChange ?? 0,
-			confidence: fc.confidence,
-			modelsAgree: fc.modelsAgree,
-			totalModels: fc.availableModels ?? 0,
-			cutName: nameByCode.get(cutCode) || cutCode.replace(/_/g, " "),
+			direction: beefConsensus.direction,
+			changePct: beefConsensus.predictedChange,
+			confidence: beefConsensus.confidence,
+			modelsAgree: beefConsensus.modelsAgree,
+			totalModels: beefConsensus.availableModels,
+			cutName: "牛肉基准 · 下月",
 		};
-	}, [cutForecasts, cutsData]);
+	}, [beefConsensus]);
 
 	// Merge the per-cut 7-day forecast into the hot-cuts table rows
 	// (PRODUCT-SPEC §5.1 — the 行情总览 hot-cuts table must show the AI

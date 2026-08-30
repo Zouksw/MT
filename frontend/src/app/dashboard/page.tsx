@@ -52,13 +52,15 @@ const DATASET_ICON = <Database className="size-5" />;
 const ALERT_ICON = <Bell className="size-5" />;
 
 /**
- * AI 7-day prediction hero card (PRODUCT-SPEC §5.1).
+ * AI beef-monthly prediction hero card (PRODUCT-SPEC §5.1, round-138 批5).
  *
- * Surfaces the headline cut's consensus: direction arrow + predicted change +
- * confidence + model agreement. Direction drives the color (green up / red
- * down / muted flat) — the only place direction is allowed to set color per
- * the dashboard design rule. Shows an honest empty state ("Awaiting signal")
- * when no cut is forecastable (no price data / no token) instead of a fake
+ * Surfaces the beef benchmark (IMF PBEEFUSDM) next-month consensus: direction
+ * arrow + predicted change + confidence + model agreement — the SAME
+ * useBeefMonthlyConsensus source /beef/forecast reads, so the two surfaces
+ * agree by construction. Direction drives the color (green up / red down /
+ * muted flat) — the only place direction is allowed to set color per the
+ * dashboard design rule. Shows an honest empty state ("Awaiting signal")
+ * when the benchmark has no forecastable price / no token instead of a fake
  * arrow.
  */
 function AIPredictionCard({
@@ -85,7 +87,7 @@ function AIPredictionCard({
 			<div className="rounded-xl border bg-card p-5">
 				<div className="flex items-center gap-2 mb-1 text-muted-foreground">
 					<Sparkles className="size-4" />
-					<span className="text-sm font-medium">AI 7日预测</span>
+					<span className="text-sm font-medium">AI 牛肉月度预测</span>
 				</div>
 				<div className="text-2xl font-display font-semibold text-muted-foreground">
 					Awaiting signal
@@ -105,7 +107,7 @@ function AIPredictionCard({
 		<div className="rounded-xl border bg-card p-5">
 			<div className="flex items-center gap-2 mb-1 text-muted-foreground">
 				<Sparkles className="size-4" />
-				<span className="text-sm font-medium">AI 7日预测</span>
+				<span className="text-sm font-medium">AI 牛肉月度预测</span>
 				<span className="text-xs text-muted-foreground/70">· {summary.cutName}</span>
 			</div>
 			<div className="flex items-end gap-2">
@@ -246,7 +248,7 @@ export default function DashboardPage() {
 
 					{/* KPI HERO — three headline cards per PRODUCT-SPEC §5.1:
 					 * 全球牛肉价（IMF 月度基准，FRED PBEEFUSDM — D2 换掉长期冻结的进口均价种子值）/
-					 * 国产均价 (domestic avg) / AI 7日预测.
+					 * 国产均价 (domestic avg) / AI 牛肉月度预测.
 					 * Each surfaces an honest "--" when its data source is empty rather
 					 * than fabricating a number. The AI card's directional color comes
 					 * from the consensus direction (green up / red down / muted flat). */}
