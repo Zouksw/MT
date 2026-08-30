@@ -15,7 +15,11 @@
  *      monthly window revives and verifies — the full
  *      expire → backfill → restore → verified lifecycle, i.e. the batch-6b
  *      hard acceptance ("first monthly prediction reaches verified")
- *      constructed repeatably.
+ *      constructed repeatably;
+ *   5. 批0b (round-136) not-yet-due guard: freeze sweeps (Pass A/B) only
+ *      mark ACTIONABLE monthly rows (anchor + horizon months + 90d grace
+ *      elapsed) and restore reclaims not-yet-actionable unverifiable rows —
+ *      "未到期 ≠ 不可验证", the 2026-08-30 incident's 42-row freeze.
  *
  * Fixtures are throwaway commodities with controlled monthly histories;
  * cleanup deletes prediction rows → prices → commodity per test.
@@ -220,17 +224,19 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 		}
 	});
 
-	it("Pass A freezes a monthly series whose source has been dead >90d (nothing publishable remains)", async () => {
-		// Latest (and only) monthly point 100d ago (> 90d monthly window);
-		// prediction 35d ago with horizon 1 (matured). No post-prediction
-		// actuals can exist AND the source is confirmed dead.
+	it("Pass A freezes an actionable monthly row whose source has been dead >90d (nothing publishable remains)", async () => {
+		// 批0b: the row must be ACTIONABLE (window + grace elapsed) before any
+		// freeze verdict — anchor 125d ago + 1 month + 90d grace = 5d ago. The
+		// pre-0b fixture (35d-old row) now stays completed: its actionable
+		// moment is ~85d away, so the terminal verdict waits even on a dead
+		// source (that waiting is pinned separately below).
 		const c = await makeMonthlyCommodity(ctx, "deadA", [
-			{ date: new Date(Date.now() - 100 * DAY), close: 100 },
+			{ date: new Date(Date.now() - 130 * DAY), close: 100 },
 		]);
 		const prediction = await makeMonthlyPrediction(ctx, c.id, {
 			horizon: 1,
-			forecastStartAt: new Date(Date.now() - 35 * DAY),
-			predictedAt: new Date(Date.now() - 35 * DAY),
+			forecastStartAt: new Date(Date.now() - 125 * DAY),
+			predictedAt: new Date(Date.now() - 125 * DAY),
 			values: [100],
 		});
 
@@ -248,15 +254,17 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 
 	it("Pass B uses the 90d monthly window: a ~100d-old latest point freezes, a ~70d-old one does not", async () => {
 		// Both predictions are NEWER than the 10d due cutoff → only Pass B
-		// can touch them. The price point predates both predictions, so the
-		// only differentiator is the cadence staleness window (90d monthly,
+		// can touch them, and both rows are ACTIONABLE (anchor 395d ago +
+		// 10 months + 90d ≈ elapsed) so the 批0b not-yet-due guard is not the
+		// differentiator — the cadence staleness window is (90d monthly,
 		// round-132: the newest healthy point ages 45→~76d mid-cycle, so 70d
 		// must stay alive — 60d would have frozen it).
 		const deadish = await makeMonthlyCommodity(ctx, "deadB", [
-			{ date: new Date(Date.now() - 100 * DAY), close: 100 },
+			{ date: new Date(Date.now() - 400 * DAY), close: 100 },
 		]);
 		const deadishPrediction = await makeMonthlyPrediction(ctx, deadish.id, {
 			horizon: 10,
+			forecastStartAt: new Date(Date.now() - 395 * DAY),
 			predictedAt: new Date(Date.now() - 5 * DAY),
 			values: [1, 2, 3],
 		});
@@ -265,6 +273,7 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 		]);
 		const aliveishPrediction = await makeMonthlyPrediction(ctx, aliveish.id, {
 			horizon: 10,
+			forecastStartAt: new Date(Date.now() - 395 * DAY),
 			predictedAt: new Date(Date.now() - 5 * DAY),
 			values: [1, 2, 3],
 		});
@@ -281,6 +290,136 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 		} finally {
 			await cleanupCommodity(ctx, deadish.id);
 			await cleanupCommodity(ctx, aliveish.id);
+		}
+	});
+
+	it("批0b: no sweep freezes a NOT-YET-ACTIONABLE monthly row on a dead source (未到期 ≠ 不可验证 — the 08-30 incident shape)", async () => {
+		// Source quiet 130d (> 90d window — both passes judge it frozen), but
+		// every row's window is far from actionable:
+		//  - Pass A candidate: predictedAt 35d ago (≤ 10d cutoff), horizon 1,
+		//    anchor 35d ago → actionable ~85d from now. (Group-level maturity
+		//    also fails: earliest + max horizon 10 months > now.)
+		//  - Pass B candidate: predictedAt 5d ago (> cutoff), horizon 10,
+		//    anchor 5d ago → actionable ~a year out.
+		// Live incident: the pre-批0b Pass B marked exactly such rows
+		// unverifiable hours before the 90d window fix deployed.
+		const c = await makeMonthlyCommodity(ctx, "notdue", [
+			{ date: new Date(Date.now() - 130 * DAY), close: 100 },
+		]);
+		const passARow = await makeMonthlyPrediction(ctx, c.id, {
+			horizon: 1,
+			forecastStartAt: new Date(Date.now() - 35 * DAY),
+			predictedAt: new Date(Date.now() - 35 * DAY),
+			values: [100],
+		});
+		const passBRow = await makeMonthlyPrediction(ctx, c.id, {
+			horizon: 10,
+			forecastStartAt: new Date(Date.now() - 5 * DAY),
+			predictedAt: new Date(Date.now() - 5 * DAY),
+			values: [1, 2, 3],
+		});
+
+		try {
+			await markUnverifiablePredictions(); // Pass A + Pass B
+			await expireWindowElapsedPredictions();
+			const statuses = await ctx.prisma.predictionLog.findMany({
+				where: { id: { in: [passARow.id, passBRow.id] } },
+				select: { status: true },
+			});
+			expect(statuses).toHaveLength(2);
+			for (const s of statuses) expect(s.status).toBe("completed");
+		} finally {
+			await cleanupCommodity(ctx, c.id);
+		}
+	});
+
+	it("批0b: Pass A freeze on a matured monthly group marks only the actionable sibling", async () => {
+		// Group-level maturity comes from the EARLIEST row (sound
+		// approximation), but the marking must stay per-row: the newer
+		// sibling on the same dead source keeps its seat until its own
+		// window + grace elapses.
+		const c = await makeMonthlyCommodity(ctx, "mixed", [
+			{ date: new Date(Date.now() - 200 * DAY), close: 100 },
+		]);
+		const oldRow = await makeMonthlyPrediction(ctx, c.id, {
+			horizon: 1,
+			forecastStartAt: new Date(Date.now() - 150 * DAY),
+			predictedAt: new Date(Date.now() - 150 * DAY),
+			values: [100],
+		}); // actionable: 150d + 1mo + 90d ≈ 30d ago
+		const youngRow = await makeMonthlyPrediction(ctx, c.id, {
+			horizon: 3,
+			forecastStartAt: new Date(Date.now() - 20 * DAY),
+			predictedAt: new Date(Date.now() - 20 * DAY),
+			values: [1, 2, 3],
+		}); // not actionable: 20d + 3mo + 90d ≈ 160d out
+
+		try {
+			await markUnverifiablePredictions();
+			const byId = new Map(
+				(
+					await ctx.prisma.predictionLog.findMany({
+						where: { id: { in: [oldRow.id, youngRow.id] } },
+						select: { id: true, status: true },
+					})
+				).map((s) => [s.id, s.status]),
+			);
+			expect(byId.get(oldRow.id)).toBe("unverifiable");
+			expect(byId.get(youngRow.id)).toBe("completed");
+		} finally {
+			await cleanupCommodity(ctx, c.id);
+		}
+	});
+
+	it("批0b: restoreVerifiablePredictions reclaims a not-yet-actionable unverifiable monthly row (incident self-heal), but not a legitimately-expired one", async () => {
+		// End state of the 08-30 incident: healthy series, rows wrongly frozen
+		// while their windows are months from opening. The extended restore
+		// must reclaim them WITHOUT window actuals; a genuinely expired row
+		// (actionable, window still under the actuals bar) must stay put.
+		const c = await makeMonthlyCommodity(ctx, "incident", [
+			{ date: new Date(Date.now() - 75 * DAY), close: 99 },
+			{ date: new Date(Date.now() - 45 * DAY), close: 100 },
+		]);
+		const frozen = await ctx.prisma.predictionLog.create({
+			data: {
+				modelId: "monthly-incident-test",
+				commodityId: c.id,
+				horizon: 10,
+				predictedValues: [1, 2, 3],
+				status: "unverifiable", // the wrongly-frozen state
+				predictedAt: new Date(Date.now() - 6 * DAY),
+				forecastStartAt: monthStart(0),
+				interval: "monthly",
+			},
+		});
+		const zombie = await ctx.prisma.predictionLog.create({
+			data: {
+				modelId: "monthly-incident-test",
+				commodityId: c.id,
+				horizon: 1,
+				predictedValues: [1],
+				status: "unverifiable",
+				predictedAt: new Date(Date.now() - 200 * DAY),
+				forecastStartAt: new Date(Date.now() - 200 * DAY),
+				interval: "monthly",
+			},
+		});
+
+		try {
+			const restored = await restoreVerifiablePredictions();
+			expect(restored).toBeGreaterThanOrEqual(1);
+			const frozenAfter = await ctx.prisma.predictionLog.findUnique({
+				where: { id: frozen.id },
+				select: { status: true },
+			});
+			expect(frozenAfter?.status).toBe("completed");
+			const zombieAfter = await ctx.prisma.predictionLog.findUnique({
+				where: { id: zombie.id },
+				select: { status: true },
+			});
+			expect(zombieAfter?.status).toBe("unverifiable");
+		} finally {
+			await cleanupCommodity(ctx, c.id);
 		}
 	});
 

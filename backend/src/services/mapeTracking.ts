@@ -60,6 +60,19 @@ function addMonthsUTC(date: Date, months: number): Date {
  * the daily 7d — PBEEFUSDM legitimately publishes ~45d late. */
 const MONTHLY_GRACE_DAYS = stalenessWindowDays("monthly");
 
+/** A monthly row's ACTIONABLE moment (round-136 批0b): anchor + horizon
+ * calendar months + one backfill-grace window. Before this moment the row is
+ * "not yet due" and no sweep may write a terminal verdict on it — the live
+ * 08-30 incident froze all 42 monthly rows whose verification windows had
+ * not even opened ("未到期 ≠ 不可验证"). One definition shared by all three
+ * writers so they can never oscillate: the freeze sweeps (Pass A/B via
+ * markActionableMonthlyRows) only mark rows whose moment has passed, the
+ * expire SQL asserts the same elapsed bound, and
+ * restoreVerifiablePredictions reclaims unverifiable rows whose moment has
+ * NOT passed. */
+const monthlyActionableMs = (anchor: Date, horizon: number): number =>
+	addMonthsUTC(anchor, horizon).getTime() + MONTHLY_GRACE_DAYS * 86400000;
+
 export interface LogPredictionParams {
 	modelId: string;
 	commodityId: string;
@@ -314,6 +327,42 @@ export async function restorePostFixConflictPredictions(fixedAt: Date): Promise<
 	return result.count;
 }
 
+/** Freeze-mark only the ACTIONABLE monthly rows of a frozen source — those
+ * whose verification window AND backfill grace have fully elapsed
+ * (monthlyActionableMs <= now). Shared by markUnverifiablePredictions Pass A
+ * (predictedAt <= cutoff slice) and Pass B (> cutoff slice), so both freeze
+ * decisions carry the not-yet-due guard. Rows are enumerated first (monthly
+ * rows are few — new-point-gated) so the calendar-month arithmetic reuses
+ * addMonthsUTC instead of duplicating it in SQL; the UPDATE re-checks status
+ * for the same race safety the direct updateMany had. */
+async function markActionableMonthlyRows(
+	commodityIds: string[],
+	predictedAtFilter: { lte: Date } | { gt: Date },
+): Promise<number> {
+	const rows = await prisma.predictionLog.findMany({
+		where: {
+			status: PS.COMPLETED,
+			commodityId: { in: commodityIds },
+			predictedAt: predictedAtFilter,
+			NOT: { commodityId: { startsWith: "cut:" } },
+			interval: "monthly",
+		},
+		select: { id: true, horizon: true, predictedAt: true, forecastStartAt: true },
+	});
+	const now = Date.now();
+	const actionableIds = rows
+		.filter(
+			(row) => monthlyActionableMs(row.forecastStartAt ?? row.predictedAt, row.horizon) <= now,
+		)
+		.map((row) => row.id);
+	if (actionableIds.length === 0) return 0;
+	const result = await prisma.predictionLog.updateMany({
+		where: { id: { in: actionableIds }, status: PS.COMPLETED },
+		data: { status: PS.UNVERIFIABLE },
+	});
+	return result.count;
+}
+
 /**
  * Mark completed predictions whose forecast horizon has elapsed AND whose
  * commodity has received NO new daily prices after the prediction was made
@@ -475,17 +524,9 @@ export async function markUnverifiablePredictions(): Promise<number> {
 			markedTotal += result.count;
 		}
 		if (monthlyIds.length > 0) {
-			const result = await prisma.predictionLog.updateMany({
-				where: {
-					status: PS.COMPLETED,
-					commodityId: { in: monthlyIds },
-					predictedAt: { lte: cutoff },
-					NOT: { commodityId: { startsWith: "cut:" } },
-					interval: "monthly",
-				},
-				data: { status: PS.UNVERIFIABLE },
-			});
-			markedTotal += result.count;
+			// 批0b: only rows whose monthly window + grace has fully elapsed may
+			// receive the terminal freeze verdict (not-yet-due rows are skipped).
+			markedTotal += await markActionableMonthlyRows(monthlyIds, { lte: cutoff });
 		}
 	}
 
@@ -584,17 +625,9 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 		marked += result.count;
 	}
 	if (monthlyIds.length > 0) {
-		const result = await prisma.predictionLog.updateMany({
-			where: {
-				status: PS.COMPLETED,
-				commodityId: { in: monthlyIds },
-				predictedAt: { gt: cutoff },
-				NOT: { commodityId: { startsWith: "cut:" } },
-				interval: "monthly",
-			},
-			data: { status: PS.UNVERIFIABLE },
-		});
-		marked += result.count;
+		// 批0b: same not-yet-due guard as Pass A — a within-cutoff monthly row
+		// on a dead-looking source keeps its seat until its window opens.
+		marked += await markActionableMonthlyRows(monthlyIds, { gt: cutoff });
 	}
 	return marked;
 }
@@ -730,6 +763,14 @@ function windowHasActualsBarSql(): Prisma.Sql {
  * Window-aware since round-110: a newer price OUTSIDE the window means
  * nothing for verification (the old heartbeat test ping-ponged ~27k rows).
  *
+ * 批0b (round-136) second reclaim clause: a monthly row whose actionable
+ * moment (anchor + horizon months + grace) has NOT passed must never carry a
+ * terminal verdict — reclaim it unconditionally, no actuals needed. This is
+ * the self-healing inverse of the not-yet-due guard: the 08-30 incident's
+ * 42 frozen rows would have recovered on the next sweep had this clause
+ * existed. The bound is expire's elapsed-check flipped (exact complement),
+ * so restore and expire cannot ping-pong.
+ *
  * @returns number of predictions restored to `completed`
  */
 export async function restoreVerifiablePredictions(): Promise<number> {
@@ -738,7 +779,16 @@ export async function restoreVerifiablePredictions(): Promise<number> {
 		SET status = 'completed'
 		WHERE pl.status = 'unverifiable'
 			AND pl.commodity_id NOT LIKE 'cut:%'
-			AND EXISTS (${windowHasActualsBarSql()})
+			AND (
+				EXISTS (${windowHasActualsBarSql()})
+				OR (
+					COALESCE(pl.interval, 'daily') = 'monthly'
+					AND COALESCE(pl.forecast_start_at, pl.predicted_at)
+						+ make_interval(months => pl.horizon::int)
+						+ make_interval(days => ${MONTHLY_GRACE_DAYS}::int)
+						> (now() AT TIME ZONE 'utc')
+				)
+			)
 	`;
 	return result;
 }
