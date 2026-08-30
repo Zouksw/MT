@@ -84,10 +84,13 @@ esac
 # Dependency-file integrity guard. Catches the recurring pnpm-store/venv
 # corruption pattern (Round 5 js-yaml, Round 7 venv, Round 10
 # is-core-module/core.json) before a silent failure surfaces as a confusing
-# build/test/runtime error.
+# build/test/runtime error. Probe files under .pnpm/, not top-level
+# node_modules/ — pnpm's isolated layout only exposes DIRECT deps at top
+# level, so a top-level path for a transitive dep (js-yaml) false-fired
+# every 5 min since ≥2026-08-25 while the tree was intact; fixed round-143.
 for f in \
     "/root/frontend/node_modules/.pnpm/is-core-module@*/node_modules/is-core-module/core.json" \
-    "/root/frontend/node_modules/js-yaml/package.json" \
+    "/root/frontend/node_modules/.pnpm/js-yaml@*/node_modules/js-yaml/package.json" \
     "/root/inference-service/venv/bin/python"
 do
     # shellcheck disable=SC2086

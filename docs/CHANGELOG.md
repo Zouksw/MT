@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-08-30"
+last_updated: "2026-08-31"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-08-31 — round-143：状态维护轮 — ops 全量扫描 + healthcheck 哨兵误报根治
+
+用户指令"维护当前项目状态"。只读诊断扫描（ops-check）+ 一处监控修复。
+
+- **扫描结论（全部实测 2026-08-31 00:50 前后）**：git 树干净 @ `c6dae5b`（round-142 五连提交核实落盘）；PM2 三服务在线、mt-backend `unstable restarts: 0`（9 分钟前重启为上轮门禁动作，错误日志干净）；健康端点 3×200（backend 2ms / inference 2ms / frontend 18ms）；PG 5432 + Redis PONG；磁盘 61%（15G 空闲）、内存可用 10G；系统 cron 六项齐备（backup/watchdog/healthcheck/cleanup/db-maintenance/track-snapshot）；数据新鲜度 5 白名单序列全部符合节奏——beef 2026-07-01（FRED 月度，8 月点 ~9 月中发布属正常）、CME live/feeder 2026-08-28（周五收盘、周一盘中）、usd_cny/brl_usd 日更至 08-30；无 nginx（直出端口架构，符合现状）。
+- **修复 `cron-healthcheck.sh` js-yaml 哨兵误报**：顶层路径 `/root/frontend/node_modules/js-yaml/package.json` 在 pnpm isolated layout 下本就不该存在（顶层只暴露直接依赖，js-yaml 是传递依赖、无 hoist 配置）——该路径自 ≥08-25（日志保留最早日）每天 288 次全量误报 "possible store corruption"。**依赖树实测完好**：js-yaml@3.14.2/4.1.1 双版本都在 `.pnpm/`、istanbul-lib-instrument/cosmiconfig 正常解析、frontend 341 测试绿。改为 `.pnpm/js-yaml@*/...` 深层路径（与 is-core-module 哨兵同模式）+ 注释写明布局约束。验证：`bash -n` 通过、glob 命中双版本、手工全量跑零告警、**00:55 cron 实跑告警消失**（00:50 为最后一次误报）。
+- **Watch 项**：① track-snapshot cron 08-30 19:49 装入 crontab，**今日 07:30 首次定时触发**（安装时已手工端到端验证 `ee36c41`，快照曾以 `1cee1c1` 自动提交）；② 批 0a 值守窗 2026-09 中下旬不变（FRED 8 月点发布后跑 SQL 三查 + 三面核查）。
 
 ### 2026-08-31 — round-142：第五波 v3.3.0 执行 — 批 1（公开中文行情摘要 + SEO 基建）+ 批 2（seed 身份对齐）+ 批 3（正确性收尾包）
 

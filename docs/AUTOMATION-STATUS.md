@@ -115,7 +115,7 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 |---|---|---|
 | `0 2 * * *` | `backup-db.sh --compress` | 每日 2AM 数据库备份 |
 | `*/2 * * * *` | `watchdog-nextserver.sh` | 每 2 分钟杀重复 next-server（防 OOM） |
-| `*/5 * * * *` | `cron-healthcheck.sh` | 每 5 分钟探测 backend/frontend/inference + 自动重启 + **数据新鲜度探针**（round-49：读 /health/ready 的 dataLayer，anyDataFlowing=false 或 verification debt 高时记入 healthcheck.log，不重启） |
+| `*/5 * * * *` | `cron-healthcheck.sh` | 每 5 分钟探测 backend/frontend/inference + 自动重启 + **数据新鲜度探针**（round-49：读 /health/ready 的 dataLayer，anyDataFlowing=false 或 verification debt 高时记入 healthcheck.log，不重启）+ 依赖完整性哨兵（is-core-module/js-yaml/venv；探针走 `.pnpm/` 深层路径——round-143 修正 js-yaml 顶层路径在 pnpm isolated layout 下每天 288 次误报） |
 | `0 3 * * *` | `cron-cleanup.sh` | 每日 3AM 磁盘清理（tmp/core/playwright/旧日志） |
 | `0 4 * * 0` | `cron-db-maintenance.sh` | 每周日 4AM VACUUM ANALYZE + session 清理 |
 | `30 7 * * 1` | `cron-track-snapshot.sh` | 每周一 07:30 周度 track-record 快照：跑只读 tsx 导出器 + **路径限定自动提交**（仅 `docs/snapshots/track-record-*.md`，git pathspec 不卷入无关暂存；index.lock 存在则跳过留下周；round-139 v3.2.0 批 1/D9，实跑验证自动提交 `1cee1c1`） |
