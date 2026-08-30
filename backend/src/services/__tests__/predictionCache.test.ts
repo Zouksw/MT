@@ -29,10 +29,18 @@ vi.mock("@/lib", () => ({
 }));
 
 // prisma is imported by the module (used in schedulePredictionsFromPostgreSQL);
-// stub it so module load doesn't touch a real DB.
+// stub it so module load doesn't touch a real DB. commodityPrice.findFirst backs
+// the monthly loop's freshness probe (default null = no monthly rows, so the
+// scheduler tests below exercise only the daily gate).
 vi.mock("@/lib", async () => {
 	const actual = await vi.importActual<typeof import("@/lib")>("@/lib");
-	return { ...actual, prisma: { commodity: { findMany: vi.fn() } } };
+	return {
+		...actual,
+		prisma: {
+			commodity: { findMany: vi.fn() },
+			commodityPrice: { findFirst: vi.fn().mockResolvedValue(null) },
+		},
+	};
 });
 
 import { prisma } from "@/lib";

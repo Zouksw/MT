@@ -6,11 +6,11 @@
  *      MONTHLY actuals in a months-wide window (the daily-only probe used to
  *      find 0 actuals → never verified);
  *   2. markUnverifiablePredictions Pass A/B: a healthy monthly series
- *      (latest point ≤60d old) is NOT frozen (the daily-only probe used to
+ *      (latest point ≤90d old) is NOT frozen (the daily-only probe used to
  *      freeze pure-monthly commodities ~10 days in — the round-129 B1
  *      blocker), while a genuinely dead one IS;
  *   3. expireWindowElapsedPredictions: monthly windows elapse in months with
- *      a 60d grace;
+ *      a 90d grace (round-132: 60d misjudged healthy mid-cycle ages — measured publish lag 44–53d);
  *   4. restoreVerifiablePredictions → verifyDuePredictions: a backfilled
  *      monthly window revives and verifies — the full
  *      expire → backfill → restore → verified lifecycle, i.e. the batch-6b
@@ -174,9 +174,9 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 	it("Pass A does NOT freeze a healthy monthly series — the round-129 B1 regression (daily-only probe used to freeze pure-monthly commodities)", async () => {
 		// Prediction 35d ago, horizon 1 → matured in monthly terms. Two alive
 		// shapes, both wall-clock-relative so the fixture never decays past the
-		// 60d window (calendar-anchored monthStart dates rotted on 2026-08-30):
+		// 90d window (calendar-anchored monthStart dates rotted on 2026-08-30):
 		//  a) publish-lag grace — latest point 40d old (OLDER than the
-		//     prediction) but still inside the 60d monthly window → alive;
+		//     prediction) but still inside the 90d monthly window → alive;
 		//  b) actuals arriving — latest point 30d old (NEWER than the
 		//     prediction) → actuals exist after the prediction → alive.
 		// The pre-ADR probe read daily prices only, found none, and marked
@@ -220,8 +220,8 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 		}
 	});
 
-	it("Pass A freezes a monthly series whose source has been dead >60d (nothing publishable remains)", async () => {
-		// Latest (and only) monthly point 100d ago (> 60d monthly window);
+	it("Pass A freezes a monthly series whose source has been dead >90d (nothing publishable remains)", async () => {
+		// Latest (and only) monthly point 100d ago (> 90d monthly window);
 		// prediction 35d ago with horizon 1 (matured). No post-prediction
 		// actuals can exist AND the source is confirmed dead.
 		const c = await makeMonthlyCommodity(ctx, "deadA", [
@@ -246,12 +246,14 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 		}
 	});
 
-	it("Pass B uses the 60d monthly window: a ~70d-old latest point freezes, a ~30d-old one does not", async () => {
+	it("Pass B uses the 90d monthly window: a ~100d-old latest point freezes, a ~70d-old one does not", async () => {
 		// Both predictions are NEWER than the 10d due cutoff → only Pass B
 		// can touch them. The price point predates both predictions, so the
-		// only differentiator is the cadence staleness window (60d monthly).
+		// only differentiator is the cadence staleness window (90d monthly,
+		// round-132: the newest healthy point ages 45→~76d mid-cycle, so 70d
+		// must stay alive — 60d would have frozen it).
 		const deadish = await makeMonthlyCommodity(ctx, "deadB", [
-			{ date: new Date(Date.now() - 70 * DAY), close: 100 },
+			{ date: new Date(Date.now() - 100 * DAY), close: 100 },
 		]);
 		const deadishPrediction = await makeMonthlyPrediction(ctx, deadish.id, {
 			horizon: 10,
@@ -259,7 +261,7 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 			values: [1, 2, 3],
 		});
 		const aliveish = await makeMonthlyCommodity(ctx, "aliveB", [
-			{ date: new Date(Date.now() - 30 * DAY), close: 100 },
+			{ date: new Date(Date.now() - 70 * DAY), close: 100 },
 		]);
 		const aliveishPrediction = await makeMonthlyPrediction(ctx, aliveish.id, {
 			horizon: 10,
@@ -284,7 +286,7 @@ describe("Monthly cadence — verification lifecycle (ADR-0001)", () => {
 
 	it("full monthly lifecycle: expire (zombie window) → backfill → restore → verified — the batch-6b hard acceptance, repeatably", async () => {
 		// Anchor M-6, horizon 3 → window [M-6, M-2). Only ONE in-window point
-		// exists (M-5) — under the bar of 3 — and the window + 60d grace has
+		// exists (M-5) — under the bar of 3 — and the window + monthly grace has
 		// long elapsed → the expire sweep must drain it to unverifiable.
 		const c = await makeMonthlyCommodity(ctx, "lifecycle", [
 			{ date: monthStart(-7), close: 99 },

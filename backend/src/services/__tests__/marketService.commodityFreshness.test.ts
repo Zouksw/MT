@@ -23,8 +23,8 @@ describe("stalenessWindowDays — cadence policy", () => {
 		expect(stalenessWindowDays("daily")).toBe(7);
 	});
 
-	it("monthly uses 60 days (PBEEFUSDM publishes mid-M+1; normal gaps reach ~45d)", () => {
-		expect(stalenessWindowDays("monthly")).toBe(60);
+	it("monthly uses 90 days (measured first-ingest lag 44–53d; healthy newest point ages to ~76d mid-cycle — round-132)", () => {
+		expect(stalenessWindowDays("monthly")).toBe(90);
 	});
 
 	it("unknown/absent cadence falls back to the daily window (fail-closed to the short window)", () => {
@@ -56,8 +56,8 @@ describe("getCommodityFreshness — interval-aware (round-129 batch 6a)", () => 
 			},
 		});
 		monthlyId = monthly.id;
-		// Monthly point ~53 days old — inside the 60d monthly window, far
-		// outside the old 7d daily window.
+		// Monthly point ~53 days old — inside the 90d monthly window (and at
+		// the measured first-ingest lag), far outside the 7d daily window.
 		const mDate = new Date(Date.now() - 53 * 24 * 3600 * 1000);
 		await ctx.prisma.commodityPrice.create({
 			data: {

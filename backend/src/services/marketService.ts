@@ -250,7 +250,7 @@ export async function getLatestExchangeRates() {
  * OWN cadence (round-129 batch 6a). Previously daily-only: monthly-only
  * series (beef_carcass_us = IMF, world_bank group) reported lastUpdated null
  * and stale:true no matter how fresh their monthly points were. Stale
- * thresholds come from the cadence policy (7d daily / 60d monthly). Mirrors
+ * thresholds come from the cadence policy (7d daily / 90d monthly). Mirrors
  * the `/commodities/freshness` endpoint.
  */
 export async function getCommodityFreshness() {

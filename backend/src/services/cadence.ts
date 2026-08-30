@@ -8,11 +8,19 @@
  * module centralizes the threshold policy; the call sites keep their own
  * query shapes.
  *
- * Thresholds = ~2× the natural publication rhythm (a missed publication must
- * not fire, two in a row must):
+ * Thresholds = one publication rhythm of tolerance ABOVE the normal point-age
+ * ceiling (a missed publication must not fire, two in a row must):
  *  - daily: 7 days (unchanged historical STALE_WINDOW_DAYS semantics)
- *  - monthly: 60 days (FRED PBEEFUSDM publishes month M around mid-M+1, so
- *    normal point-date gaps reach ~45d; 60 sits above that worst case)
+ *  - monthly: 90 days. Round-132 measured the real rhythm from
+ *    commodity_prices (created_at − date): steady-state first-ingest lag is
+ *    44–53d (point dated M-01 appears mid/late M+1), so the newest healthy
+ *    point ages 45d→~76d across a cycle; 60d (the round-129/131 value,
+ *    "2× rhythm") misclassified every healthy monthly series as stale for
+ *    roughly the back half of each cycle — live proof: beef_carcass_us
+ *    (latest 2026-07-01) crossed 60d on 2026-08-30 while its source is
+ *    healthy (next release ~mid-September). 90d = 45d lag + 31d rhythm +
+ *    ~2wk slip margin; observed late backfills (83–114d) are catch-ups of
+ *    ALREADY-published points, not the newest point's age.
  *
  * Deletion test: remove this module and the thresholds scatter back into N
  * callers — it earns its keep as the single policy seam.
@@ -24,7 +32,7 @@ export type SeriesInterval = "daily" | "weekly" | "monthly";
 export function stalenessWindowDays(interval: string): number {
 	switch (interval) {
 		case "monthly":
-			return 60;
+			return 90;
 		case "weekly":
 			return 21;
 		case "daily":

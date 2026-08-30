@@ -8,7 +8,7 @@
  *   2. logPrediction's monthly dedup guard (returns the existing row id
  *      instead of duplicating),
  *   3. schedulePredictionsFromPostgreSQL's monthly predicate (latest point
- *      ≤60d AND ≥3 points → subscribed as interval="monthly").
+ *      ≤90d AND ≥3 points → subscribed as interval="monthly").
  *
  * Fixtures are throwaway commodities with controlled monthly price history;
  * cleanup deletes prices → commodity → prediction rows per test.
@@ -223,15 +223,15 @@ describe("Monthly cadence — subscription & refresh gating (ADR-0001)", () => {
 	});
 
 	describe("schedulePredictionsFromPostgreSQL monthly predicate (ADR-0001 ⑤)", () => {
-		it("subscribes a healthy monthly series (latest ≤60d, ≥3 points) and skips stale/thin ones", async () => {
-			// Healthy: latest point ~30d old (inside the 60d window), 4 points.
+		it("subscribes a healthy monthly series (latest ≤90d, ≥3 points) and skips stale/thin ones", async () => {
+			// Healthy: latest point ~30d old (inside the 90d window), 4 points.
 			const healthy = await makeMonthlyCommodity(ctx, "sched-healthy", [
 				{ date: monthStart(-3), close: 100 },
 				{ date: monthStart(-2), close: 101 },
 				{ date: monthStart(-1), close: 102 },
 				{ date: monthStart(0), close: 103 },
 			]);
-			// Stale: latest ~90d old (> 60d staleness window) despite 4 points.
+			// Stale: latest ~120d old (> 90d staleness window) despite 4 points.
 			const stale = await makeMonthlyCommodity(ctx, "sched-stale", [
 				{ date: monthStart(-6), close: 100 },
 				{ date: monthStart(-5), close: 101 },
@@ -257,6 +257,75 @@ describe("Monthly cadence — subscription & refresh gating (ADR-0001)", () => {
 				await cleanupCommodity(ctx, healthy.id);
 				await cleanupCommodity(ctx, stale.id);
 				await cleanupCommodity(ctx, thin.id);
+			}
+		});
+
+		it("does NOT subscribe a dual-cadence commodity (stale daily rows + monthly rows) — effective cadence is daily (round-132)", async () => {
+			// Live defect this pins: the LME/world-bank group carries 180 STALE
+			// daily rows alongside its monthly history. The daily loop skips
+			// them (daily data >7d old), the fetcher still reads the daily rows
+			// (fallback only fires on ZERO daily rows) → logs stamp 'daily' →
+			// the monthly new-point guard never finds a monthly-stamped row →
+			// 30-min recompute on frozen inputs (~1.9k redundant rows/series in
+			// 6 days, 2026-08-24..30). The predicate must require NO daily rows.
+			const dual = await makeMonthlyCommodity(ctx, "sched-dual", [
+				{ date: monthStart(-2), close: 100 },
+				{ date: monthStart(-1), close: 101 },
+				{ date: monthStart(0), close: 102 },
+			]);
+			// Old daily history (way outside the 7d daily window).
+			for (const d of [-30, -29, -28]) {
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: dual.id,
+						date: new Date(Date.now() + d * 86400000),
+						interval: "daily",
+						close: 99,
+						source: "test",
+					},
+				});
+			}
+			try {
+				await schedulePredictionsFromPostgreSQL();
+				expect(getSubscribedCommodities()).not.toContain(dual.id);
+			} finally {
+				unsubscribeCommodity(dual.id);
+				await cleanupCommodity(ctx, dual.id);
+			}
+		});
+
+		it("evicts an existing monthly subscription whose commodity gained daily rows (self-heal, round-132)", async () => {
+			// Start pure-monthly → subscribed; then (stale) daily rows appear —
+			// the fetcher's effective cadence flips to daily, so the monthly sub
+			// must go. Stale rows keep the daily loop out of the picture, which
+			// is also the live defect's exact shape; fresh daily rows would add
+			// a legitimate DAILY subscription (id-only accessor can't tell the
+			// two apart, and that case is already the dual-cadence exclusion).
+			const flip = await makeMonthlyCommodity(ctx, "sched-flip", [
+				{ date: monthStart(-2), close: 100 },
+				{ date: monthStart(-1), close: 101 },
+				{ date: monthStart(0), close: 102 },
+			]);
+			try {
+				await schedulePredictionsFromPostgreSQL();
+				expect(getSubscribedCommodities()).toContain(flip.id);
+				// Stale daily history lands (a dead source's rows got imported).
+				for (const d of [-30, -29, -28]) {
+					await ctx.prisma.commodityPrice.create({
+						data: {
+							commodityId: flip.id,
+							date: new Date(Date.now() + d * 86400000),
+							interval: "daily",
+							close: 99,
+							source: "test",
+						},
+					});
+				}
+				await schedulePredictionsFromPostgreSQL();
+				expect(getSubscribedCommodities()).not.toContain(flip.id);
+			} finally {
+				unsubscribeCommodity(flip.id);
+				await cleanupCommodity(ctx, flip.id);
 			}
 		});
 	});

@@ -547,17 +547,27 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 	}
 
 	// ADR-0001 ⑤ — monthly predicate: latest point within the monthly
-	// staleness window (60d = 2× publication rhythm; PBEEFUSDM publishes
+	// staleness window (90d = publish lag 45d + one rhythm 31d + slip margin;
 	// mid M+1, so a healthy latest point sits ~45d old) AND the full series
 	// ≥3 points (the engine's minimum for spacing extrapolation on monthly
 	// data). This is the gate that finally admits beef_carcass_us (pure
 	// monthly, 195 points) into the prediction loop — round-128 found the
 	// background loop had ZERO beef coverage because the daily-only gate
 	// above silently excluded every monthly series.
+	//
+	// Round-132: `none: daily` is load-bearing. The fetcher reads daily rows
+	// whenever ANY exist (recency notwithstanding — the monthly fallback only
+	// fires on zero daily rows), so a dual-cadence commodity's effective
+	// cadence is daily and its logs stamp 'daily'. Admitting it here (the
+	// original `has()` skip only covered FRESH daily rows — stale-daily
+	// commodities weren't daily-subscribed) made the monthly new-point guard
+	// look for monthly-stamped log rows that never appear → hasNewPoint=true
+	// forever → 30-min recompute on frozen inputs (live: 7 series × ~1.9k
+	// redundant rows in 6 days).
 	const monthlyCommodities = await prisma.commodity.findMany({
 		where: {
 			isActive: true,
-			prices: { some: { interval: "monthly" } },
+			prices: { some: { interval: "monthly" }, none: { interval: "daily" } },
 		},
 		select: {
 			id: true,
@@ -565,21 +575,33 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 		},
 	});
 	const monthlyWindowMs = stalenessWindowDays("monthly") * 86400000;
+	const eligibleMonthly = new Set<string>();
 	let subscribedMonthly = 0;
 	for (const commodity of monthlyCommodities) {
 		if (commodity._count.prices < 3) continue;
-		// A commodity serving both cadences (fresh daily rows AND monthly
-		// rows) keeps its daily subscription above — it's the finer refresh;
-		// the Map is keyed by commodityId, so re-subscribing would replace it.
-		if (subscriptions.has(commodity.id)) continue;
 		const latest = await prisma.commodityPrice.findFirst({
 			where: { commodityId: commodity.id, interval: "monthly" },
 			orderBy: { date: "desc" },
 			select: { date: true },
 		});
 		if (!latest || Date.now() - latest.date.getTime() > monthlyWindowMs) continue;
+		eligibleMonthly.add(commodity.id);
+		if (subscriptions.has(commodity.id)) continue;
 		subscribeCommodity(commodity.id, MODELS, 10, "monthly");
 		subscribedMonthly++;
+	}
+
+	// Self-heal (round-132): evict monthly subscriptions whose commodity no
+	// longer passes the predicate above. Without this, a still-running
+	// process keeps refreshing a monthly sub after the commodity's effective
+	// cadence flipped to daily — recomputing identical forecasts every cycle
+	// while the monthly dedup guard never bites (no monthly-stamped rows).
+	let evictedMonthly = 0;
+	for (const [id, sub] of subscriptions) {
+		if (sub.interval === "monthly" && !eligibleMonthly.has(id)) {
+			unsubscribeCommodity(id);
+			evictedMonthly++;
+		}
 	}
 
 	const skipped = commodities.length - subscribed;
@@ -587,7 +609,8 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 		`[PREDICT] Subscribed ${subscribed} commodities to prediction refresh (${skipped} active commodities had <2 daily prices in last ${STALE_WINDOW_DAYS}d, skipped)` +
 			(subscribedMonthly > 0
 				? ` + ${subscribedMonthly} monthly series (ADR-0001, new-point-gated)`
-				: ""),
+				: "") +
+			(evictedMonthly > 0 ? `; evicted ${evictedMonthly} dual-cadence monthly subs` : ""),
 	);
 
 	return subscribed + subscribedMonthly;

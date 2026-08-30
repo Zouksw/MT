@@ -56,7 +56,7 @@ function addMonthsUTC(date: Date, months: number): Date {
 }
 
 /** Backfill grace for monthly windows in the expire sweep: one full
- * publication cycle (cadence.ts monthly staleness window, 60d) instead of
+ * publication cycle (cadence.ts monthly staleness window, 90d) instead of
  * the daily 7d — PBEEFUSDM legitimately publishes ~45d late. */
 const MONTHLY_GRACE_DAYS = stalenessWindowDays("monthly");
 
@@ -428,10 +428,10 @@ export async function markUnverifiablePredictions(): Promise<number> {
 	// CADENCE is older than the earliest due prediction. If so, no actuals
 	// exist for ANY due prediction in the group → frozen → mark all of them
 	// unverifiable. Monthly rows additionally require the source to be dead
-	// past the 60d monthly window (ADR-0001 ② / batch-6b item 3): a healthy
+	// past the 90d monthly window (ADR-0001 ② / batch-6b item 3, value round-132): a healthy
 	// monthly source's latest point can sit ~45d old mid publication cycle
 	// — "no price after the prediction" alone must not freeze it during the
-	// publish lag; a truly dead source (nothing for >60d) still freezes.
+	// publish lag; a truly dead source (nothing for >90d) still freezes.
 	const frozen: Array<{ commodityId: string; cadence: RowCadence }> = [];
 	for (const info of byGroup.values()) {
 		if (!info.hasDueRow) continue; // no row has actually matured yet
@@ -542,7 +542,7 @@ async function markLaggingFrozenPredictions(cutoff: Date, nowMs: number): Promis
 
 	// Per-group: frozen iff the latest price OF THAT CADENCE is ≤ the
 	// prediction (no post-prediction actuals can exist) AND that price is
-	// older than the cadence's staleness window (daily 7d, monthly 60d —
+	// older than the cadence's staleness window (daily 7d, monthly 90d —
 	// a healthy monthly point sits ~45d old mid-publication-cycle, so the
 	// daily window would false-freeze every monthly series; ADR-0001 ②).
 	for (const row of laggingCommodities) {
@@ -651,7 +651,7 @@ export async function expireWindowElapsedPredictions(): Promise<number> {
 			-- Window long elapsed: anchor + horizon + grace is still in the past.
 			-- Monthly rows (ADR-0001 ②): horizon steps are calendar months
 			-- (make_interval(months)) and the backfill grace widens to the
-			-- monthly staleness window (60d = one full publication cycle;
+			-- monthly staleness window (90d = lag + one full publication cycle;
 			-- PBEEFUSDM legitimately publishes ~45d late) instead of daily 7d.
 			AND (
 				COALESCE(pl.forecast_start_at, pl.predicted_at)
