@@ -1203,6 +1203,21 @@ let allModelAccuracyCache: {
 	expiresAt: number;
 } | null = null;
 
+/**
+ * Per-series entries (round-137 批2): resolveModelWeights now probes the
+ * per-series accuracy table for every consensus call, and /signals/batch
+ * fans out to up to 50 different series — 9 models × 2 queries each, the
+ * exact fan-out the global entry was added to prevent. Same 60s TTL, keyed
+ * by series, bounded so it can't grow unbounded (the original reason per-key
+ * caching was skipped). Clear-all on overflow is crude but safe: the worst
+ * case is one extra fetch burst per TTL window.
+ */
+const SERIES_ACCURACY_CACHE_MAX = 64;
+const seriesAccuracyCache = new Map<
+	string,
+	{ value: Awaited<ReturnType<typeof computeAllModelAccuracy>>; expiresAt: number }
+>();
+
 async function computeAllModelAccuracy(commodityId: string | undefined, days: number) {
 	// Primary chronos ensemble + baselines for the accuracy-comparison page.
 	// Importing here (not at module top) avoids a circular dependency:
@@ -1257,9 +1272,9 @@ export async function getAllModelAccuracy(
 		isPrimary: boolean;
 	}>
 > {
-	// Only cache the "all commodities" case (commodityId=undefined) — per-
-	// commodity results are cheap (one model, not 9) and would need per-key
-	// cache entries that grow unbounded.
+	// Global (commodityId=undefined) keeps the single-entry cache; per-series
+	// calls get the bounded map above (getModelAccuracy(modelId, cid) one-model
+	// calls remain uncached — those really are cheap).
 	const cacheKey = `${commodityId ?? "all"}:${days}`;
 	if (commodityId === undefined) {
 		if (
@@ -1268,6 +1283,11 @@ export async function getAllModelAccuracy(
 			allModelAccuracyCache.expiresAt > Date.now()
 		) {
 			return allModelAccuracyCache.value;
+		}
+	} else {
+		const hit = seriesAccuracyCache.get(cacheKey);
+		if (hit && hit.expiresAt > Date.now()) {
+			return hit.value;
 		}
 	}
 
@@ -1279,6 +1299,14 @@ export async function getAllModelAccuracy(
 			value,
 			expiresAt: Date.now() + ALL_MODEL_ACCURACY_TTL_MS,
 		};
+	} else {
+		if (seriesAccuracyCache.size >= SERIES_ACCURACY_CACHE_MAX) {
+			seriesAccuracyCache.clear();
+		}
+		seriesAccuracyCache.set(cacheKey, {
+			value,
+			expiresAt: Date.now() + ALL_MODEL_ACCURACY_TTL_MS,
+		});
 	}
 
 	return value;

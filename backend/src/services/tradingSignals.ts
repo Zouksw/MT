@@ -23,7 +23,7 @@
 
 import { logger, prisma } from "../lib";
 import { cutSeriesKey, getBeefCutSeries, STALE_WINDOW_DAYS } from "./beefQueries";
-import { horizonUnitOf } from "./cadence";
+import { accuracyWindowDays, horizonUnitOf } from "./cadence";
 import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
 import { ALL_MODELS, BASELINE_MODELS, getAllModels } from "./modelRegistry";
 import { getCachedPrediction, runAndCachePrediction } from "./predictionCache";
@@ -252,9 +252,16 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 
 	// Resolve quality weights from historical MAPE (PRODUCT-SPEC §3.3). Better
 	// models (lower MAPE) weigh more in the direction vote + consensus price.
-	// Falls back to equal weights if MAPE data unavailable — enhancement, not
-	// a hard dependency.
-	const qualityWeights = await resolveModelWeights(availableForecasts.map((f) => f.modelId));
+	// Per-series champion routing (round-137 批2): weight by THIS series' own
+	// verified accuracy when it has enough evidence, else the global pool;
+	// the accuracy window scales with the series cadence (daily 30d,
+	// monthly 180d). Falls back to equal weights if MAPE data unavailable —
+	// enhancement, not a hard dependency.
+	const qualityWeights = await resolveModelWeights(
+		availableForecasts.map((f) => f.modelId),
+		accuracyWindowDays(seriesInterval ?? "daily"),
+		req.commodityId,
+	);
 
 	// Count directions (still reported as raw headcount for the distribution UI)
 	const upCount = availableForecasts.filter((f) => f.direction === "up").length;

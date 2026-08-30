@@ -58,3 +58,22 @@ export function horizonUnitOf(interval: string | null | undefined): "day" | "mon
 export function forecastHorizons(interval: string): number[] {
 	return interval === "monthly" ? [1, 3] : [10];
 }
+
+/** Rolling-accuracy window (days) for consensus quality weights, scaled to
+ * the series cadence (round-137 批2). A 30d window holds dozens of verified
+ * rows for a daily series, but monthly verification matures only ~9 rows/
+ * month for the whole 7-model pool (H∈{1,3}) — a monthly series needs a
+ * proportionally longer window for per-series champion routing to clear
+ * MIN_SERIES_VERIFIED_TO_ACTIVATE: 180d ≈ 6 maturity months (~50 rows at
+ * steady state). */
+export function accuracyWindowDays(interval: string): number {
+	switch (interval) {
+		case "monthly":
+			return 180;
+		case "weekly":
+			return 90;
+		case "daily":
+		default:
+			return 30;
+	}
+}
