@@ -116,6 +116,37 @@ export const FRED_MONTHLY: Record<
 		category: "soft_commodities",
 		unit: "cents/kg",
 	},
+
+	// Proteins — beef-family monthly expansion (round-138 批6, IMPROVEMENT-PLAN
+	// v3.1.0): the beef prediction face grows from the single IMF benchmark to
+	// a family — US retail beef plus the two cross-proteins (substitution
+	// effect). All three series verified live via this keyless CSV endpoint on
+	// 2026-08-30 (monthly rows through 2026-07). Units are heterogeneous ON
+	// PURPOSE: two WB Pink Sheet indices (2010=100) and one BLS retail price —
+	// never mix them into one series; they join on the beef prediction face as
+	// separate per-series commodities (batch 2's per-series routing keys them
+	// independently).
+	BEEF_RETAIL_US: {
+		seriesId: "APU0000703112",
+		slug: "beef_retail_us",
+		name: "Beef Retail (US, Ground Chuck)",
+		category: "proteins",
+		unit: "USD/lb",
+	},
+	PORK_WORLD: {
+		seriesId: "PPORKUSDM",
+		slug: "pork_world",
+		name: "Pork (World Bank Index)",
+		category: "proteins",
+		unit: "index (2010=100)",
+	},
+	POULTRY_WORLD: {
+		seriesId: "PPOULTUSDM",
+		slug: "poultry_world",
+		name: "Poultry (World Bank Index)",
+		category: "proteins",
+		unit: "index (2010=100)",
+	},
 };
 
 async function fetchFredMonthly(

@@ -40,6 +40,20 @@ describe("FRED_MONTHLY config contract", () => {
 		expect(categories.has("soft_commodities")).toBe(true);
 	});
 
+	it("covers the beef-family proteins (round-138 批6) with exact series ids", () => {
+		// The beef prediction face's cross-series: US retail beef + the two
+		// substitution-effect proteins. Series ids pinned because a typo here
+		// fails SILENTLY at ingest time (fredgraph.csv 404s per-series and the
+		// source logs a warning but still reports success for the others).
+		const byId = new Map(entries.map(([, c]) => [c.seriesId, c]));
+		expect(byId.get("APU0000703112")?.slug).toBe("beef_retail_us");
+		expect(byId.get("PPORKUSDM")?.slug).toBe("pork_world");
+		expect(byId.get("PPOULTUSDM")?.slug).toBe("poultry_world");
+		expect([
+			...new Set(entries.filter(([, c]) => c.category === "proteins").map(([, c]) => c.slug)),
+		]).toHaveLength(3);
+	});
+
 	it("every series has all required fields (no undefined sneaks in)", () => {
 		for (const [key, config] of entries) {
 			expect(config.seriesId, `${key}.seriesId`).toBeTruthy();
@@ -70,9 +84,13 @@ describe("FRED_MONTHLY config contract", () => {
 	it("every commodity unit carries a real dimension (USD-prefixed), not a bare number", () => {
 		// Units drive the "how is this price denominated?" display + the
 		// authoritative-source unit-conflict guards. A bare/empty unit would
-		// make a price ambiguous.
+		// make a price ambiguous. Round-138 批6 extends the allowed forms with
+		// EXACTLY ONE non-currency dimension — the World Bank Pink Sheet index
+		// (2010=100) carried by the protein series: its dimension is the index
+		// base, explicitly labeled so it can't be mistaken for currency. The
+		// "no bare number" intent is preserved by pinning the exact string.
 		for (const [key, config] of entries) {
-			expect(config.unit, `${key}.unit`).toMatch(/(USD|cents)\//);
+			expect(config.unit, `${key}.unit`).toMatch(/(USD|cents)\/|^index \(2010=100\)$/);
 		}
 	});
 });
