@@ -262,6 +262,17 @@ export default function BeefForecastPage() {
 			<div className="mt-4">
 				<BeefBacktestSection />
 			</div>
+
+			{/* 相关工具（v3.2.0 批 3）：进口成本计算器（公开页，RMB/kg 到岸参考） */}
+			<div className="mt-4">
+				<Link
+					href="/tools/landing-cost"
+					className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+				>
+					进口成本计算器（到岸 RMB/kg 参考，公开页）
+					<ArrowRight className="h-3 w-3" />
+				</Link>
+			</div>
 		</PageContainer>
 	);
 }

@@ -12,6 +12,9 @@ const PUBLIC_PATHS = [
 	// a login wall (IMPROVEMENT-PLAN batch 2). Data is privacy-whitelisted
 	// server-side (macro + beef-cut series only).
 	"/ai/track-record",
+	// Public landing-cost calculator (v3.2.0 批 3) — acquisition tool; the
+	// API behind it is whitelisted-series-only like /public/highlights.
+	"/tools/landing-cost",
 ];
 
 export function middleware(request: NextRequest) {

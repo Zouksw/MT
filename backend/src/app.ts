@@ -42,6 +42,7 @@ import { metricsRouter } from "@/routes/metrics";
 import { portfolioRouter } from "@/routes/portfolios";
 import { signalsRouter } from "@/routes/signals";
 import { timeseriesRouter } from "@/routes/timeseries";
+import { toolsRouter } from "@/routes/tools";
 import { watchlistRouter } from "@/routes/watchlist";
 
 export interface AppInstance {
@@ -220,6 +221,9 @@ export function createApp(): AppInstance {
 
 	// Beef data (factory-level, cut-level)
 	app.use("/api/beef", beefRouter);
+
+	// Public trade tools (landing-cost calculator — v3.2.0 批 3)
+	app.use("/api/tools", toolsRouter);
 
 	// Error handling
 	app.use(errorHandler);
