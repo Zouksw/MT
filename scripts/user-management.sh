@@ -68,7 +68,7 @@ case "$COMMAND" in
 
         node -e "
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
@@ -134,7 +134,7 @@ createAdmin().catch(console.error);
 
         node -e "
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
