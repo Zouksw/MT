@@ -1,7 +1,7 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.2.0"
+version: "3.3.0"
 last_updated: "2026-08-30"
 status: "active"
 maintainer: "MT Team"
@@ -17,6 +17,114 @@ related_docs:
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
 
+> ## 第五波 v3.3.0（2026-08-30，round-141 规划）— 分发期：公开面、SEO 基建、卫生收尾
+>
+> **指令来源**：用户"分析项目后续的开发方向，规划方案"。
+> **性质**：v3.1.0 七批 + v3.2.0 四批（round-135~140）已把**预测机制侧**的未决工程项清空（质量加权共识、per-series 冠军路由、方向准确率、conformal 区间、节奏感知验证环、9 模型注册表、18 slugs 权威源声明全部 live）；证据轨进入有机成熟期（首批 beef verified 等 FRED 8 月点，值守窗 2026-09 中下旬）。**当前最大缺口已从"机制"移到"分发"**：0 真实用户、公开面仅 8 路由、SEO 基建缺位。本波三件事：**① 公开中文行情摘要面 + SEO 基建**（v3.0.0 批 B 升格——竞品深探 §8.5-4 判定的"真数据自动摘要"应法，零人力、只真数据）；**② 测试保真**（seed 身份漂移 TECH-DEBT §十七 兑现——mt_test 与生产对牛肉基准序列的元数据/节奏漂移已迫使测试写 beforeAll hack）；**③ 低优先正确性/加固收尾**（round-106 清单存活项打包，本轮逐项 live 复核在位）。证据轨批 0a/0b 承接 V4，门控不变。
+> **约束不变**：只用预训练模型不训练（§七.2）；不做支付/下单/交易（§九）；诚实优先——不为 SEO 写人力研报式内容、不虚构"分析师洞察"、公开面只白名单真数据。
+>
+> ### V5-一、现状基线（2026-08-30 深夜实测，round-141 取证）
+>
+> | 维度 | 事实 | 证据 |
+> |------|------|------|
+> | 测试基线 | backend **1029 pass + 1 skip**（99 文件）、frontend **338**、inference **61**（round-140 同日基线；D2/D3 删功能的 −13/−5 已文档注明为随组删非回退） | round-140 门禁记录 |
+> | 服务 | PM2 三进程在线、三探活 200；git 树干净 @ `7766230` | 本轮 `pm2 jlist` + curl 实测（23:45） |
+> | 牛肉验证窗 | monthly completed：H=1×7 / H=3×7 / H=10×7（另 7 条 NULL-interval stale）；**H=1 到期 2026-08-31 00:00、verified=0**——实际值等 FRED 8 月月度点（~9 月中发布）属正常等待，非故障；首批 verified 预计 **2026-09 中下旬** | 本轮 psql（beef_carcass_us × interval/horizon/status 分组 + MIN 到期） |
+> | 公开面 | PUBLIC_PATHS **8 路由**（/ /landing /login /register /about /pricing /ai/track-record /tools/landing-cost）；**app 无 sitemap.ts/robots.ts，全 app 仅 2 处 metadata 导出**——SEO 基建缺位 | 本轮 `middleware.ts:4` + app 目录 grep |
+> | 用户 | **3 个 seed 用户、0 真实注册**（round-119 清完 1796 测试残留后回归三人组）；分发是当前最大缺口 | 本轮 psql `count(users)` |
+> | 生产数据 | beef_cut_prices **2401 行冻结 2026-04-30（4 个月）**；宏观活水正常（IMF 牛肉月度 331.78 @2026-07-01、CME 活牛/架子牛日更、FX 族）；prediction_logs 197,922 行 / verified 35,064 | 本轮 psql + highlights 端点 |
+> | 方向准确率 | chronos 三变体 **62.0-63.2%**（18 slugs 声明后覆盖扩至 2682 判定行、诚实回落）、holtwinters 33.8%（分化弱点）、naive flat "—" | round-139 批 2 live 验收（2026-08-30） |
+>
+> ### V5-二、方向分析（五轨研判）
+>
+> 1. **机制轨——已收官**：v3.1.0 + v3.2.0 十一波次后，预测机制侧无未决工程项；领先指标方向经双臂门禁诚实关闭（重评 2028-11）；sarimax 维持 0 行是纪律正确。**本波不造新机制**——任何"再调一调模型"的冲动都撞 §十.4 守护基线与 D6 门禁纪律。
+> 2. **证据轨——有机成熟，零开发**：批 0a 值守窗（2026-09 中下旬）→ 批 0b 校准区间（样本门：首批 live verified）→ H=3（2026-10-31）→ per-series 权重激活评估（~2026-11，MIN_SERIES_VERIFIED_TO_ACTIVATE=20）→ 快照 cron 每周一 07:30 自动留档。工程侧只欠批 0b 一项且被样本门正确拦住。
+> 3. **分发轨——当前最大缺口，本波主战场**：信任资产（track-record/accuracy/预测中心）与获客工具（landing-cost）已建成，但**没有面向搜索引擎的公开内容面**。竞品深探 §8.5-4 的判定：牧集 = 人力研报 + 长尾 SEO；MT 的诚实应法 = **真数据自动摘要 + 公开预测对错档案**——后者已建，前者即批 1（v3.0.0 批 B 两次升格未排期，本波排期）。
+> 4. **数据轨——等待用户输入，工程侧就绪**：beef_cut_prices CSV 周更 runbook + `/beef/import` 端到端就绪（冻结已 4 个月）；4 个空 API key；批 C 贸易词汇五维数据解冻即接（维持登记）。本波不动数据轨（无新工程动作可做）。
+> 5. **债务轨——残尾打包**：十轮清偿（round-112~140）后剩三类——(a) round-106 低优先正确性/加固清单存活项（本轮 live 抽查确认在位：swagger 无鉴权、authRateLimiter 三路由共用、lastDirections 内存 Map、SMTP warn 每调用、monthRange setMonth、verifyTokenSession findMany 等）；(b) seed 身份漂移（§十七，直接影响 mt_test/CI 保真度）；(c) 结构性登记项（TD-6 胖路由、TD-8 剩 ~29 GET 裸 fetch、TD-12 tailwind 三源、R3 ghost 行——维持不排期）。本波只清 (a)(b)。
+>
+> **结论**：第五波 = **分发期**。主战场公开面 + SEO（批 1），辅以测试保真（批 2）与正确性收尾（批 3），证据轨按门值守（批 0a/0b 承接）。
+>
+> ### V5-三、批次总览
+>
+> | 批 | 内容 | 价值 | 规模 | 门控 |
+> |----|------|------|------|------|
+> | **1（P0）** | 公开中文行情摘要页 + 公开 digest 端点 + SEO 基建（批 B 二次升格） | 零人力获客面——真数据吃长尾流量 | M | D10 点头 |
+> | **2** | seed 身份对齐（beef_carcass_us → IMF 月度口径，§十七 兑现） | mt_test/CI 保真——消除测试 beforeAll hack | S | D11 点头 |
+> | **3** | 正确性/加固收尾包（round-106 存活项） | 残尾债务清偿 | S-M | 逐项可独立验收 |
+> | **0a（承 V4）** | 验证窗值守（首批牛肉 verified 落地核查） | 证据链兑现或缺陷早暴露 | XS | 时间（2026-09 中下旬） |
+> | **0b（承 V4）** | 校准共识区间（回测残差为主 + live 交叉核对） | 共识卡"校准 90% 区间" | S-M | 首批 live verified（批 0a 后） |
+>
+> **顺序**：批 1 → 批 2 → 批 3（后两批可换序/穿插）；批 0a/0b 到门即做。门禁沿用：tsc + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
+>
+> ### V5-四、批次详情
+>
+> **批 1 — 公开中文行情摘要面 + SEO 基建（M，v3.0.0 批 B 升格；前置 D10）**
+> 竞品打法分化的直接落地（COMPETITIVE-ANALYSIS §8.5-4）：牧集靠人力研报吃长尾，MT 用**真数据自动摘要**吃长尾——每个数字可溯源到库内序列，零人力、不虚构"分析师洞察"。
+> - **1a SEO 基建**：`app/sitemap.ts`（真实路由枚举、公开面优先，登录后页面不入图）+ `app/robots.ts`（允许公开路径、拦 /api 与私有页）+ 公开页中文 metadata（title/description，逐页不复制粘贴）。现状：无 sitemap/robots、全 app 仅 2 处 metadata 导出（V5-一 公开面行）。
+> - **1b 公开端点**：`GET /api/market/public/digest`——白名单活序列的中文摘要载荷（IMF 牛肉基准 MoM、CME 活牛/架子牛 WoW、USD/CNY、BRL/USD：现价 + 变动 + 日期 + 新鲜度旗标 + 近 30 点）。**不复用 highlights 端点**（其形状已被 Hero 等钉住），新端点独立 cacheRoute 300 + 全局限流 + 无任何用户私有数据（白名单纪律同 highlights/track-record）。
+> - **1c 公开页 `/market/digest`（中文）**：今日牛肉国际行情——序列卡片（现价/涨跌/日期/stale 旗标）+ "本周变化" 段（WoW/MoM 聚合，即"周报"的页面自聚合形态——**不做邮件分发**，无订阅者基数）+ 互链（/tools/landing-cost 进口成本、/ai/track-record 预测对错档案）；middleware PUBLIC_PATHS +1。
+> - 验收：未登录可见且 curl 200；每个展示数字可对应库内序列（手工核对一组）；序列断流显示"数据源维护中"不硬编码兜价；sitemap/robots live 可取且不含私有路由；digest 端点 0 私有字段（单测断言 where/白名单）。
+>
+> **批 2 — seed 身份对齐（S，§十七 兑现；前置 D11）**
+> `prisma/seed.ts:1865` 的 beef_carcass_us 仍是 round-126 之前的身份（"US Beef Carcass Price (FRED)" / USD/cwt / `base:260, volatility:8` 日度合成 180 行），而生产自 round-126 起该序列实为 **IMF 全球牛肉月度基准（PBEEFUSDM，USC/lb，月度）**。影响：mt_test / CI 全新种子库与生产漂移，landing-cost 路由测试被迫 beforeAll 临时改 unit + 未来日期 fixture 压制合成行。
+> 内容：seed COMMODITIES 元数据对齐生产（名称/单位/seriesId/interval=monthly）+ 合成价改月度节律（点距 30 天、值域贴 331.78 附近 USC/lb 量级，或最小化合成行数）+ 复核依赖该 slug 的既有断言（tools/highlights/freshness 测试）+ 移除 landing-cost 测试的 beforeAll hack。
+> 验收：`bootstrap-test-db.sh --force` 后 mt_test 该序列 metadata == 生产口径（psql 对照）；landing-cost 测试无临时改写；backend 全量绿（数不回退）。
+>
+> **批 3 — 正确性/加固收尾包（S-M，round-106 清单存活项；本轮 2026-08-30 逐项 live 复核在位）**
+> 按价值排序的小项打包，每项独立可验收（行为测试或 live 验证），一轮多 commit：
+> 1. `/api/docs` Swagger 无鉴权（`app.ts:215`）→ 加 authenticate（等级见 D12）——公开暴露全端点面是当前最大残余暴露。
+> 2. `authRateLimiter`（10/15min/IP）被 login+refresh+change-password 三路由共用（`auth.ts:217/345/514`）→ NAT 环境误锁；拆分或提额。
+> 3. `alertNotifications.ts:29` lastDirections 内存 Map（重启即失 + 无界增长）→ 方向戳持久化到 Alert 行 metadata（或显式 bounded + 注释）。
+> 4. `notificationChannels.ts:61` "SMTP not configured" 每次调用打 warn → 只打一次。
+> 5. `helpers.ts:319` monthRange 31 日 setMonth 跳月（两 caller 现传月初，latent）→ clamp 到月初。
+> 6. `authService` verifyTokenSession findMany 全量 session → count。
+> 7. 小项：topCuts 次级 orderBy（并列价 nondeterministic）、datasetService 0 行导入 rowsCount 覆盖非累加、biome 存量 10 条 judgment-call 警告逐条定夺。
+> 8. 可选（Python 侧）：inference `@app.on_event` 已弃用 → lifespan 迁移（pytest 同步）。
+> 明确缓办（数据冻结期 latent，维持登记）：/spreads 混币种分组、beef cheek → OFFAL 死别名（taxonomy 决策 D13）、metrics GET 提权。
+>
+> **批 0a / 批 0b（承 V4-三 原文，门控不变）**
+> 批 0a：2026-09 中下旬值守窗——① SQL 三查（status=verified 行数 / MAPE 分布 / 方向判定进入）；② 三面核查（/ai/accuracy、/ai/track-record、/beef/forecast 出现牛肉数字）；③ 未验证则读 verifyDuePredictions 日志定位（发布滞后登记等待=诚实；生命周期缺陷修复=单批 commit）；④ 快照 cron 自动留档。批 0b：校准源用 **v3.1.0 批 1 牛肉月度滚动回测残差**（36 origins × 7 模型 × H=1/3，样本充分）为主 + live verified 交叉核对（首批 7 行起），不达标维持"模型分歧区间"现标注、不显示任何未校准"90%"字样。
+>
+> ### V5-五、决策项（不擅动，需用户点头）
+>
+> | # | 事项 | 建议 | 来源 |
+> |---|------|------|------|
+> | **D10（新，批 1）** | 公开摘要页排期与范围 | 建议：**做**——页 + 端点 + SEO 基建一次成；"周报"以页面自聚合"本周变化"段起步，邮件分发不做（无订阅者基数，避免空壳） | V5-二 分发轨；§8.5-4；v3.0.0 批 B 两次升格未排期 |
+> | **D11（新，批 2）** | seed 身份对齐（改 seed 影响 mt_test/CI 全新种子库） | 建议：**做**——测试保真度问题，生产零影响（seed 不触生产库，users>0 安全门在） | TECH-DEBT §十七 |
+> | **D12（新，批 3）** | /api/docs 鉴权等级 | 建议：`authenticate`（登录即可）——swagger 是开发/集成面，ADMIN 过重；备选直接摘除路由（若判定无人用） | round-106 登记 + 本轮复核在位 |
+> | D13（缓，批 3 附带） | beef cheek → OFFAL 死别名 taxonomy（加 CHEEK 码或删别名） | 建议：数据解冻前维持登记（行被静默丢弃的影响面=0，冻结核不出新行） | round-106 登记 |
+> | 承 V4 | D8/D9 已执行完毕（18 slugs 声明 / 快照 cron 自动提交）；D1-D4 已于 round-139 续3 + round-140 全部处置 | — | V4-四 |
+>
+> ### V5-六、有机观察项（零开发，日历驱动）
+>
+> - **2026-08-31 00:00**：牛肉月度 H=1 首批 7 行到期（verified=0 属正常等待——实际值等 FRED 8 月点，非故障）。
+> - **每周一 07:30**：track-record 快照 cron 自动留档（批 1 之后每份 verified 进档）。
+> - **2026-09 中**：FRED 月度 8 月点发布（M+1 惯例）→ 30min 刷新的新点守卫触发新月度预测轮。
+> - **2026-09 中下旬**：首批 beef verified 落地 → 批 0a 值守窗（SQL 三查 + 三面核查）。
+> - **2026-10-31**：H=3 首批到期（季度视界证据）。
+> - **2026-10/11**：三条新蛋白序列（beef_retail_us / pork_world / poultry_world）首批验证成熟。
+> - **~2026-11**：per-series 权重激活评估点（beef 月均 +7×2 verified 行，180d 窗攒满 20 行；届时对照后端日志确认激活）。
+> - **2028-11**：活牛 × IMF 重叠 ≥ ~40 个月，领先指标主假设重评。
+>
+> ### V5-七、已登记不排期（研究门 / 外部阻塞 / 结构性）
+>
+> - **relational conformal**（联合区间）：研究门——待批 0b 单变量校准落地后评估必要性。
+> - **change-point 区间加宽**：待批 0b 评估覆盖表现后决定。
+> - **LLM event-flag 实验**（market_news → 事件标志外生变量）：**外部阻塞——无 LLM API key**；用户提供后按门禁制单列实验。
+> - sarimax 维持暂缓（连续两次门禁阴性）；chronos-2 测过未采（维持）。
+> - TD-6 胖路由（beef.ts ~790 行 / mapeTracking ~1027 行，反向问题未碰）；TD-8 剩 ~29 处 GET 裸 fetch（低优先，逐站点评估）；TD-12 tailwind 三源并存（等 v4 迁移产品决策）；R3 ghost 行（sundial/timer_xl ~332 行）保留不删（D7 定案）。
+> - 批 C 贸易词汇五维：数据解冻（KNOWN-ISSUES D1）即接上，设计登记未落地。
+>
+> ### V5-八、不做清单（红线重申 + 本波新增）
+>
+> - 继承 v3.1.0 V3-五 + v3.2.0 V4-七 全部（训练/微调、未过门禁接入、放宽验证窗造 verified 数、未校准区间标"90%"）。
+> - **新增（分发纪律）**：不为 SEO 写人力研报式内容、不虚构"分析师洞察"——公开摘要面只做**真数据自动摘要**，每个数字可溯源；公开端点只白名单宏观/牛肉序列，0 用户私有数据（沿 highlights/track-record 纪律）；不因获客目标做邮件订阅/推送（无订阅者基数，不造空壳）。
+>
+> ### V5-九、用户侧外部输入（非工程，不变）
+>
+> 4 个空 API key（MLA / USDA_MARS / OPENWEATHER / FAO——beef_cut_prices 冻结 2026-04-30 已 4 个月，CSV 周更 runbook 就绪 `docs/guides/WEEKLY-DATA-IMPORT.md`）；种子用户 3→10 访谈；CI 部署 secrets（DEPLOY_*，见 AUTOMATION-STATUS §一）；（可选）LLM API key——若希望开启 event-flag 方向。
+
 > ## 第四波 v3.2.0（2026-08-30，round-139 规划）— 证据成熟期：值守、解锁、第二产品落点
 >
 > **指令来源**：用户"维护项目状态，规划后续的开发计划"。
@@ -29,7 +137,7 @@ related_docs:
 >
 > **执行状态（2026-08-30 深夜，批 4 部分落地——D1+D4 执行、D2/D3 维持登记，round-139 续3）**：用户目标指令"完成后续的开发任务"同源放行；按各决策项建议案执行其中非破坏性两项。**D1** PRODUCT-SPEC 增补：§七 能力表 +3 行（进口到岸成本测算 ✅ 已上线、多源数据治理 ✅ 18 slugs 声明、批 C 贸易词汇五维 ◐ 设计登记未落地）+ M3 清单补记（计算器上线 ✅、批 B 周报候选方向未排期）。**D4** `predictionBeefCoverage24h`→`predictionBeefCoverage90d`（窗口 24h→90d：月度一轮 + 60d 验证冻结）+ 新增 `predictionBeefLatestAt`（末轮日志时间戳）；health 路由类型/赋值、cron-healthcheck 暴露行、回归钉（30 天前 beef 日志必计入）同改；live 验收 /health/ready = coverage90d 3 + latestAt 2026-08-30T06:09。**D2/D3 维持登记**（TECH-DEBT round-132 条目：休眠表删除属数据治理决定需用户明示；portfolios/predict-batch 维持登记为 D6 建议不动）——破坏性删除项不随通用目标放行，待用户逐项点头。backend **1042+1**（dataHealth 套件 9→10，换 1 加 1 净 0）。
 >
-> **执行状态（2026-08-30 深夜，批 4 收官——D2+D3 由用户"继续剩余事项"指令逐项放行，round-140）**：**D2** `03fd1c7` 休眠表处置——定向备份 `backups/round140-d2/dormant-tables.sql`（生产行数 forecasts/forecasting_models 0、security_audit_logs 49）→ 迁移 DROP 三表 + ModelAlgorithm 枚举（生产/mt_test 双应用、live 复核空表）；seed 整段摘除（模型/预测点播种、安全审计夹具、MODEL_DEFS、汇总行）+ `getUserProfile` 去 models 计数。**D3** 删 `/api/portfolios` 路由组（7 端点 + 13 测试）**连同 Portfolio/GroupMember 两表**（0 行 0 前端消费，迁移 20260830220000，同备份文件）；删 `/api/inference/predict/batch` 与推理服务 `POST /predict/batch` 两端及 batch 测试（backend 1042+1→**1029+1**〔−13 随组删，非覆盖回退，round-132 同例〕、pytest 66→**61**〔−5 随端点删〕；Python 有限值守卫保留——单预测同依赖）；live 验收 404×3（backend 两处 + Python）+ /predict 200 + 三服务在线。schema 模型 30→**25**、路由 18→**17**（AGENTS/API.md 同步；API.md 补记批 3 遗漏的 /api/tools 节）。门禁：tsc×2 / biome×2 / ruff / 双 build / 三服务重启；**首跑 flake 复现并定位**——--force 重建 mt_test 后 Redis 预测缓存全空，首个全量并行跑中两个最重推理测试（beef forecasts / wheat_cme signals）冷启动超 30s，隔离与复跑均绿（round-136 已登记同类）。
+> **执行状态（2026-08-30 深夜，批 4 收官——D2+D3 由用户"继续剩余事项"指令逐项放行，round-140）**：**D2** `03fd1c7` 休眠表处置——定向备份 `backups/round140-d2/dormant-tables.sql`（生产行数 forecasts/forecasting_models 0、security_audit_logs 49）→ 迁移 DROP 三表 + ModelAlgorithm 枚举（生产/mt_test 双应用、live 复核空表）；seed 整段摘除（模型/预测点播种、安全审计夹具、MODEL_DEFS、汇总行）+ `getUserProfile` 去 models 计数。**D3** 删 `/api/portfolios` 路由组（7 端点 + 13 测试）**连同 Portfolio/GroupMember 两表**（0 行 0 前端消费，迁移 20260830220000，同备份文件）；删 `/api/inference/predict/batch` 与推理服务 `POST /predict/batch` 两端及 batch 测试（backend 1042+1→**1029+1**〔−13 随组删，非覆盖回退，round-132 同例〕、pytest 66→**61**〔−5 随端点删〕；Python 有限值守卫保留——单预测同依赖）；live 验收 404×3（backend 两处 + Python）+ /predict 200 + 三服务在线。schema 模型 30→**25**、路由 18→**17**（AGENTS/API.md 同步；API.md 补记批 3 遗漏的 /api/tools 节）。门禁：tsc×2 / biome×2 / ruff / 双 build / 三服务重启；**首跑 flake 复现并定位**——--force 重建 mt_test 后 Redis 预测缓存全空，首个全量并行跑中两个最重推理测试（beef forecasts / wheat_cme signals）冷启动超 30s，隔离与复跑均绿（round-136 已登记同类）。**v3.2.0 至此仅剩批 0a/0b 两项时间门/样本门承接项，已纳入第五波 v3.3.0（V5-四）继续值守。**
 >
 > ### V4-一、现状基线（2026-08-30 实测，round-139 取证）
 >

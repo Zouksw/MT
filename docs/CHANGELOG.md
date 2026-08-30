@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-141：第五波 v3.3.0 规划 — 方向分析 + 分发期批次设计（docs-only）
+
+用户指令"分析项目后续的开发方向，规划方案"。产出 IMPROVEMENT-PLAN **v3.3.0 第五波**（分发期），无代码改动、零测试影响。
+
+- **方向分析（V5-二 五轨研判）**：机制轨已收官（v3.1.0+v3.2.0 十一波次后预测侧无未决工程项）；证据轨有机成熟零开发（首批 beef verified 等 FRED 8 月点，值守窗 2026-09 中下旬）；**分发轨是当前最大缺口**（0 真实用户、公开面仅 8 路由、无 sitemap/robots、全 app 仅 2 处 metadata——本轮实测）；数据轨等用户输入（beef_cut_prices 冻结已 4 个月）；债务轨仅剩残尾（round-106 存活项 + seed 身份漂移）。
+- **批次设计**：批 1（P0）公开中文行情摘要页 `/market/digest` + 公开 digest 端点 + SEO 基建（v3.0.0 批 B 二次升格，竞品深探 §8.5-4"真数据自动摘要"应法，D10 门）；批 2 seed 身份对齐（TECH-DEBT §十七 兑现，D11 门）；批 3 正确性/加固收尾包（swagger 无鉴权 / authRateLimiter 三路由共用 / lastDirections 内存 Map / SMTP warn / monthRange setMonth / verifyTokenSession findMany 等，本轮逐项 live 复核在位）；批 0a/0b 承 V4 时间门/样本门不变。
+- **新增决策项**：D10 摘要页排期与范围、D11 seed 对齐、D12 /api/docs 鉴权等级、D13 cheek taxonomy（缓）。
+- **不做清单新增（分发纪律）**：不为 SEO 写人力研报式内容/不虚构"分析师洞察"；公开端点只白名单真数据；不做邮件订阅（无基数不造空壳）。
+- **基线取证（2026-08-30 23:45 live）**：H=1 到期 2026-08-31 00:00、verified=0（等实际值属正常）；users 3 / beef_cut_prices 2401 行 @2026-04-30 / prediction_logs 197,922（verified 35,064）；三服务在线、crontab 6 条、公开 highlights/landing-cost 200。PROJECT-VISION 08-30 状态指针同步（基线数字更新至 round-140 门禁记录 + 指向 v3.3.0）。
+
 ### 2026-08-30 — round-140：批 4 收官 — D2（休眠表五模型处置）+ D3（portfolios 组 + predict/batch 两端删除）+ cbOT 孤儿清理
 
 用户指令"继续剩余事项"——对上轮列出的 D2/D3 决策请求逐项放行（round-132"继续完成剩余的任务"同款先例）。批 0a/0b 仍受时间/样本门（8 月月度点 ~9 月中发布）。
