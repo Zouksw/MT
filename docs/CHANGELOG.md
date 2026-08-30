@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-30 — round-138（续）：批 3（领先指标实验·双臂门禁）执行 — 两臂均未过门禁，方向诚实关闭
+
+按计划"增量不显著就不上"纪律执行双臂实验，**结论分支走的是"两臂均未过门禁"的诚实路径**：
+
+- **主假设（活牛期货领先 IMF 现货）数据不可行，未测**：live_cattle_cme 全史仅 141 日度点（2025-11 起 ≈ 10 个月），撑不起 36 个月度 rolling origins——登记为数据不可行（非门禁失败），重评 2028-11 后（重叠 ≥ ~40 个月）。
+- **次假设（汇率滞后）双臂同门禁**（36 origins 配对、PASS 需中位 MAPE 相对改善 ≥10% 且胜率 >50%、滞后 L≥2 保证 exog 在 origin 时已发布、**零前向填充**——上次门禁失败的正因）：筛查先验已弱（BRL/AUD 全部滞后 |r| ≤ 0.17，n=194，最佳 L=5）。**臂 A（sarimax lagged-exog，`lagged_exog_gate.py`）四组全 FAIL**（rel 0.963–1.005，胜率 44–53%；arima 基线 1.46% 与批 1 回测逐位一致，交叉验证）。**臂 B（chronos-2 协变量零样本，`chronos2_covariate_gate.py`，族内配对隔离协变量增量）四组全 FAIL**（rel 0.955–1.317，brl H=3 劣化 +32%——弱信号协变量在长视界引入噪声；chronos-2 单变量 1.48% 仍在 chronos 带、未超 arima 冠军）。
+- **登记**：领先指标方向关闭；sarimax exog 接线维持暂缓（连续两次门禁阴性，本次是零填充的更强检验）；chronos-2 测过未采（D6 例外条款履行完毕，权重已缓存复测零下载）。报告 `docs/backtests/beef-leading-indicator-2026-08.md`（含完整筛查表/门禁表/复现命令）。
+- **门禁**：ruff 干净；两臂复跑数字逐位一致（臂 B SEED 确定性验证）；pytest **66** 全绿；零服务代码改动（纯实验脚本），无需重启。
+
 ### 2026-08-30 — round-138 执行轮：IMPROVEMENT-PLAN v3.1.0 批 5（牛肉预测中心）落地
 
 用户指令"/goal 继续完成规划的任务"。核心预测链（批 0 月度循环 → 批 1 回测 → 批 2 per-series 路由 → 批 4 方向准确率）的用户可见汇合面：

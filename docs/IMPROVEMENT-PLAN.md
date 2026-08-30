@@ -27,6 +27,8 @@ related_docs:
 >
 > **执行状态（2026-08-30 晚，批 5 已落地，round-138）**：`7ba03cc`（新页 `/beef/forecast`：下月共识卡〔calibrated 区间诚实推迟至 2026-09 证据成熟——回测已证原生区间欠覆盖 58-78%，不显未校准数字〕+ 回测证据面板 + 验证时间线〔2026-09/10、2026-11 到期预告〕+ 活牛/架子牛上游面板 + /beef 导航入口；dashboard hero 改挂牛肉月度共识，新 hook `useBeefMonthlyConsensus` 为页/卡唯一数据源——一致由构造保证）· `61a149d`（周度快照脚本 + 牛肉专段 + 首份产物 `docs/snapshots/track-record-2026-08-30.md`——v3.0.0 "track-record 周度快照物料" 原仅有规划，本轮补齐）。live：未登录 307→/login ✓；共识端点 flat/−0.28%/331.78→331.78/区间 327.31–332.54/57%/3-7。frontend **334**（+4）；backend 源零改动（1021+1 沿用）。
 >
+> **执行状态（2026-08-30 晚，批 3 已落地，round-138 续）**：`b778429` 双臂门禁实验执行完毕，**两臂均未过门禁——领先指标方向诚实关闭**。臂 A sarimax lagged-exog 四组 FAIL（rel 0.963–1.005）；臂 B chronos-2 协变量四组 FAIL（rel 0.955–1.317，brl H=3 劣化 +32%）；主假设（活牛期货）数据不可行（10 个月重叠，重评 2028-11）。sarimax 维持暂缓、chronos-2 测过未采（D6 例外条款履行）。报告 `docs/backtests/beef-leading-indicator-2026-08.md`。至此 v3.1.0 **执行顺序内的六批（0/1/2/4/5/3）全部落地，仅剩批 6（FRED 免 key 序列扩充）未执行**。测试基线：backend **1021+1**、frontend **334**、inference **66**，零回退。
+>
 > **指令来源**：用户"结合当前项目最核心的功能，利用 AI 大模型预测牛肉价格的变化，制定后续的开发计划"。
 > **依据**：引擎与生产库 2026-08-30 实测（见 V3-一）+ [PREDICTION-STRATEGY](PREDICTION-STRATEGY.md)（含本轮补写的失效标注——其 §五 实验序列实为比特币错标数据）+ [COMPETITIVE-ANALYSIS §八](COMPETITIVE-ANALYSIS-MOOKET.md)。
 > **核心论断**：预测**机制**已经成熟（质量加权共识 + 劣于-naive 淘汰制 + split-conformal 区间 + cadence 感知验证环，全部 live），当前缺口是**证据、序列适配、产品面**三件事——牛肉预测此刻拿不出一条可展示的验证证据（被误杀 + horizon 过长）；模型质量权重是全局的而非按序列的；方向准确率（采购择时真正要的指标）没有度量。
