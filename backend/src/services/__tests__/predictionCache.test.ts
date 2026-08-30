@@ -66,19 +66,19 @@ describe("Prediction Cache — subscription lifecycle", () => {
 	});
 
 	it("tracks a subscribed commodity", () => {
-		subscribeCommodity("c1", ["arima"], 10);
+		subscribeCommodity("c1", ["arima"], [10]);
 		expect(getSubscribedCommodities()).toContain("c1");
 	});
 
 	it("stops tracking after unsubscribe", () => {
-		subscribeCommodity("c1", ["arima"], 10);
+		subscribeCommodity("c1", ["arima"], [10]);
 		unsubscribeCommodity("c1");
 		expect(getSubscribedCommodities()).not.toContain("c1");
 	});
 
 	it("re-subscribing replaces (not duplicates) an existing entry", () => {
-		subscribeCommodity("c1", ["arima"], 10);
-		subscribeCommodity("c1", ["arima", "holtwinters"], 5);
+		subscribeCommodity("c1", ["arima"], [10]);
+		subscribeCommodity("c1", ["arima", "holtwinters"], [5]);
 		expect(getSubscribedCommodities().filter((id) => id === "c1")).toHaveLength(1);
 	});
 

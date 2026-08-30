@@ -103,15 +103,25 @@ export interface LogPredictionParams {
  * prediction retrains on grown data and is worth logging.
  *
  * Returns the newest row's id alongside the boolean so logPrediction can
- * dedup without a second query. modelId omitted = judge by the newest row of
- * ANY model (the background refresh uses that form to skip whole cycles).
+ * dedup without a second query. modelId/horizon omitted = judge by the
+ * newest row across that dimension (the background refresh passes both; the
+ * any-model form remains available for whole-cycle checks). The horizon
+ * dimension is load-bearing since 批0c: a monthly series logs one row per
+ * (model × horizon) — [1, 3] — so the horizon-1 row landing must not
+ * suppress the horizon-3 row of the same training state.
  */
 export async function monthlyNewPointState(
 	commodityId: string,
 	modelId?: string,
+	horizon?: number,
 ): Promise<{ hasNewPoint: boolean; newestRowId: string | null }> {
 	const newest = await prisma.predictionLog.findFirst({
-		where: { commodityId, interval: "monthly", ...(modelId ? { modelId } : {}) },
+		where: {
+			commodityId,
+			interval: "monthly",
+			...(modelId ? { modelId } : {}),
+			...(horizon !== undefined ? { horizon } : {}),
+		},
 		orderBy: { predictedAt: "desc" },
 		select: { id: true, forecastStartAt: true },
 	});
@@ -148,7 +158,7 @@ export async function logPrediction(params: LogPredictionParams): Promise<string
 	// months. Daily rows are exempt: they mature in ~10 days, so re-predicting
 	// them each cycle is the existing, intended behavior.
 	if (params.interval === "monthly") {
-		const state = await monthlyNewPointState(params.commodityId, params.modelId);
+		const state = await monthlyNewPointState(params.commodityId, params.modelId, params.horizon);
 		if (!state.hasNewPoint && state.newestRowId) return state.newestRowId;
 	}
 

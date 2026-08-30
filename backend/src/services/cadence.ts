@@ -47,3 +47,14 @@ export function stalenessWindowDays(interval: string): number {
 export function horizonUnitOf(interval: string | null | undefined): "day" | "month" {
 	return interval === "monthly" ? "month" : "day";
 }
+
+/** Forecast horizons (steps) a subscribed series refreshes each cycle
+ * (round-136 批0c / D5). Daily keeps the historical 10-day default; monthly
+ * uses 1 and 3 — next month + next quarter. A monthly horizon counts MONTHS
+ * (ADR-0001 ①), so the previously inherited 10 meant TEN MONTHS: the first
+ * beef verification could not land before anchor+10 (2027-05). [1, 3] puts
+ * the first rolling evidence at 2026-09/2026-11 instead. Existing horizon-10
+ * rows stay valid — long horizons verify on their own schedule. */
+export function forecastHorizons(interval: string): number[] {
+	return interval === "monthly" ? [1, 3] : [10];
+}

@@ -220,6 +220,48 @@ describe("Monthly cadence — subscription & refresh gating (ADR-0001)", () => {
 				await cleanupCommodity(ctx, c.id);
 			}
 		});
+
+		it("批0c: the dedup guard is per (model × horizon) — horizon 1 and 3 both log on the same training state", async () => {
+			// Monthly series subscribe [1, 3] months (cadence.forecastHorizons).
+			// The pre-批0c guard keyed on (commodity, model) only, so after the
+			// horizon-1 row landed, the horizon-3 log of the SAME training state
+			// was swallowed as a "duplicate" — the horizon-3 verification window
+			// would never open.
+			const c = await makeMonthlyCommodity(ctx, "multih", [
+				{ date: monthStart(-1), close: 100 },
+				{ date: monthStart(0), close: 101 },
+			]);
+			try {
+				const base = {
+					modelId: "monthly-multih-test",
+					commodityId: c.id,
+					predictedValues: [1, 2, 3],
+					forecastStartAt: monthStart(1),
+					interval: "monthly" as const,
+				};
+				const h1 = await logPrediction({ ...base, horizon: 1 });
+				const h3 = await logPrediction({ ...base, horizon: 3 });
+				expect(h3).not.toBe(h1); // distinct horizons are distinct rows
+				expect(await ctx.prisma.predictionLog.count({ where: { commodityId: c.id } })).toBe(2);
+
+				// Same horizon re-log on unchanged data still dedups per horizon.
+				const h1again = await logPrediction({ ...base, horizon: 1 });
+				expect(h1again).toBe(h1);
+				expect(await ctx.prisma.predictionLog.count({ where: { commodityId: c.id } })).toBe(2);
+
+				// The guard's horizon dimension is observable via
+				// monthlyNewPointState: horizon 1 has a row anchored at M+1
+				// (no new point since), horizon 10 has no rows (new point).
+				expect((await monthlyNewPointState(c.id, "monthly-multih-test", 1)).hasNewPoint).toBe(
+					false,
+				);
+				expect((await monthlyNewPointState(c.id, "monthly-multih-test", 10)).hasNewPoint).toBe(
+					true,
+				);
+			} finally {
+				await cleanupCommodity(ctx, c.id);
+			}
+		});
 	});
 
 	describe("schedulePredictionsFromPostgreSQL monthly predicate (ADR-0001 ⑤)", () => {

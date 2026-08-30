@@ -18,7 +18,7 @@ import {
 	STALE_WINDOW_DAYS,
 } from "./beefQueries";
 import { cacheKeys } from "./cache";
-import { horizonUnitOf, stalenessWindowDays } from "./cadence";
+import { forecastHorizons, horizonUnitOf, stalenessWindowDays } from "./cadence";
 import { predict } from "./inference/client";
 import { getCommodityPriceValues } from "./inference/data-fetcher";
 import { applyConformalInterval, getIntervalMultipliers } from "./intervalCalibration";
@@ -54,7 +54,12 @@ interface CachedPrediction {
 interface CommoditySubscription {
 	commodityId: string;
 	models: string[];
-	horizon: number;
+	/** Forecast horizons (steps) refreshed per cycle — cadence.forecastHorizons
+	 * policy: daily keeps its historical [10] days; monthly is [1, 3] months
+	 * (批0c/D5 — horizon-10-in-months deferred first verification by ~a year).
+	 * Each (model × horizon) pair is its own cache key, log row, and
+	 * verification window. */
+	horizons: number[];
 	/** Cadence of the subscribed series (ADR-0001 ⑤). The 30-min timer ticks
 	 * for every subscription, but monthly cycles are skipped unless a new
 	 * actual point has landed (see refreshCommodityPredictions). */
@@ -309,28 +314,34 @@ async function computeAndCachePrediction(
  * Refresh all predictions for a subscribed commodity
  */
 async function refreshCommodityPredictions(sub: CommoditySubscription): Promise<void> {
-	// ADR-0001 ④: a monthly series gains a new actual point ~once a month —
-	// re-running inference between points retrains on identical data and (pre-
-	// guard) logged ~336 duplicate rows/day. Skip the whole cycle when no new
-	// point has landed; logPrediction carries the same predicate for the
-	// on-demand path — this early return additionally saves the inference
-	// calls. The monthly prediction itself re-enters the cache on-demand the
-	// next time cache expiry coincides with a genuinely new point.
-	if (sub.interval === "monthly") {
-		const state = await monthlyNewPointState(sub.commodityId);
-		if (!state.hasNewPoint) return;
-	}
+	// ADR-0001 ④ + 批0c: a monthly series gains a new actual point ~once a
+	// month — re-running inference between points retrains on identical data
+	// and (pre-guard) logged ~336 duplicate rows/day. The guard is PER
+	// (model × horizon): each horizon is its own log row and verification
+	// window, so the horizon-1 row landing must not suppress the horizon-3
+	// row of the same training state (logPrediction carries the same
+	// per-horizon predicate for the on-demand path). Daily rows are exempt —
+	// they mature in ~10 days, so re-predicting each cycle is intended.
+	const guardMonthly = sub.interval === "monthly";
 
-	logger.info(`Refreshing predictions for ${sub.commodityId} (${sub.models.length} models)`);
+	logger.info(
+		`Refreshing predictions for ${sub.commodityId} (${sub.models.length} models × ${sub.horizons.length} horizons)`,
+	);
 
 	await Promise.allSettled(
-		sub.models.map(async (modelId) => {
-			try {
-				await runAndCachePrediction(sub.commodityId, modelId, sub.horizon);
-			} catch (error) {
-				logger.error(`Failed to refresh ${modelId} for ${sub.commodityId}: ${error}`);
-			}
-		}),
+		sub.models.flatMap((modelId) =>
+			sub.horizons.map(async (horizon) => {
+				try {
+					if (guardMonthly) {
+						const state = await monthlyNewPointState(sub.commodityId, modelId, horizon);
+						if (!state.hasNewPoint) return;
+					}
+					await runAndCachePrediction(sub.commodityId, modelId, horizon);
+				} catch (error) {
+					logger.error(`Failed to refresh ${modelId} for ${sub.commodityId}: ${error}`);
+				}
+			}),
+		),
 	);
 }
 
@@ -340,13 +351,13 @@ async function refreshCommodityPredictions(sub: CommoditySubscription): Promise<
 export function subscribeCommodity(
 	commodityId: string,
 	models: string[],
-	horizon: number,
+	horizons: number[],
 	interval: "daily" | "monthly" = "daily",
 ): void {
 	subscriptions.set(commodityId, {
 		commodityId,
 		models,
-		horizon,
+		horizons,
 		interval,
 	});
 
@@ -541,7 +552,7 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 	for (const commodity of commodities) {
 		// _count.prices is now the in-window daily-price count.
 		if (commodity._count.prices >= 2) {
-			subscribeCommodity(commodity.id, MODELS, 10);
+			subscribeCommodity(commodity.id, MODELS, forecastHorizons("daily"));
 			subscribed++;
 		}
 	}
@@ -587,7 +598,10 @@ export async function schedulePredictionsFromPostgreSQL(): Promise<number> {
 		if (!latest || Date.now() - latest.date.getTime() > monthlyWindowMs) continue;
 		eligibleMonthly.add(commodity.id);
 		if (subscriptions.has(commodity.id)) continue;
-		subscribeCommodity(commodity.id, MODELS, 10, "monthly");
+		// 批0c (D5): monthly horizons are MONTHS — [1, 3] (next month + next
+		// quarter) instead of the inherited daily-default 10 (ten months,
+		// first verification 2027-05). See cadence.forecastHorizons.
+		subscribeCommodity(commodity.id, MODELS, forecastHorizons("monthly"), "monthly");
 		subscribedMonthly++;
 	}
 
@@ -721,7 +735,7 @@ export async function scheduleBeefCutPredictions(): Promise<number> {
 		if (c._count._all >= 2) {
 			// Virtual key routes runAndCachePrediction → getBeefCutSeries.
 			const key = `cut:${c.factoryId}:${c.cutCode}`;
-			subscribeCommodity(key, MODELS, 10);
+			subscribeCommodity(key, MODELS, forecastHorizons("daily"));
 			subscribed++;
 		}
 	}
