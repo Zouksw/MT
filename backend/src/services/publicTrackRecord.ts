@@ -55,12 +55,18 @@ export interface PublicTrackRecord {
 		verifiedCount: number;
 		predictionCount: number;
 		lastVerifiedAt: string | null;
+		/** Rolling direction-hit rate [0,1] (round-137 批4) — share of verified
+		 * rows whose end-of-horizon direction matched the actual move vs the
+		 * pre-window anchor. null when no judged rows (e.g. naive: flat). */
+		directionHitRate: number | null;
+		directionCount: number;
 	}>;
 	samples: TrackRecordSample[];
 	methodology: {
 		verification: string;
 		window: string;
 		metric: string;
+		direction: string;
 		consensus: string;
 	};
 }
@@ -140,6 +146,8 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 			verifiedCount: a.verifiedCount,
 			predictionCount: a.predictionCount,
 			lastVerifiedAt: a.lastVerifiedAt,
+			directionHitRate: a.directionHitRate,
+			directionCount: a.directionCount,
 		})),
 		samples,
 		methodology: {
@@ -148,6 +156,8 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 			window: `Leaderboard and freshness use a rolling ${days}-day verification window; samples are the most recent verified predictions.`,
 			metric:
 				"MAPE = mean absolute percentage error between predicted values and actuals over the horizon. Median is the headline stat (robust to outliers); mean is kept for risk context. Scoring uses ONLY predictions whose verification succeeded (status=verified) — rows invalidated or marked stale/unverifiable never enter medianMape/avgMape/verifiedCount, but they DO remain in predictionCount, which counts every logged prediction in the window: the two fields use different denominators by design.",
+			direction:
+				"Direction hit = the end-of-horizon forecast's up/down move relative to the last pre-forecast price (anchor) matched the actual move. Flat forecasts (the naive baseline repeats the anchor) are excluded from the denominator, not counted as misses — the same semantics as the published beef monthly backtest.",
 			consensus:
 				"The signal consensus weighs each model by its verified MAPE; models verified strictly worse than the naive baseline are eliminated from the vote.",
 		},

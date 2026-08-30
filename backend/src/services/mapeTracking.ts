@@ -1091,6 +1091,11 @@ export async function getModelAccuracy(
 	last7dMape: number | null;
 	last30dMape: number | null;
 	lastVerifiedAt: string | null;
+	/** Direction-hit rate over the window ([0,1], null when directionCount=0) —
+	 * read-side derivation (round-137 批4), see getModelDirectionStats. */
+	directionHitRate: number | null;
+	/** Rows that produced a definite direction hit or miss. */
+	directionCount: number;
 }> {
 	const since = new Date(Date.now() - days * 86400000);
 
@@ -1173,6 +1178,8 @@ export async function getModelAccuracy(
 	// verified primary model).
 	const lastVerifiedAt = lastVerifiedRow?.verifiedAt?.toISOString() ?? null;
 
+	const direction = await getModelDirectionStats(modelId, commodityId, days);
+
 	return {
 		modelId,
 		avgMape: round2(stats?.avg_main),
@@ -1182,6 +1189,149 @@ export async function getModelAccuracy(
 		last7dMape: round2(stats?.med_7d),
 		last30dMape: round2(stats?.med_30d),
 		lastVerifiedAt,
+		directionHitRate: direction.directionHitRate,
+		directionCount: direction.directionCount,
+	};
+}
+
+/** Direction-hit stats (round-137 批4) — see getModelDirectionStats. */
+export interface DirectionStats {
+	/** hits / (hits + misses) ∈ [0,1] rounded to 4dp; null when count = 0. */
+	directionHitRate: number | null;
+	/** Rows that produced a definite hit or miss (flat/anchor-less rows excluded). */
+	directionCount: number;
+}
+
+/**
+ * One row's direction verdict — the SAME semantics as the rolling backtest
+ * (docs/backtests/beef-monthly-2026-08.md): direction of the LAST horizon
+ * step relative to the anchor point (the last close before the forecast
+ * window). null = no direction to judge: a flat prediction (naive repeats
+ * the anchor → sign 0), a flat actual, or non-finite input. Flat rows are
+ * excluded from the denominator, not counted as misses — the backtest's
+ * "naive direction: — (flat)" rule.
+ */
+export function directionVerdict(
+	predLast: number,
+	actLast: number,
+	anchor: number,
+): boolean | null {
+	if (!Number.isFinite(predLast) || !Number.isFinite(actLast) || !Number.isFinite(anchor))
+		return null;
+	const p = Math.sign(predLast - anchor);
+	const a = Math.sign(actLast - anchor);
+	if (p === 0 || a === 0) return null;
+	return p === a;
+}
+
+interface DirectionRow {
+	commodityId: string;
+	interval: string | null;
+	forecastStartAt: Date | null;
+	predictedAt: Date;
+	predLast: number | null;
+	actLast: number | null;
+	predLen: number | null;
+	actLen: number | null;
+}
+
+/**
+ * Rolling direction-hit stats for one model — READ-SIDE derivation, no schema
+ * change (IMPROVEMENT-PLAN 批4 pins "读侧聚合（不加列）"). The verdict per
+ * verified row is computed at read time from the stored end-of-horizon values
+ * plus the anchor close (last price point STRICTLY before the row's forecast
+ * window, cadence-matched; forecastStartAt-null legacy rows fall back to
+ * predictedAt, the documented reader convention).
+ *
+ * Exclusions each just shrink the denominator: cut: series (anchor would live
+ * in beef_cut_prices — zero verified rows today), rows whose value arrays
+ * mismatch in length (index pairing broken), rows with no anchor point within
+ * the lookback buffer, and flat predictions/actuals (directionVerdict null).
+ */
+export async function getModelDirectionStats(
+	modelId: string,
+	commodityId?: string,
+	days: number = 30,
+): Promise<DirectionStats> {
+	const since = new Date(Date.now() - days * 86400000);
+	// SQL extracts only the LAST array elements — the direction口径 needs one
+	// number per side, not the whole arrays shipped to Node.
+	const rows = await prisma.$queryRaw<DirectionRow[]>(Prisma.sql`
+		SELECT commodity_id AS "commodityId", interval,
+		       forecast_start_at AS "forecastStartAt", predicted_at AS "predictedAt",
+		       (predicted_values ->> -1)::float8 AS "predLast",
+		       (actual_values ->> -1)::float8 AS "actLast",
+		       jsonb_array_length(predicted_values) AS "predLen",
+		       jsonb_array_length(actual_values) AS "actLen"
+		FROM prediction_logs
+		WHERE model_id = ${modelId}
+			AND status = ${PS.VERIFIED}
+			AND verified_at >= ${since}
+			AND commodity_id NOT ILIKE '%test%'
+			${commodityId ? Prisma.sql`AND commodity_id = ${commodityId}` : Prisma.empty}
+	`);
+	if (rows.length === 0) return { directionHitRate: null, directionCount: 0 };
+
+	// One closes-array per (commodity × cadence): every row's anchor comes
+	// from a single indexed range fetch per group. The buffer above minStart
+	// (staleness window + 7d) guarantees a point exists before the earliest
+	// window unless the series genuinely has an age gap there.
+	const groups = new Map<string, { commodityId: string; interval: string; starts: number[] }>();
+	for (const r of rows) {
+		if (isCutSeriesKey(r.commodityId)) continue;
+		const interval = r.interval ?? "daily"; // NULL = legacy daily rows (schema note)
+		const key = `${r.commodityId}|${interval}`;
+		const g = groups.get(key) ?? { commodityId: r.commodityId, interval, starts: [] };
+		g.starts.push((r.forecastStartAt ?? r.predictedAt).getTime());
+		groups.set(key, g);
+	}
+
+	const anchors = new Map<string, number>();
+	for (const g of groups.values()) {
+		const minStart = Math.min(...g.starts);
+		const bufferMs = (stalenessWindowDays(g.interval) + 7) * 86400000;
+		const closes = await prisma.commodityPrice.findMany({
+			where: {
+				commodityId: g.commodityId,
+				interval: g.interval,
+				date: { gte: new Date(minStart - bufferMs), lt: new Date(Math.max(...g.starts) + 1) },
+			},
+			select: { date: true, close: true },
+			orderBy: { date: "asc" },
+		});
+		const times = closes.map((c) => c.date.getTime());
+		for (const start of g.starts) {
+			// last close STRICTLY before the row's window start (binary search)
+			let lo = 0;
+			let hi = times.length;
+			while (lo < hi) {
+				const mid = (lo + hi) >> 1;
+				if (times[mid] < start) lo = mid + 1;
+				else hi = mid;
+			}
+			if (lo > 0) {
+				anchors.set(`${g.commodityId}|${g.interval}|${start}`, Number(closes[lo - 1].close));
+			}
+		}
+	}
+
+	let hits = 0;
+	let judged = 0;
+	for (const r of rows) {
+		if (r.predLast == null || r.actLast == null) continue;
+		if (r.predLen == null || r.actLen == null || r.predLen !== r.actLen) continue;
+		const interval = r.interval ?? "daily";
+		const start = (r.forecastStartAt ?? r.predictedAt).getTime();
+		const anchor = anchors.get(`${r.commodityId}|${interval}|${start}`);
+		if (anchor == null) continue;
+		const verdict = directionVerdict(r.predLast, r.actLast, anchor);
+		if (verdict == null) continue;
+		judged++;
+		if (verdict) hits++;
+	}
+	return {
+		directionHitRate: judged > 0 ? Math.round((hits / judged) * 10000) / 10000 : null,
+		directionCount: judged,
 	};
 }
 
@@ -1246,6 +1396,8 @@ async function computeAllModelAccuracy(commodityId: string | undefined, days: nu
 				last7dMape: accuracy.last7dMape,
 				last30dMape: accuracy.last30dMape,
 				lastVerifiedAt: accuracy.lastVerifiedAt,
+				directionHitRate: accuracy.directionHitRate,
+				directionCount: accuracy.directionCount,
 				// Primary (chronos ensemble) vs statistical baseline. Drives the
 				// role badge + the honesty banner on the comparison page.
 				isPrimary: primary.has(modelId),
@@ -1269,6 +1421,8 @@ export async function getAllModelAccuracy(
 		last7dMape: number | null;
 		last30dMape: number | null;
 		lastVerifiedAt: string | null;
+		directionHitRate: number | null;
+		directionCount: number;
 		isPrimary: boolean;
 	}>
 > {

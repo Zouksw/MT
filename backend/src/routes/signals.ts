@@ -139,6 +139,8 @@ router.get(
 				last7dMape: null,
 				last30dMape: null,
 				lastVerifiedAt: null,
+				directionHitRate: null,
+				directionCount: 0,
 			});
 		}
 
