@@ -15,7 +15,7 @@
 | [TECH-DEBT.md](TECH-DEBT.md) | 过度工程化与冗余清单（BullMQ 死队列、多租户脚手架、死模型等），每条标注审计日期，动手前需复核 |
 | [AUTOMATION-STATUS.md](AUTOMATION-STATUS.md) | CI/CD、cron、护栏等自动化基础设施状态 |
 | [COMPETITIVE-ANALYSIS-MOOKET.md](COMPETITIVE-ANALYSIS-MOOKET.md) | 牧集对标分析：真正差距、价值未兑现根因、优势落实路径 + §八 深度探查（SPA 路由图/报盘词汇/公司事实，2026-08-30） |
-| [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) | 改进方案：v3.0.0 第三波（深探牧集后的开发方向：成本计算器/公开行情面/贸易词汇五维，2026-08-30）；v2 正文已执行完毕存档 |
+| [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) | 改进方案：v3.1.0 第三波（AI 预测核心专轮：月度修复/滚动回测/冠军路由/方向准确率，2026-08-30）+ 并行轨（成本计算器等）；v2 正文已执行完毕存档 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 
 ## 技术参考
