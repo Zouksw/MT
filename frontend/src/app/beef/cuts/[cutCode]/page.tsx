@@ -11,11 +11,34 @@ import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatPrice, formatPriceRange } from "@/lib/format";
 
+/** Quotation-spec dimensions carried on BeefCutPrice.metadata (V7 批3,
+ * CSV-imported, optional) — rendered when present, absent rows show "—". */
+type SpecDims = {
+	feedingMethod?: string;
+	feedingDays?: number;
+	vendorLabel?: string;
+	breed?: string;
+	storage?: string;
+};
+
+function formatSpec(spec: SpecDims | null | undefined): string {
+	if (!spec) return "";
+	const parts: string[] = [];
+	if (spec.feedingMethod) parts.push(spec.feedingMethod);
+	if (spec.feedingDays != null) parts.push(`${spec.feedingDays}d`);
+	if (spec.vendorLabel) parts.push(spec.vendorLabel);
+	if (spec.breed) parts.push(spec.breed);
+	if (spec.storage) parts.push(spec.storage);
+	return parts.join(" · ");
+}
+
 type PricePoint = {
 	date: string;
 	price: number;
 	source: string;
 	grade?: string;
+	/** Backend writes spec dims flat at metadata top level (beefIngest V7 批3). */
+	metadata?: SpecDims;
 	factory?: { code: string; name: string; country: string };
 };
 
@@ -234,6 +257,7 @@ export default function CutDetail() {
 											<th className="text-left">Factory</th>
 											<th className="text-right">Price</th>
 											<th className="text-left">Grade</th>
+											<th className="text-left">Spec</th>
 											<th className="w-32">Range</th>
 										</tr>
 									</thead>
@@ -244,11 +268,13 @@ export default function CutDetail() {
 													date: string;
 													price: number;
 													grade?: string;
+													metadata?: SpecDims;
 													factory?: { code: string; name: string; country: string };
 												},
 												i: number,
 											) => {
 												const pct = ((p.price - spMin) / range) * 100;
+												const specText = formatSpec(p.metadata);
 												return (
 													// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
 													<tr key={`${p.date}-${p.factory?.code}-${i}`}>
@@ -258,6 +284,12 @@ export default function CutDetail() {
 														<td className="text-xs">{p.factory ? `${p.factory.name}` : "--"}</td>
 														<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
 														<td className="text-xs text-gray-500">{p.grade || "--"}</td>
+														<td
+															className="text-xs text-gray-500"
+															title="Quotation spec (imported via CSV)"
+														>
+															{specText || "--"}
+														</td>
 														<td>
 															<div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
 																<div

@@ -342,6 +342,69 @@ describe("Beef Routes (Integration)", () => {
 			expect(res.body.data.updated).toBe(2);
 		});
 
+		it("lands optional spec columns in BeefCutPrice.metadata (V7 批3)", async () => {
+			const specDate = today; // same-day rows are cleaned by afterAll
+			const csv = csvBuffer([
+				[
+					"factoryCode",
+					"cutCode",
+					"price",
+					"date",
+					"feedingMethod",
+					"feedingDays",
+					"vendorLabel",
+					"breed",
+					"storage",
+				],
+				["AU-847", "TOPSIDE", "6.10", specDate, "Grain-fed", "150", "MSA", "Angus", "Port"],
+				["BR-SIF2057", "TOPSIDE", "5.40", specDate, "Grass-fed", "", "", "", "Warehouse"],
+			]);
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.attach("file", csv, "spec.csv");
+
+			expect(res.status).toBe(201);
+			expect(res.body.data.imported).toBe(2);
+
+			const rows = await prisma.beefCutPrice.findMany({
+				where: { source: adminSource, cutCode: "TOPSIDE", date: new Date(`${specDate}T00:00:00Z`) },
+				orderBy: { factoryId: "asc" },
+			});
+			expect(rows).toHaveLength(2);
+			const byFactory = new Map(rows.map((r) => [r.factoryId, r.metadata]));
+			const metas = [...byFactory.values()];
+			// Full-spec row: every non-empty cell landed under its metadata key.
+			expect(metas).toContainEqual({
+				feedingMethod: "Grain-fed",
+				feedingDays: 150,
+				vendorLabel: "MSA",
+				breed: "Angus",
+				storage: "Port",
+			});
+			// Partial-spec row: empty cells dropped, not stored as "".
+			expect(metas).toContainEqual({
+				feedingMethod: "Grass-fed",
+				storage: "Warehouse",
+			});
+		});
+
+		it("skips a row with a malformed feedingDays (wrong spec never lands)", async () => {
+			const csv = csvBuffer([
+				["factoryCode", "cutCode", "price", "date", "feedingDays"],
+				["AU-847", "HEEL_MUSCLE", "4.20", today, "abc"],
+			]);
+			const res = await request(app)
+				.post("/api/beef/import")
+				.set(authHeaders(token))
+				.attach("file", csv, "bad-spec.csv");
+
+			expect(res.status).toBe(201);
+			expect(res.body.data.imported).toBe(0);
+			expect(res.body.data.skipped).toBe(1);
+			expect(res.body.data.errors[0].message).toMatch(/feedingDays/);
+		});
+
 		it("skips invalid rows but imports valid ones (partial success)", async () => {
 			const csv = csvBuffer([
 				["factoryCode", "cutCode", "price", "date"],

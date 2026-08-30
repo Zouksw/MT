@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBeefCSV } from "../beefIngest";
+import { extractSpecDims, parseBeefCSV } from "../beefIngest";
 
 describe("parseBeefCSV", () => {
 	it("parses a well-formed CSV with header row", () => {
@@ -77,5 +77,46 @@ describe("parseBeefCSV", () => {
 		const rows = parseBeefCSV(csv, ";");
 		expect(rows).toHaveLength(1);
 		expect(rows[0].cutcode).toBe("BRISKET_NAVEL");
+	});
+});
+
+describe("extractSpecDims — optional quotation-spec columns (V7 批3)", () => {
+	it("collects non-empty spec cells with normalized metadata keys", () => {
+		const row = {
+			factorycode: "AU-847",
+			feedingmethod: "Grain-fed",
+			feedingdays: "150",
+			vendorlabel: "MSA",
+			breed: "Angus",
+			storage: "Port",
+		};
+		expect(extractSpecDims(row)).toEqual({
+			spec: {
+				feedingMethod: "Grain-fed",
+				feedingDays: 150,
+				vendorLabel: "MSA",
+				breed: "Angus",
+				storage: "Port",
+			},
+		});
+	});
+
+	it("returns an empty spec when no spec column is present (legacy CSVs)", () => {
+		expect(extractSpecDims({ factorycode: "AU-847", price: "7.42" })).toEqual({ spec: {} });
+	});
+
+	it("drops empty cells — partial spec columns are fine", () => {
+		const { spec } = extractSpecDims({ feedingmethod: "Grass-fed", storage: "Warehouse" });
+		expect(spec).toEqual({ feedingMethod: "Grass-fed", storage: "Warehouse" });
+	});
+
+	it("rejects a non-integer feedingDays with a row error (never a wrong spec)", () => {
+		expect(extractSpecDims({ feedingdays: "abc" }).error).toMatch(/Invalid feedingDays/);
+		expect(extractSpecDims({ feedingdays: "1.5" }).error).toMatch(/Invalid feedingDays/);
+		expect(extractSpecDims({ feedingdays: "-3" }).error).toMatch(/Invalid feedingDays/);
+	});
+
+	it("ignores unknown columns — the whitelist disciplines keys, not extras", () => {
+		expect(extractSpecDims({ imps: "116A", leanness: "90CL" })).toEqual({ spec: {} });
 	});
 });

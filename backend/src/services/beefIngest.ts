@@ -4,6 +4,7 @@
  * Exports unchanged from the two source modules.
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
 import { logger } from "@/lib/logger.js";
 // ---------------------------------------------------------------------------
@@ -37,6 +38,67 @@ export interface BeefImportResult {
 /** Normalize a CSV header to the canonical lower-case key. */
 function normalizeHeader(h: string): string {
 	return h.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+/**
+ * Optional quotation-spec columns (V7 批3, round-149) — the import-trade
+ * vocabulary from the competitive research (feeding method / days / VL
+ * vendor label / breed / storage position, plus the free-text spirit of
+ * IMPS/chemical-lean qualifiers). Whitelisted header → metadata key; only
+ * non-empty cells land in BeefCutPrice.metadata. Values stay free-text
+ * (operator-supplied truth) — the whitelist disciplines KEYS, not values.
+ */
+export const SPEC_DIM_COLUMNS: Record<string, string> = {
+	feedingmethod: "feedingMethod",
+	feedingdays: "feedingDays",
+	vendorlabel: "vendorLabel",
+	breed: "breed",
+	storage: "storage",
+};
+
+export interface SpecDims {
+	feedingMethod?: string;
+	feedingDays?: number;
+	vendorLabel?: string;
+	breed?: string;
+	storage?: string;
+}
+
+/**
+ * Extract the optional spec dimensions from one CSV row. Pure function —
+ * the unit-test seam. Returns { spec } (empty object when no spec column is
+ * present) or { error } when a spec cell is present but malformed (only
+ * feedingDays is numeric; text dims carry no format to violate).
+ */
+export function extractSpecDims(row: Record<string, string>): { spec: SpecDims; error?: string } {
+	const spec: SpecDims = {};
+	for (const [header, key] of Object.entries(SPEC_DIM_COLUMNS)) {
+		const cell = (row[header] || "").trim();
+		if (!cell) continue;
+		switch (key) {
+			case "feedingDays": {
+				const n = Number(cell);
+				if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+					return { spec, error: `Invalid feedingDays: ${cell} (whole days expected)` };
+				}
+				spec.feedingDays = n;
+				break;
+			}
+			case "feedingMethod":
+				spec.feedingMethod = cell;
+				break;
+			case "vendorLabel":
+				spec.vendorLabel = cell;
+				break;
+			case "breed":
+				spec.breed = cell;
+				break;
+			case "storage":
+				spec.storage = cell;
+				break;
+		}
+	}
+	return { spec };
 }
 
 /**
@@ -126,6 +188,7 @@ export async function importBeefPrices(
 		grade: string | null;
 		date: Date;
 		rowNum: number;
+		spec: SpecDims;
 	}
 	const pending: PendingUpsert[] = [];
 
@@ -202,7 +265,17 @@ export async function importBeefPrices(
 		const unit = (row.unit || "USD/kg").trim();
 		const grade = (row.grade || "").trim() || null;
 
-		pending.push({ factoryId, cutCode, price, currency, unit, grade, date, rowNum });
+		// Optional quotation-spec columns (V7 批3): a malformed cell (only
+		// feedingDays can be) skips the row like any other invalid field —
+		// better a skipped row than a price stamped with a wrong spec.
+		const { spec, error: specError } = extractSpecDims(row);
+		if (specError) {
+			errors.push({ row: rowNum, message: specError });
+			skipped++;
+			continue;
+		}
+
+		pending.push({ factoryId, cutCode, price, currency, unit, grade, date, rowNum, spec });
 	}
 
 	// Second pass: execute all valid upserts inside a single transaction so the
@@ -235,8 +308,19 @@ export async function importBeefPrices(
 							sourceRef: uploader,
 							date: p.date,
 							grade: p.grade,
+							// Spec dims land only when the CSV carried them (V7 批3) —
+							// undefined keeps metadata null on spec-less imports.
+							metadata:
+								Object.keys(p.spec).length > 0 ? (p.spec as Prisma.InputJsonValue) : undefined,
 						},
-						update: { price: p.price, currency: p.currency, unit: p.unit, grade: p.grade },
+						update: {
+							price: p.price,
+							currency: p.currency,
+							unit: p.unit,
+							grade: p.grade,
+							metadata:
+								Object.keys(p.spec).length > 0 ? (p.spec as Prisma.InputJsonValue) : undefined,
+						},
 					});
 					// Distinguish insert vs update: a freshly-created row has
 					// createdAt within 1ms of updatedAt. Exact equality is fragile

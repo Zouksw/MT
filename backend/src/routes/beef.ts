@@ -749,14 +749,19 @@ router.get(
  * page offers for download. This documents the exact CSV contract the
  * POST /import parser expects, so an operator never has to guess column
  * names or formats. Public — viewing the template is not sensitive.
+ *
+ * The five trailing columns are the optional quotation-spec dimensions
+ * (V7 批3): feedingMethod / feedingDays / vendorLabel (VL) / breed /
+ * storage — empty cells are simply omitted, non-empty ones land in
+ * BeefCutPrice.metadata.
  */
 router.get(
 	"/import/template",
 	asyncHandler(async (_req, res) => {
 		const csv =
-			"factoryCode,cutCode,price,date,currency,unit,grade\n" +
-			"AU-847,BRISKET_NAVEL,8.45,2026-07-25,USD,USD/kg,Choice\n" +
-			"BR-SIF2057,STRIPLOIN,12.30,2026-07-25,USD,USD/kg,M7\n";
+			"factoryCode,cutCode,price,date,currency,unit,grade,feedingMethod,feedingDays,vendorLabel,breed,storage\n" +
+			"AU-847,BRISKET_NAVEL,8.45,2026-07-25,USD,USD/kg,Choice,Grain-fed,150,,Angus,Port\n" +
+			"BR-SIF2057,STRIPLOIN,12.30,2026-07-25,USD,USD/kg,M7,Grass-fed,,,,Warehouse\n";
 		// Force a download with a .csv filename rather than inline render.
 		res.setHeader("Content-Type", "text/csv; charset=utf-8");
 		res.setHeader("Content-Disposition", 'attachment; filename="beef-prices-template.csv"');

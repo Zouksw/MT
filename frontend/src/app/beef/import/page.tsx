@@ -153,6 +153,14 @@ export default function BeefImportPage() {
 									</li>
 								</ul>
 								<p className="pt-1">Optional: currency (USD), unit (USD/kg), grade.</p>
+								<p className="pt-1">
+									Optional quotation-spec columns (land in the row&apos;s metadata, shown on the cut
+									page when present): <span className="font-mono text-xs">feedingMethod</span>,{" "}
+									<span className="font-mono text-xs">feedingDays</span> (whole days),{" "}
+									<span className="font-mono text-xs">vendorLabel</span> (VL),{" "}
+									<span className="font-mono text-xs">breed</span>,{" "}
+									<span className="font-mono text-xs">storage</span>.
+								</p>
 							</div>
 						</CardBody>
 					</Card>
