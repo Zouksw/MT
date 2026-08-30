@@ -282,14 +282,14 @@ round-106 四路并行审查（路由+中间件 / 服务层 / 前端 / 推理+�
 - ~~`marketData.ts _importSchema`；`ui/select.tsx`；button/card 双实现~~ → **均已清**（_importSchema grep 零命中；select.tsx 系误报、TD-9 已 RESCINDED；button/card 双实现 round-114 87cf1ec 收敛）。
 - `alertNotifications.lastDirections` 内存 Map（重启即失 + 无界增长）**仍开**（行为缺陷非死代码，文件 alertNotifications.ts:29 现存）；`topCuts` 排序无次级 orderBy **仍开**，文件已迁 `beefQueries.ts:96`（round-117 合并）；bridge 代理行混入国家均值未标注**仍开**。
 
-**低优先级正确性/加固（后续批次可做）：**
-- `datasetService` 0 数据点导入返回 success 且 rowsCount 被覆盖（非累加）。
-- `notificationChannels` 每次调用打 "SMTP not configured" 警告（应打一次）。
-- `helpers.monthRange` 31 日 setMonth 跳月（现两 caller 均传月初，latent）；`normalizer.ts:114` 回退路径本地时区构 Date（其余 UTC）。
-- `authService.verifyTokenSession` findMany 全量 session（应 count）；`renameWatchlist` 撞唯一名 P2002 → 500。
+**低优先级正确性/加固（后续批次可做）——2026-08-31 round-142 批 3 复核批注：本组 8 项存活项已全部收口（commit `465570f`）：/api/docs 加 authenticate、authRateLimiter 拆分（login 保留 10/15min，refresh/change-password 30/15min）、lastDirections bounded(512)、SMTP warn 每进程一次、monthRange 月初 clamp（Jan 31 跳月 +3 回归钉）、verifyTokenSession count 化、topCuts cutCode 决胜平价、importDataset rowsCount 真实计数。仍开（缓办，数据冻结期 latent 或属产品决策）：/spreads 混币种分组、beef cheek → OFFAL 死别名（D13）、metrics GET 提权、inference `@app.on_event` → lifespan 迁移（零行为变化，可选项维持登记）、前端剩余 biome 警告（judgment-call 规则）。**
+- ~~`datasetService` 0 数据点导入返回 success 且 rowsCount 被覆盖（非累加）。~~（**已修 round-142 批 3**：rowsCount 改为导入后真实 datapoint count。）
+- ~~`notificationChannels` 每次调用打 "SMTP not configured" 警告（应打一次）。~~（**已修 round-142 批 3**：每进程只打一次。）
+- ~~`helpers.monthRange` 31 日 setMonth 跳月（现两 caller 均传月初，latent）~~（**已修 round-142 批 3**：月初 UTC clamp + 3 回归钉）；`normalizer.ts:114` 回退路径本地时区构 Date（其余 UTC）——仍开（latent，低风险）。
+- ~~`authService.verifyTokenSession` findMany 全量 session（应 count）~~（**已修 round-142 批 3**：session.count + 正路径钉）；`renameWatchlist` 撞唯一名 P2002 → 500——仍开（复核 watchlistService:278 未见显式处理，低频路径）。
 - metrics GET 仅 authenticate（~~/api/security/audit 是 ADMIN 门~~ 该组端点已删 round-132，此对照失效）——是否提权待定；socket `join-timeseries` 房间名未校验且不计入 20 房上限；`/api/docs` Swagger 无鉴权暴露全端点面。
-- `authRateLimiter`（10/15min/IP）被 login+refresh+change-password 共用——NAT 环境误锁。
-- inference: `@app.on_event` 已弃用（应 lifespan）；负价格未拒（边界设计决策）；批量 gc.collect() 每项一次（可提升为每批一次）。
+- ~~`authRateLimiter`（10/15min/IP）被 login+refresh+change-password 共用——NAT 环境误锁。~~（**已修 round-142 批 3**：拆 authActionRateLimiter 30/15min 承接 refresh/change-password，login 保留原限。）
+- inference: `@app.on_event` 已弃用（应 lifespan；round-142 批 3 评估后**缓办**——零行为变化且批量端点已删，维持登记）；负价格未拒（边界设计决策）；~~批量 gc.collect() 每项一次~~（批量端点已随 round-140 D3 删除，条目失效）。
 - 前端剩余 biome 警告 10 条（noExplicitAny 等 judgment-call 规则，均存量）。
 
 ### round-107 前后端打通审计遗留项（2026-08-16，已核实）
@@ -602,6 +602,7 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 
 **round-106 "死代码类" 登记六项全数关闭**（详见上文该节 2026-08-30 复核批注）——实际清理发生在 round-112~132 各轮，登记文本一直未同步，本轮补记。
 
-## 十七、round-139 顺带登记（2026-08-30，批 3 执行中发现，未动）
+## 十七、round-139 顺带登记（2026-08-30，批 3 执行中发现；**已解决 round-142 批 2，2026-08-31**）
 
-**seed.ts 的 beef_carcass_us 身份停留在 round-126 之前**：`prisma/seed.ts:2031` 仍是 "US Beef Carcass Price (FRED)" / `unit: "USD/cwt"` + 合成日度价生成（`base: 260, volatility: 8`，180 天日更 seed 行）——而生产库与代码自 round-126 D4 起该序列实为 **IMF 全球牛肉月度基准 PBEEFUSDM（USC/lb，月度）**。影响：mt_test / CI 全新种子库中该序列的元数据与节奏均与生产漂移（landing-cost 路由测试需在 beforeAll 临时把 unit 改为 USC/lb 并用未来日期 fixture 压制合成行）。处置：登记未动（改 seed 属独立卫生轮——需同步改 COMMODITIES 元数据 + 合成价策略〔月度序列不应生成日度合成行〕并复核依赖该 slug 的既有测试断言）。
+**seed.ts 的 beef_carcass_us 身份停留在 round-126 之前**：~~`prisma/seed.ts:2031` 仍是 "US Beef Carcass Price (FRED)" / `unit: "USD/cwt"` + 合成日度价生成（`base: 260, volatility: 8`，180 天日更 seed 行）~~ **已对齐生产（commit `8e94a9a`，v3.3.0 批 2 / D11）**：COMMODITIES 元数据改为 Global Beef Price (IMM via FRED)/全球牛肉价格（IMF 月度）/USC/lb + metadata fred+PBEEFUSDM；合成价改 6 个月度月起点（source fred，替代 180 日行）；baseline 260→330。验收：mt_test --force 重建后与生产逐字段一致；tools.test 的 beforeAll unit hack 与 afterAll 恢复整体移除；backend 全量首跑即绿（1031+1，零回退）。原登记内容保留如下——
+~~`prisma/seed.ts:2031` 仍是 "US Beef Carcass Price (FRED)" / `unit: "USD/cwt"` + 合成日度价生成（`base: 260, volatility: 8`，180 天日更 seed 行）~~——影响（历史）：mt_test / CI 全新种子库中该序列的元数据与节奏均与生产漂移（landing-cost 路由测试需在 beforeAll 临时把 unit 改为 USC/lb 并用未来日期 fixture 压制合成行）。

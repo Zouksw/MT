@@ -169,14 +169,14 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 
 ## 五、测试体系
 
-| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-30 实测） |
+| 项目 | 框架 | 配置 | 测试文件数 | 测试数（截至 2026-08-31 实测） |
 |---|---|---|---|---|
-| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 99（2026-08-30 深夜） | **1029 pass / 1 skip** |
-| frontend | jest 29 + Testing Library | jest.config.js | 38（2026-08-30 深夜） | **338 pass** |
+| backend | vitest 4（round-90 从 3 升级） | vitest.config.ts | 99（2026-08-31） | **1036 pass / 1 skip** |
+| frontend | jest 29 + Testing Library | jest.config.js | 39（2026-08-31） | **341 pass** |
 | inference | pytest 8 | conftest.py | 4（2026-08-30） | **61 pass** |
 | frontend E2E | Playwright | playwright.config.ts | 9 specs | chromium only |
 
-> 三者合计 **1428 全绿**（1029 + 338 + 61，截至 2026-08-30 深夜 round-140 批 4 收官后实测；当日轨迹 1022+1/334/66 → +15 landing-cost → +5 D8 声明钉 → 1042+1 → **−13/−5 为 round-140 D3 随组随端点删除的测试（portfolios 13 条 + Python batch 5 条，属删功能非覆盖回退，round-132 -34 同例）**；批 2/批 4 轮经 `bootstrap-test-db.sh --force` 重建 mt_test（顺带暴露并修复 seed 残留的 round-114 `prisma.organizations` 死引用）；已知首跑 flake：--force 重建后 Redis 预测缓存全空，首个全量并行跑中 beef-forecasts/wheat-cme-signals 两测试冷启动超 30s，复跑必绿（round-136 首例、round-140 复现并定位机理）；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
+> 三者合计 **1438 全绿**（1036 + 341 + 61，截至 2026-08-31 round-142 第五波执行后实测；当日轨迹 1029+1/338/61 → 批 1 digest +2/+3 → 批 2 seed 对齐 ±0 → 批 3 收尾包 +5/+0〔docs 3→5、monthRange +3、verifyTokenSession 正路径 +1，authService mock 修正零净变化〕；批 1 首跑复现已知 flake ×3 后四次全量全绿〔--force 重建后 Redis 预测缓存全空的冷启动机制，round-136 首例、round-140 定位机理〕；round-122 批 2 起后端测试强制 Redis db1 与生产 db0 隔离）。测试数随时间变化，运行 `cd backend && pnpm test`、`cd frontend && pnpm test`、`cd inference-service && pytest -q` 获取当前数。
 
 **集成测试（fail-loud）**：backend `src/__tests__/integration/` + `src/routes/__tests__/` + `src/services/__tests__/`（真 DB 子集）用真实 PostgreSQL（mt_db）+ in-process Express（supertest）。**DB 不可达时显式失败**（`requireDb(label)` 在 beforeAll throw，或 `createTestContext` 后 `if (!ctx.available) throw`），不再静默 skip 报绿——2026-08-01 round-60 测试系统重构统一（之前 150+ case 用 `if (!dbAvailable) return;` 静默跳过，无 DB 时假绿掩盖故障）。CI 已配 postgres+redis（ci.yml:126-160），真 CI 跑真测试，只有真 DB 故障才红。
 

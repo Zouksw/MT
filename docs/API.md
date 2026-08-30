@@ -21,9 +21,9 @@ REST API documentation for the MT beef-price platform.
 > `/api/forecasts*`, `/api/cache/*`, `/api/datasets/:id/export`), used the wrong
 > `/api/apikeys` prefix, and omitted ~95 real endpoints. This version was
 > regenerated from the actual route files (`backend/src/routes/*.ts`, mounts in
-> `backend/src/app.ts`): **17 routers, 123 endpoints**（2026-08-30 round-140 复测：
-> `grep -hE "router\.(get|post|put|patch|delete)\(" backend/src/routes/*.ts` 排除 test——
-> round-139 批 3 增 /api/tools、round-140 D3 删 portfolios 组 7 端点 + /predict/batch）,
+> `backend/src/app.ts`): **17 routers, 124 endpoints**（round-140 复测 123；2026-08-31
+> round-142 批 1 增公开 `/api/market/public/digest` 为 124——
+> `grep -hE "router\.(get|post|put|patch|delete)\(" backend/src/routes/*.ts` 排除 test）,
 > all verified against code.
 
 ---
@@ -171,6 +171,8 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
+| `/api/market/public/highlights` | GET | **公开**（免鉴权）：白名单宏观序列活水（landing 消费）；cacheRoute 300s |
+| `/api/market/public/digest` | GET | **公开**（免鉴权）：中文行情摘要载荷——固定白名单 5 序列（IMF 牛肉基准 / CME 活牛·架子牛 / USD/CNY / BRL）带 nameCn、节奏感知涨跌（daily：较上期+近 7 天；monthly：仅环比，不造周窗）、stale 旗标、seriesId 溯源；`/market/digest` 页消费（round-142 批 1） |
 | `/api/market/commodities` | GET | Commodity list with authoritative latest price |
 | `/api/market/commodities/:slug/latest` | GET | Latest price (API-only hook exists, unused) |
 | `/api/market/commodities/:slug/price` | GET | Price history (`?interval=daily/weekly/monthly&limit=`) |
@@ -265,8 +267,8 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/docs` | GET | Swagger UI |
-| `/api/docs/json` | GET | OpenAPI spec JSON |
+| `/api/docs` | GET | Swagger UI（**需鉴权**——round-142 批 3 起：全端点面对匿名爬虫是侦察价值，D12 定 authenticate 级） |
+| `/api/docs/json` | GET | OpenAPI spec JSON（同上需鉴权） |
 
 ---
 

@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-142：第五波 v3.3.0 执行 — 批 1（公开中文行情摘要 + SEO 基建）+ 批 2（seed 身份对齐）+ 批 3（正确性收尾包）
+
+用户指令"根据计划开始执行"（round-141 规划的第五波；D10/D11/D12 按计划建议案放行）。三个独立 commit，每批全门禁。
+
+- **批 1 `3988648`（公开面，v3.0.0 批 B 二次升格）**：`GET /api/market/public/digest` 公开端点（固定白名单 5 序列，节奏感知涨跌〔daily 较上期+近 7 天 / monthly 仅环比——不造周窗〕、stale 旗标、seriesId 溯源、逐条降级）+ 公开页 `/market/digest`（中文、序列卡片、landing-cost/track-record 互链、"无分析师观点"声明、断流诚实降级）+ middleware PUBLIC_PATHS 9 路由。**SEO 基建**：sitemap.ts（仅 6 条可索引公开路由）/ robots.ts（负面清单）/ 6 页逐页中文·英文匹配的 metadata layout / root metadataBase。**执行中发现两处占位符进产物并根治**：`.env.production` `NEXT_PUBLIC_APP_URL=your-domain.com`（site-url.ts 守卫视同未设置——**真实域名待用户配置后重建才进 sitemap**，round-107 同款陷阱）；root layout 硬编码 `og:url mt.ai` 收敛到单一来源。backend +2 测试（白名单相等性=隐私契约）frontend +3（hook）。
+- **批 2 `8e94a9a`（seed 身份对齐，TECH-DEBT §十七 兑现）**：seed `beef_carcass_us` 从 pre-round-126 身份（US Beef Carcass/USD/cwt/180 日合成行）对齐生产（Global Beef Price (IMF via FRED)/全球牛肉价格（IMF 月度）/USC/lb/metadata fred+PBEEFUSDM/6 个月度合成点）；mt_test --force 重建后与生产逐字段一致；tools.test 的 beforeAll unit hack 与 afterAll 恢复整体移除。零测试数变化，全量首跑即绿。
+- **批 3 `465570f`（round-106 存活项 8 项收口）**：① /api/docs 加 authenticate（D12：spec 是全端点地图，对匿名爬虫是侦察价值）；② authRateLimiter 拆分——login 保留 10/15min，refresh/change-password 走新 authActionRateLimiter 30/15min（NAT 办公室不再被并池锁死）；③ lastDirections 内存 Map 显式 bounded(512)+FIFO+重启语义注释（重启只可能漏报一次、不可能误报）；④ SMTP 未配置 warn 每进程一次；⑤ monthRange 月初 UTC clamp（Jan 31 +setMonth 曾整月跳过 2 月；+3 回归钉）；⑥ verifyTokenSession session.count 化（不再全量拉 session 行；顺修 authService.test mock 队列串位 +1 正路径钉）；⑦ topCuts 平价 cutCode 决胜；⑧ importDatasetData rowsCount 改为导入后真实 datapoint 计数（re-import skipDuplicates / 0 行导入不再清零计数器）。**Python lifespan 可选项缓办**（零行为变化，维持登记）。
+- **门禁与基线**：tsc×2 / biome 触达文件全清 / backend **1036+1**（99 文件，+5）/ frontend **341**（39 套件，+3）/ inference 61 不变；双 build ×3 轮、PM2 重启 ×3、live 全验（digest 匿名 200 且数字与 FRED/landing-cost 手验一致、digest 页 zh title/canonical/OG 落地、sitemap/robots 无占位符、/api/docs 匿名 401、/dashboard 仍 307 登录门、login 401 非 429）。**首跑 flake 复现一次**（批 1 首跑 ×3——已登记的 mt_test --force 后冷 Redis 预测缓存机制；其后四次全量全绿）。
+- **文档**：AGENTS.md 页面 47→48；API.md 端点 123→124 + 补记 highlights 遗漏行 + /api/docs 鉴权标注；IMPROVEMENT-PLAN V5 执行状态块；TECH-DEBT §十七 转已解决 + round-106 存活项批注。
+- **批 0a/0b 未到期**：值守窗 2026-09 中下旬（FRED 8 月月度点 ~9 月中发布）；2026-08-31 00:00 H=1 到期穿越预检通过（7 行仍 completed、等实际值属正常）。
+
 ### 2026-08-30 — round-141：第五波 v3.3.0 规划 — 方向分析 + 分发期批次设计（docs-only）
 
 用户指令"分析项目后续的开发方向，规划方案"。产出 IMPROVEMENT-PLAN **v3.3.0 第五波**（分发期），无代码改动、零测试影响。
