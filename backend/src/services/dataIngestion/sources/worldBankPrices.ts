@@ -10,7 +10,6 @@
 
 import { logger } from "@/lib";
 import { fetchFredCsvSeries } from "../fredCsv";
-import { ensureCommodity, upsertPrice } from "../helpers";
 import { scraperFetch } from "../http";
 import type { Scraper, ScraperResult } from "../scraperManager";
 
@@ -151,7 +150,7 @@ export const FRED_MONTHLY: Record<
 
 async function fetchFredMonthly(
 	config: (typeof FRED_MONTHLY)[string],
-): Promise<{ inserted: number; updated: number }> {
+): Promise<{ inserted: number; updated: number; seen: number }> {
 	const start = new Date();
 	start.setMonth(start.getMonth() - 3); // last 3 months
 	// Shared FRED CSV implementation (round-105) — this used to be a private
@@ -170,6 +169,7 @@ async function fetchFredMonthly(
 async function fetchWorldBankData(): Promise<ScraperResult> {
 	let inserted = 0;
 	let updated = 0;
+	let seen = 0;
 
 	// Liveness probe for the World Bank commodity API. This is a DIAGNOSTIC
 	// signal only — it never gates the FRED write path below. The WB API was
@@ -212,6 +212,7 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 			const r = await fetchFredMonthly(config);
 			inserted += r.inserted;
 			updated += r.updated;
+			seen += r.seen;
 		} catch (err) {
 			logger.warn(
 				`[WORLD_BANK/FRED] ${config.seriesId} failed: ${err instanceof Error ? err.message : err}`,
@@ -219,8 +220,15 @@ async function fetchWorldBankData(): Promise<ScraperResult> {
 		}
 	}
 
-	logger.info(`[WORLD_BANK] ${inserted} inserted, ${updated} updated`);
-	return { inserted, updated };
+	// noChange (round-153): these are monthly series re-scanned on the daily
+	// cycle. Once the 6dp rounding landed, a mid-month re-scrape legitimately
+	// writes 0/0 with data in hand — that is a confirmed-unchanged cycle
+	// (success), not the 0-row "possible silent failure" warning shape.
+	const noChange = seen > 0 && inserted === 0 && updated === 0;
+	logger.info(
+		`[WORLD_BANK] ${inserted} inserted, ${updated} updated${noChange ? " (unchanged)" : ""}`,
+	);
+	return { inserted, updated, ...(noChange ? { noChange: true } : {}) };
 }
 
 export const worldBankScraper: Scraper = {

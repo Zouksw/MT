@@ -22,8 +22,24 @@
  * contract-test convention (pure config assertions, no DB / no network).
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FRED_MONTHLY } from "@/services/dataIngestion/sources/worldBankPrices";
+
+const mocks = vi.hoisted(() => ({
+	scraperFetch: vi.fn(),
+	ensureCommodity: vi.fn(),
+	upsertPrice: vi.fn(),
+	logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@/lib", () => ({ logger: mocks.logger }));
+vi.mock("@/services/dataIngestion/helpers", () => ({
+	ensureCommodity: mocks.ensureCommodity,
+	upsertPrice: mocks.upsertPrice,
+}));
+vi.mock("@/services/dataIngestion/http", () => ({ scraperFetch: mocks.scraperFetch }));
+
+import { worldBankScraper } from "@/services/dataIngestion/sources/worldBankPrices";
 
 describe("FRED_MONTHLY config contract", () => {
 	const entries = Object.entries(FRED_MONTHLY);
@@ -142,5 +158,67 @@ describe("FRED CSV shared module — URL window format (round-105)", () => {
 		expect(src).toMatch(/cosd=\$\{isoDay\(params\.start\)\}/);
 		// not merely absent from comments — absent from the URL construction
 		expect(src).not.toMatch(/formatDateYMD\(/);
+	});
+});
+
+/**
+ * noChange contract (round-153). These are monthly series scanned on the
+ * daily cycle. Before the 6dp rounding fix, every run phantom-updated 23-35
+ * rows (Decimal(18,6) truncation defeated samePrice), which masked the fact
+ * that a true mid-month 0/0 cycle would classify as "warning — possible
+ * silent failure". With rounding in place the honest mid-month outcome is
+ * 0/0 with rows in hand → noChange → success.
+ *
+ * scraperFetch serves the WB liveness probe (offline, the realistic state)
+ * and the per-series fredgraph.csv downloads.
+ */
+describe("worldBankScraper.fetch — noChange on a confirmed-unchanged cycle", () => {
+	const CSV_BODY = "observation_date,X\n2026-07-01,92.29046216818182\n";
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.ensureCommodity.mockResolvedValue({ id: "c-1" });
+		mocks.scraperFetch.mockImplementation(async (url: string) => {
+			if (url.includes("api.worldbank.org")) return { ok: false, status: 404 };
+			if (url.includes("fredgraph.csv")) {
+				return { ok: true, status: 200, text: async () => CSV_BODY };
+			}
+			return { ok: false, status: 0 };
+		});
+	});
+
+	it("0/0 with parsed rows in hand → noChange:true (classifier reads success, not warning)", async () => {
+		mocks.upsertPrice.mockResolvedValue({ inserted: 0, updated: 0 });
+
+		const result = await worldBankScraper.fetch();
+
+		expect(result.inserted).toBe(0);
+		expect(result.updated).toBe(0);
+		expect(result.noChange).toBe(true);
+		// Every series actually offered a parsed row to the write path.
+		expect(mocks.upsertPrice.mock.calls.length).toBeGreaterThanOrEqual(
+			Object.keys(FRED_MONTHLY).length,
+		);
+	});
+
+	it("a run that writes anything new keeps the plain shape (no noChange flag)", async () => {
+		mocks.upsertPrice.mockResolvedValue({ inserted: 1, updated: 0 });
+
+		const result = await worldBankScraper.fetch();
+
+		expect(result.inserted).toBeGreaterThan(0);
+		expect(result.noChange).toBeUndefined();
+	});
+
+	it("an empty fetch (no parseable rows anywhere) stays 0/0 WITHOUT noChange — the silent-failure warning shape", async () => {
+		mocks.scraperFetch.mockImplementation(async (url: string) => {
+			if (url.includes("api.worldbank.org")) return { ok: false, status: 404 };
+			return { ok: false, status: 404 }; // every CSV download fails
+		});
+
+		const result = await worldBankScraper.fetch();
+
+		expect(result).toEqual({ inserted: 0, updated: 0 });
+		expect(result.noChange).toBeUndefined();
 	});
 });

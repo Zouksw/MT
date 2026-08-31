@@ -45,7 +45,7 @@ export async function fetchFredCsvSeries(params: {
 	commoditySource: string;
 	timeoutMs?: number;
 	logPrefix: string;
-}): Promise<{ inserted: number; updated: number }> {
+}): Promise<{ inserted: number; updated: number; seen: number }> {
 	const { config, interval, commoditySource, logPrefix } = params;
 
 	// cosd/coed MUST be dashed ISO (YYYY-MM-DD). formatDateYMD's dashless
@@ -62,12 +62,12 @@ export async function fetchFredCsvSeries(params: {
 	});
 	if (!res.ok) {
 		logger.warn(`${logPrefix} ${config.seriesId}: HTTP ${res.status}`);
-		return { inserted: 0, updated: 0 };
+		return { inserted: 0, updated: 0, seen: 0 };
 	}
 
 	const text = await res.text();
 	const lines = text.trim().split("\n");
-	if (lines.length < 2) return { inserted: 0, updated: 0 };
+	if (lines.length < 2) return { inserted: 0, updated: 0, seen: 0 };
 
 	const commodity = await ensureCommodity({
 		slug: config.slug,
@@ -79,6 +79,7 @@ export async function fetchFredCsvSeries(params: {
 
 	let inserted = 0;
 	let updated = 0;
+	let seen = 0;
 
 	// Skip the header row; each data row is "date,value".
 	for (let i = 1; i < lines.length; i++) {
@@ -86,8 +87,17 @@ export async function fetchFredCsvSeries(params: {
 		if (cols.length < 2) continue;
 
 		const dateStr = cols[0].trim();
-		const value = parseFloat(cols[1].trim());
-		if (Number.isNaN(value) || !dateStr) continue;
+		const raw = parseFloat(cols[1].trim());
+		if (Number.isNaN(raw) || !dateStr) continue;
+		seen++;
+		// commodity_prices OHLC columns are Decimal(18,6): an un-rounded float
+		// like 92.29046216818182 stores as 92.290462 and then never matches
+		// upsertPrice's samePrice check again — every run rewrote 23-35
+		// unchanged rows (world_bank boot/scheduled runs, observed 2026-08-31).
+		// Round at the parse boundary so a re-scrape of the same CSV is a true
+		// no-op (same 6dp contract as comtradeMirror/argentinaExports,
+		// round-152).
+		const value = Math.round(raw * 1e6) / 1e6;
 
 		const date = new Date(`${dateStr}T00:00:00Z`);
 		if (Number.isNaN(date.getTime())) continue;
@@ -108,5 +118,9 @@ export async function fetchFredCsvSeries(params: {
 		updated += r.updated;
 	}
 
-	return { inserted, updated };
+	// `seen` = parsed rows offered to the write path. A 0/0 result WITH seen>0
+	// means every row hit the samePrice no-op — a confirmed-unchanged cycle,
+	// which callers translate to noChange so classifiers read success, not
+	// "empty possible silent failure" (monthly series on the daily cycle).
+	return { inserted, updated, seen };
 }
