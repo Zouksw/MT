@@ -21,10 +21,6 @@ export interface DashboardStats {
 		total: number;
 		trend: number | null;
 	};
-	forecasts: {
-		total: number;
-		trend: number | null;
-	};
 	alerts: {
 		total: number;
 		bySeverity: {
@@ -167,16 +163,6 @@ export const useDashboardStats = () => {
 	);
 
 	const {
-		data: forecastsData,
-		error: forecastsError,
-		isLoading: forecastsLoading,
-	} = useRetryableFetch(
-		() => (isAuth ? `${API_BASE}/models?page=1&limit=1` : null),
-		authFetcher,
-		retryOpts,
-	);
-
-	const {
 		data: alertsData,
 		error: alertsError,
 		isLoading: alertsLoading,
@@ -186,26 +172,23 @@ export const useDashboardStats = () => {
 		retryOpts,
 	);
 
+	// Engine model list — round-132 D6 deleted the /api/models registry, and
+	// the three /api/models calls left here 404'd on every dashboard load
+	// (the unguarded forecastsData.total read then crashed the whole page
+	// into the error boundary). The live source of truth is
+	// GET /api/inference/models — the same source /ai/predict uses; the
+	// backend proxies inference-service and falls back to static ids with
+	// status:"unknown" (no `available` flag) when the engine is unreachable.
+	const { data: modelsData } = useRetryableFetch(
+		() => (isAuth ? `${API_BASE}/inference/models` : null),
+		authFetcher,
+		retryOpts,
+	);
+
 	// round-119: the recent-alerts strip used to fire a SECOND request
 	// (`/api/alerts?limit=5`) for data the limit=100 call above already
 	// returns — same endpoint, same newest-first ordering, first page. Slice
 	// from the one response instead (alertsList is parsed below).
-
-	const { data: recentForecastsData } = useRetryableFetch(
-		() => (isAuth ? `${API_BASE}/models?limit=5` : null),
-		authFetcher,
-		retryOpts,
-	);
-
-	// Active-model count — a separate lightweight count query (limit=1) so we
-	// report the real number of isActive=true models instead of forcing
-	// active==total. Previously this was `active: aiTotal` which always read
-	// 100% active whenever any models existed — a fabricated metric.
-	const { data: activeModelsData } = useRetryableFetch(
-		() => (isAuth ? `${API_BASE}/models?page=1&limit=1&isActive=true` : null),
-		authFetcher,
-		retryOpts,
-	);
 
 	// Latest 资讯 for the dashboard news strip (PRODUCT-SPEC §5.1 最新市场动态).
 	// Reuses the /api/news module — top 5 published, newest first.
@@ -215,15 +198,13 @@ export const useDashboardStats = () => {
 		retryOpts,
 	);
 
-	const loading = !isAuth
-		? false
-		: datasetsLoading || timeseriesLoading || forecastsLoading || alertsLoading;
+	const loading = !isAuth ? false : datasetsLoading || timeseriesLoading || alertsLoading;
 
 	// round-119: alertsError joins the pool — an alerts-endpoint failure used
 	// to leave `stats` null with `error` null too (alerts gate stats but its
 	// error was never consumed), so the dashboard silently rendered all-zero
 	// cards with no banner.
-	const errors = [datasetsError, timeseriesError, forecastsError, alertsError].filter(Boolean);
+	const errors = [datasetsError, timeseriesError, alertsError].filter(Boolean);
 	// Signed-out visitors are a NORMAL state for /dashboard (the page renders
 	// a sign-in CTA) — reporting it as an error drew a red banner + toast on
 	// top of that CTA. Only authenticated-session fetch failures are errors
@@ -239,7 +220,6 @@ export const useDashboardStats = () => {
 		() => ({
 			datasets: null,
 			timeseries: null,
-			forecasts: null,
 			alerts: null,
 		}),
 		[],
@@ -350,12 +330,14 @@ export const useDashboardStats = () => {
 		};
 	}, [beefPrices, beefCuts, beefTrend]);
 
-	// AI models — real count from the models registry (was hardcoded 8/8, a fake).
-	// `total` is the registry total; `active` is the count of isActive=true
-	// models (separate count query). Previously `active` was forced equal to
-	// `total`, fabricating 100%-active whenever any model existed.
-	const aiTotal = forecastsData?.total ?? forecastsData?.data?.length ?? 0;
-	const aiActive = activeModelsData?.total ?? activeModelsData?.pagination?.total ?? 0;
+	// AI models — live engine truth from /api/inference/models. `total` is the
+	// engine's callable-model count; `active` counts models the engine reports
+	// `available: true`. The static fallback payload omits `available`, so an
+	// unreachable engine yields active=0 — availability we could not verify is
+	// never claimed (round-106 honesty rule, mirrored from the backend route).
+	const engineModels: Array<{ available?: boolean }> = modelsData?.models ?? [];
+	const aiTotal = engineModels.length;
+	const aiActive = engineModels.filter((m) => m.available === true).length;
 
 	// AI hero card (round-138 批5): the beef MONTHLY consensus — IMF
 	// PBEEFUSDM benchmark, H=1 MONTH — from the same useBeefMonthlyConsensus
@@ -419,10 +401,6 @@ export const useDashboardStats = () => {
 						total: timeseriesData.total || timeseriesData.data?.length || 0,
 						trend: trends.timeseries,
 					},
-					forecasts: {
-						total: forecastsData.total || forecastsData.data?.length || 0,
-						trend: trends.forecasts,
-					},
 					alerts: {
 						total: alertsData.total || alertsData.data?.length || 0,
 						bySeverity: alertsBySeverity,
@@ -442,15 +420,15 @@ export const useDashboardStats = () => {
 					aiSummary,
 					recentNews,
 					recentAlerts: alertsList.slice(0, 5),
-					recentForecasts: Array.isArray(recentForecastsData?.data)
-						? recentForecastsData.data
-						: recentForecastsData?.data?.models || recentForecastsData?.items || [],
+					// The per-user forecast-record store was deleted with the
+					// round-132 registry (Prisma Forecast removed round-140); the
+					// RecentActivity forecasts tab shows its honest empty state.
+					recentForecasts: [],
 				}
 			: null
 		: {
 				datasets: { total: 0, trend: null },
 				timeseries: { total: 0, trend: null },
-				forecasts: { total: 0, trend: null },
 				alerts: { total: 0, bySeverity: { error: 0, warning: 0, info: 0 }, trend: null },
 				aiModels: { active: aiActive, total: aiTotal },
 				beef: {

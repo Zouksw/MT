@@ -121,7 +121,12 @@ describe("useDashboardStats", () => {
 			"/beef/prices/latest": { data: { prices: [{ price: 5, cutCode: "X", date: "2026-07-19" }] } },
 			"/datasets?page=1&limit=1": { total: 10, data: [] },
 			"/timeseries?page=1&limit=1": { total: 25, data: [] },
-			"/models?page=1&limit=1": { total: 5, data: [] },
+			"/inference/models": {
+				models: [
+					{ id: "arima", available: true },
+					{ id: "chronos_tiny", available: true },
+				],
+			},
 			"/alerts?page=1&limit=100": {
 				total: 15,
 				data: [
@@ -142,7 +147,8 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats).toBeDefined();
 		expect(result.current.stats?.datasets.total).toBe(10);
 		expect(result.current.stats?.timeseries.total).toBe(25);
-		expect(result.current.stats?.forecasts.total).toBe(5);
+		expect(result.current.stats?.aiModels.total).toBe(2);
+		expect(result.current.stats?.aiModels.active).toBe(2);
 		expect(result.current.stats?.alerts.total).toBe(15);
 		expect(result.current.error).toBeNull();
 	});
@@ -249,10 +255,6 @@ describe("useDashboardStats", () => {
 					},
 				});
 			}
-			if (url.includes("/models?limit=5")) {
-				// recentForecasts — still its own call, uses items[] shape
-				return makeFetchResult({ data: { items: [{ id: 1, name: "Forecast 1" }] } });
-			}
 			return makeFetchResult({ data: { total: 0, data: [] } });
 		});
 
@@ -271,7 +273,9 @@ describe("useDashboardStats", () => {
 			"4",
 			"5",
 		]);
-		expect(result.current.stats?.recentForecasts).toEqual([{ id: 1, name: "Forecast 1" }]);
+		// The per-user forecast store died with the round-132 registry — the
+		// strip is an honest [] (RecentActivity renders its empty state).
+		expect(result.current.stats?.recentForecasts).toEqual([]);
 
 		// Exactly ONE alerts request is issued (authed keys are thunks; their
 		// source contains the URL, so match on the stringified key).
@@ -279,6 +283,12 @@ describe("useDashboardStats", () => {
 			String(c[0]).includes("/alerts"),
 		);
 		expect(alertsCalls).toHaveLength(1);
+
+		// And NO call to the deleted /api/models registry survives.
+		const modelsCalls = mockUseRetryableFetch.mock.calls.filter((c) =>
+			String(c[0]).includes("/models?"),
+		);
+		expect(modelsCalls).toHaveLength(0);
 	});
 
 	it("should use default values when totals are missing", async () => {
@@ -294,10 +304,10 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats?.timeseries.total).toBe(0);
 	});
 
-	it("should report AI models count from the registry (no longer hardcoded)", async () => {
-		mockUseRetryableFetch.mockImplementation(() =>
-			makeFetchResult({ data: { total: 0, data: [] } }),
-		);
+	it("should report AI models count from the engine (no longer hardcoded)", async () => {
+		mockByKey({
+			"/inference/models": { models: [] },
+		});
 
 		const { result } = renderHook(() => useDashboardStats());
 
@@ -305,28 +315,29 @@ describe("useDashboardStats", () => {
 			expect(result.current.loading).toBe(false);
 		});
 
-		// Previously this was a hardcoded fake (8/8). Now derived from the models
-		// registry — with an empty registry the count is honestly 0.
+		// Previously this was a hardcoded fake (8/8). Now derived from the
+		// engine's model list — with an empty list the count is honestly 0.
 		expect(result.current.stats?.aiModels.active).toBe(0);
 		expect(result.current.stats?.aiModels.total).toBe(0);
 	});
 
-	it("reports active != total when only some models are isActive=true (TRUST-1 honesty guard)", async () => {
+	it("counts only engine-available models as active (TRUST-1 honesty guard)", async () => {
 		// Mutation guard: the previous code set `active: aiTotal`, forcing
-		// active==total (always 100%). With a real isActive count, a registry
-		// of 4 models where only 1 is active must surface active=1, total=4.
-		// Flipping the hook back to `active: aiTotal` fails this test.
+		// active==total (always 100%). The engine reports per-model
+		// availability; 4 listed models with 1 available must surface
+		// active=1, total=4. Flipping back to `active: aiTotal` fails this.
+		// The static fallback payload has no `available` flag at all —
+		// availability we could not verify is never claimed.
 		// Key-indexed (not call-order) so hook reordering doesn't break it.
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
-			const url = String(key ?? "");
-			if (url.includes("isActive=true")) {
-				return makeFetchResult({ data: { total: 1, pagination: { total: 1 } } });
-			}
-			if (url.includes("/models?page=1&limit=1")) {
-				return makeFetchResult({ data: { total: 4, data: [] } });
-			}
-			return makeFetchResult({ data: { total: 0, data: [] } });
+		mockByKey({
+			"/inference/models": {
+				models: [
+					{ id: "arima", available: true },
+					{ id: "sarimax" },
+					{ id: "chronos_tiny", available: false },
+					{ id: "chronos_base" },
+				],
+			},
 		});
 
 		const { result } = renderHook(() => useDashboardStats());
@@ -339,6 +350,33 @@ describe("useDashboardStats", () => {
 		expect(result.current.stats?.aiModels.active).toBe(1);
 		// The honesty invariant: active must NEVER be force-set to total.
 		expect(result.current.stats?.aiModels.active).not.toBe(result.current.stats?.aiModels.total);
+	});
+
+	it("survives an engine-models fetch failure without crashing (regression: /api/models 404 crash)", async () => {
+		// The deleted /api/models registry 404'd on every load and the
+		// unguarded forecastsData.total read threw during the stats build,
+		// crashing /dashboard into the error boundary. The models fetch is
+		// auxiliary now: when it fails, stats must still build (0 models) and
+		// the hook must NOT surface it as a dashboard error.
+		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
+		mockUseRetryableFetch.mockImplementation((key: any) => {
+			const url = String(key ?? "");
+			if (url.includes("/inference/models")) {
+				return makeFetchResult({ data: undefined, error: new Error("HTTP error! status: 404") });
+			}
+			return makeFetchResult({ data: { total: 3, data: [] } });
+		});
+
+		const { result } = renderHook(() => useDashboardStats());
+
+		await waitFor(() => {
+			expect(result.current.loading).toBe(false);
+		});
+
+		expect(result.current.stats).not.toBeNull();
+		expect(result.current.stats?.aiModels.total).toBe(0);
+		expect(result.current.stats?.aiModels.active).toBe(0);
+		expect(result.current.error).toBeNull();
 	});
 
 	it("surfaces trend as null when no trend source is wired (no fake 0 badge — TRUST-1)", async () => {
@@ -357,7 +395,6 @@ describe("useDashboardStats", () => {
 		// an honest "no trend data" instead of a fabricated 0%.
 		expect(result.current.stats?.datasets.trend).toBeNull();
 		expect(result.current.stats?.timeseries.trend).toBeNull();
-		expect(result.current.stats?.forecasts.trend).toBeNull();
 		expect(result.current.stats?.alerts.trend).toBeNull();
 	});
 
