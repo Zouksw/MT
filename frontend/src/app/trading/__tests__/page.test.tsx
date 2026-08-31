@@ -20,6 +20,17 @@ import type React from "react";
 let mockTradingData: Record<string, unknown>;
 let lastInitialSlug: string | undefined;
 
+// AppShell reads AuthContext for nav prefetch (auth-aware prefetch) — page
+// tests render the shell without a provider, so pin a session here.
+jest.mock("@/contexts/auth", () => ({
+	useAuth: jest.fn(() => ({
+		status: "authenticated",
+		user: { id: "u1", email: "u@x.dev", name: "Test User" },
+		refresh: jest.fn(),
+		logout: jest.fn(),
+	})),
+}));
+
 jest.mock("@/hooks/useTradingData", () => ({
 	useTradingData: (initialSlug?: string) => {
 		lastInitialSlug = initialSlug;

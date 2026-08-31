@@ -323,6 +323,10 @@ export default function LandingCostPage() {
 
 					<Link
 						href="/beef/forecast"
+						// Public acquisition page: anonymous visitors must not prefetch
+						// this protected route (middleware login redirect breaks the
+						// prefetch — see useNavPrefetch in AppShell).
+						prefetch={false}
 						className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
 					>
 						<ArrowLeft className="h-3 w-3" />

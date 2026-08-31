@@ -243,7 +243,9 @@ export default function TrackRecordPage() {
 
 						<p className="mt-8 text-xs text-muted-foreground">
 							Generated {new Date(record.generatedAt).toLocaleString()} ·{" "}
-							<Link href="/ai/accuracy" className="underline hover:text-primary">
+							{/* prefetch={false}: protected route on a public page — an
+							    anonymous prefetch bounces off the middleware login redirect. */}
+							<Link href="/ai/accuracy" prefetch={false} className="underline hover:text-primary">
 								logged-in users see the full accuracy workbench
 							</Link>
 						</p>

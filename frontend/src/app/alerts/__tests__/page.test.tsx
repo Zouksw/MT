@@ -2,6 +2,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // Mock next/navigation
+// AppShell reads AuthContext for nav prefetch (auth-aware prefetch) — page
+// tests render the shell without a provider, so pin a session here.
+jest.mock("@/contexts/auth", () => ({
+	useAuth: jest.fn(() => ({
+		status: "authenticated",
+		user: { id: "u1", email: "u@x.dev", name: "Test User" },
+		refresh: jest.fn(),
+		logout: jest.fn(),
+	})),
+}));
+
 jest.mock("next/navigation", () => ({
 	useRouter: () => ({ push: jest.fn() }),
 	usePathname: () => "/alerts",

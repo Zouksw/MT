@@ -21,6 +21,7 @@ import { usePathname } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
+import { useAuth } from "@/contexts/auth";
 import { cn } from "@/lib/utils";
 
 // ─── Navigation model (PRODUCT-SPEC.md §4 — beef-focused IA) ─────────────
@@ -90,9 +91,24 @@ function isActive(pathname: string, href: string): boolean {
 	return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/**
+ * Prefetch only with a verified session. The shell also mounts on public
+ * pages (/tools/landing-cost, /market/digest), where an anonymous visitor's
+ * sidebar prefetches of protected routes hit the middleware login redirect —
+ * the Next client router resolves that redirect against an https origin
+ * (ERR_SSL_PROTOCOL_ERROR) and logs "Failed to fetch RSC payload" for every
+ * nav link. Session truth is AuthContext (cookie-verified), which flips the
+ * prefetch on right after hydration for signed-in users.
+ */
+function useNavPrefetch(): boolean {
+	const { status } = useAuth();
+	return status === "authenticated";
+}
+
 // ─── Sidebar content (shared between desktop rail + mobile drawer) ───────
 
 function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+	const canPrefetch = useNavPrefetch();
 	return (
 		<nav className="flex flex-col gap-6 px-3 py-4" aria-label="Main navigation">
 			{NAV_SECTIONS.map((section) => (
@@ -108,6 +124,7 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
 								<li key={item.href}>
 									<Link
 										href={item.href}
+										prefetch={canPrefetch}
 										onClick={onNavigate}
 										className={cn(
 											"flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
@@ -133,8 +150,13 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
 // ─── Brand mark ──────────────────────────────────────────────────────────
 
 function BrandMark() {
+	const canPrefetch = useNavPrefetch();
 	return (
-		<Link href="/dashboard" className="flex items-center gap-2 px-5 h-14 border-b border-border">
+		<Link
+			href="/dashboard"
+			prefetch={canPrefetch}
+			className="flex items-center gap-2 px-5 h-14 border-b border-border"
+		>
 			<span className="flex items-center justify-center size-7 rounded-md bg-primary text-primary-foreground font-semibold text-sm">
 				MT
 			</span>
@@ -146,6 +168,7 @@ function BrandMark() {
 // ─── Top bar ─────────────────────────────────────────────────────────────
 
 function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
+	const canPrefetch = useNavPrefetch();
 	return (
 		<header className="flex items-center gap-3 h-14 px-4 border-b border-border bg-background sticky top-0 z-30">
 			{/* Mobile menu toggle */}
@@ -166,6 +189,7 @@ function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 			{/* Alerts shortcut */}
 			<Link
 				href="/alerts"
+				prefetch={canPrefetch}
 				className="relative p-1.5 rounded-md hover:bg-muted text-foreground/70 hover:text-foreground"
 				aria-label="查看告警"
 			>
