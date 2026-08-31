@@ -29,46 +29,63 @@ function useAnimatedCounter(target: number, duration = 800) {
 	const rafNative =
 		typeof requestAnimationFrame === "function" &&
 		/\[native code\]/.test(requestAnimationFrame.toString());
+	// Integer targets count up in whole numbers; decimal targets (331.78 USC/lb)
+	// keep 2 decimals so the hero never rounds the flagship price to an integer.
+	// Defined inside the effect: it only reads the target, and a fresh
+	// closure per effect run keeps the deps honest without churn.
 
-	const [display, setDisplay] = useState(() => {
-		if (
-			!rafNative ||
-			(typeof window !== "undefined" &&
-				window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-		)
-			return target;
-		return 0;
-	});
+	// Start TRUTHFUL. The usual mount path is LoadingState → data ready →
+	// card mounts with its final value already in hand: there is no 0→value
+	// transition to animate, and starting the display at 0 froze such cards
+	// at a wrong 0 forever (prevTarget === target short-circuited the
+	// effect before any animation/stall-guard could run). Only genuine
+	// post-mount value changes animate.
+	const [display, setDisplay] = useState(target);
 	const prevTarget = useRef(target);
 
 	useEffect(() => {
-		if (!rafNative) {
+		const decimals = Number.isInteger(target) ? 0 : 2;
+		const snap = (v: number) => Math.round(v * 10 ** decimals) / 10 ** decimals;
+		const prefersReducedMotion = () =>
+			typeof window !== "undefined" &&
+			window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		if (prevTarget.current === target) return;
+		if (!rafNative || prefersReducedMotion()) {
 			prevTarget.current = target;
-			return;
-		}
-		const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		if (prefersReducedMotion) {
-			prevTarget.current = target;
+			setDisplay(target);
 			return;
 		}
 		const start = prevTarget.current;
 		const diff = target - start;
-		if (diff === 0) return;
 		const startTime = performance.now();
-		let rafId: number;
+		let rafId = 0;
+		let done = false;
+		const finish = () => {
+			if (done) return;
+			done = true;
+			prevTarget.current = target;
+			setDisplay(snap(target));
+		};
 		function step(now: number) {
 			const elapsed = now - startTime;
 			const progress = Math.min(elapsed / duration, 1);
 			const eased = 1 - (1 - progress) ** 3;
-			setDisplay(Math.round(start + diff * eased));
+			setDisplay(snap(start + diff * eased));
 			if (progress < 1) rafId = requestAnimationFrame(step);
-			else prevTarget.current = target;
+			else finish();
 		}
 		rafId = requestAnimationFrame(step);
+		// rAF stalls indefinitely for backgrounded/occluded tabs (and some
+		// headless captures) — the animation must never hold a stale value
+		// hostage, so snap to target once the window passes.
+		const stallGuard = setTimeout(finish, duration + 200);
 		// Cancel the in-flight rAF loop on unmount or target change so it
 		// doesn't keep calling setDisplay on an unmounted/re-rendered component
 		// (setState-on-unmounted memory leak + wasted work).
-		return () => cancelAnimationFrame(rafId);
+		return () => {
+			cancelAnimationFrame(rafId);
+			clearTimeout(stallGuard);
+		};
 	}, [target, duration, rafNative]);
 
 	return display;
