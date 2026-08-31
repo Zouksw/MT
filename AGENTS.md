@@ -43,7 +43,7 @@
 | 推理模型 id | **9** | `inference_engine.py` 的 `MODEL_IDS`（6 统计 + 3 Chronos 变体） |
 
 **推理模型清单**（来源 `inference-service/services/statistical_models.py` + `inference_engine.py`）：
-- 统计（6）：`arima`（ARIMA(2,1,1)）、`sarimax`（带外生变量）、`holtwinters`（三次指数平滑）、`exponential_smoothing`（二次）、`naive_forecaster`（朴素基线）、`stl_forecaster`（STL 分解 + 阻尼外推）
+- 统计（6）：`arima`（ARIMA(2,1,1)）、`sarimax`（带外生变量）、`holtwinters`（三次指数平滑）、`exponential_smoothing`（简单/一次指数平滑，`trend=None, seasonal=None`——2026-08-31 复核修正，原文"二次"与实现不符）、`naive_forecaster`（朴素基线）、`stl_forecaster`（STL 分解 + 阻尼外推）
 - Chronos 预训练基座（3）：`chronos_tiny` / `chronos_mini` / `chronos_base` → `amazon/chronos-t5-{tiny,mini,base}`
 
 > 注：`inference-service/main.py` 启动时预加载 Chronos pipeline；权重经 `HF_ENDPOINT=https://hf-mirror.com` 镜像下载并缓存于 `/root/.cache/huggingface`（见 `ecosystem.config.cjs` inference 段注释）。

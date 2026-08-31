@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-151：调研轮 — 数值预测与大模型实践调研报告（RESEARCH-LLM-NUMERIC-FORECASTING v1.0.0）
+
+用户目标"重新获取当前服务器的状态，重点关注预测数值变化的模型使用的方案，调研量化金融和肉类贸易等相关实践，学习其他相关项目是如何使用大模型来实现数值预测的"。docs-only 调研轮（round-148 同例），三路外部调研走三个并发子代理（量化金融 / 肉类农产品 / 开源 TSFM 工程），关键承重声明经独立批评代理复审（初稿 5 处硬伤修正后定稿）。
+
+- **服务器/预测链路现状复查（全部实测）**：三服务健康（/ready 3 pipeline 零失败）；prediction_logs 201,456 行四状态分布、10 个 model_id 精度双口径（中位/p90）——**新读数：chronos p90 随容量单调恶化 220→357→531（更大模型=更重尾部），统计基线 p90 仅 16-18**；`sundial`/`timer_xl` 为已移除的在线训练反模式残留（verified 各 10 条，2026-07 停更）；牛肉月度 28 行（7 模型 × H∈{1,3,6,10}）锚定 2026-07-31，**H=1 对账日=当日（2026-08-31），等 FRED 八月实值**，H=6 的 7 行为 D5 政策性 stale（round-136 遗留行处置）；代码级方案梳理（种子/信号量/pipeline 缓存/质量加权投票/加权中位数/per-series 路由/验证生命周期）+ 补录 round-136 批 1 牛肉月度滚动回测结论（chronos 淘汰结论 H=1 不成立/H=3 成立、arima 冷启动冠军、原生区间欠覆盖 58-78%）。
+- **量化金融业界实践**：组合预测之谜（M4 最佳可复现方法=简单平均）、回测卫生（DSR/PBO）、LLM 落地位置=文本→特征（Lopez-Lira & Tang + alpha 衰减/记忆污染两告诫；IndexGPT 仅商标）；**Tan et al. 引用纠偏**（"打不过统计基线"非原文、官方代码仓 BennyTMT）；"语言模型骨干 vs 数值 token 化（Chronos）"两范式区分经原文复核成立。
+- **肉类/农产品实践**：USDA WASDE=模型+判断共识制（其区间覆盖率曾被评 48%/35%）；Expana 公开批判"95% 准确率"（naive 不变预测 1 个月即 95.7%——准确率口径=100%−偏差）；基差分解范式（BeefBasis 68% 区间口径、no-change 基差最难打败）；arXiv:2601.06371（TSFM 零样本胜 USDA ERS 月度基准，无牛肉=MT 场景即增量）；ABARES=公开预测评估的政府先例。
+- **TSFM 工程全景**：12 模型表含**许可商用性核查**（TimesFM 3.0 权重 non-commercial、Moirai-MoE CC-BY-NC → 商用排除；Chronos 家族全 Apache-2.0）；AutoGluon 官方微调门槛（>100 序列 & 中位长度>3×h——MT 不达标，与"只用预训练"红线互证）；GreedyEnsemble（Caruana 贪心）机制；**chronos-forecasting 2.3.1=最新版且无 Bolt 修复记录**、chronos-2 已被 2.1.0+ 原生支持且权重已在本地缓存（round-138 臂 B 已测未采的事实校正入册）。
+- **启示 R1-R8（只登记增量）**：R1 验证环补相对 naive 技能分（MASE，未登记）；R2 "组合预测"作为第 10 个受验证 model id 对照线（载体级增量）；R3 挑战者路径校正（批 3 已关闭/重评 2028-11 + 许可排除确权）；R4 微调门槛证据落袋（重开条件=序列聚合>100 条）；R5 基差分解建模候选（挂 90CL 周度数据积累）；R6 LLM 文本实验两告诫；R7 叙事弹药三件（ABARES/Expana/arXiv 2601.06371）；R8 GreedyEnsemble+特征表版本化借镜（低优先）。**总判断：无"必须改道"信号，无"被错过的机会"，增量全部在外围面。**
+- **顺手修正**：AGENTS.md `exponential_smoothing`"二次"→"简单/一次"（与 `trend=None` 实现不符，/models 自述同口径）。
+
 ### 2026-08-31 — round-150：执行轮 — 第七波 v3.5.0 批 1+2+3 全落地（进口周度基准 + 独占位强化 + 规格维度载体）
 
 用户指令"按照计划开始"。三个独立 commit，每批全门禁（tsc/biome/全量测试/构建/PM2 重启/live 验证）。
