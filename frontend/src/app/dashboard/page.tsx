@@ -424,23 +424,20 @@ export default function DashboardPage() {
 					    no data prop, so the panel showed 暂无预测趋势数据 forever and the
 					    7D/30D/90D selector was dead UI. There is no per-day forecast-count
 					    endpoint today — re-add the slot when one exists (see TECH-DEBT). */}
+					{/* Alert distribution + quick actions share the row — each used to
+					    sit in its own half-filled 2-col grid, leaving the right column
+					    dead space. RecentActivity runs full-width below. */}
 					<div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6`}>
-						<div>
-							<AlertDistributionChart data={stats?.alerts.bySeverity} loading={loading} />
-						</div>
+						<AlertDistributionChart data={stats?.alerts.bySeverity} loading={loading} />
+						<QuickActions />
 					</div>
 
-					<div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4`}>
-						<div className="lg:col-span-2">
-							<RecentActivity
-								recentAlerts={stats?.recentAlerts}
-								recentForecasts={stats?.recentForecasts}
-								loading={loading}
-							/>
-						</div>
-						<div>
-							<QuickActions />
-						</div>
+					<div>
+						<RecentActivity
+							recentAlerts={stats?.recentAlerts}
+							recentForecasts={stats?.recentForecasts}
+							loading={loading}
+						/>
 					</div>
 
 					{/* AI models — real count only. Previously this was a hardcoded "8/8"
