@@ -126,12 +126,14 @@
 | B3 | /alerts 页填充 | 空态区加引导卡（最近 3 条预测快讯 / 告警规则入口），消除 400px 黑洞 | 同上 |
 | B4 | beef hub 降噪 | 琥珀公告收敛为首行 + "展开详情"；`● Snapped` 降为灰色 dot + tooltip，仅在悬浮/详情强调红 | Linear "reduce visual noise" |
 
-### 批 C — 色彩纪律收口（P1）
+### 批 C — 色彩纪律收口（P1，2026-08-31 执行，结论见下）
 
 | # | 项 | 做法 |
 |---|---|---|
-| C1 | 22 处 `blue-*` → 语义 token | `Alert/Tag/Badge` 的 info 变体改 `text-info/bg-info/10/border-info/20`（金族，round-76 补漏）；`DataSourcePanel/MarketFactorsPanel/ImportResultTable/data-sources` 同规则 |
-| C2 | `text-gray-400` 16 处 → `text-muted-foreground`/`gray-500` | DESIGN-SYSTEM-AUDIT P0 遗留清零（顺带，属同一纪律批） |
+| C1 | info 语义的 `blue-*` → 语义 token | `Alert/Tag/Badge` 的 info 变体 + `ImportResultTable` info tone → `--info`（金族，round-76 补漏）；单 token 自适应双主题 |
+| C2 | `text-gray-400` 清理 | 实测 16 处中 15 处是 `text-gray-600 dark:text-gray-400` 成对写法（双模式均过 AA，保留）；仅 TradeFlowsCard 1 处单用 → `text-muted-foreground` |
+
+**执行修正（诚实记录）**：原计划"22 处 blue-* 全部收口"在落实中收窄为 **info 语义 4 处组件**——其余 blue/cyan 位于**多色分类调色板**（DataSourcePanel 8 数据源色、data-sources TierBadge 1-4 档色、MarketFactorsPanel 经济/天气图标色）。这些是分类编码而非 info 语义，改成金族反而违反 DESIGN.md 规则 1（"Gold = AI intelligence"——金色只能标记 AI 内容）。分类色按设计规则保留。
 
 ### 批 D — 语言一致性（P2，需先定规则再批量执行）
 

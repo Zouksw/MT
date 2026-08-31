@@ -20,7 +20,8 @@ const COLOR_MAP: Record<TagColor, string> = {
 		"bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
 	error:
 		"bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
-	info: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+	// Batch C: info semantic → --info token (gold family, round-76)
+	info: "bg-info/10 text-info border-info/30",
 };
 
 export const Tag: React.FC<TagProps> = ({

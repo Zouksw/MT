@@ -18,7 +18,7 @@ const VARIANT_MAP: Record<BadgeVariant, string> = {
 	success: "bg-green-600 dark:bg-green-500",
 	warning: "bg-yellow-600 dark:bg-yellow-500",
 	error: "bg-destructive",
-	info: "bg-blue-600 dark:bg-blue-500",
+	info: "bg-info",
 };
 
 export const Badge: React.FC<BadgeProps> = ({

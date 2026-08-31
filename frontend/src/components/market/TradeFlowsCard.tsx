@@ -69,7 +69,8 @@ function fmtPeriod(period: string) {
 }
 
 function MoM({ pct }: { pct: number | null }) {
-	if (pct === null || !Number.isFinite(pct)) return <span className="text-gray-400">—</span>;
+	if (pct === null || !Number.isFinite(pct))
+		return <span className="text-muted-foreground">—</span>;
 	const up = pct >= 0;
 	return (
 		<span

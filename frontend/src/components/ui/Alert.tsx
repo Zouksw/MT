@@ -19,9 +19,13 @@ const VARIANT_MAP: Record<
 	{ bg: string; border: string; text: string; icon: React.ReactNode }
 > = {
 	info: {
-		bg: "bg-blue-50 dark:bg-blue-900/20",
-		border: "border-blue-200 dark:border-blue-800",
-		text: "text-blue-800 dark:text-blue-200",
+		// Batch C (design-optimization): the info semantic uses the --info token
+		// (gold family, round-76 decision) — raw blue-* classes bypassed the
+		// palette and clashed with the gold signature. One token set adapts to
+		// both modes (--info is brightened in .dark), so no dark: pairs.
+		bg: "bg-info/10",
+		border: "border-info/30",
+		text: "text-info",
 		icon: <Info className="size-4 mt-0.5 flex-shrink-0" />,
 	},
 	success: {
