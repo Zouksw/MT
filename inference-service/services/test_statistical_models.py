@@ -17,6 +17,7 @@ import pytest
 from services.statistical_models import (
     STATISTICAL_MODELS,
     predict_arima,
+    predict_holtwinters,
     predict_naive,
     predict_stl,
 )
@@ -292,3 +293,51 @@ def test_sarimax_rejects_future_exog_factor_count_mismatch():
     future_exog = [[float(i)] for i in range(5)]
     with pytest.raises(ValueError, match="factors"):
         predict_sarimax(values, horizon=5, exog=exog, future_exog=future_exog)
+
+
+# ─── Holt-Winters cadence-aware seasonality (round-153) ──────────────────────
+
+DAY = 86_400_000
+MONTHLY_SERIES = [100.0 + i * 0.8 for i in range(24)]  # 24 monthly pts, trend
+
+
+def _monthly_ts(n: int) -> list[int]:
+    # Monthly spacing (~30.4d median step) — must read as monthly cadence.
+    return [int((1_700_000_000_000 + i * 30.5 * DAY) // 1) for i in range(n)]
+
+
+def _daily_ts(n: int) -> list[int]:
+    return [1_700_000_000_000 + i * DAY for i in range(n)]
+
+
+def test_holtwinters_monthly_timestamps_drop_seasonal_term():
+    """Monthly cadence (median step >= 28d) must NOT fit the spurious 7-step
+    season — the forecast must equal a trend-only ExponentialSmoothing fit
+    bit-for-bit. Round-152 evidence: no-seasonal beat p7 in 6/8 monthly cells."""
+    from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+    result = predict_holtwinters(MONTHLY_SERIES, horizon=3, timestamps=_monthly_ts(len(MONTHLY_SERIES)))
+    ref = ExponentialSmoothing(
+        np.array(MONTHLY_SERIES), trend="add", seasonal=None
+    ).fit().forecast(3)
+    np.testing.assert_allclose(result["values"], np.asarray(ref), rtol=1e-12)
+
+
+def test_holtwinters_daily_timestamps_keep_weekly_season():
+    """Daily cadence keeps the historical ≥14-point p7 seasonal behavior."""
+    from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+    ts = _daily_ts(len(TREND_SERIES))
+    result = predict_holtwinters(TREND_SERIES, horizon=3, timestamps=ts)
+    ref = ExponentialSmoothing(
+        np.array(TREND_SERIES), trend="add", seasonal="add", seasonal_periods=7
+    ).fit().forecast(3)
+    np.testing.assert_allclose(result["values"], np.asarray(ref), rtol=1e-12)
+
+
+def test_holtwinters_absent_timestamps_keep_daily_semantics():
+    """No timestamps → legacy daily semantics (p7 on ≥14 pts). Back-compat for
+    direct callers and old tests that never pass timestamps."""
+    result = predict_holtwinters(TREND_SERIES, horizon=3)
+    seasonal_ref = predict_holtwinters(TREND_SERIES, horizon=3, timestamps=_daily_ts(len(TREND_SERIES)))
+    assert result["values"] == seasonal_ref["values"]

@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-153：实验轮 — 牛肉价格预测模型设置实验 + holtwinters 月度去季节落地
+
+用户目标"根据调研报告，尝试不同的模型设置，寻找最适合牛肉价格预测的方案"。输入 = round-151 调研报告 R2/R8，实验协议与 round-136 批 1 完全一致（rolling-origin + MAPE/方向口径，新增 MASE 中位与相对 naive 技能列）。
+
+- **实验矩阵（32 配置 × 4 序列 × 2H）**：`inference-service/experiments/model_settings_beef.py`（psql 导出序列 JSON → 本地 statsmodels/sktime/sklearn 变体 + 经 10810 服务的 Chronos 上下文变体 + 组合 10 种）。主证 `beef_carcass_us`（195 点/36 origins）+ 三条月度验证序列（retail/pork/poultry，126-127 点/24 origins）防单序列过拟合。首轮发现实验脚本 ETS 包装 bug（seasonal_periods 未传 statsmodels），修复后全量重跑；统计侧两次重跑逐位一致，chronos 侧仅 2/864 行因与生产刷新并发 RNG 交错有微差（引擎已声明的边界）。
+- **最适合方案（结论）**：牛肉月度 = ARIMA(2,1,1)（跨 8 格最佳单模型 +4.0%，**不换阶**——(0,1,1)/(1,1,0) 仅 carcass 局部优、跨序列全负）+ 无季节 Holt-Winters（平均技能 +7.0%/平均秩并列第一，牛肉 3/4 格优、方向 4/4 优，carcass H=3 方向命中 85.3%）+ Chronos 三变体留池交 per-series 路由（carcass H=3 全负 -15.5~-63.6% 但 retail H=1 +20.9%/poultry H=1 +32.6% 为全场最优）；**等权均值组合 = 全场最稳单一配置**（comb_prod7_mean 平均 +5.3%、8 格无负）——组合预测之谜在本仓数据复现，R2 证据落袋（第 10 个受验证 model id 的工程载体留批次）。**拒绝清单**：12 月季节全家（hw_p12/snaive12/theta-sp12 全崩）、chronos 上下文截断（不稳健）、RF 树模型（-45.5%，兼红线）。
+- **生产改动 `predict_holtwinters` 节奏感知**：timestamps 中位步长 ≥28 天（月度）→ 不加季节项；日度/缺省 timestamps 行为逐位不变（向后兼容）。引擎 predict() 将 timestamps 传入 holtwinters 分支。测试 61→**64**（+3：月度=无季节拟合逐位一致/日度保持 p7/缺省保持日度语义），ruff 全绿，PM2 重启后 live 双口径验证：真实牛肉月度序列经服务输出与 trend-only 参考逐位一致（≠p7 参考）、日度对照仍 = p7；/ready 3 pipeline 零失败。注：月度 holtwinters 的历史 verified（旧 p7 口径）与新预测不可直接比，30d 质量窗将滚动到新口径。
+- 报告：`docs/backtests/beef-model-settings-2026-08.md`（完整表 + 跨序列矩阵 + 拒绝清单 + 局限）。方向命中样本 22-36/格（±~12pp 置信区间），只作方向性证据。
+
 ### 2026-08-31 — round-152：执行轮 — 第八波 v3.6.0 批 0+2+4 全落地（Comtrade 镜像贸易流通路 + 阿根廷月度降级分支 + 贸易流读侧面）
 
 用户指令"是否存在可以自动打通的数据通路，将可以自动操作的项目先完成"。三批独立 commit 全门禁（tsc/biome/全量测试/构建/PM2 重启/live 验证）。批 1（单一窗口账号）/批 3（data.gov key）有用户门未动，批 5 观察项值守。**轮次注记**：三笔代码 commit 消息中的 "round-151" 为并发会话撞号（调研轮 1da44f3 同号在先），本执行轮定名 round-152，以 SHA 区分为准。

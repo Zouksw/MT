@@ -191,10 +191,24 @@ def predict_holtwinters(
     values: list[float],
     horizon: int,
     confidence_level: float = 0.95,
+    timestamps: list[int] | None = None,
 ) -> dict:
     arr = np.array(values, dtype=float)
-    # Need at least 2 full seasons for seasonal HW
-    if len(arr) >= 14:
+    # Seasonal term is a DAILY-cadence assumption: seasonal_periods=7 models a
+    # weekly cycle, which is meaningful for the FX/CME daily pools. On monthly
+    # cadence (median timestamp step >= ~28d) a 7-step "season" is a spurious
+    # 7-month cycle — the round-153 rolling backtest (4 monthly series x 2
+    # horizons) found the no-seasonal variant better in 6/8 cells (worse in 2:
+    # mildly on beef_carcass H=1, moderately on pork H=1) and better on the
+    # two BEEF series in 3/4 cells with direction hits higher in all 4 (e.g.
+    # 85.3% vs 58.8% on carcass H=3; 2.45% vs 2.66% MAPE). Detect cadence from
+    # timestamps when the caller supplies them; absent timestamps keep the
+    # historical daily semantics (back-compat for legacy callers/tests).
+    monthly = False
+    if timestamps and len(timestamps) >= 3:
+        steps = np.diff(np.asarray(timestamps, dtype=np.int64))
+        monthly = bool(np.median(steps) >= 28 * 86_400_000)
+    if len(arr) >= 14 and not monthly:
         model = ExponentialSmoothing(arr, trend="add", seasonal="add", seasonal_periods=7)
     else:
         model = ExponentialSmoothing(arr, trend="add", seasonal=None)

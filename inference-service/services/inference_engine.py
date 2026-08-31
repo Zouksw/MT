@@ -148,6 +148,12 @@ def predict(
         result = STATISTICAL_MODELS["sarimax"](
             values, horizon, confidence_level, exog=exog, future_exog=future_exog
         )
+    elif model_id == "holtwinters":
+        # Holt-Winters is cadence-aware: a 7-step season assumes daily data,
+        # which is spurious on monthly series (see predict_holtwinters).
+        result = STATISTICAL_MODELS["holtwinters"](
+            values, horizon, confidence_level, timestamps=timestamps
+        )
     elif model_id in STATISTICAL_MODELS:
         result = STATISTICAL_MODELS[model_id](values, horizon, confidence_level)
     else:
