@@ -5,8 +5,11 @@ import { useTradingData } from "../useTradingData";
 // (selection, chart mapping, AI state hygiene), not fetching from those five
 // endpoints. The knob is read lazily inside the factories so beforeEach can
 // retarget the fixtures per test.
+type MockCommodity = { id: string; slug: string; name: string; latestDate?: string };
 const md = {
-	commodities: [{ id: "c1", slug: "beef_carcass_us", name: "Beef Carcass (US)" }],
+	commodities: [
+		{ id: "c1", slug: "beef_carcass_us", name: "Beef Carcass (US)" },
+	] as MockCommodity[],
 	prices: [
 		{ date: "2026-08-01", open: 4.0, high: 4.2, low: 3.9, close: 4.1, volume: 100 },
 		{ date: "2026-08-02", open: 4.1, high: 4.3, low: 4.0, close: 4.2, volume: 110 },

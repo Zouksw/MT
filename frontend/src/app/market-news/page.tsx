@@ -125,6 +125,7 @@ export default function MarketNewsList() {
 				key: "title",
 				title: "Title",
 				dataIndex: "title",
+				wrap: true,
 				render: (_value, record) => {
 					const r = asRow(record);
 					return (
@@ -175,21 +176,6 @@ export default function MarketNewsList() {
 						</span>
 					);
 				},
-			},
-			{
-				key: "viewCount",
-				title: "Views",
-				dataIndex: "viewCount",
-				width: 80,
-				align: "right" as const,
-				render: (value) => (
-					<span
-						className="text-sm text-muted-foreground tabular-nums"
-						style={{ fontVariantNumeric: "tabular-nums" }}
-					>
-						{(value as number) ?? 0}
-					</span>
-				),
 			},
 			{
 				key: "actions",

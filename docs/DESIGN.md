@@ -220,6 +220,7 @@ box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 6. **Dark mode is default.** Design dark-first, light-second.
 7. **2-column grids for data-dense pages**, never 3-column (too cramped).
 8. **Minimum radius `rounded` (4px).** No `rounded-sm` or arbitrary sub-4px values.
+9. **No dead columns in list views.** A column that is all `0` or all `--` is layout noise: hide it, or demote it to a tooltip/detail page. Long-text columns must opt into wrapping (`ui/Table` `wrap: true`) — the default nowrap is for short enumerated values only, and unwrapped long titles overflow into the next cell (2026-08-31 design-optimization batch A).
 
 ---
 

@@ -9,6 +9,8 @@ export interface Column<T> {
 	width?: number | string;
 	align?: "left" | "center" | "right";
 	className?: string;
+	/** Allow cell content to wrap (default: nowrap — long titles overflow into the next cell). */
+	wrap?: boolean;
 }
 
 export interface TableProps<T> {
@@ -144,7 +146,7 @@ export function Table<T>({
 									return (
 										<td
 											key={col.key}
-											className={`px-4 py-3 text-sm whitespace-nowrap tabular-nums ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
+											className={`px-4 py-3 text-sm tabular-nums ${col.wrap ? "" : "whitespace-nowrap"} ${getAlignClass(col.align)} ${col.className || ""}`.trim()}
 										>
 											{content as React.ReactNode}
 										</td>

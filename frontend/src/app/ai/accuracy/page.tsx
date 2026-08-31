@@ -228,18 +228,31 @@ function EnsembleComparisonCard({ models }: { models: ModelWithBacktest[] }) {
 	// (e.g. baseline-only) would mislead.
 	if (primaryAvg === null || baselineAvg === null || ratio === null) return null;
 
+	// Direction-aware framing (honesty-first): the live numbers decide who
+	// leads. Rendering the "pretrained advantage" trophy while the data shows
+	// baselines winning (e.g. Chronos 1.5% vs statistical 0.4% during the
+	// consensus transition) would be marketing spin, not a metric.
+	const chronosLeads = ratio >= 1;
+	const leadValue = chronosLeads ? `${ratio.toFixed(1)}×` : `${(1 / ratio).toFixed(1)}×`;
+
 	return (
 		<Card className="mb-6 border-primary/20 bg-primary/5" data-testid="ensemble-comparison">
 			<CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex items-start gap-3">
-					<div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+					<div
+						className={`rounded-lg p-2.5 ${chronosLeads ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+					>
 						<Trophy className="size-5" />
 					</div>
 					<div>
-						<p className="text-sm font-medium text-foreground">Pretrained ensemble advantage</p>
+						<p className="text-sm font-medium text-foreground">
+							{chronosLeads
+								? "Pretrained ensemble advantage"
+								: "Statistical baselines currently lead"}
+						</p>
 						<p className="text-xs text-muted-foreground mt-0.5">
-							Chronos (pretrained) vs statistical baselines — same verified predictions, lower
-							error.
+							Chronos (pretrained) vs statistical baselines — same verified predictions, lower error
+							wins.
 						</p>
 					</div>
 				</div>
@@ -257,8 +270,12 @@ function EnsembleComparisonCard({ models }: { models: ModelWithBacktest[] }) {
 						</p>
 					</div>
 					<div className="text-right border-l border-border pl-6">
-						<p className="text-[10px] uppercase tracking-wide text-muted-foreground">Advantage</p>
-						<p className="text-lg font-bold text-success">{ratio.toFixed(1)}×</p>
+						<p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+							{chronosLeads ? "Chronos advantage" : "Statistical lead"}
+						</p>
+						<p className={`text-lg font-bold ${chronosLeads ? "text-success" : "text-foreground"}`}>
+							{leadValue}
+						</p>
 					</div>
 				</div>
 			</CardBody>
@@ -378,18 +395,11 @@ export default function AccuracyPage() {
 			<LoadingState loading={loading} skeletonType="stats">
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 					<StatCard
-						title="Overall Accuracy"
+						title="Avg MAPE — All Models"
 						value={overallAccuracy !== null ? Number(overallAccuracy.toFixed(1)) : "--"}
+						suffix={overallAccuracy !== null ? "%" : undefined}
 						icon={<Target className="size-5" />}
 						variant="primary"
-						trend={
-							overallAccuracy !== null
-								? {
-										value: Number(Math.max(0, 100 - overallAccuracy).toFixed(0)),
-										isPositive: overallAccuracy < 10,
-									}
-								: undefined
-						}
 					/>
 					<StatCard
 						title="Best Model"

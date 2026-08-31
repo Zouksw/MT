@@ -57,6 +57,9 @@ const WINDOW_OPTIONS: { label: string; value: WindowSize }[] = [
 	{ label: "90 Days", value: 90 },
 ];
 
+/** Axis floor for log scale (MAPE of exactly 0 would be -∞ in log space). */
+const LOG_FLOOR = 0.1;
+
 interface AccuracyTrendChartProps {
 	models: ModelWithBacktest[];
 }
@@ -94,19 +97,35 @@ function CustomTooltip({
 export function AccuracyTrendChart({ models }: AccuracyTrendChartProps) {
 	const [activeWindow, setActiveWindow] = useState<WindowSize>(30);
 
-	const chartData = useMemo(() => {
+	// Small-denominator MAPE spikes (KNOWN-ISSUES R5) give this chart a heavy
+	// tail — on a linear axis the sub-2% cluster that matters flattens onto the
+	// floor. When the spread spans more than one order of magnitude, switch the
+	// y-axis to log scale instead of capping: nothing is hidden, every dot
+	// stays visible, and the tight low-error cluster becomes readable. Zero
+	// MAPE maps to the 0.1 axis floor (log needs > 0); tooltips still carry
+	// the exact figure.
+	//
+	// One row per model, keyed by modelId: a per-model Line then reads its
+	// value from the shared row, so the dot lands under its own x label.
+	// (Per-child `data` arrays align by index in recharts — every dot used to
+	// stack on the first category.)
+	const { chartData, useLogScale } = useMemo(() => {
 		const modelsWithBacktest = models.filter((m) => m.backtest?.windows?.length);
-		if (modelsWithBacktest.length === 0) return [];
+		if (modelsWithBacktest.length === 0) return { chartData: [], useLogScale: false };
 
-		return modelsWithBacktest.map((m) => {
+		const rows = modelsWithBacktest.map((m) => {
 			const window = m.backtest?.windows.find((w) => w.days === activeWindow);
-			return {
-				name: m.displayName,
-				mape: window?.mape ?? null,
-				predictions: window?.predictionCount ?? 0,
-				verified: window?.verifiedCount ?? 0,
-			};
+			return { name: m.displayName, modelId: m.modelId, mape: window?.mape ?? null };
 		});
+
+		const positives = rows.map((d) => d.mape).filter((v): v is number => v != null && v > 0);
+		const spread = positives.length >= 2 ? Math.max(...positives) / Math.min(...positives) : 1;
+		const log = spread > 20;
+		const chartData = rows.map((d) => ({
+			name: d.name,
+			[d.modelId]: d.mape != null && log && d.mape <= 0 ? LOG_FLOOR : d.mape,
+		}));
+		return { chartData, useLogScale: log };
 	}, [models, activeWindow]);
 
 	const activeModels = useMemo(() => models.filter((m) => m.backtest?.windows?.length), [models]);
@@ -166,39 +185,35 @@ export function AccuracyTrendChart({ models }: AccuracyTrendChartProps) {
 							axisLine={{ stroke: chartAxisStyles.line.stroke }}
 							tickLine={false}
 							tickFormatter={(v: number) => `${v}%`}
+							scale={useLogScale ? "log" : "auto"}
+							domain={useLogScale ? [LOG_FLOOR, "auto"] : undefined}
+							allowDataOverflow={false}
 						/>
 						<Tooltip content={<CustomTooltip />} />
 						<Legend wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
-						<Line
-							type="monotone"
-							dataKey="mape"
-							name="MAPE"
-							stroke={chartGridStyles.stroke}
-							strokeWidth={0}
-							dot={false}
-							legendType="none"
-						/>
-						{activeModels.map((m) => {
-							const window = m.backtest?.windows.find((w) => w.days === activeWindow);
-							return (
-								<Line
-									key={m.modelId}
-									type="monotone"
-									dataKey="mape"
-									name={m.displayName}
-									stroke={MODEL_COLORS[m.modelId] || "#6B7280"}
-									strokeWidth={2}
-									dot={{ r: 4, strokeWidth: 2, fill: "#FFFFFF" }}
-									activeDot={{ r: 6, strokeWidth: 2 }}
-									data={[{ name: m.displayName, mape: window?.mape ?? null }]}
-									connectNulls={false}
-									isAnimationActive={true}
-									animationDuration={chartAnimations.duration}
-								/>
-							);
-						})}
+						{activeModels.map((m) => (
+							<Line
+								key={m.modelId}
+								type="monotone"
+								dataKey={m.modelId}
+								name={m.displayName}
+								stroke={MODEL_COLORS[m.modelId] || "#6B7280"}
+								strokeWidth={2}
+								dot={{ r: 4, strokeWidth: 2, fill: "#FFFFFF" }}
+								activeDot={{ r: 6, strokeWidth: 2 }}
+								connectNulls={false}
+								isAnimationActive={true}
+								animationDuration={chartAnimations.duration}
+							/>
+						))}
 					</LineChart>
 				</ResponsiveContainer>
+				{useLogScale && (
+					<p className="text-[11px] text-muted-foreground mt-1">
+						Logarithmic y-axis — MAPE spread spans multiple orders of magnitude (small-denominator
+						spikes). Hover any point for the exact figure.
+					</p>
+				)}
 			</CardBody>
 		</Card>
 	);

@@ -516,63 +516,66 @@ export default function ProfessionalChart({
 
 	return (
 		<div className="relative w-full">
-			{/* OHLCV Legend */}
-			{legend && chartType === "candlestick" && (
-				<div className="absolute top-2 left-3 z-10 flex gap-3 text-xs font-mono">
-					<span className="text-gray-500">{legend.date}</span>
-					<span>
-						O{" "}
-						<span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>
-							{formatPrice(legend.open, false)}
+			{/* Overlay legend — one flex row (OHLCV left, indicators right) so the
+			    two groups can never collide, even when both wrap at 390px. */}
+			<div className="absolute top-2 inset-x-3 z-10 flex items-start justify-between gap-4 text-xs">
+				{legend && chartType === "candlestick" && (
+					<div className="flex flex-wrap min-w-0 flex-1 gap-x-3 gap-y-1 font-mono">
+						<span className="text-gray-500">{legend.date}</span>
+						<span>
+							O{" "}
+							<span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>
+								{formatPrice(legend.open, false)}
+							</span>
 						</span>
-					</span>
-					<span>
-						H <span className="text-foreground">{formatPrice(legend.high, false)}</span>
-					</span>
-					<span>
-						L <span className="text-foreground">{formatPrice(legend.low, false)}</span>
-					</span>
-					<span>
-						C{" "}
-						<span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>
-							{formatPrice(legend.close, false)}
+						<span>
+							H <span className="text-foreground">{formatPrice(legend.high, false)}</span>
 						</span>
-					</span>
-					{legend.volume > 0 && (
-						<span className="text-gray-500">V {legend.volume.toLocaleString()}</span>
+						<span>
+							L <span className="text-foreground">{formatPrice(legend.low, false)}</span>
+						</span>
+						<span>
+							C{" "}
+							<span className={legend.close >= legend.open ? "text-green-500" : "text-red-500"}>
+								{formatPrice(legend.close, false)}
+							</span>
+						</span>
+						{legend.volume > 0 && (
+							<span className="text-gray-500">V {legend.volume.toLocaleString()}</span>
+						)}
+					</div>
+				)}
+
+				{/* Indicator legend */}
+				<div className="flex flex-wrap justify-end shrink-0 gap-x-3 gap-y-1">
+					{showSma20 && (
+						<span className="flex items-center gap-1">
+							<span
+								className="inline-block w-3 h-0.5 rounded"
+								style={{ backgroundColor: CHART_COLORS.sma20 }}
+							/>
+							<span className="text-gray-500">SMA20</span>
+						</span>
+					)}
+					{showSma50 && (
+						<span className="flex items-center gap-1">
+							<span
+								className="inline-block w-3 h-0.5 rounded"
+								style={{ backgroundColor: CHART_COLORS.sma50 }}
+							/>
+							<span className="text-gray-500">SMA50</span>
+						</span>
+					)}
+					{predictions && predictions.length > 0 && (
+						<span className="flex items-center gap-1">
+							<span
+								className="inline-block w-3 h-0.5 rounded"
+								style={{ backgroundColor: CHART_COLORS.prediction, borderStyle: "dashed" }}
+							/>
+							<span className="text-gray-500">AI Prediction</span>
+						</span>
 					)}
 				</div>
-			)}
-
-			{/* Indicator legend */}
-			<div className="absolute top-2 right-3 z-10 flex gap-3 text-xs">
-				{showSma20 && (
-					<span className="flex items-center gap-1">
-						<span
-							className="inline-block w-3 h-0.5 rounded"
-							style={{ backgroundColor: CHART_COLORS.sma20 }}
-						/>
-						<span className="text-gray-500">SMA20</span>
-					</span>
-				)}
-				{showSma50 && (
-					<span className="flex items-center gap-1">
-						<span
-							className="inline-block w-3 h-0.5 rounded"
-							style={{ backgroundColor: CHART_COLORS.sma50 }}
-						/>
-						<span className="text-gray-500">SMA50</span>
-					</span>
-				)}
-				{predictions && predictions.length > 0 && (
-					<span className="flex items-center gap-1">
-						<span
-							className="inline-block w-3 h-0.5 rounded"
-							style={{ backgroundColor: CHART_COLORS.prediction, borderStyle: "dashed" }}
-						/>
-						<span className="text-gray-500">AI Prediction</span>
-					</span>
-				)}
 			</div>
 
 			{/* Chart container */}

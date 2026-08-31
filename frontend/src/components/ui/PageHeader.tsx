@@ -47,14 +47,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 				</nav>
 			)}
 
-			<div className="flex justify-between items-start gap-4">
+			{/* Stack actions below the title on mobile — a shrink-0 side-by-side
+			    row overflows narrow viewports (trading header clipped at 390px). */}
+			<div className="flex flex-col sm:flex-row justify-between items-start gap-4">
 				<div className="flex-1">
 					<h1 className="text-2xl font-semibold text-foreground tracking-tighter m-0 mb-2">
 						{title}
 					</h1>
 					{description && <p className="text-sm text-muted-foreground m-0">{description}</p>}
 				</div>
-				{actions && <div className="shrink-0 flex items-center gap-2">{actions}</div>}
+				{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
 			</div>
 		</div>
 	);
