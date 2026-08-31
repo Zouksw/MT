@@ -105,7 +105,7 @@ export default function LandingPage() {
 						))}
 						<a
 							href="/register"
-							className="rounded-full bg-black px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
+							className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
 						>
 							Get Started
 						</a>
@@ -143,7 +143,7 @@ export default function LandingPage() {
 						<a
 							href="/register"
 							onClick={() => setMobileMenuOpen(false)}
-							className="block rounded-full bg-black px-4 py-2 text-center text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors mt-2"
+							className="block rounded-full bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors mt-2"
 						>
 							Get Started
 						</a>
@@ -178,7 +178,7 @@ export default function LandingPage() {
 						<div className="mt-8">
 							<a
 								href="/register"
-								className="rounded-full bg-black px-8 py-3 text-base font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors"
+								className="rounded-full bg-primary px-8 py-3 text-base font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
 							>
 								Create free account
 							</a>
