@@ -380,9 +380,10 @@ router.get(
 				tier: "2",
 				beefRelevance: "adjacent",
 			},
-			china_customs_stats: {
-				label: "China Customs",
-				description: "中国海关总署 — monthly import/export statistics by commodity and country",
+			comtrade_mirror: {
+				label: "UN Comtrade Mirror",
+				description:
+					"UN Comtrade 公共预览 API — 分国别×HS×月度对华出口量价（出口国 FOB 镜像 + 中国年度 CIF 校准，V8 批0）",
 				tier: "3",
 				beefRelevance: "adjacent",
 			},

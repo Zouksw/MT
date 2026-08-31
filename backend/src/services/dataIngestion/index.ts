@@ -9,10 +9,10 @@ import { scraperManager } from "./scraperManager";
 import { abaresScraper } from "./sources/abaresData";
 import { balticDryScraper } from "./sources/balticDry";
 import { cepeaScraper } from "./sources/cepeaData";
-import { chinaCustomsStatsScraper } from "./sources/chinaCustomsStats";
 import { chinaWholesaleScraper } from "./sources/chinaWholesale";
 import { cmeFuturesScraper } from "./sources/cmeFutures";
 import { commodityPriceScraper } from "./sources/commodityPrices";
+import { comtradeMirrorScraper } from "./sources/comtradeMirror";
 import { dceFuturesScraper } from "./sources/dceFutures";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
@@ -53,7 +53,14 @@ export function registerAllScrapers(): void {
 
 	// Tier 3 — China domestic & import data
 	scraperManager.registerSource("china_wholesale", chinaWholesaleScraper);
-	scraperManager.registerSource("china_customs_stats", chinaCustomsStatsScraper);
+	// "china_customs_stats" decommissioned 2026-08-31 (V8 批0, D23): its
+	// stats.customs.gov.cn endpoint was fabricated (never produced a row) and
+	// the host is egress-blocked — every daily run paid a timeout to report
+	// success+0 rows. Replaced by comtrade_mirror (partner-reported exports
+	// to China, keyless). Source file kept; re-register in both places (here
+	// + DAILY_SOURCES in server.ts) only after the official portal becomes
+	// reachable AND the real endpoint contract is verified.
+	scraperManager.registerSource("comtrade_mirror", comtradeMirrorScraper);
 
 	// Tier 4 — Shipping & logistics
 	scraperManager.registerSource("baltic_dry", balticDryScraper);

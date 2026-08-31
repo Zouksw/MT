@@ -138,7 +138,11 @@ function backgroundJobs(): ScheduledJob[] {
 		"mla_nlrs",
 		"cepea",
 		"abares",
-		"china_customs_stats",
+		// Trade-flow mirror replaces "china_customs_stats" (decommissioned
+		// 2026-08-31, V8 批0/D23 — fabricated endpoint, host blocked, 0 rows
+		// ever). Monthly/annual Comtrade data re-scanned daily: non-release
+		// days confirm no change (noChange contract, round-149 precedent).
+		"comtrade_mirror",
 		"secex",
 		"usda_ams",
 		// Weekly NW_LS421 report on the daily cycle: the PDF always holds the
