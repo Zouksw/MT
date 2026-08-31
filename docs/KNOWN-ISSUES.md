@@ -35,6 +35,11 @@
 - **key 现状（.env 实查）**：`MLA_API_KEY` / `USDA_MARS_API_KEY` / `OPENWEATHER_API_KEY` 为**空串**（占位名存在、值为空），`FRED_API_KEY` 整行缺失——fred/weather 每 6h 的 "Missing KEY" error 行即此因。**源复活仍是 key 获取问题（用户动作），代码侧端到端就绪，优先级不变**。
 - **旁路通道已开**：资讯侧 RSS（Beef Central + USDA Federal Register）自 2026-08-22 起每 6h 注入 market_news（M3，round-118），是当前唯一自动新增的外部内容通道。
 
+**2026-08-31 更新（round-152，V8 批0）——贸易流量价层脱离 D1 困境**：
+- 对华贸易统计层（原 china_customs_stats 职责）已由 `comtrade_mirror` 打通（UN Comtrade 公共预览 API，免 key、本机直连）：928 行入库（6 国×8 HS×37 个月 + 中国年度 CIF 校准 7 行），live 验收与贸易报告逐位对齐。**该子层不再依赖任何用户 key**。
+- `china_customs_stats` 按 D23 退役（双处注册移除、文件保留）：其端点 `stats.customs.gov.cn/api/trade/query` 为虚构路径 + 主机封锁，ingestion_logs 历史全为 warning 0/0（零产出实证）。官方平台直连复活仍属 D1 网络结论（需中国出口节点或人工月度 CSV，见 IMPROVEMENT-PLAN 批 5 观察项）。
+- D1 其余部分（MLA/USDA key、beef_cut_prices 冻结 2026-04-30）**不变**。
+
 **桥接兜底（已上线）**：`beefPriceBridge.ts` 把 5 个 STRONG 映射的 CommodityPrice slug 复制到 BeefCutPrice，但只有 `aus_cube_roll_m9` 有上游行（180 行，最新 2026-04-29）。
 
 **round-63 全量 scraper 审计（2026-08-02 live 实测，19 源逐项核实）**：每个 scraper 都"成功"返回 0 行（scraperManager 计 succeeded），但实际状态分 5 类：
@@ -358,6 +363,13 @@
 **事实**：`pnpm.overrides` 的 `"vite": "^5.4.21"`（vitest2+vite5 时代安全钉）从未随 vitest 4 + vite 6 升级同步，而 lockfile 已是 vite 6.4.3——**任何** `pnpm add/install` 都会把 vite 重解为 5.4.21 并炸掉 vitest 4（`ERR_PACKAGE_PATH_NOT_EXPORTED`）。属于"改了 package.json 不 install"埋下的延迟炸弹。
 **修复**：override 改 `"^6.4.3"`（≥6.4.3 覆盖原 CVE 意图），vite 恢复 6.4.3、vitest 4.1.10 全绿。
 **教训**：改 overrides 必须当场 install + 跑测试。顺带实证 AGENTS.md 的"Vitest 2"陈述已过期（实为 4.1.10）。
+
+### T3 — 门禁基线两处既有噪音（round-152 登记，均非当批引入）
+
+**来源**：2026-08-31 round-152 V8 批次门禁实测（净树复现确认 pre-existing）
+- **frontend `tsc --noEmit` 2 个既有类型错**：`frontend/src/hooks/__tests__/useTradingData.test.ts:255/256`（`latestDate` 不在 `{id,slug,name}` 类型上）。净树（stash 全部改动后）复现同样报错，证明非 V8 批引入。影响：AGENTS 六所载前端类型检查命令当前红。待修（小改动：补类型或修 fixture），登记不擅动（非己所造）。
+- **backend `mapeTracking.monthly.test.ts` "批0b restore" 用例月末敏感 flaky**：2026-08-31 当天 3 跑 1 挂（"restoreVerifiablePredictions reclaims a not-yet-actionable..."），隔离复跑 9/9 全过。用例依赖 anchor+horizon+90d grace 的日期算术，月末边界（08-31）易触发。影响：全量测试偶发 1 失败，复跑即绿，不掩盖真实回归（失败时可见）。
+**动作**：均待独立小轮次处理；V8 批次以"复跑通过 + 失败项与本批无关（净树复现）"为门禁判断口径。
 
 ---
 

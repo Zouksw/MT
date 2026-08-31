@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-152：执行轮 — 第八波 v3.6.0 批 0+2+4 全落地（Comtrade 镜像贸易流通路 + 阿根廷月度降级分支 + 贸易流读侧面）
+
+用户指令"是否存在可以自动打通的数据通路，将可以自动操作的项目先完成"。三批独立 commit 全门禁（tsc/biome/全量测试/构建/PM2 重启/live 验证）。批 1（单一窗口账号）/批 3（data.gov key）有用户门未动，批 5 观察项值守。**轮次注记**：三笔代码 commit 消息中的 "round-151" 为并发会话撞号（调研轮 1da44f3 同号在先），本执行轮定名 round-152，以 SHA 区分为准。
+
+- **批 0 `6afc196` — comtrade_mirror 源（P0 主批，免 key 零外部依赖）**：UN Comtrade 公共预览 API 出口国镜像——月度活 reporter {BR/AU/NZ/US}×8 牛肉 HS（0201/0202/020230/020220/0206 族）×flow=X×partner=156 + {AR/UY} 年度回退 + 中国年度 CIF 校准线（`import_cn_cif_*` 独立 type，与 FOB 镜像绝不合并）。全部实测坑写入实现与测试：motCode==0 过滤（运输方式拆行裸和≈2×）、flowCode 必须 X/M、period 单值限制（cmdCode/partnerCode 逗号批量替代）、~1 req/s 限速（2s 间隔+瞬态重试）。37 个月回填 161 查询→928 行（6 区域×8 HS×37 月度时点，2023-07→2026-07）；live 验收与贸易报告**逐位对齐**（BR 2026-06 0202 = 158,364,760kg/$1,069.2M/$6,751/t；中国 2024 CIF 校准 7 行全中：AR 3723/AU 6462/BR 4621/NZ 4410/US 9308/UY 3318/全球 4600）。**noChange 精度修复（live 发现 live 修）**：MarketFactor.value 为 Decimal(18,6)，裸浮点单价永不等库内截断值 → boot run 出现 111 行幽灵更新击穿 sameFactor no-op；解析器预圆整 6 位小数后复跑 → unchanged/success 0/0（freshness 板 healthy）。**D23 执行**：china_customs_stats 双处退役（虚构端点+主机封锁零产出，ingestion_logs 历史全 warning 0/0 佐证；文件保留待官方平台复活），源注册数 19（AGENTS 已同步 21 文件/19 注册）。+10 测试（mot 陷阱/单价实测值/双口径航道/年月日期/坏行丢弃/URL+查询集契约钉住）。
+- **批 2 `30b3440` — argentina_exports 源（计划降级分支兑现）**：序列定位证实 datos.gob.ar **无牛肉×目的国月度交叉**（SSPM 75 产品族无目的国、77 目的国无产品——缺口登记，INDEC NCM 附录/SENASA 留观察）。落 `ica_carnes`（SSPM 75.3 月度 CSV 直链，1992 起、t-2 新鲜、免 key）：type=`export_fob_carnes`/region=`AR→WORLD`/USD M（刻意不用 export_to_cn_* 语义——无目的国无数量即无单价）。schema 漂移全有或全无（缺列 0 行→warning）、Decimal(18,6) 同款预圆整、noChange 契约。live：boot run 414 行 CSV→36 月窗口 34 行入库（2023-09→2026-06）。+5 测试。
+- **批 4 `65b1157` — 贸易流读侧最小面（D25 鉴权内起步）**：`GET /api/market/trade-flows`（authenticate；zod hs 枚举钉住源模块 HS_CODES 单一事实源；cacheRoute 3600s）——分国别最新月量/价/环比 + 年度回退线区分（freq A 无环比）+ 中国年度 CIF 校准**并列表** + 口径注记 3 条强制随载荷。**stale 语义 live 修复**：初版 75 天墙钟阈值把 t-2 正常节奏源（AU/US）误标 stale，改月差>3 月（UY 年度 2024 仍诚实 stale）。/beef 页新增"对华贸易流"卡（TradeFlowsCard：分国别表 + CIF 校准子表 + 注记页脚；匿名访问卡片自省略——forecast 列同款降级；Array.isArray 防御让页面测试的异形 mock 载荷安全跳过）。+4 集成测试（mt_test 自播自清 + Redis 缓存键清理——键为 Router 相对路径 `/trade-flows`，live 复核）。live：BR 2026-07 $6,398/t 82,714t MoM −5.2%、NZ $5,556/t +5.7%，与研究报告一致。
+- **基线与登记**：backend **1091+1 skip**（+19）、frontend **354**（基线 352 上零回退）、inference 61 不变 = **1546**。KNOWN-ISSUES：D1 补 2026-08-31 更新（贸易流量价层脱离 D1——免 key 已通，china_customs_stats 退役实证）；新登记 T3 两处**既有**门禁噪音（frontend `useTradingData.test.ts` 2 个 tsc 类型错，净树复现非本批引入；`mapeTracking.monthly.test.ts` 月末敏感 flaky，8-31 当天 3 跑 1 挂隔离即过）。AGENTS 源计数同步（21 文件/19 注册）。三服务 PM2 重启后在线。
+
 ### 2026-08-31 — round-151：调研轮 — 数值预测与大模型实践调研报告（RESEARCH-LLM-NUMERIC-FORECASTING v1.0.0）
 
 用户目标"重新获取当前服务器的状态，重点关注预测数值变化的模型使用的方案，调研量化金融和肉类贸易等相关实践，学习其他相关项目是如何使用大模型来实现数值预测的"。docs-only 调研轮（round-148 同例），三路外部调研走三个并发子代理（量化金融 / 肉类农产品 / 开源 TSFM 工程），关键承重声明经独立批评代理复审（初稿 5 处硬伤修正后定稿）。

@@ -36,7 +36,7 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **19** | `backend/src/services/dataIngestion/sources/*.ts`（排除 index/test；2026-08-31 复核，round-150 批 1 增 usdaImportBeef（NW_LS421 周报→beef_90cl_us）后为 19） |
+| 数据源爬虫 | **21 文件 / 19 注册** | `sources/*.ts`（排除 index/test）；2026-08-31 复核（round-151，V8 批0+2）：增 comtradeMirror/argentinaExports、退役 chinaCustomsStats（文件保留）后文件数 21；inac 与 chinaCustomsStats 为退役保留文件，注册数 19（`registerAllScrapers` 实数） |
 | Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |
