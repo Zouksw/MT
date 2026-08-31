@@ -180,6 +180,7 @@ existence is never disclosed cross-user; ADMIN bypasses ownership checks.
 | `/api/market/commodities/:slug/price-multi` | GET | Multi-source comparison (newest-window semantics) |
 | `/api/market/commodities/:slug/fundamentals` | GET | Related market factors (last 30d, relevant regions) |
 | `/api/market/factors/exchange-rates` | GET | Latest FX rates (API-only) |
+| `/api/market/trade-flows` | GET | 对华牛肉贸易流（`?hs=` 8 个 HS 码可选，默认 0202）：partner 月度 FOB 镜像（BR/AU/NZ/US + AR/UY 年度回退，UN Comtrade 免 key）+ 中国年度 CIF 校准**双轨呈现，口径绝不合并**（3 条口径注记随载荷返回；每序列 stale 旗标按月差口径）；需鉴权；cacheRoute 3600s（round-152 批 4） |
 | `/api/market/sources` | GET | Data-source health board (status enum only — raw error strings removed round-119) |
 | `/api/market/commodities/:slug/sources` | GET | Per-commodity contributing sources |
 | `/api/market/sources/:sourceId/refresh` | POST | Trigger one scraper (from data-sources board) |

@@ -40,6 +40,11 @@
 - `china_customs_stats` 按 D23 退役（双处注册移除、文件保留）：其端点 `stats.customs.gov.cn/api/trade/query` 为虚构路径 + 主机封锁，ingestion_logs 历史全为 warning 0/0（零产出实证）。官方平台直连复活仍属 D1 网络结论（需中国出口节点或人工月度 CSV，见 IMPROVEMENT-PLAN 批 5 观察项）。
 - D1 其余部分（MLA/USDA key、beef_cut_prices 冻结 2026-04-30）**不变**。
 
+**2026-08-31 更新（round-153，数据维护轮）——fred 免 key 复活 + world_bank 幻影更新修复**：
+- `fred`（宏观 MarketFactor 序列）不再被 FRED_API_KEY 硬门控：无 key 走 fredgraph.csv 免费公开下载（与 fredCsv.ts 同端点，BALTIC_DRY 除外——非 FRED 序列），有 key 升级官方 JSON API。首轮 live 暴露并修正 5 个休眠期不可见的错误 series id（PALLFNFINDEX→PALLFNFINDEXM、PCOPPUSD→PCOPPUSDM、PWHEAMTUSD→PWHEAMTUSDM、PCOTTIND→PCOTTINDUSDM、PSUGAUSA→PSUGAISAUSDM，全部 live 探针核实 2026-08-31）。live 验收：market_factors **15 序列×12 观测**（dailies 至 2026-08-25/28、monthlies 至 2026-07-01），每周期 ~30 条 "Missing FRED_API_KEY" error 噪音归零。FRED_API_KEY 转为可选增强。
+- `world_bank`（fredCsv 月度通道）**每轮 23-35 行幻影更新已修**：FRED CSV 原始值带 14 位小数（实测 PPORKUSDM 89.61709686727274）vs Decimal(18,6) 存储（89.617097），samePrice 永不成立 → 每次 boot/定时运行重写全量行。修复：fredCsv.ts 解析边界统一 6dp 舍入（同源覆盖 cme 日度通道）+ 补 noChange 契约（月中重扫 0/0 → success 而非 warning）。live：boot run `world_bank success 0/0 (unchanged)`（此前 success 0/23-35）。该幻影更新此前一直掩盖 noChange 缺失。
+- 牛肉相关 CommodityPrice 现势（同日实测）：CME 活牛/架子牛 daily 至 2026-08-28、beef_90cl_us weekly 至 2026-08-28、beef_carcass_us/beef_retail_us/pork_world/poultry_world monthly 至 2026-07-01（八月月度值 mid-Sep 发布，属正常节奏）；usda_ams 部位级（beef_australia 等）仍冻结 2026-04-29——**D1 的 key 门部分仅剩部位级与 mla**。
+
 **桥接兜底（已上线）**：`beefPriceBridge.ts` 把 5 个 STRONG 映射的 CommodityPrice slug 复制到 BeefCutPrice，但只有 `aus_cube_roll_m9` 有上游行（180 行，最新 2026-04-29）。
 
 **round-63 全量 scraper 审计（2026-08-02 live 实测，19 源逐项核实）**：每个 scraper 都"成功"返回 0 行（scraperManager 计 succeeded），但实际状态分 5 类：
@@ -364,12 +369,13 @@
 **修复**：override 改 `"^6.4.3"`（≥6.4.3 覆盖原 CVE 意图），vite 恢复 6.4.3、vitest 4.1.10 全绿。
 **教训**：改 overrides 必须当场 install + 跑测试。顺带实证 AGENTS.md 的"Vitest 2"陈述已过期（实为 4.1.10）。
 
-### T3 — 门禁基线两处既有噪音（round-152 登记，均非当批引入）
+### T3 — 门禁基线两处既有噪音（round-152 登记；第二条 round-153 重新定性）
 
 **来源**：2026-08-31 round-152 V8 批次门禁实测（净树复现确认 pre-existing）
 - **frontend `tsc --noEmit` 2 个既有类型错**：`frontend/src/hooks/__tests__/useTradingData.test.ts:255/256`（`latestDate` 不在 `{id,slug,name}` 类型上）。净树（stash 全部改动后）复现同样报错，证明非 V8 批引入。影响：AGENTS 六所载前端类型检查命令当前红。待修（小改动：补类型或修 fixture），登记不擅动（非己所造）。
-- **backend `mapeTracking.monthly.test.ts` "批0b restore" 用例月末敏感 flaky**：2026-08-31 当天 3 跑 1 挂（"restoreVerifiablePredictions reclaims a not-yet-actionable..."），隔离复跑 9/9 全过。用例依赖 anchor+horizon+90d grace 的日期算术，月末边界（08-31）易触发。影响：全量测试偶发 1 失败，复跑即绿，不掩盖真实回归（失败时可见）。
-**动作**：均待独立小轮次处理；V8 批次以"复跑通过 + 失败项与本批无关（净树复现）"为门禁判断口径。
+- **backend 全量套件偶发 1 挂**：~~"mapeTracking.monthly 月末日期敏感 flaky"~~ **round-153 重新定性：并行负载型 flaky，非日期算术**。证据（2026-08-31）：① 08-30 全量 3 跑 1 挂于 mapeTracking.monthly "批0b restore" 用例，隔离复跑 9/9 过；② 08-31 19:01 全量 1 挂于**另一个用例** signals.test.ts "should generate a real signal"（30s 超时；隔离复跑 19/19 仅 1.5s——20× 争用放大）；③ 同日 19:21/19:32 两次全量全绿（1097+1 / 1099+1 skip）；④ restore SQL 窗口算术全部锚定月首（day-1），静态复核无 day-of-month 溢出路径。机制：vitest 多 worker 并行共享 mt_test DB + 同机并发会话负载 → 连接池/CPU 争用超时，挂点随负载漂移。
+- **门禁卫生（round-153 实录）**：`npx vitest run | tail` 管道使 tail 的 exit 0 掩盖测试失败——19:01 的失败最初以 exit 0 呈现。门禁命令须 `echo EXIT:${PIPESTATUS[0]}` 或免管道直读输出。
+**动作**：T3a（tsc 两错）待独立小轮次处理；T3b 维持 round-152 的门禁口径（复跑通过 + 失败项与本批无关（隔离绿）即放行），仅当复发且带完整失败输出时再议 timeout 上调/套件序列化（投机修复会掩盖共识链路的真实性能回归，暂不采纳）。
 
 ---
 

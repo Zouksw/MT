@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-08-31 — round-153：数据维护轮 — ingestion 三修 + 数据文档对齐（world_bank 幻影更新 / fred 免 key 复活 / T3 重新定性）
+
+用户目标"解决与数据有关的其他问题，维护项目数据相关的文档"。两代码批（独立 commit、全门禁、live 验证）+ 文档对齐批。
+
+- **批 A `8fb2d92` — fredCsv 6dp 舍入 + world_bank noChange 契约**：`commodity_prices` OHLC 列为 Decimal(18,6)，FRED CSV 原始值带 14 位小数（live 实证 PPORKUSDM 89.61709686727274 vs 存储 89.617097），samePrice 永不成立 → **world_bank 每次 boot/定时运行幻影重写 23-35 行**（该幻影更新同时掩盖了 noChange 契约缺失）。修复：共享模块 `fredCsv.ts` 解析边界统一 6dp 舍入（同源覆盖 cme 日度通道同类隐患）+ 返回 `seen` 计数；worldBankPrices 据此对"月中重扫 0/0 有数据在手"返回 `noChange:true` → 分类 success。live：boot run `world_bank success 0/0 (unchanged)`（此前 success 0/23-35）。+6 测试（fredCsv 舍入×3 + noChange 契约×3）。
+- **批 B `2ab1fa9` — fred 免 key fredgraph.csv 回退**：原源每周期硬跳过（"Missing FRED_API_KEY" error ~30 行/36h）。现无 key 走公开 CSV 下载（与 fredCsv.ts 同端点）、有 key 升级 JSON API；写入环统一 12 观测截断 + 6dp 舍入 + `fetchPath` 溯源（api|csv）+ noChange + HTML 错误页守卫。**首轮 live 暴露 5 个休眠期不可见的错误 series id 并修正**（PALLFNFINDEX→PALLFNFINDEXM、PCOPPUSD→PCOPPUSDM、PWHEAMTUSD→PWHEAMTUSDM、PCOTTIND→PCOTTINDUSDM、PSUGAUSA→PSUGAISAUSDM，均 live 探针核实）；BALTIC_DRY 非 FRED 序列移除（BDI 归 baltic_dry 源）。live：**market_factors 15 序列×12 观测**（dailies 至 08-25/28、monthlies 至 07-01），error 噪音归零，FRED_API_KEY 转可选。+2 测试。
+- **T3 重新定性（KNOWN-ISSUES）**：backend 全量偶发 1 挂**非"月末日期敏感"而是并行负载型**——08-31 19:01 挂点漂移到 signals.test.ts（30s 超时，隔离 1.5s 全过；同日另两次全量全绿；restore SQL 锚定月首无日溢出路径）。顺带登记门禁卫生：`vitest run | tail` 的管道 exit 0 会掩盖失败（本次实录），门禁命令须带 `PIPESTATUS`。投机性 timeout 上调不采纳（会掩盖共识链路真实性能回归）。
+- **数据文档对齐**：API.md 补 `GET /api/market/trade-flows` 行（round-152 批 4 此前漏登）；PRODUCT-SPEC §七 数据层两行重写——牛肉价格行（免 key 活水已开/冻结面收窄至部位级，全部 2026-08-31 live 实测）+ 新增对华贸易流量层行；KNOWN-ISSUES D1 追加 round-153 更新。基线：backend **1099+1 skip**（1092→1100，+8，零回退；挂点漂移证据见 T3）；frontend/inference 未动。
+- **未动**：T3a（useTradingData.test.ts 两 tsc 错——该文件正被并发会话修改，不擅动）；批 1/3 用户门（单一窗口账号/data.gov key）不变。
+
 ### 2026-08-31 — round-154：方案维护轮 — PREDICTION-STRATEGY §八现行大模型预测方案入册（round-151/153 认知收敛）
 
 用户目标"针对这一轮对于模型预测的认知，维护项目使用大模型进行预测的方案"。docs-only（零代码改动，无测试门禁可跑；本节数字均引自已入库证据文档 RESEARCH-LLM-NUMERIC-FORECASTING v1.0.0 与 backtests/beef-model-settings-2026-08.md）。

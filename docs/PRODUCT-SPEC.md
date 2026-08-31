@@ -186,7 +186,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 | 最终形态需要 | 现状 | 差距 |
 |-------------|------|------|
-| 牛肉价格数据 (进口/国产/部位) | 8 源代码已存在 (abares/cepea/inac/mla/secex/usda_ams/usda_psd/chinaCustomsStats) | ⚠️ 数据冻结 2026-04-30（详见 KNOWN-ISSUES D1：key 现状为 MLA/USDA_MARS/OPENWEATHER 空串 + FRED 行缺失，网络层经代理已非硬阻塞——2026-08-31 复核修正，原"3 个 key 已 set"括注已过期）；CSV 手动导入路径已验证可用（round-81） |
+| 牛肉价格数据 (进口/国产/部位) | **免 key 活水已开**（2026-08-31 live 实测）：CME 活牛/架子牛 daily（08-28）、beef_90cl_us 进口 90CL weekly（USDA NW_LS421，round-150）、beef_carcass_us / beef_retail_us / pork_world / poultry_world monthly（FRED 免 key CSV，07-01，八月值 mid-Sep 发布属正常节奏）；**冻结面收窄至部位级**——usda_ams（beef_australia 等，2026-04-29）与 mla_nlrs 需 key（详见 KNOWN-ISSUES D1）；爬虫 21 文件/19 注册（chinaCustomsStats 已退役，comtrade_mirror/argentina_exports/usda_import_beef 接入）；CSV 手动导入路径已验证可用（round-81） | ◐ 进口基准与替代蛋白月度已自动化；**部位级 BeefCutPrice 是剩余硬缺口**（key 解阻或 CSV 运营） |
 | AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（~~chronos MAPE 1.7% 显著优于 stat 3.6%~~ **2026-08-23 round-121 取证修订**：~~全时间轴 chronos 均值 46-59%~~（**round-129 口径再修**：46-59% 为 raw 口径，混入 stale 失效行——chronos 30d 窗 16 条 stale 行 avg≈9676% 主导；可引用的 verified-only 口径为 **chronos 全周期均值 7-10% vs naive 3.75%，中位 0.51-0.52 vs 0.33**）、中位数均 <1%——真实故事是"chronos 全面劣于 naive（约 2 倍均值）、被淘汰线清出投票"，详见 COMPETITIVE-ANALYSIS §三.3 v1.1.1 口径修正与 accuracy 页） |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
@@ -195,6 +195,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | 进口到岸成本测算（获客工具） | 公开页 `/tools/landing-cost` + 只读端点 `GET /api/tools/landing-cost` | ✅ 已上线（2026-08-30，v3.2.0 批3）：白名单活价（IMF 牛肉基准 USC/lb 月度、CME 活牛/架子牛 USD/cwt 日更、USD/CNY，全部带日期/新鲜度旗标）× 用户自担关税/增值税/运费/损耗参数 → ¥/kg 到岸参考区间；**平台不内置各国税率（不造虚构数据）**，未知量纲拒绝换算、断流诚实降级 |
 | 多源数据治理 | `authoritativeSources` 权威源声明 + 写入侧量纲守卫 | ✅ 18 个混源 slug 已声明（2026-08-30 批2）——训练/MAPE 验证/最新价/相关性全链一致取数；写入侧按源 20× 量纲守卫；未声明混源不进方向聚合（provenance 守卫）。明细见 KNOWN-ISSUES R2 |
 | 贸易词汇五维（v3.0.0 批 C） | BeefCutPrice metadata 扩 feedingRegime/feedingDays/leanPct/breed/locationPort + CSV 模板扩展 + taxonomy 报盘俗名映射 | ◐ 设计登记未落地——数据解冻（KNOWN-ISSUES D1）即接上 |
+| 对华贸易流量层（FOB/CIF 双轨） | `comtrade_mirror`（UN Comtrade 免 key：partner 月度 FOB 镜像 BR/AU/NZ/US + AR/UY 年度回退 + 中国年度 CIF 校准）+ `argentina_exports`（SSPM ica_carnes 月度 FOB）落库 MarketFactor；读侧 `GET /api/market/trade-flows`（8 HS 码）+ /beef 对华贸易流卡（round-152 批 0/2/4） | ✅ 已上线：FOB（partner 口径）与 CIF（中国口径）分轨呈现、口径注记随载荷、**绝不合并**；AR 品类×目的国交叉不存在（SSPM 75/77 互补缺口已登记） |
 
 **结论（2026-08-09 核实，2026-08-23 round-120 修订）**: M1+M2 阶段（阶段 0-3）**已实现**——beef-only 叙事、6 区 IA、dashboard hero 重构、AI 预测融入行情行均已落地；~~WebSocket 实时~~（round-112 移除，见上表）。平台地基完成度 **>90%**。唯一硬阻塞是 D1 数据流（网络封锁/key 缺失），可通过 CSV 手动导入绕行。M3 资讯 RSS 已接入（round-118），品牌完善见 M3 清单。
 
