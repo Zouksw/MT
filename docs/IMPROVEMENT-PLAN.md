@@ -1,7 +1,7 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.5.0"
+version: "3.6.0"
 last_updated: "2026-08-31"
 status: "active"
 maintainer: "MT Team"
@@ -14,9 +14,99 @@ related_docs:
   - "Product Spec": "PRODUCT-SPEC.md"
   - "Tech Debt": "TECH-DEBT.md"
   - "Research Landscape": "RESEARCH-BEEF-INFO-LANDSCAPE.md"
+  - "Trade Data Research": "RESEARCH-BEEF-TRADE-DATA-SOURCES.md"
 ---
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
+
+> ## 第八波 v3.6.0（2026-08-31 规划）— 数据通路波：贸易流量价通路打通 + 厂号维度拓宽
+>
+> **执行状态：未开始（本轮为规划轮；批 0 无外部依赖可立即执行，批 1/3 有用户门）。承第七波剩余门控项批 0a（时间门 2026-09 中下旬）/ 批 0b（样本门），值守不变。**
+>
+> **指令来源**：用户"结合探究的报告，制定打通和拓宽数据通路的方案"。**输入**：[RESEARCH-BEEF-TRADE-DATA-SOURCES.md](RESEARCH-BEEF-TRADE-DATA-SOURCES.md) v1.0.0（2026-08-31，全部关键源本机 live 取证——下称"贸易报告"）。
+>
+> **波次论断**：V7-二.9 曾把海关源登记为"环境阻塞（stats.customs.gov.cn 不可达），不排期"——贸易报告用**出口国镜像策略**绕开了这个死结：**UN Comtrade 公共预览 API 免 key、本机直连可用**（巴西月度新鲜到 t-1、澳/新/美 t-2、中国年度分国别官方口径），无需中国出口、无需爬虫、无需 key。这意味着"对华贸易流量价"这层数据**从环境死锁变为零成本可执行**。本波两件事：**打通**（把断掉/零行的贸易统计通路接通——批 0/2）+ **拓宽**（新增厂号注册状态维度与 HS10 粒度——批 1/3），最后补最小读侧面让数据可见（批 4）。
+>
+> ### V8-一、基线与通路健康图谱（2026-08-31 生产库实测）
+>
+> | 层 | 现状 | 证据 |
+> |---|---|---|
+> | MarketFactor（贸易/宏观因子层） | **仅 exchange_rate_api 207 行（至 2026-08-30）**——除汇率外整层空置；china_customs_stats 历史贡献 **0 行**（虚构端点 + .gov.cn 封锁，KNOWN-ISSUES D1） | psql GROUP BY source |
+> | 贸易流量价（分国别×HS×月度） | **0 行**——本波主战场 | 同上 |
+> | Factory（厂号参照表） | 21 家（AU6/BR5/US4/AR3/UY2/CN1，seed 时代），**无注册状态/准入维度** | psql GROUP BY country |
+> | beef_cut_prices | 2,401 行冻结 2026-04-30（不变，D1 用户侧钥匙未到） | psql |
+> | 测试基线 | backend **1072+1** / frontend **352** / inference 61 = **1485**（V7 批 3 后口径） | V7 执行状态 |
+> | 上游可达性 | Comtrade 免 key ✅；单一窗口厂号查询站 ✅（查询需实名会话）；datos.gob.ar/magyp ✅；api.fas.usda.gov 主机 ✅（需 key）；stats.customs.gov.cn ❌（直连+代理均不可达）；INAC ❌（全球下线） | 贸易报告 §三矩阵 |
+>
+> ### V8-二、通路诊断（打通 vs 拓宽）
+>
+> **打通（断路复活）**：① 对华贸易统计——源代码存在但端点虚构+主机封锁，零产出 → **Comtrade 镜像替代**（同语义换活源，MarketFactor 落库模型不变）；② 阿根廷月度——Comtrade 无其月度明细 → 国家开放数据门户（直连已验）；③ 乌拉圭——INAC 全球性下线，无免费路径，**维持登记等其恢复**（不排期）。
+> **拓宽（新维度）**：① 厂号注册状态（有效/暂停）+ 产品类别 → Factory 表零迁移扩容，为搜索/watchlist 的"国家×厂号"维度提供数据地基（牧集 `/followProduct` 与必孚"新增准入"情报的对等公共数据版）；② HS10 粒度（美国线 cutoff/trimming 子目，FAS GATS）；③ 贸易流读侧面（MarketFactor 现仅 stats 一处 groupBy，无任何用户可见面）。
+>
+> ### V8-三、批次总览
+>
+> | 批 | 内容 | 价值 | 规模 | 门控 |
+> |---|---|---|---|---|
+> | **0（P0）** | `comtrade_mirror` 源（月度镜像 + 中国年度校准线）+ china_customs_stats 退役 | 贸易流量价从 0 行到多国覆盖；消除零行空跑 | M | 无（D23 随批确认） |
+> | **1** | 厂号注册参照表（单一窗口导出 → Factory 表）+ /api/search 厂号维度 | "国家×厂号"搜索地基（牧集对等能力公共数据版） | S-M | **用户门**（单一窗口账号/导出件）+ D24 |
+> | **2** | 阿根廷月度出口源 `argentina_exports`（datos.gob.ar 直连） | 补 AR 月度缺口（Comtrade 无其月度） | S | 无（首步序列定位带降级分支） |
+> | **3** | USDA FAS GATS 源（HS10 细粒度，api.fas.usda.gov） | 美国线子目级纵深 | S | **用户门**（data.gov 免费 key） |
+> | **4** | 贸易流读侧最小面（读端点 + 行情页"对华贸易流"卡） | 数据可见性闭环（批 0 数据的用户面） | S | 批 0 数据积累 ≥1 个月 + D25 |
+> | **5（观察项）** | 中国官方口径复活 / Comtrade key 提额 / 商业提单库评估 | 条件触达，零开发等待 | — | 外部条件（见批 5 明细） |
+>
+> **顺序**：批 0 → 批 2（可与 0 穿插）→【用户门到】批 1 → 批 3 →【数据积累】批 4；批 5 纯观察。门禁沿用：tsc + biome + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
+>
+> ### V8-四、批次明细
+>
+> **批 0 — Comtrade 镜像源 `comtrade_mirror`（M，P0）**
+> - 新源 `sources/comtradeMirror.ts`（注册双处：`dataIngestion/index.ts` Tier 3 + `server.ts` DAILY_SOURCES——月度数据挂日循环，非发布日重扫同月=确认无变化，走 **`noChange:true` 契约**防 empty 误报，usda_import_beef 先例 round-149）。
+> - **查询集**（贸易报告 §4.1 实测口径）：月度活 reporter {76 巴西, 36 澳, 554 新, 842 美}× cmdCode {0201, 0202, 020230, 020220, 020610, 020621, 020622, 020629}× flow=X× partner=156；**年度回退** {32 阿, 858 乌} 同 cmdCode（freq=A）；**中国校准线**：reporter=156 / freq=A / flow=M / 全伙伴（年度一次）。首跑回填 36 个月。
+> - **实现要点（全部为实测坑，写进测试）**：① `motCode==0` 过滤——按运输方式拆行直接求和会得到 ~2× 量（实测 2026-06 巴西 316,730t 裸和 vs 158,365t 正确值）；② flowCode 必须 `X`/`M`（`1` 返 400）；③ 限速 ≥1.5s/req + 429 退避（公共预览 ~1 req/s，实测 429"Try again in 1 seconds"）；④ 落库 `upsertFactor`：type=`export_to_cn_{hs}`、region=`{ISO2}→CN`、unit=`USD/ton`（fobvalue ÷ netWgt/1000）、metadata 存 qtyKg/valueUsd/partner/period/classification=H6——type+region 已含国别×HS 去重语义，seriesKey 留默认（round-104 教训的反向适用）。
+> - **china_customs_stats 退役（D23）**：注册与 DAILY_SOURCES 移除（inac 先例——零行空跑白付超时），源文件保留待中国出口条件复活（届时端点须重探——现行 `api/trade/query` 为虚构路径，从未核实过真实契约）；AGENTS/KNOWN-ISSUES 计数同步。
+> - 测试预估 +10~14：解析器（mot 去重/坏行丢弃/单位换算/429 退避）+ noChange 分类 + 查询集契约（常量钉住防漂移）。验收 live：首跑写入 ≥4 国 × ≥3 HS × ≥24 个月；巴西 2026-06 行与贸易报告实测值对齐（158,365t / $6,751/t）；freshness 板 healthy。
+>
+> **批 1 — 厂号注册参照表（S-M，用户门）**
+> - **用户动作**：免费注册单一窗口账号（实名）→ 从 `ciferquery.singlewindow.cn`（进口食品境外生产企业注册信息，本机 200 已验）按国别导出厂号清单（页面自带查询与导出；**脚本化登录抓取不做**——ToS 未验证，贸易报告 §七.2）。
+> - 形态：ADMIN 端点 `POST /api/factories/registry-import`（CSV 上传，复用 beefImport 成熟模式：模板端点 + 白名单键 + 坏行跳行宁缺勿错）→ Factory 表 **零迁移**（accredited[] 存产品类别、active 存注册状态、metadata 存快照日期/所在地区注册编号/来源）。
+> - 搜索面联动：/api/search 白名单加 Factory（code/name/country 维度，每源封顶 5 沿既有纪律）——D20（watchlist 部位×厂号订阅）的数据地基就此齐备，但 D20 本身维持排后（部位级数据面冻结未变）。
+> - 验收：21 家既有厂之外的增量导入（如 BR SIF 全量）；重复 code 幂等更新（updatedAt 触发）；/api/search 可按厂号/国别命中。
+>
+> **批 2 — 阿根廷月度出口 `argentina_exports`（S）**
+> - **首步=序列定位**（降级分支显式）：datos.gob.ar CKAN 检索牛肉专项月度出口序列——本轮命中出口总额级（SSPM Exportaciones FOB por rubro 月度 CSV 直链 `infra.datos.gob.ar`）与产量/价格面（magyp SIO Carnes），**牛肉×目的国月度序列未命中（待确认）**。命中→落 MarketFactor（type=`export_to_cn_ar` 对齐批 0 语义）；只命中总额级→落 `export_total_ar` 并登记缺口；SENASA 工厂/目的国级统计在 argentina.gob.ar（`viaProxy` 经 SCRAPER_PROXY_URL，既有基建）——批内可选子项。
+> - noChange 契约同批 0；测试预估 +5~8。
+>
+> **批 3 — USDA FAS GATS（S，用户门）**
+> - 用户申请 data.gov 免费 key → `FAS_API_KEY` 入 .env；新源 `usdaFasGats.ts` 走 `api.fas.usda.gov`（主机本机可达已验，GATS 双边 HS10 官方出口口径）。落 MarketFactor（type=`export_to_cn_us10_{hs10}`）；批内与 Comtrade HS6 美国线做聚合一致性互校（对不齐则登记口径差，不硬拼）。
+> - 价值：美国线 0202.30.xxxx 级子目（cutoff/trimming 等）比 HS6 更细。
+>
+> **批 4 — 贸易流读侧最小面（S，时间软门：批 0 后 ≥1 个月数据积累）**
+> - `GET /api/market/trade-flows`（鉴权内起步，D25 定公开节奏）：分国别月度量/价/环比 + **口径注记强制**（FOB 镜像 vs 中国年度 CIF 校准双口径并列，绝不合并——贸易报告 §七.4 实测两口径存在系统性差异）+ stale 旗标（月度滞后如实，同 digest 纪律）。
+> - /beef 或 /market/digest 增"对华贸易流"卡（分国别最新月：量、均价、环比）；若入 digest 则走公开白名单纪律（0 私有数据 + 每数字可溯源）。
+> - **不进预测循环**：MarketFactor 严格保持分析面——贸易均价序列是否晋升 CommodityPrice 月度序列入 ADR-0001 循环，单列 D27（默认不做：镜像数据存在滞后修订，预测环对修订敏感；先攒 6 个月修订行为证据）。
+>
+> **批 5 — 观察项（外部条件触发，零开发等待）**
+> - **中国大陆出口/代理节点出现** → 复活 china_customs_stats（端点重探，官方平台为交互式会话）；或先建人工 CSV 导入通道（beefImport 模式 ADMIN 端点）承接月度导出。
+> - **Comtrade 免费注册 key**（comtradeplus.un.org，免费，配额档位待确认）→ 提额写入 .env，批 0 源自动受益（限速参数化即可）。
+> - **乌拉圭 INAC 恢复** → inac 源复活（注册双处还原，index.ts 注释已留指引）。
+> - **商业提单库**（Volza $1,500 起 / 环球慧思 ¥4-5万 / 腾道 ¥5-10万，均【转述】）——D26 预算决策，默认不做；若启动先用试用验证"中国进口方向"实际覆盖（中国提单不公开，商业库为镜像/第三方申报数据）。
+>
+> ### V8-五、决策项（不擅动，需用户点头）
+>
+> | # | 事项 | 建议 | 来源 |
+> |---|------|------|------|
+> | **D23（批 0 附带）** | china_customs_stats 退役（移除注册，源文件保留） | 建议：**移除**——虚构端点+主机封锁零产出，每 24h 白付一次超时换 success+0 行（inac 先例）；AGENTS 计数（19 源）随批同步 | KNOWN-ISSUES D1；贸易报告 §4.1 |
+> | **D24（批 1）** | 厂号注册表获取方式：人工 CSV 导入 vs 脚本化会话抓取 | 建议：**人工 CSV 起步**（ToS 稳、零风险）；脚本化待 ToS 复核后再议 | 贸易报告 §七.2 |
+> | **D25（批 4）** | 贸易流展示面公开节奏：鉴权内先行 vs 直接公开 | 建议：**鉴权内先行**，数据攒满 1-2 个月且口径注记完备后随 digest 白名单公开（每数字可溯源纪律不变） | 贸易报告 §七.4 |
+> | **D26（批 5）** | 商业提单库（¥1-40 万/年级预算） | 建议：**默认不做**——提单/企业级层非 PRODUCT-SPEC 当前范围；若用户判断需要，先 Volza 试用验证覆盖 | 贸易报告 §4.6 |
+> | **D27（批 4 附带）** | 贸易均价是否晋升预测序列（CommodityPrice 月度入 ADR-0001 循环） | 建议：**暂不**——镜像数据有滞后修订，预测环对修订敏感；攒 6 个月修订行为证据后重评 | V8-四 批 4 |
+>
+> ### V8-六、不做清单（继承 + 本波新增）
+>
+> 继承全部既有红线（交易/支付/训练模型/爬付费墙转售，V7-五）。本波新增显式：**单一窗口脚本化登录抓取**（ToS 未验证前只走人工导出）；**.gov.cn / Cloudflare 源的硬闯**（维持 D1 网络结论）；**乌拉圭死站等待**（全球性下线，登记不排期）；**贸易数据进预测循环**（D27 未过门前 MarketFactor 严格保持分析面）；**商业库数据再分发**（用户协议限制，只能内用）。
+>
+> ### V8-七、用户侧解阻清单（本波新增项）
+>
+> 承 V7 六项（两把 key / CSV 周导入 / 域名 / SMTP）不变，新增：⑥ **单一窗口实名账号**（免费注册，解锁批 1 厂号注册表导出）；⑦ **data.gov 免费 API key**（解锁批 3 FAS GATS）；⑧（可选）**Comtrade 免费注册 key**（提额增益——批 0 免 key 已可用）。
 
 > ## 第七波 v3.5.0（2026-08-31，round-149 规划；**同日修订——用户方向澄清：主线=国外牛肉进口/国际贸易**）— 调研驱动·进口主线：国际免费层补强 + 独占位强化 + 进口数据解阻清单
 >

@@ -18,7 +18,7 @@
 | [RESEARCH-BEEF-INFO-LANDSCAPE.md](RESEARCH-BEEF-INFO-LANDSCAPE.md) | **牧集及同类牛肉行情信息网站调研报告**（v1.0.0，2026-08-31）：国内外 17 家供给全景（国内 B2B 平台/行情服务商/国际基准源五层）、牧集+必孚 bundle 级深探、报价 schema 词汇表、商业模式五型与付费墙双假设、数据合规框架、对 MT 九条启示（新发地免费部位级接口/MLA 90CL/空位验证）；经独立复审修订 |
 | [RESEARCH-BEEF-TRADE-DATA-SOURCES.md](RESEARCH-BEEF-TRADE-DATA-SOURCES.md) | **牛肉外贸（海关/贸易流）数据源研究报告**（v1.0.0，2026-08-31）：全部关键源本机 live 取证——UN Comtrade 免 key 镜像实测（巴西 t-1/澳新美 t-2、中国年度分国别、HS6 粒度）、单一窗口厂号注册查询可达性（需实名会话）、stats.customs.gov.cn 需中国出口、商业提单库价格带、牧集搜索能力四层拆解与 P0-P2 落地路线 |
 | [RESEARCH-LLM-NUMERIC-FORECASTING.md](RESEARCH-LLM-NUMERIC-FORECASTING.md) | **数值预测与大模型实践调研报告**（v1.0.0，2026-08-31）：服务器/预测链路 08-31 现状复查（10 model_id 精度双口径、牛肉月度 28 行到期时刻、代码级方案梳理）+ 量化金融（组合预测之谜/LLM=文本→特征/Tan et al. 引用纠偏）+ 肉类农产品（USDA 混合制/Expana naive-95.7% 批判/基差分解/arXiv 2601.06371）+ TSFM 工程全景（许可商用性核查/微调门槛/GreedyEnsemble）+ R1-R8 增量启示；经独立批评代理复审修订 |
-| [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) | 改进方案：v3.1.0 第三波（AI 预测核心专轮：月度修复/滚动回测/冠军路由/方向准确率，2026-08-30）+ 并行轨（成本计算器等）；v2 正文已执行完毕存档 |
+| [IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md) | 改进方案：v3.6.0 第八波（数据通路波：Comtrade 镜像贸易流/厂号注册表/阿根廷月度/FAS GATS/读侧面，2026-08-31）+ v3.5.0 第七波已落地（90CL 周度源等）；更早波次存档于文内 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 
 ## 技术参考
