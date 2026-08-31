@@ -1,11 +1,11 @@
 "use client";
 
 import { ArrowDownRight, ArrowUpRight, Lock, Minus, Sparkles } from "lucide-react";
+import { useAuth } from "@/contexts/auth";
 import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatDecimal, formatPrice, formatSignedPercent } from "@/lib/format";
-import { tokenManager } from "@/lib/tokenManager";
 
 /**
  * Market Forecast Board — the product's signature AI-in-market-row experience.
@@ -28,7 +28,12 @@ import { tokenManager } from "@/lib/tokenManager";
  * state naming the activation path.
  */
 export function MarketForecastBoard() {
-	const hasToken = typeof window !== "undefined" && !!tokenManager.getToken();
+	// Session truth is AuthContext (cookie-verified), not the memory token —
+	// tokenManager empties on refresh, which left a signed-in user staring at
+	// "Sign in for forecast" after every F5. Same source useDashboardStats
+	// moved to (round-104).
+	const { status } = useAuth();
+	const hasToken = status === "authenticated";
 
 	// Latest cut prices (same source as the price table) — gives us the cut
 	// list + current price + display names. Reuse beefFetcher (cookie auth).
