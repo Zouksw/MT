@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronRight, Zap } from "lucide-react";
+import { ArrowRight, Bell, ChevronRight, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { Tag } from "@/components/ui/Tag";
@@ -95,7 +95,15 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 
 				{activeTab === "alerts" ? (
 					alertsItems.length === 0 ? (
-						<p className="text-sm text-muted-foreground text-center py-6">No recent alerts</p>
+						<div className="text-center py-6">
+							<p className="text-sm text-muted-foreground">No recent alerts</p>
+							<a
+								href="/alerts"
+								className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1.5"
+							>
+								Browse all alerts <ArrowRight className="size-3" />
+							</a>
+						</div>
 					) : (
 						<div className="space-y-1">
 							{alertsItems.map((item, i) => (
@@ -125,7 +133,15 @@ export const RecentActivity = React.memo<RecentActivityProps>(
 						</div>
 					)
 				) : forecastsItems.length === 0 ? (
-					<p className="text-sm text-muted-foreground text-center py-6">No recent forecasts</p>
+					<div className="text-center py-6">
+						<p className="text-sm text-muted-foreground">No recent forecasts</p>
+						<a
+							href="/beef/forecast"
+							className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1.5"
+						>
+							Open the forecast center <ArrowRight className="size-3" />
+						</a>
+					</div>
 				) : (
 					<div className="space-y-1">
 						{forecastsItems.map((item, i) => (

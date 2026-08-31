@@ -34,6 +34,9 @@ export interface DashboardStats {
 		/** Models with isActive=true in the registry (was forced equal to total — a fake). */
 		active: number;
 		total: number;
+		/** Family split (batch B2): engine `type` = "pretrained" | "statistical". */
+		pretrained: { active: number; total: number };
+		statistical: { active: number; total: number };
 	};
 	beef: {
 		cuts: number;
@@ -335,9 +338,21 @@ export const useDashboardStats = () => {
 	// `available: true`. The static fallback payload omits `available`, so an
 	// unreachable engine yields active=0 — availability we could not verify is
 	// never claimed (round-106 honesty rule, mirrored from the backend route).
-	const engineModels: Array<{ available?: boolean }> = modelsData?.models ?? [];
+	// Batch B2 (design-optimization): split the engine roster by family so the
+	// dashboard card can show "Pretrained 3/3 · Statistical 6/6" instead of a
+	// decorative dot strip that carries no information when everything is
+	// active. Fallback payloads omit `type` → both families 0/0 (hidden chip).
+	const engineModels: Array<{ available?: boolean; type?: string }> = modelsData?.models ?? [];
 	const aiTotal = engineModels.length;
 	const aiActive = engineModels.filter((m) => m.available === true).length;
+	const byFamily = (type: string) => {
+		const family = engineModels.filter((m) => m.type === type);
+		return { total: family.length, active: family.filter((m) => m.available === true).length };
+	};
+	// The engine labels Chronos models "foundation" (statistical baselines are
+	// "statistical"); the UI presents that family as "Pretrained".
+	const aiPretrained = byFamily("foundation");
+	const aiStatistical = byFamily("statistical");
 
 	// AI hero card (round-138 批5): the beef MONTHLY consensus — IMF
 	// PBEEFUSDM benchmark, H=1 MONTH — from the same useBeefMonthlyConsensus
@@ -409,6 +424,8 @@ export const useDashboardStats = () => {
 					aiModels: {
 						active: aiActive,
 						total: aiTotal,
+						pretrained: aiPretrained,
+						statistical: aiStatistical,
 					},
 					beef: {
 						cuts: beefCuts.length,
@@ -430,7 +447,12 @@ export const useDashboardStats = () => {
 				datasets: { total: 0, trend: null },
 				timeseries: { total: 0, trend: null },
 				alerts: { total: 0, bySeverity: { error: 0, warning: 0, info: 0 }, trend: null },
-				aiModels: { active: aiActive, total: aiTotal },
+				aiModels: {
+					active: aiActive,
+					total: aiTotal,
+					pretrained: aiPretrained,
+					statistical: aiStatistical,
+				},
 				beef: {
 					cuts: beefCuts.length,
 					factories: beefFactories.length,

@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type React from "react";
+import { useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 
 /**
@@ -15,6 +16,10 @@ import { Alert } from "@/components/ui/Alert";
  * This is the core of the "no real data is tolerable" contract: the platform
  * stays usable and demoable, but never silently passes frozen seed data off as
  * a live market.
+ *
+ * Batch B4 (design-optimization): the full three-line explanation was a wall
+ * of amber text towering over the page. One scannable summary line + the
+ * detail behind a disclosure — same honesty, half the visual noise.
  */
 
 interface SnapshotBannerProps {
@@ -36,6 +41,8 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 export const SnapshotBanner: React.FC<SnapshotBannerProps> = ({ freshness }) => {
+	const [expanded, setExpanded] = useState(false);
+
 	// Only render when the backend explicitly says all rows are non-live.
 	if (!freshness?.allStale) return null;
 
@@ -47,16 +54,32 @@ export const SnapshotBanner: React.FC<SnapshotBannerProps> = ({ freshness }) => 
 
 	return (
 		<Alert variant="warning" className="mb-4">
-			<div className="flex items-start gap-2">
-				<AlertTriangle className="size-4 mt-0.5 shrink-0" />
-				<div className="text-sm">
-					<strong>Demo snapshot mode.</strong> Beef price data on this page is frozen at{" "}
-					<strong>{dateStr}</strong>
-					{breakdown} — no live scraper is currently producing cut-level prices. The full product
-					experience (AI predictions per cut, alerts, real-time行情) is functional and will activate
-					automatically once a beef data source goes live (e.g. USDA MARS or MLA API key
-					configured).
+			{/* The Alert variant already renders the warning icon — no second one. */}
+			<div className="text-sm flex-1">
+				<div className="flex items-center justify-between gap-2 flex-wrap">
+					<span>
+						<strong>Demo snapshot mode.</strong> Cut-level prices are frozen at{" "}
+						<strong>{dateStr}</strong>
+						{breakdown} — no live source is publishing right now.
+					</span>
+					<button
+						type="button"
+						onClick={() => setExpanded((v) => !v)}
+						aria-expanded={expanded}
+						className="inline-flex items-center gap-1 text-xs font-medium text-warning hover:underline shrink-0"
+					>
+						{expanded ? "Less" : "Why?"}
+						{expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+					</button>
 				</div>
+				{expanded && (
+					<p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+						The full product experience (AI predictions per cut, alerts, real-time行情) is
+						functional and will activate automatically once a beef data source goes live (e.g. USDA
+						MARS or MLA API key configured). Until then every row below is labeled with its
+						provenance rather than passed off as live.
+					</p>
+				)}
 			</div>
 		</Alert>
 	);

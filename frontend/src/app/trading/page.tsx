@@ -191,9 +191,13 @@ function TradingPageInner() {
 				)}
 			</div>
 
-			{/* 2-column layout: Chart + Signal Panel */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<div className="lg:col-span-2">
+			{/* Design-optimization batch B1: chart full-width, then a 2+3 grid —
+			    info/factors share the left column while the forecast panel owns
+			    the right. Previously every block stacked in one narrow column and
+			    ~half the canvas below the chart was dead space (TradingView's
+			    panel pattern: chart is the largest cell, details sit beside it). */}
+			<div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+				<div className="lg:col-span-5">
 					<Card>
 						<CardHeader>
 							<CardTitle>
@@ -240,7 +244,10 @@ function TradingPageInner() {
 					</Card>
 				</div>
 
-				<div>
+				{/* Left column: info + market factors stacked (single grid cell so
+				    the two cards sit contiguously; the forecast panel owns the right
+				    column at its own natural height) */}
+				<div className="lg:col-span-2 flex flex-col gap-4">
 					{/* Beef cut info card or Commodity info card */}
 					{d.beefMode && d.beefCutInfo ? (
 						<Card className="mb-4">
@@ -293,39 +300,6 @@ function TradingPageInner() {
 						)
 					)}
 
-					{d.signalLoading && (
-						<div className="flex items-center justify-center py-8">
-							<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-							<span className="ml-3 text-sm text-gray-500">Loading AI signals...</span>
-						</div>
-					)}
-					{!d.signalLoading && d.signal && (
-						<PriceForecastPanel
-							consensusDirection={d.signal.direction}
-							confidence={d.signal.confidence}
-							modelsAgree={d.signal.modelsAgree}
-							totalModels={d.signal.totalModels}
-							individualForecasts={(d.signal.individualForecasts ?? []).filter(Boolean)}
-							predictedChange={d.signal.predictedChange}
-							currentPrice={d.currentPrice}
-							predictedPrice={d.signal.predictedPrice ?? d.currentPrice}
-							horizon={d.signal.horizon ?? 10}
-							horizonUnit={d.signal.horizonUnit}
-							range={d.signal.range}
-							supportLevel={d.signal.supportLevel}
-							resistanceLevel={d.signal.resistanceLevel}
-							distribution={d.signal.distribution ?? { up: 0, down: 0, flat: 0 }}
-							bestModelId={d.signal.bestModel ?? d.bestModelId}
-							loading={false}
-							timestamp={d.signal.timestamp}
-						/>
-					)}
-					{!d.signalLoading && !d.signal && (
-						<div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-							AI signal unavailable for this commodity.
-						</div>
-					)}
-
 					{/* Beef mode: factory price comparison table */}
 					{d.beefMode && d.beefPrices.length > 0 && (
 						<Card>
@@ -373,6 +347,52 @@ function TradingPageInner() {
 							</CardBody>
 						</Card>
 					)}
+
+					<MarketFactorsPanel factors={d.factors} loading={d.factorsLoading} />
+				</div>
+
+				{/* Right column: AI forecast panel (TradingView-style detail pane) */}
+				<div className="lg:col-span-3">
+					{d.signalLoading && (
+						<div className="flex items-center justify-center py-8">
+							<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+							<span className="ml-3 text-sm text-gray-500">Loading AI signals...</span>
+						</div>
+					)}
+					{!d.signalLoading && d.signal && (
+						<PriceForecastPanel
+							consensusDirection={d.signal.direction}
+							confidence={d.signal.confidence}
+							modelsAgree={d.signal.modelsAgree}
+							totalModels={d.signal.totalModels}
+							individualForecasts={(d.signal.individualForecasts ?? []).filter(Boolean)}
+							predictedChange={d.signal.predictedChange}
+							currentPrice={d.currentPrice}
+							predictedPrice={d.signal.predictedPrice ?? d.currentPrice}
+							horizon={d.signal.horizon ?? 10}
+							horizonUnit={d.signal.horizonUnit}
+							range={d.signal.range}
+							supportLevel={d.signal.supportLevel}
+							resistanceLevel={d.signal.resistanceLevel}
+							distribution={d.signal.distribution ?? { up: 0, down: 0, flat: 0 }}
+							bestModelId={d.signal.bestModel ?? d.bestModelId}
+							loading={false}
+							timestamp={d.signal.timestamp}
+						/>
+					)}
+					{!d.signalLoading && !d.signal && (
+						<div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+							AI signal unavailable for this commodity.
+						</div>
+					)}
+				</div>
+
+				<div className="lg:col-span-5">
+					<DataSourcePanel
+						priceSources={d.priceSources}
+						factorSources={d.factorSources}
+						loading={d.sourcesLoading}
+					/>
 				</div>
 			</div>
 
@@ -493,21 +513,8 @@ function TradingPageInner() {
 				</div>
 			)}
 
-			{/* Market factors panorama — only in normal mode */}
-			{
-				<div className="mt-4">
-					<MarketFactorsPanel factors={d.factors} loading={d.factorsLoading} />
-				</div>
-			}
-
-			{/* Data provenance panel */}
-			<div className="mt-4">
-				<DataSourcePanel
-					priceSources={d.priceSources}
-					factorSources={d.factorSources}
-					loading={d.sourcesLoading}
-				/>
-			</div>
+			{/* Market factors + data provenance panels moved into the main grid
+			    (batch B1) — no standalone sections here anymore. */}
 
 			{/* Disclaimer */}
 			<p className="text-center text-muted-foreground mt-6" style={{ fontSize: 11, opacity: 0.7 }}>

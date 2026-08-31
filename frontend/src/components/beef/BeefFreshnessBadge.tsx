@@ -30,9 +30,13 @@ const TIER_CONFIG: Record<BeefFreshness, { label: string; dotClass: string; text
 	live: { label: "Live", dotClass: "bg-success", textClass: "text-success" },
 	proxy: { label: "Proxy", dotClass: "bg-warning", textClass: "text-warning" },
 	snapshot: {
+		// Batch B4 (design-optimization): red/destructive on all 50 rows read
+		// as "something is broken" when snapshot is a freshness tier, not an
+		// error. Neutral grey + tooltip keeps per-row honesty; the page-level
+		// SnapshotBanner carries the alarm.
 		label: "Snapshot",
-		dotClass: "bg-destructive",
-		textClass: "text-destructive",
+		dotClass: "bg-muted-foreground/60",
+		textClass: "text-muted-foreground",
 	},
 };
 

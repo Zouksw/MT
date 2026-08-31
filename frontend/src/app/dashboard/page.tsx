@@ -442,7 +442,10 @@ export default function DashboardPage() {
 
 					{/* AI models — real count only. Previously this was a hardcoded "8/8"
 					 * fake. Now sourced from the models registry; the panel is hidden when
-					 * no models exist rather than fabricating activity. */}
+					 * no models exist rather than fabricating activity. Batch B2: the
+					 * dot strip + always-full progress bar encoded nothing when every
+					 * model is active — replaced with a family split that states the
+					 * roster composition (pretrained Chronos vs statistical baselines). */}
 					{stats?.aiModels && stats.aiModels.total > 0 && (
 						<div className={isMobile ? "mt-4" : "mt-6"}>
 							<div className="rounded-lg p-5 sm:p-6 relative overflow-hidden border bg-card">
@@ -461,17 +464,35 @@ export default function DashboardPage() {
 										</p>
 									</div>
 									<div className="flex items-center gap-4">
-										<div className="hidden sm:flex items-center gap-1.5">
-											{Array.from({ length: stats.aiModels.total }).map((_, i) => (
-												<div
-													// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-													key={i}
-													className="w-2.5 h-2.5 rounded-full transition-all duration-300"
-													style={{
-														background: i < stats.aiModels.active ? "#8B6914" : "var(--muted)",
-													}}
-												/>
-											))}
+										<div className="hidden sm:flex items-center gap-2">
+											{(
+												[
+													{ label: "Pretrained", family: stats.aiModels.pretrained },
+													{ label: "Statistical", family: stats.aiModels.statistical },
+												] as const
+											).map(
+												({ label, family }) =>
+													family.total > 0 && (
+														<span
+															key={label}
+															className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground"
+														>
+															<span
+																className="size-1.5 rounded-full"
+																style={{
+																	background:
+																		family.active === family.total
+																			? "#8B6914"
+																			: "var(--muted-foreground)",
+																}}
+															/>
+															{label}{" "}
+															<span className="font-mono tabular-nums">
+																{family.active}/{family.total}
+															</span>
+														</span>
+													),
+											)}
 										</div>
 										<div>
 											<div
@@ -483,15 +504,6 @@ export default function DashboardPage() {
 											<p className="text-body-sm text-muted-foreground mt-1">Active Models</p>
 										</div>
 									</div>
-								</div>
-								<div className="relative mt-4 h-1.5 rounded-full bg-muted overflow-hidden">
-									<div
-										className="h-full rounded-full transition-all duration-700 ease-out"
-										style={{
-											width: `${stats.aiModels.total > 0 ? (stats.aiModels.active / stats.aiModels.total) * 100 : 0}%`,
-											background: "#8B6914",
-										}}
-									/>
 								</div>
 							</div>
 						</div>

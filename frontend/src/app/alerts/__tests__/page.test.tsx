@@ -138,9 +138,10 @@ describe("AlertList", () => {
 
 		render(<AlertList />);
 
-		// Should show empty state after error
+		// Should show the designed empty state after error (batch B3: an empty
+		// list with no active filters renders EmptyState, not the filter banner)
 		await waitFor(() => {
-			expect(screen.getByText(/No alerts match your current filters/)).toBeInTheDocument();
+			expect(screen.getByText("No alerts yet")).toBeInTheDocument();
 		});
 	});
 
@@ -163,7 +164,7 @@ describe("AlertList", () => {
 		render(<AlertList />);
 
 		await waitFor(() => {
-			expect(screen.getByText(/No alerts match your current filters/)).toBeInTheDocument();
+			expect(screen.getByText("No alerts yet")).toBeInTheDocument();
 		});
 	});
 });

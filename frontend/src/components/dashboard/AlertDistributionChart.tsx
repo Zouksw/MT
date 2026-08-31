@@ -1,6 +1,6 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
+import { ArrowRight, TriangleAlert } from "lucide-react";
 import dynamic from "next/dynamic";
 import React from "react";
 
@@ -156,7 +156,13 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 						>
 							<div className="text-center">
 								<div className="text-4xl mb-2">&#10003;</div>
-								<p className="text-sm">No alerts</p>
+								<p className="text-sm">No alerts — all monitored series are quiet</p>
+								<a
+									href="/alerts/rules"
+									className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+								>
+									Set up alert rules <ArrowRight className="size-3" />
+								</a>
 							</div>
 						</div>
 					)}

@@ -21,6 +21,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
@@ -422,11 +423,25 @@ export default function AlertList() {
 
 				<div className="mt-4">
 					{filteredAlerts.length === 0 ? (
-						<Alert variant="info">
-							{activeTab === "unread"
-								? "You have no unread alerts."
-								: "No alerts match your current filters."}
-						</Alert>
+						// Batch B3: a one-line banner left ~400px of dead page below it.
+						// Designed empty state: explanation + next actions.
+						filters.type || filters.severity || filters.unreadOnly ? (
+							<Alert variant="info">
+								No alerts match your current filters. Adjust or clear them to see more.
+							</Alert>
+						) : (
+							<EmptyState
+								type="alerts"
+								title={activeTab === "unread" ? "You're all caught up" : "No alerts yet"}
+								description={
+									activeTab === "unread"
+										? "Every alert has been read. New anomalies and forecast signals will land here."
+										: "Alerts appear when price anomalies are detected or AI signals fire. Set up rules to get notified on your terms."
+								}
+								actionText="Set up alert rules"
+								onAction={() => _router.push("/alerts/rules")}
+							/>
+						)
 					) : (
 						<>
 							<Table
