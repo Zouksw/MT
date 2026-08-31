@@ -7,6 +7,7 @@
 
 import { scraperManager } from "./scraperManager";
 import { abaresScraper } from "./sources/abaresData";
+import { argentinaExportsScraper } from "./sources/argentinaExports";
 import { balticDryScraper } from "./sources/balticDry";
 import { cepeaScraper } from "./sources/cepeaData";
 import { chinaWholesaleScraper } from "./sources/chinaWholesale";
@@ -44,6 +45,11 @@ export function registerAllScrapers(): void {
 	scraperManager.registerSource("mla_nlrs", mlaNlrsScraper);
 	scraperManager.registerSource("secex", secexScraper);
 	scraperManager.registerSource("abares", abaresScraper);
+	// Argentina monthly meat-rubro FOB exports (SSPM/INDEC ICA via
+	// datos.gob.ar, keyless) — the deliberate degradation tier for AR's
+	// missing Comtrade monthlies: product family × world, no destination
+	// cross (registered gap; V8 批2, round-151).
+	scraperManager.registerSource("argentina_exports", argentinaExportsScraper);
 	scraperManager.registerSource("usda_ams", usdaAmsScraper);
 	// Weekly US import manufacturing-beef benchmark (NW_LS421 PDF, keyless —
 	// the MARS API behind usda_ams is key-gated and mymarketnews hosts are

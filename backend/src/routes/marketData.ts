@@ -394,6 +394,13 @@ router.get(
 				tier: "2",
 				beefRelevance: "direct",
 			},
+			argentina_exports: {
+				label: "Argentina SSPM/ICA",
+				description:
+					"datos.gob.ar SSPM 75.3 — 阿根廷肉类及制品 FOB 出口月度序列（产品族×全球，目的国交叉为登记缺口，V8 批2）",
+				tier: "2",
+				beefRelevance: "direct",
+			},
 			inac: {
 				label: "INAC Uruguay",
 				description: "Instituto Nacional de Carnes — Uruguayan beef export prices and volumes",

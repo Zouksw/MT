@@ -144,6 +144,9 @@ function backgroundJobs(): ScheduledJob[] {
 		// days confirm no change (noChange contract, round-149 precedent).
 		"comtrade_mirror",
 		"secex",
+		// Monthly SSPM CSV on the daily cycle: non-release days confirm no
+		// change (noChange contract, same shape as comtrade_mirror).
+		"argentina_exports",
 		"usda_ams",
 		// Weekly NW_LS421 report on the daily cycle: the PDF always holds the
 		// current week, so the six non-publication days re-scrape the same row
