@@ -85,7 +85,7 @@ export default function LandingPage() {
 					{/* Logo */}
 					<a href="/" className="flex items-center gap-2.5">
 						<div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
-							<span className="text-white dark:text-gray-900 font-semibold text-base">T</span>
+							<span className="text-white dark:text-gray-900 font-semibold text-sm">MT</span>
 						</div>
 						<span className="text-base font-display font-semibold text-gray-900 dark:text-white tracking-tight">
 							MT
@@ -170,9 +170,11 @@ export default function LandingPage() {
 			<section className="bg-white dark:bg-background border-t border-black/5 dark:border-white/10">
 				<div className="px-6 py-24 md:py-36 lg:py-48">
 					<MotionReveal className="text-center max-w-[700px] mx-auto">
-						<h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
+						{/* h2, not h1 — the hero already owns the page's single h1;
+						    two h1s break the document outline for SEO + screen readers. */}
+						<h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900 dark:text-white">
 							Start receiving signals today
-						</h1>
+						</h2>
 						<div className="mt-8">
 							<a
 								href="/register"

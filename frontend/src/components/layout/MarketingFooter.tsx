@@ -58,7 +58,7 @@ export function MarketingFooter() {
 					<div className="max-w-xs">
 						<div className="flex items-center gap-2.5 mb-3">
 							<div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
-								<span className="text-white dark:text-gray-900 font-semibold text-base">T</span>
+								<span className="text-white dark:text-gray-900 font-semibold text-sm">MT</span>
 							</div>
 							<span className="text-base font-display font-semibold text-gray-900 dark:text-white tracking-tight">
 								MT

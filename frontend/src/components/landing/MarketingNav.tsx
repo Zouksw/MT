@@ -46,7 +46,7 @@ export function MarketingNav({
 				<div className="flex justify-between items-center h-16">
 					<Link href="/" className="flex items-center gap-2">
 						<div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-md flex items-center justify-center">
-							<span className="text-white dark:text-gray-900 font-semibold text-lg">T</span>
+							<span className="text-white dark:text-gray-900 font-semibold text-sm">MT</span>
 						</div>
 						<span className="text-h4 font-display font-semibold text-foreground">MT</span>
 					</Link>
