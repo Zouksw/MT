@@ -90,11 +90,17 @@ export function useTradingData(initialSlug?: string) {
 			// (round-129 batch 7, TECH-DEBT §十四 F3).
 			setSelectedSlug("beef_carcass_us");
 		} else if (!beefMode && commodities.length > 0) {
-			// Auto-select the first commodity. A selected slug missing from the
-			// list can only originate from a stale/typo'd ?slug= deep link —
-			// degrade to the default instead of a permanent "Loading..." chart.
+			// Auto-select the first commodity that actually has price data. The
+			// raw list order leads with series whose price table is empty (e.g.
+			// carp_wholesale_cn), so a blind commodities[0] landed every visitor
+			// on an empty "No chart data" board by default — the same trap the
+			// beefMode branch below already fixed for beef_cutout_us (round-129
+			// batch 7). A selected slug missing from the list can only originate
+			// from a stale/typo'd ?slug= deep link — degrade to the default
+			// instead of a permanent "Loading..." chart.
 			if (!selectedSlug || !commodities.some((c) => c.slug === selectedSlug)) {
-				setSelectedSlug(commodities[0].slug);
+				const firstWithData = commodities.find((c) => c.latestDate) ?? commodities[0];
+				setSelectedSlug(firstWithData.slug);
 			}
 		}
 	}, [selectedSlug, commodities, beefMode]);

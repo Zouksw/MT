@@ -35,6 +35,8 @@ export interface Commodity {
 	currency: string;
 	/** Series cadence "daily" | "weekly" | "monthly" (round-129 batch 7). */
 	interval: string;
+	/** Date of the newest price row, when the series has any (backend-computed). */
+	latestDate?: string;
 }
 
 export interface CommodityPricePoint {

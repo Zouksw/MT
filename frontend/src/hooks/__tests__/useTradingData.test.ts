@@ -243,6 +243,31 @@ describe("useTradingData", () => {
 		await waitFor(() => expect(stale.current.selectedSlug).toBe("beef_carcass_us"));
 	});
 
+	it("auto-select prefers the first commodity WITH price data over the raw list head", async () => {
+		// The raw commodity list leads with series whose price table is empty
+		// (carp_wholesale_cn), so a blind commodities[0] default landed every
+		// visitor on an empty "No chart data" board. The auto-select must skip
+		// data-less series (latestDate present = has rows) and only fall back
+		// to the list head when nothing has data.
+		mockFetchRoute(happyRoutes());
+		md.commodities = [
+			{ id: "c0", slug: "carp_wholesale_cn", name: "Carp" },
+			{ id: "c1", slug: "beef_carcass_us", name: "Beef Carcass (US)", latestDate: "2026-07-01" },
+			{ id: "c2", slug: "corn_cme", name: "Corn", latestDate: "2026-08-29" },
+		];
+
+		const { result } = renderHook(() => useTradingData());
+		await waitFor(() => expect(result.current.selectedSlug).toBe("beef_carcass_us"));
+
+		// No series has data → honest list-head fallback (previous behavior).
+		md.commodities = [
+			{ id: "c0", slug: "carp_wholesale_cn", name: "Carp" },
+			{ id: "c2", slug: "corn_cme", name: "Corn" },
+		];
+		const { result: fallback } = renderHook(() => useTradingData());
+		await waitFor(() => expect(fallback.current.selectedSlug).toBe("carp_wholesale_cn"));
+	});
+
 	it("surfaces an AI-signal error when the signal payload can't be parsed", async () => {
 		const routes = happyRoutes();
 		routes["/api/signals/beef_carcass_us?"] = {
