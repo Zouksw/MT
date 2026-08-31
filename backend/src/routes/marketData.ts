@@ -9,6 +9,7 @@ import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
 import { stalenessWindowDays } from "@/services/cadence";
 import { scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
+import { HS_CODES } from "@/services/dataIngestion/sources/comtradeMirror";
 import {
 	getCommodityFreshness,
 	getFundamentals,
@@ -17,6 +18,7 @@ import {
 	getPriceHistory,
 	getPricesBySource,
 	getSourceFreshness,
+	getTradeFlows,
 	listCommodities,
 } from "@/services/marketService";
 
@@ -293,6 +295,27 @@ router.get(
 	asyncHandler(async (_req, res) => {
 		const rates = await getLatestExchangeRates();
 		success(res, { rates, count: rates.length });
+	}),
+);
+
+/**
+ * Trade flows to China (V8 批4): per-country monthly volume / unit price / MoM
+ * from the comtrade_mirror lanes, plus the China-reported annual CIF
+ * calibration table. 鉴权内起步 per D25 — the 口径注记 (notes) travel with the
+ * payload and are mandatory UI on every consumer. Single hs param from the
+ * mirror's pinned HS set (query-set contract lives in the source module).
+ */
+const tradeFlowsSchema = z.object({
+	hs: z.enum(HS_CODES).default("0202"),
+});
+
+router.get(
+	"/trade-flows",
+	authenticate,
+	cacheRoute("market:trade-flows", 3600),
+	asyncHandler(async (req: AuthenticatedRequest, res) => {
+		const { hs } = tradeFlowsSchema.parse(req.query);
+		success(res, await getTradeFlows(hs));
 	}),
 );
 

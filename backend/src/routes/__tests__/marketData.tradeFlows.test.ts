@@ -1,0 +1,174 @@
+/**
+ * GET /api/market/trade-flows (V8 批4, round-151).
+ *
+ * The read side of the comtrade_mirror lanes (V8 批0). Contract under test:
+ * auth gating (D25 鉴权内先行), the per-country latest + MoM shape, the
+ * annual-lane distinction (AR/UY: freq A, no MoM), the side-by-side CIF
+ * calibration table, and the mandatory 口径注记 (notes). Seeds its own factor
+ * rows in mt_test and cleans both the rows and the route's Redis cache key
+ * (the 3600s TTL would otherwise serve deleted rows to the next run).
+ */
+
+import type { Express } from "express";
+import request from "supertest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { redis } from "@/lib/redis";
+import { createTestApp, getAdminToken, getPrisma, requireDb } from "@/test/helpers/testApp";
+
+let app: Express;
+let adminToken: string;
+
+/** Months relative to "now" so stale flags stay deterministic. */
+function monthsAgo(n: number): Date {
+	const d = new Date();
+	d.setUTCDate(1);
+	d.setUTCMonth(d.getUTCMonth() - n);
+	return d;
+}
+
+const MIRROR_TYPE = "export_to_cn_0202";
+const CALIB_TYPE = "import_cn_cif_0202";
+// Router-relative paths (Express req.path inside a mounted router — the
+// full /api/market prefix is NOT part of the cache key; live-verified).
+const CACHE_KEYS = ["market:trade-flows:/trade-flows", "market:trade-flows:/trade-flows:hs=0202"];
+
+beforeAll(async () => {
+	app = createTestApp();
+	await requireDb("trade-flows routes");
+	adminToken = await getAdminToken(app);
+
+	const prisma = getPrisma();
+	await prisma.marketFactor.deleteMany({ where: { type: { in: [MIRROR_TYPE, CALIB_TYPE] } } });
+	await prisma.marketFactor.createMany({
+		data: [
+			{
+				// BR monthly, latest + previous → MoM computable, fresh (1 month back)
+				type: MIRROR_TYPE,
+				region: "BR→CN",
+				date: monthsAgo(1),
+				value: 6751.24,
+				unit: "USD/ton",
+				source: "comtrade_mirror",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: "202606",
+					quantityKg: 158364760,
+					valueUsd: 1069158523,
+					basis: "FOB (partner-reported export)",
+				},
+			},
+			{
+				type: MIRROR_TYPE,
+				region: "BR→CN",
+				date: monthsAgo(2),
+				value: 6400.0,
+				unit: "USD/ton",
+				source: "comtrade_mirror",
+				seriesKey: "",
+				metadata: { freq: "M", period: "202605", quantityKg: 150000000, valueUsd: 960000000 },
+			},
+			{
+				// AR annual fallback: freq A, single row → no MoM
+				type: MIRROR_TYPE,
+				region: "AR→CN",
+				date: new Date(new Date().getUTCFullYear() - 1, 0, 1),
+				value: 3723.5,
+				unit: "USD/ton",
+				source: "comtrade_mirror",
+				seriesKey: "",
+				metadata: {
+					freq: "A",
+					period: String(new Date().getUTCFullYear() - 1),
+					quantityKg: 592359800,
+					valueUsd: 2205121511,
+				},
+			},
+			{
+				type: CALIB_TYPE,
+				region: "CN←BR",
+				date: new Date(new Date().getUTCFullYear() - 1, 0, 1),
+				value: 4621.36,
+				unit: "USD/ton",
+				source: "comtrade_mirror",
+				seriesKey: "",
+				metadata: {
+					freq: "A",
+					period: String(new Date().getUTCFullYear() - 1),
+					quantityKg: 1339849200,
+					valueUsd: 6191927449,
+					basis: "CIF (China-reported import)",
+				},
+			},
+		],
+	});
+});
+
+afterAll(async () => {
+	await getPrisma().marketFactor.deleteMany({ where: { type: { in: [MIRROR_TYPE, CALIB_TYPE] } } });
+	try {
+		const r = await redis();
+		if (r) await r.del(...CACHE_KEYS);
+	} catch {
+		// Redis down — the key expires on its own TTL.
+	}
+});
+
+describe("GET /api/market/trade-flows", () => {
+	test("requires authentication (D25 鉴权内先行)", async () => {
+		const res = await request(app).get("/api/market/trade-flows");
+		expect(res.status).toBe(401);
+	});
+
+	test("returns monthly flows with latest + MoM and annual lanes without", async () => {
+		const res = await request(app)
+			.get("/api/market/trade-flows?hs=0202")
+			.set({ Authorization: `Bearer ${adminToken}` });
+		expect(res.status).toBe(200);
+		expect(res.body.success).toBe(true);
+
+		const { flows, calibration, notes } = res.body.data;
+		expect(res.body.data.hs).toBe("0202");
+
+		const br = flows.find((f: { region: string }) => f.region === "BR→CN");
+		expect(br).toBeDefined();
+		expect(br.freq).toBe("M");
+		expect(br.stale).toBe(false);
+		expect(br.latest.unitPriceUsdPerT).toBeCloseTo(6751.2, 1);
+		expect(br.latest.qtyTons).toBeCloseTo(158364.8, 1);
+		expect(br.latest.valueUsdM).toBeCloseTo(1069.2, 1);
+		// (6751.24 − 6400) / 6400 = 5.5%
+		expect(br.momPct).toBeCloseTo(5.5, 1);
+
+		const ar = flows.find((f: { region: string }) => f.region === "AR→CN");
+		expect(ar.freq).toBe("A");
+		expect(ar.momPct).toBeNull();
+		expect(ar.stale).toBe(false);
+
+		// Calibration lane: CIF, separate table, never merged into flows.
+		const cnBr = calibration.find((c: { region: string }) => c.region === "CN←BR");
+		expect(cnBr.basis).toContain("CIF");
+		expect(cnBr.latest.unitPriceUsdPerT).toBeCloseTo(4621.4, 1);
+		expect(calibration.some((c: { region: string }) => c.region.includes("→CN"))).toBe(false);
+
+		// 口径注记 mandatory: the response always travels with its caliber notes.
+		expect(Array.isArray(notes)).toBe(true);
+		expect(notes.length).toBeGreaterThanOrEqual(2);
+		expect(notes.join("")).toContain("绝不合并");
+	});
+
+	test("rejects an hs code outside the mirror's pinned set", async () => {
+		const res = await request(app)
+			.get("/api/market/trade-flows?hs=999999")
+			.set({ Authorization: `Bearer ${adminToken}` });
+		expect(res.status).toBe(400);
+	});
+
+	test("defaults to hs=0202 when no param is given", async () => {
+		const res = await request(app)
+			.get("/api/market/trade-flows")
+			.set({ Authorization: `Bearer ${adminToken}` });
+		expect(res.status).toBe(200);
+		expect(res.body.data.hs).toBe("0202");
+	});
+});

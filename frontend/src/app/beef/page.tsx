@@ -7,6 +7,7 @@ import { CutForecastCell } from "@/components/beef/CutForecastCell";
 import { SnapshotBanner } from "@/components/beef/SnapshotBanner";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { MarketForecastBoard } from "@/components/market/MarketForecastBoard";
+import { TradeFlowsCard } from "@/components/market/TradeFlowsCard";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -546,6 +547,11 @@ export default function BeefOverview() {
 					</CardBody>
 				</Card>
 			</div>
+
+			{/* 对华贸易流 (V8 批4): monthly FOB mirror + annual CIF calibration.
+			    Auth-gated (D25 鉴权内先行) — the card omits itself for
+			    anonymous visitors instead of showing a login wall. */}
+			<TradeFlowsCard />
 
 			{/* Price Spread by Source */}
 			{latestPrices.length > 0 && (

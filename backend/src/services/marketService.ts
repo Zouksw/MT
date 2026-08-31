@@ -9,6 +9,7 @@
  * request (file upload) or the scraper manager.
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { NotFoundError } from "@/middleware/errorHandler";
@@ -456,5 +457,183 @@ export async function getSourceFreshness() {
 			// counts real price rows written + whether predictions can verify.
 			dataHealth,
 		},
+	};
+}
+
+/**
+ * Trade flows to China for one HS code (V8 批4, round-151).
+ *
+ * Reads the comtrade_mirror lanes (V8 批0): monthly FOB mirror rows written
+ * by the live monthly reporters (BR/AU/NZ/US), annual FOB fallback rows for
+ * AR/UY, and the China-reported annual CIF calibration lines. Response
+ * contract: per-country latest month with quantity / unit price / MoM, the
+ * calibration lines side by side, and 口径注记 mandatory — FOB mirror and CIF
+ * official are systematically different numbers and must never be merged
+ * (research doc §七.4). Stale flags are honest about monthly lag: AR/UY gaps
+ * are non-reporting (annual only), NOT zero exports.
+ */
+export interface TradeFlowPoint {
+	period: string;
+	date: string;
+	unitPriceUsdPerT: number;
+	qtyTons: number;
+	valueUsdM: number;
+}
+
+export interface TradeFlowEntry {
+	region: string;
+	country: string;
+	freq: "M" | "A";
+	basis: string;
+	latest: TradeFlowPoint;
+	/** Unit-price change vs the previous period, %. Null for annual lanes and
+	 * first points (no comparable previous row). */
+	momPct: number | null;
+	qtyMomPct: number | null;
+	stale: boolean;
+}
+
+export interface CalibrationEntry {
+	region: string;
+	country: string;
+	basis: string;
+	latest: TradeFlowPoint;
+	stale: boolean;
+}
+
+/** Monthly lanes are stale when the latest period lags more than 3 months
+ * behind the current one — BR reports t-1 and AU/NZ/US t-2, so a 2-month lag
+ * is the sources' normal cadence, not staleness (live-found round-151: a
+ * 75-day wall-clock threshold flagged every t-2 source as stale). */
+const MONTHLY_STALE_MONTHS = 3;
+/** Annual lanes land ~1 year in arrears; 2 missing years = stale. */
+const ANNUAL_STALE_YEARS = 2;
+
+type FactorRow = {
+	region: string | null;
+	date: Date;
+	value: Prisma.Decimal;
+	metadata: Prisma.JsonValue;
+};
+
+function toPoint(row: FactorRow): TradeFlowPoint {
+	const meta = (row.metadata ?? {}) as {
+		period?: string;
+		quantityKg?: number;
+		valueUsd?: number;
+	};
+	return {
+		period: meta.period ?? row.date.toISOString().slice(0, 7),
+		date: row.date.toISOString(),
+		unitPriceUsdPerT: Math.round(Number(row.value) * 10) / 10,
+		qtyTons: Math.round(((meta.quantityKg ?? 0) / 1000) * 10) / 10,
+		valueUsdM: Math.round(((meta.valueUsd ?? 0) / 1_000_000) * 10) / 10,
+	};
+}
+
+export async function getTradeFlows(hs: string): Promise<{
+	hs: string;
+	flows: TradeFlowEntry[];
+	calibration: CalibrationEntry[];
+	notes: string[];
+}> {
+	const [mirrorRows, calibRows] = await Promise.all([
+		prisma.marketFactor.findMany({
+			where: { type: `export_to_cn_${hs}` },
+			orderBy: { date: "desc" },
+			take: 400,
+		}),
+		prisma.marketFactor.findMany({
+			where: { type: `import_cn_cif_${hs}` },
+			orderBy: { date: "desc" },
+			take: 100,
+		}),
+	]);
+
+	const now = Date.now();
+	const byRegion = new Map<string, FactorRow[]>();
+	for (const row of mirrorRows) {
+		if (!row.region) continue;
+		const list = byRegion.get(row.region) ?? [];
+		list.push(row);
+		byRegion.set(row.region, list);
+	}
+
+	const flows: TradeFlowEntry[] = [];
+	for (const [region, rows] of byRegion) {
+		const meta = (rows[0].metadata ?? {}) as { freq?: string; basis?: string };
+		const freq = meta.freq === "A" ? "A" : "M";
+		const latest = toPoint(rows[0]);
+		const prev = rows[1] ? toPoint(rows[1]) : null;
+
+		let momPct: number | null = null;
+		let qtyMomPct: number | null = null;
+		if (prev && prev.unitPriceUsdPerT > 0 && latest.period !== prev.period) {
+			momPct =
+				Math.round(
+					((latest.unitPriceUsdPerT - prev.unitPriceUsdPerT) / prev.unitPriceUsdPerT) * 1000,
+				) / 10;
+		}
+		if (prev && prev.qtyTons > 0 && latest.period !== prev.period) {
+			qtyMomPct = Math.round(((latest.qtyTons - prev.qtyTons) / prev.qtyTons) * 1000) / 10;
+		}
+
+		let stale: boolean;
+		const latestDate = new Date(latest.date);
+		const nowDate = new Date(now);
+		if (freq === "M") {
+			const monthDiff =
+				(nowDate.getUTCFullYear() - latestDate.getUTCFullYear()) * 12 +
+				(nowDate.getUTCMonth() - latestDate.getUTCMonth());
+			stale = monthDiff > MONTHLY_STALE_MONTHS;
+		} else {
+			const latestYear = Number(latest.period.slice(0, 4));
+			stale = latestYear <= new Date().getUTCFullYear() - ANNUAL_STALE_YEARS;
+		}
+
+		flows.push({
+			region,
+			country: region.split("→")[0],
+			freq,
+			basis: meta.basis ?? "FOB (partner-reported export)",
+			latest,
+			momPct,
+			qtyMomPct,
+			stale,
+		});
+	}
+	// Monthly lanes first (newest data), then annual fallbacks.
+	flows.sort((a, b) => {
+		if (a.freq !== b.freq) return a.freq === "M" ? -1 : 1;
+		return new Date(b.latest.date).getTime() - new Date(a.latest.date).getTime();
+	});
+
+	const seenCalib = new Set<string>();
+	const calibration: CalibrationEntry[] = [];
+	for (const row of calibRows) {
+		if (!row.region || seenCalib.has(row.region)) continue;
+		seenCalib.add(row.region);
+		const meta = (row.metadata ?? {}) as { basis?: string };
+		const point = toPoint(row);
+		const latestYear = Number(point.period.slice(0, 4));
+		calibration.push({
+			region: row.region,
+			country: row.region.split("←")[1] ?? row.region,
+			basis: meta.basis ?? "CIF (China-reported import)",
+			latest: point,
+			stale: latestYear <= new Date().getUTCFullYear() - ANNUAL_STALE_YEARS,
+		});
+	}
+	calibration.sort((a, b) => b.latest.qtyTons - a.latest.qtyTons);
+
+	return {
+		hs,
+		flows,
+		calibration,
+		notes: [
+			"月度线为出口国报送的 FOB 镜像口径（巴西约滞后 1 个月，澳/新/美约 2 个月）；阿根廷/乌拉圭仅年度报送，缺失月份为未报送而非零值。",
+			"中国官方口径为年度 CIF（中国报送），与月度 FOB 镜像存在系统性差异（含运保费与时点），两口径并列展示、绝不合并。",
+			"0202 为冻牛肉总量，其 6 位子目（020230 冻去骨 / 020220 冻带骨）为独立序列，读取时不可与 0202 加总。",
+		],
 	};
 }
