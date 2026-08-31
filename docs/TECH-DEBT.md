@@ -138,6 +138,17 @@
 
 ---
 
+### TD-12b — 死字号/动画 token 与未命名"亮金"（2026-08-31 复核登记，未动 per §十.5）
+
+**来源**：2026-08-07 DESIGN-SYSTEM-AUDIT §3.2/§6.1 + 2026-08-31 前端审查复核（round-151）。
+**现状（2026-08-31 复核）**：
+- `tailwind.config.ts` 自定义字号 token 中 `text-data-lg/data/data-sm/code` 全仓 **0 用**（默认 Tailwind 字号 text-sm/xs 以 10:1 成为事实标准）；动画 token 4 个中 3 个死（fade-in/slide-up/modal-in 0 用，活的是 skeleton-pulse）。
+- **亮金 `#A8821C`**（primary #8B6914 的暗色提亮变体）在 **7 处**作为事实上的第二金使用：Hero.tsx 渐变 + hover ring、cards.css ×2、forms.css、layouts.css、ai-utils.ts——设计审计曾记"最后 1 处 hex 漂移"，实为**成体系的未命名 token**，非漂移。
+- 审计 P2/P3 两项已在后续轮次完成：`next/font/google` 死字体加载已移除（layout.tsx 现仅 geist/font）；animate-spin 已 reduced-motion 感知（animations.css:252 降至 3s）。
+**处置决策（遵循 §十.5）**：不改。死 token 删除与 `--color-bright-gold` token 化需与 TD-12 的 v4 `@theme` 迁移（产品级 palette 收敛）同批进行，独立零散改动会加深三源分裂。触发条件：下次动 tailwind.config.ts 或 tokens.css 时顺手处理。
+
+---
+
 ## 三、Schema
 
 ### TD-13 — 死/伪模型

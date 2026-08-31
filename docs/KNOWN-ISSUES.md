@@ -150,6 +150,15 @@
 
 ---
 
+### D5 — news 行入库即带 "[No title available]" 占位标题（数据侧，前端忠实渲染）
+
+**来源**：2026-08-31 judge 视觉验收备注（dashboard 最新市场动态条）+ live API 复核。
+**现状（2026-08-31 live 实测）**：`GET /api/news?page=1&limit=5` 返回的 TRADE_POLICY / Federal Register 行中部分**连 title 字段都没有**，后端逐字返回 `"[No title available]"` 字符串；该串不在前后端任何源码中（全仓 grep 0 命中）——**入库时就已带占位标题**，属采集侧数据缺陷。dashboard 新闻条与 /market-news 列表原样展示。
+**对核心价值链的影响**：低——信息仍在（source/category/publishedAt 齐全），仅标题占位观感差；每页少量行。
+**处置决策（遵循 §十.5）**：前端不改（"[No title available]" 本身是诚实的缺失标注）。登记待采集侧决策：选项 A 回填（用 Federal Register 原始 title 字段重新抓取）；选项 B ingestion 写入前丢弃无 title 行；选项 C 前端用 source+category 生成回退文案。**需要 owner 决策**。
+
+---
+
 ## 二、推理服务
 
 ### R1 — Chronos 接入后端共识 + 网络可用性
@@ -280,6 +289,16 @@
 **事实**：backend 每 30 分钟刷一轮预测（5 commodity × 3 chronos = 15 请求），burst 期 torch CPU 推理缓冲把 RSS 推到 2.2–2.6GB，超 2G 上限 → PM2 WORKER 每 30 分钟 SIGINT 击杀，重启计数 320、当周 218 次。**非泄漏**（空闲 RSS ~560MB，3 pipeline 常驻），是工作集天花板 + glibc arena 不归还。用户可见症状被 round-99 的 /ready 修复掩盖（重启 7s 完成、请求全 200），故长期未被发现。
 **修复（2026-08-14）**：上限 2G→**`3584M`**。踩坑：PM2 尺寸正则**不认小数**，`'3.5G'` 被 WARN 拒绝且重启不生效——必须用整数 M。主机 14G 内存/11G available。
 **二次事件（2026-08-15 05:25）**：cme 复活后预测订阅商品 5→17（burst 15→~51 请求），如 R4 预警——RSS 在 burst 峰值冲到 **3769MB**（超 3584M 上限 11MB），15 小时内首次也是唯一一次击杀。缓解三件套（同日上线）：①上限 **4096M**；②`MALLOC_ARENA_MAX=2`（ecosystem env，治 glibc 多线程 arena 碎片——torch 多线程下默认 8×cores 个 arena 各自滞留内存）；③`routers/predict.py` 每请求 `gc.collect()`（torch/statsmodels 包装器的引用环 refcount 不回收）。重启后 live 验证：/ready 200、chronos 真实预测通路 OK、RSS 基线 603MB。**观察项**：若 RSS 仍持续爬升，下一步限并发或深入 torch 内存剖析。
+
+---
+
+### R5 — holtwinters avgMape 273.66% vs medianMape 0.31%：均值被长尾离群拉高（口径复核项，非前端 bug）
+
+**来源**：2026-08-31 judge 视觉验收备注（/ai/track-record 公开页 Model leaderboard 表）+ live API 复核。
+**现状（2026-08-31 live 实测）**：`GET /api/signals/models/accuracy/public` 的 holtwinters 行：`medianMape=0.31`、`avgMape=273.66`、`verifiedCount=2864`、`directionHitRate=0.4428`。同页 naive_forecaster 行 mean/median 仅差 ~10 倍，holtwinters 两口径差 ~880 倍。
+**根因（待后端复核确认）**：经典 MAPE 小分母爆炸——个别实际值接近 0 的验证点产生数千百分比误差样本，算术均值被少数离群行支配；中位数（0.31%）更代表典型精度。前端 `fmtMape`（`app/ai/track-record/page.tsx:52`）对后端数值忠实渲染，**不是展示层 bug**。
+**对核心价值链的影响**：公开"可核查"页面（信任面）展示 273.66% 的均值会削弱可信叙事，但中位数列同屏可见，信息未失真。
+**处置决策（遵循 §十.5）**：前端不改（忠实渲染）；登记待后端决策——选项 A 同时展示 sMAPE/MdAPE 等稳健口径；选项 B 对均值加截尾（如 trim 1%）；选项 C 排除 |actual| 低于阈值 的样本并在方法论注记说明。**需要 owner 决策，AI 不自主改口径**。
 
 ---
 
