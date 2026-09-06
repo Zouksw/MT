@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-157 — 数据源评估（对标牧集规模/密度）：eWAPS 断供回归发现 + INAC 复活 + 逐层取数决策（纯文档轮）
+
+- **新增 [DATA-SOURCES-EVALUATION.md](DATA-SOURCES-EVALUATION.md)**：回答"要实现牧集量级的数据规模/密度，牛肉外贸信息从哪里获取"。核心结论：牧集密度=三层叠加（现货日更层**无公开源**=运营人工录入或商业采购决策；统计月更层 Comtrade 镜像已承接；工具参照层静态+名单页），MT 数据层 09-06 全量实测基线（18 在册源仅 5 产数；commodity_prices 66,560 行中 95% 为 fred 宏观；beef_cut_prices 2,401 行冻结 2026-04-30；weekly_kills/cold_storage 无在册写入者）。
+- **发现线上回归（本轮最高价值）**：USDA AMS mnreports 报告族（ams_2823.pdf/nw_ls421.txt）已迁 eWAPS 平台——`usda_import_beef` 09-06 连续 warning 0/0，digest `beef_90cl_us` 卡（round-155 批 D dashboard 第二卡）停在 2026-08-28 单点。修复三选一已登记 KNOWN-ISSUES D1（eWAPS 端点勘察 / MARS key / DataMart 待复核）。
+- **其余今日实测**：INAC 域名复活（www.inac.uy 200，旧域 SSL 死，统计入口待勘察→乌拉圭通道低成本复活路径）；IPCVA 2026-04 改版无价格区（降 P2）；customs.gov.cn 412 / ComexStat 403 / stooq 404 封锁复现（08-31 报告矩阵结论不变）。
+- 登记同步：KNOWN-ISSUES D1 增 round-157 更新块、INDEX 增条目。**零代码改动**（评估轮），全部证据为本机 curl/psql 实测可复现（文档附录含命令）。
+
 ### 2026-09-06 — round-156 批 3c 改判 + 批 5（TECH-DEBT 收口部分）— 接缝证据驱动 + 三条 TD 终态
 
 - **批 3c 改判缓做（证据：三页面接缝扫描）**：performance/alerts-rules/data-sources 三页的自然接缝（Modal、badge、card 等子组件）已被历史轮次抽出，剩余 713/705/702 行主体是 15-23 个 hooks 的有状态编排——继续拆分等于给状态机加参数透传层，收益为负（过度工程化防线：拆分是重新分箱，不该造没人住的新房间）。待任一页面功能迭代时随批重构。
