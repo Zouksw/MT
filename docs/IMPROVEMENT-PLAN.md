@@ -1,7 +1,7 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.7.0"
+version: "3.8.0"
 last_updated: "2026-09-06"
 status: "active"
 maintainer: "MT Team"
@@ -18,6 +18,50 @@ related_docs:
 ---
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
+
+> ## 第十波 v3.8.0（2026-09-06 规划，round-156 起）— 代码质量轮：五轴实测 + 分批提升
+>
+> **指令来源**：用户"深度探查当前项目的代码质量，制定提升代码质量的方案"。全库取证 2026-09-06 live 实测（五轴：正确性/可读性/架构/安全/性能），本波不夹带任何功能改动。
+>
+> ### V10-一、质量基线（2026-09-06 实测，全部可复跑命令取证）
+>
+> | 维度 | backend | frontend | inference |
+> |---|---|---|---|
+> | tsc / ruff | **0 错** | **0 错** | ruff 全过（无类型检查器，维持现状） |
+> | biome findings | 23（17W+6I，全低危：noNonNullAssertion 13 / useTemplate 4 / unusedImports 2 / uselessSwitchCase 2 / optionalChain 1 / unusedParam 1） | 12（noExplicitAny 8 等） | — |
+> | biome-ignore（非测试代码） | 2 | **90**（noExplicitAny 41 / noArrayIndexKey 36 / a11y 5 / noImgElement 3 / useExhaustiveDependencies 3 / nonNull 2） | 0 |
+> | 测试基线 | 1099+1 skip / 106 文件 | 360 / 42 套件 | 64 / 4 文件 |
+> | test:source 文件比 | 117/107 = **1.09** | 63/178 = **0.35**（44 页仅 ~9 页区有直接测试） | 4/14（主径覆盖，库仅 3,037 行） |
+> | 依赖漏洞（`pnpm audit --prod`，npmjs registry） | **7**（high 5：fast-uri×4 + js-yaml；moderate 2：qs） | **57**（high 26：next / sharp / js-cookie / nanoid / postcss / js-yaml / brace-expansion / browserslist / fast-uri / hono；moderate 27 + low 4） | pip-audit 未配置 |
+> | 卫生 | TODO/FIXME **0**；console.log 1；空 catch 10（全在 `test/helpers/testContext.ts`，best-effort 清理属合理） | TODO 0；console.log 2；空 catch 0 | — |
+> | 最大文件 | seed.ts **2,696** / mapeTracking.ts 1,538（+test 1,721）/ beef.ts 路由 851（TD-6） | performance/page **750** / alerts/rules 705 / data-sources 702 | inference_engine.py 381 |
+>
+> **取证附带发现**：① round-152 登记的"frontend `tsc --noEmit` 在 useTradingData.test.ts 有 2 个既有类型错"**已消失**（本次净树复测 0 错、退出码 0），过期登记随批 1 关闭；② `hono` 是 frontend 直接生产依赖（package.json）但**源内零引用**（唯一命中为测试文案 "honored" 子串），却携带 high+moderate advisory——直接删除候选；③ 3 处 `useExhaustiveDependencies` 抑制均附充分理由注释（deliberate run-on-X-change 触发模式），保留复核即可；④ 覆盖率工具已配置（backend `@vitest/coverage-v8` / frontend `jest --coverage`）但从未产出报告，无基线；⑤ pytest 20 条 warning 全为三方内部噪音（statsmodels 收敛/非平稳 + starlette testclient 弃用），不修。
+>
+> ### V10-二、批次总览
+>
+> | 批 | 内容 | 规模 | 门控 |
+> |---|---|---|---|
+> | **0（P0 安全）** | 依赖漏洞清零：backend 升 fast-uri / js-yaml / qs；frontend 升 next（patch 优先，D29）/ sharp / js-cookie / nanoid / postcss / js-yaml / qs + **删零引用 hono**；确实不能升的用 `pnpm.overrides` 钉安全版并在 package.json 注明理由 | M | 无 |
+> | **1** | biome 34 条 findings 清零（全部机械修复）+ console.log 3 处清理 + 关闭 ① 的过期登记 | S | 无 |
+> | **2** | biome-ignore 90 → <20：41 个 noExplicitAny 借 recharts-lazy 类型收口集中解决；36 个 noArrayIndexKey 改稳定 key（静态图表数据用 period/slug 字段）；useExhaustiveDependencies 3 处复核后保留 | M | 无 |
+> | **3** | 复杂度热点拆解（**只移动不改逻辑**，每子批独立验证）：3a seed.ts 2,696 按 category 拆模块（commodities/baselines/news fixtures，主文件只编排）；3b beef.ts 851 拆 service 层（TD-6）；3c 前端 3 个 700+ 行页面拆子组件；mapeTracking.ts 1,538 视 3a 证据再定是否入 3d | M-L | 无 |
+> | **4** | 覆盖基线首次可见（双端 `test:coverage` 出报告，**不设阈值门禁**）+ 2 个既有 flaky 根治（mapeTracking 月末敏感用固定日期注入；T3 并行负载型复核隔离方案） | S-M | 无 |
+> | **5** | TECH-DEBT 活跃项收口：TD-5 三套 AuthRequest 类型收敛 / TD-8 axios→fetch 迁移（market-data.ts）/ TD-14 空库 `migrate deploy` 冷启动验证 / TD-17 脚本漂移清理；已清项（TD-1/4/7/9/10/11）状态对齐标 RESOLVED | M | 无 |
+>
+> ### V10-三、决策项（不擅动，需用户点头）
+>
+> | # | 事项 | 建议 |
+> |---|---|---|
+> | **D28** | CI 是否加 coverage 阈值门禁 | 先可见不加门；攒两轮基线数据后再议阈值 |
+> | **D29** | next 漏洞若需 minor 跳版（15.5.x → 15.6+）是否接受 | patch 优先；minor 单独批 + 44 页全冒烟后再合 |
+> | **D30** | pip-audit 是否引入 inference | 建议缓——torch/statsmodels 供应链噪音大，ruff+pytest 已覆盖主风险面 |
+>
+> ### V10-四、不做清单（继承红线 + 本波新增）
+>
+> 不引新重构框架、不做全量重写、不夹带功能改动、覆盖率不设阈值门禁（D28 未过门）、不修三方库内部 warning（statsmodels/starlette）。批 3 拆解严守"只移动不改逻辑"，行为由既有 1099/360/64 基线守护。
+>
+> **执行顺序**：批 0（安全优先）→ 1 → 2 → 3（可拆子批穿插）→ 4 → 5。门禁沿用：tsc + biome + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
 
 > ## 第九波 v3.7.0（2026-09-06，round-155）— 产品范围收敛轮：国产维度完全删除 + 外贸信息面丰富
 >
