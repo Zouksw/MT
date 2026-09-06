@@ -129,6 +129,11 @@ router.get(
  */
 const PUBLIC_DIGEST_SLUGS = [
 	"beef_carcass_us",
+	// Weekly US import 90CL manufacturing-beef benchmark (USDA NW_LS421,
+	// round-155 批D) — the digest's cadence logic is interval-generic, so
+	// weekly serves 本周=vs previous weekly point and the 21d staleness
+	// window from cadence.ts, no weekly-specific branch needed.
+	"beef_90cl_us",
 	"live_cattle_cme",
 	"feeder_cattle_cme",
 	"usd_cny",

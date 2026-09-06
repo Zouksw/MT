@@ -177,6 +177,10 @@ describe("Market Data Routes", () => {
 		// datasets/timeseries, no private identifiers).
 		const DIGEST_WHITELIST = [
 			"beef_carcass_us",
+			// round-155 批D: weekly 90CL import benchmark joined the public
+			// digest (status may be no_data/error in mt_test — the seed has no
+			// 90CL rows; equality is on slugs, per-slug status is open).
+			"beef_90cl_us",
 			"live_cattle_cme",
 			"feeder_cattle_cme",
 			"usd_cny",

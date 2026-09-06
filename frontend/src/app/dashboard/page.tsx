@@ -6,6 +6,7 @@ import {
 	Globe,
 	Lock,
 	Newspaper,
+	Ship,
 	Sparkles,
 	TrendingDown,
 	TrendingUp,
@@ -24,6 +25,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { StatCard, type TrendIndicator } from "@/components/ui/StatCard";
 import { useAuth } from "@/contexts/auth";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useMarketDigest } from "@/hooks/useMarketDigest";
 import { usePublicHighlights } from "@/hooks/usePublicHighlights";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { useIsMobile } from "@/lib/responsive-utils";
@@ -44,6 +46,7 @@ const AlertDistributionChart = dynamic(
 // icons are static, so hoisting them to module scope keeps their reference
 // stable across renders.
 const BEEF_ICON = <Globe className="size-5" />;
+const IMPORT_90CL_ICON = <Ship className="size-5" />;
 const FACTORY_ICON = <Warehouse className="size-5" />;
 const RECORDS_ICON = <TrendingUp className="size-5" />;
 const DATASET_ICON = <Database className="size-5" />;
@@ -134,6 +137,13 @@ export default function DashboardPage() {
 	// card. Round-126: this slot previously rendered CBBTCUSD — Coinbase
 	// Bitcoin mislabeled as "US carcass" — before the series swap.
 	const { live: beefLive, loading: highlightsLoading } = usePublicHighlights();
+	// Weekly US import 90CL benchmark card (round-155 批D) — the foreign-trade
+	// hero slot replacing the deleted 国产均价 card. Same public digest source
+	// as /market/digest, so the two surfaces agree by construction; weekly
+	// cadence means the trend badge is vs the PREVIOUS WEEKLY point (honest,
+	// fabricated daily precision is not invented).
+	const { digest } = useMarketDigest();
+	const import90cl = digest?.series.find((s) => s.slug === "beef_90cl_us");
 	const { status, user: authUser, logout } = useAuth();
 	const isMobile = useIsMobile();
 	// Session truth from AuthContext (cookie-verified on mount). The old
@@ -164,6 +174,16 @@ export default function DashboardPage() {
 	const beefSpark = useMemo(
 		() => beefLive?.series?.map((p) => p.close).slice(-30) ?? [],
 		[beefLive?.series],
+	);
+	const import90clTrend = useMemo<TrendIndicator | undefined>(
+		() =>
+			import90cl?.prevPointChangePct == null
+				? undefined
+				: {
+						value: Math.abs(import90cl.prevPointChangePct),
+						isPositive: import90cl.prevPointChangePct >= 0,
+					},
+		[import90cl?.prevPointChangePct],
 	);
 	const alertsTrend = useMemo<TrendIndicator | undefined>(
 		() =>
@@ -239,12 +259,13 @@ export default function DashboardPage() {
 
 					{/* KPI HERO per PRODUCT-SPEC §5.1:
 					 * 全球牛肉价（IMF 月度基准，FRED PBEEFUSDM — D2 换掉长期冻结的进口均价种子值）/
-					 * AI 牛肉月度预测. 国产均价卡已随国产维度删除（round-155）。
+					 * 进口 90CL 周度到岸基准（USDA NW_LS421，round-155 批D——原国产均价卡随国产
+					 * 维度删除后由此外贸基准接位）/ AI 牛肉月度预测.
 					 * Each surfaces an honest "--" when its data source is empty rather
 					 * than fabricating a number. The AI card's directional color comes
 					 * from the consensus direction (green up / red down / muted flat). */}
 					<div
-						className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6"
+						className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6"
 						aria-live="polite"
 						aria-atomic="true"
 					>
@@ -259,6 +280,17 @@ export default function DashboardPage() {
 							// month-over-month) — unit-invariant, honest.
 							trend={beefTrend}
 							sparklineData={beefSpark.length >= 2 ? beefSpark : undefined}
+						/>
+						<StatCard
+							title={`进口 90CL 周度基准${import90cl?.latest ? ` · ${import90cl.latest.date.slice(5, 10).replace("-", "/")}` : ""}`}
+							value={import90cl?.latest?.close ?? "--"}
+							suffix={import90cl?.unit ?? "USD/cwt"}
+							icon={IMPORT_90CL_ICON}
+							variant="info"
+							loading={loading}
+							// Weekly cadence: vs the previous weekly point, never a
+							// fabricated daily delta.
+							trend={import90clTrend}
 						/>
 						<AIPredictionCard summary={stats?.aiSummary ?? null} loading={loading} />
 					</div>
