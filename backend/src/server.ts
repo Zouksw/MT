@@ -156,6 +156,9 @@ function backgroundJobs(): ScheduledJob[] {
 		"ibge_sidra",
 		// Uruguay DIAE monthly price ladder (stride-2 year queries; round-159).
 		"inac",
+		// Weekly Drewry WCI on the daily cycle: non-Thursday runs confirm no
+		// change (noChange contract; round-161 批2).
+		"drewry_wci",
 		"usda_ams",
 		// Weekly NW_LS421 report on the daily cycle: the PDF always holds the
 		// current week, so the six non-publication days re-scrape the same row

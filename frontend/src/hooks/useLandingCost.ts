@@ -74,6 +74,14 @@ export interface LandingCostQuote {
 		usdCny: { rate: number; date: string; stale: boolean } | null;
 		originRef: { slug: string; label: string; rate: number; date: string } | null;
 	};
+	/** Live ocean-freight benchmark (Drewry WCI, USD/40ft — round-161 批2).
+	 * Per-container quote, reference-only; never auto-converted to per-kg. */
+	freightBenchmark?: {
+		usdPer40ft: number;
+		date: string;
+		daysOld: number;
+		stale: boolean;
+	};
 	landed?: {
 		low: LandedCostBreakdown;
 		mid: LandedCostBreakdown;

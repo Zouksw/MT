@@ -124,6 +124,15 @@ export interface LandingCostQuote {
 		usdCny: { rate: number; date: string; stale: boolean } | null;
 		originRef: { slug: string; label: string; rate: number; date: string } | null;
 	};
+	/** Live ocean-freight benchmark (Drewry WCI, USD per 40ft container —
+	 * round-161 批2). Reference context for the user-supplied freight input;
+	 * NEVER auto-converted to per-kg (payload tonnage is the user's call). */
+	freightBenchmark?: {
+		usdPer40ft: number;
+		date: string;
+		daysOld: number;
+		stale: boolean;
+	};
 	landed?: {
 		low: LandedCostBreakdown;
 		mid: LandedCostBreakdown;
@@ -150,6 +159,30 @@ async function latestUsdCny(): Promise<{ rate: number; date: string; stale: bool
 		};
 	} catch {
 		return null;
+	}
+}
+
+/** Latest Drewry WCI composite (USD/40ft, weekly) — best-effort benchmark
+ * context; absent (not faked) when the series has no rows yet. */
+async function latestFreightBenchmark(): Promise<
+	{ usdPer40ft: number; date: string; daysOld: number; stale: boolean } | undefined
+> {
+	try {
+		const { price } = await getLatestPrice("ocean_freight_wci");
+		if (!price || price.close == null) return undefined;
+		const usdPer40ft = Number(price.close);
+		if (!Number.isFinite(usdPer40ft) || usdPer40ft <= 0) return undefined;
+		const age = daysOld(price.date);
+		// Weekly assessment; the cadence window for weekly covers publication
+		// rhythm (a Friday fetch is 1 day old, a Wednesday fetch 6).
+		return {
+			usdPer40ft: r2(usdPer40ft),
+			date: price.date.toISOString(),
+			daysOld: Math.floor(age),
+			stale: age > stalenessWindowDays(price.interval ?? "weekly"),
+		};
+	} catch {
+		return undefined;
 	}
 }
 
@@ -221,6 +254,13 @@ export async function getLandingCostQuote(input: {
 		notes.push("USD/CNY 汇率暂不可用——人民币到岸价本轮不显示（不猜汇率）。");
 	}
 
+	const freightBenchmark = await latestFreightBenchmark();
+	if (freightBenchmark) {
+		notes.push(
+			"海运参照为 Drewry WCI 综合指数（美元/40 尺柜，周度）——按柜计价，折每公斤需你自担装载吨数假设，平台不做该换算。",
+		);
+	}
+
 	let originRef: {
 		slug: string;
 		label: string;
@@ -285,6 +325,7 @@ export async function getLandingCostQuote(input: {
 			},
 		},
 		fx: { usdCny: fxRate, originRef },
+		freightBenchmark,
 		landed: { low: lowB, mid: midB, high: highB },
 		notes: [...baseNotes(), ...notes],
 		timestamp: new Date().toISOString(),

@@ -483,6 +483,13 @@ router.get(
 				tier: "3",
 				beefRelevance: "macro",
 			},
+			drewry_wci: {
+				label: "Drewry WCI",
+				description:
+					"Drewry World Container Index 免费页 — 集装箱运价综合指数周度（USD/40ft，到岸成本工具的海运参照）",
+				tier: "4",
+				beefRelevance: "macro",
+			},
 			baltic_dry: {
 				label: "Baltic Dry Index",
 				description: "Baltic Exchange dry bulk shipping cost index — global freight benchmark",

@@ -15,6 +15,7 @@ import { comextEuScraper } from "./sources/comextEu";
 import { commodityPriceScraper } from "./sources/commodityPrices";
 import { comtradeMirrorScraper } from "./sources/comtradeMirror";
 import { dceFuturesScraper } from "./sources/dceFutures";
+import { drewryWciScraper } from "./sources/drewryWci";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
 import { ibgeSidraScraper } from "./sources/ibgeSidra";
@@ -86,6 +87,9 @@ export function registerAllScrapers(): void {
 
 	// Tier 4 — Shipping & logistics
 	scraperManager.registerSource("baltic_dry", balticDryScraper);
+	// Weekly Drewry WCI composite (free page text, keyless) — the freight
+	// benchmark surfaced by the landing-cost tool (round-161 批2).
+	scraperManager.registerSource("drewry_wci", drewryWciScraper);
 	scraperManager.registerSource("shipping_index", shippingIndexScraper);
 
 	// Tier 5 — Macro & auxiliary

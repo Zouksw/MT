@@ -271,6 +271,32 @@ export default function LandingCostPage() {
 									</CardBody>
 								</Card>
 
+								{/* 海运参照（按柜计价，不做 per-kg 换算） */}
+								{quote.freightBenchmark && (
+									<Card>
+										<CardHeader>
+											<CardTitle>海运参照（Drewry WCI）</CardTitle>
+										</CardHeader>
+										<CardBody className="space-y-1.5 text-sm">
+											<div className="tabular-nums text-foreground">
+												${fmt(quote.freightBenchmark.usdPer40ft)} / 40 尺柜
+											</div>
+											<div className="text-xs text-muted-foreground">
+												评估日 {fmtDate(quote.freightBenchmark.date)} · 周度（周四评估）
+												{quote.freightBenchmark.stale && (
+													<span className="ml-1 text-warning">
+														（已 {quote.freightBenchmark.daysOld} 天未更新，注意时效）
+													</span>
+												)}
+											</div>
+											<div className="text-xs text-muted-foreground">
+												8
+												条东西向航线即期价综合；按柜计价——折每公斤请用你的装载吨数假设除算，平台不做该换算。
+											</div>
+										</CardBody>
+									</Card>
+								)}
+
 								{/* 汇率溯源 */}
 								<Card>
 									<CardHeader>
