@@ -64,9 +64,9 @@
 ### TD-6 — 3 个无 service 层的胖路由（待重构）
 **审计**：2026-07-12，`reviews/2026-07-12-round-29.md` 后续
 **当时证据**：ROADMAP C2 主线"胖路由抽 service"已完成 watchlist（17→0 处 `prisma.` 直连）。剩余 3 个按 `prisma.` 直连数排序：
-- `beef.ts`（15）
-- `portfolios.ts`（15）
-- `timeseries.ts`（10）
+- `beef.ts`（15）→ **已完成（2026-09-06，round-156 批3b）**：6 个胖 handler（/prices、/prices/latest、/prices/history、/spreads、/forecasts、/forecasts/:cutCode，~510 行）逐字平移至 `services/beefPriceQueries.ts`，路由 851→381 行只剩中间件链 + 薄委托（/by-country 既有的 aggregateBeefByCountry 模式）；全量 1099+1 零回退，11 端点 live 200，trend 契约/厂号 404 诚实规则逐位保持。剩余简单直查（factories/cuts/weekly-kill/cold-storage）为单 findMany 薄查询，不属"胖路由"。
+- `portfolios.ts`（15）→ **随 D3 孤儿清除删除（round-144）**，条目消亡。
+- `timeseries.ts`（10）→ **未动**（TD-6 剩余主体）。
 
 ### TD-7 — riskMetrics.ts 死文件
 **审计**：2026-07-06，§3.2

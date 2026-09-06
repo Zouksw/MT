@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-156 批 3b — beef.ts 胖路由拆 service 层（TD-6 主体）：851 → 381 行
+
+- 6 个胖 handler（合计 ~510 行业务逻辑）逐字平移至新 `services/beefPriceQueries.ts`（534 行）：`queryBeefPrices`（过滤器构造 + 分页 + freshness 映射）、`latestBeefPrices`（最新日快照 + imported 趋势）、`beefPriceHistory`（多厂号对比 + 日期窗）、`computeBeefSpreads`（价差聚合数学）、`batchBeefForecasts`（group-by 选优 + 4-worker 预测池）、`beefCutForecast`（taxonomy 校验 + 厂号钉定 + 诚实不可测态）。路由层只剩中间件链 + 薄委托——与文件内 `/by-country → aggregateBeefByCountry` 既有模式对齐；服务抛 NotFoundError/BadRequestError 沿 apiKeys/alerts 等六服务既有惯例。**逐字平移零逻辑改写**：/prices 与 /prices/latest 的过滤器构造差异（relation vs id-set 两种形状）刻意不合并，语义统一另行决策。
+- **类型坑（live 修）**：qs 包无类型声明，`ParsedQs` 直接导入报 TS7016——改用结构性类型 `BeefQuery = Record<string, unknown>`（ParsedQs 带索引签名结构兼容，函数内 `typeof x === "string"` 守卫对 unknown 同样收窄），零新依赖。
+- **门禁**：tsc 0 / biome 0 / 全量 **1099+1 skip 零回退** / PM2 重启后 **11 个 beef 端点 live 全 200**（含鉴权 + AI 门的 /forecasts 重路径）/ 契约逐位复核：/prices/latest 响应五键与 trend 三键不变、未知厂号 404 诚实规则保持、/beef 页 307 鉴权重定向正常。TECH-DEBT TD-6 同步：beef.ts 关闭、portfolios.ts 条目随 round-144 删除消亡、timeseries.ts（10 处直连）为剩余主体。
+
 ### 2026-09-06 — round-156 批 3a — seed.ts 热点拆解：2,696 → 1,174 行（数据模块化，逻辑零改动）
 
 - **拆分**：`prisma/seed.ts` 内联大块全部抽为 `prisma/seed/` 下 5 个纯数据/工具模块——`commodityData.ts`（968 行：COMMODITIES 目录 821 + PRICE_BASELINES 107 + DECLARED_SOURCES + MULTI_SOURCE_SLUGS）、`datasets.ts`（300：DATASETS + 接口 + DETECTION_METHODS）、`beefData.ts`（188：FACTORIES）、`random.ts`（47：rand/randInt/pick/sineWave/withSpike/slugify）、`users.ts`（34：USERS）；主文件只留编排 main()。块内代码逐行平移（in-main 块去一层缩进），零逻辑改写。
