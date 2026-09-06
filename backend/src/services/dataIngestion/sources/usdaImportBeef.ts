@@ -17,6 +17,16 @@
  * not). URL is stable: the mnreports PDF always holds the CURRENT week, so
  * history accrues one point per weekly run — no backfill exists on this host.
  *
+ * UPDATE round-158 (2026-09-07): the mnreports family MIGRATED to USDA's My
+ * Market News platform — ams_2823.pdf now 302s to the eWAPS portal HTML, not
+ * a PDF (live-verified; nw_ls421.txt/pdf same). The replacement is report id
+ * 2823 at mymarketnews.ams.usda.gov (viewReport + /filerepo/ PDF pattern),
+ * but that host is egress-blocked from this machine direct AND via the proxy
+ * (round-149 + 2026-09-07 re-verification). Until an egress path exists the
+ * fetch below keeps failing the %PDF- guard (honest 0-row warning) and the
+ * digest card ages to its 21d weekly staleness window on its own. See
+ * KNOWN-ISSUES D1 round-158.
+ *
  * Host prerequisite: `pdftotext` (poppler-utils) on PATH — single-machine PM2
  * deployment, same ops model as the systemd PostgreSQL/Redis deps.
  *
@@ -178,7 +188,12 @@ async function fetchImportBeef(): Promise<ScraperResult> {
 
 	const pdf = Buffer.from(await res.arrayBuffer());
 	if (pdf.subarray(0, 5).toString("latin1") !== "%PDF-") {
-		logger.warn("[USDA_IMPORT_BEEF] response is not a PDF — layout change?");
+		// Round-158: this is not layout drift — the mnreports family moved
+		// to My Market News (report 2823 on mymarketnews.ams.usda.gov,
+		// egress-blocked from this host). Say so instead of a vague hint.
+		logger.warn(
+			"[USDA_IMPORT_BEEF] response is not a PDF — AMS migrated mnreports to My Market News (report 2823, mymarketnews.ams.usda.gov, egress-blocked here); see KNOWN-ISSUES D1 round-158",
+		);
 		return { inserted: 0, updated: 0 };
 	}
 
