@@ -51,20 +51,19 @@ export interface DashboardStats {
 		/** ISO date of the most recent price record. */
 		latestDate: string | null;
 		/**
-		 * Average price split by factory.country per PRODUCT-SPEC §5.1
-		 * (进口均价 / 国产均价 hero cards). `null` when no rows on that side.
-		 * Domestic = country "CN"; imported = everything else.
+		 * Average price of rows with a factory country per PRODUCT-SPEC §5.1
+		 * (imported hero card). `null` when no country-tagged rows. The
+		 * domestic-CN counterpart was removed with the domestic dimension
+		 * (round-155).
 		 */
 		importedAvg: number | null;
-		domesticAvg: number | null;
 		/**
-		 * Period-over-period % change in imported / domestic average, latest day
-		 * vs the previous distinct day with data (PRODUCT-SPEC §5.1 ↓1.2%/↑0.5%
-		 * trend badges). Computed by the backend (round-57) and surfaced here;
-		 * null when either period lacks data on that origin.
+		 * Period-over-period % change in the imported average, latest day vs
+		 * the previous distinct day with data (PRODUCT-SPEC §5.1 trend
+		 * badges). Computed by the backend (round-57) and surfaced here; null
+		 * when either period lacks data.
 		 */
 		importedTrendPct: number | null;
-		domesticTrendPct: number | null;
 		/** Top-priced cuts for the 行情总览 hot-cuts table (max 6).
 		 * `forecast` is the per-cut 7-day consensus (merged from
 		 * useBeefCutForecasts) so the table can show the AI prediction column
@@ -254,9 +253,9 @@ export const useDashboardStats = () => {
 	const beefCuts = cutsData?.data?.cuts ?? cutsData?.cuts ?? [];
 	const beefFactories = factoriesData?.data?.factories ?? factoriesData?.factories ?? [];
 	const beefPrices = pricesData?.data?.prices ?? pricesData?.prices ?? [];
-	// Backend-computed origin-split trend (round-57): imported/domestic avg %
-	// change vs the previous distinct day. Null when backend can't compute it
-	// (no prior day) — keeps the hero trend badges honest.
+	// Backend-computed imported-average trend (round-57): avg % change vs the
+	// previous distinct day. Null when backend can't compute it (no prior
+	// day) — keeps the hero trend badge honest.
 	const beefTrend = pricesData?.data?.trend ?? null;
 
 	// Derived live beef-price board from /beef/prices/latest.
@@ -274,12 +273,11 @@ export const useDashboardStats = () => {
 		let minPrice = Number.POSITIVE_INFINITY;
 		let maxPrice = 0;
 		let latestDate: string | null = null;
-		// Origin split: domestic = factory.country === "CN", imported = everything
-		// else (BR/AU/AR/UY/US). The split powers the 进口均价 / 国产均价 hero cards.
+		// Imported split: rows with a factory country (all factories are
+		// overseas — the domestic-CN branch was removed with the domestic
+		// dimension, round-155).
 		let importedSum = 0;
 		let importedCount = 0;
-		let domesticSum = 0;
-		let domesticCount = 0;
 		const hotCutAccum = new Map<string, { price: number; country: string; source: string }>();
 		for (const p of beefPrices as Array<{
 			price?: number;
@@ -299,10 +297,7 @@ export const useDashboardStats = () => {
 			if (d && (!latestDate || d > latestDate)) latestDate = d;
 
 			const country = p?.factory?.country ?? "";
-			if (country === "CN") {
-				domesticSum += price;
-				domesticCount += 1;
-			} else if (country) {
+			if (country) {
 				importedSum += price;
 				importedCount += 1;
 			}
@@ -323,10 +318,8 @@ export const useDashboardStats = () => {
 			coverage: beefCuts.length > 0 ? pricedCuts.size / beefCuts.length : null,
 			latestDate,
 			importedAvg: importedCount > 0 ? importedSum / importedCount : null,
-			domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
 			// From the backend trend (round-57); null when not computable.
 			importedTrendPct: beefTrend?.importedTrendPct ?? null,
-			domesticTrendPct: beefTrend?.domesticTrendPct ?? null,
 			hotCuts: Array.from(hotCutAccum.entries())
 				.slice(0, 6)
 				.map(([cutCode, v]) => ({ cutCode, ...v, forecast: null })),

@@ -260,10 +260,11 @@ router.get(
 		}));
 		const freshness = pageFreshnessSummary(prices);
 
-		// Origin-split trend (round-57, PRODUCT-SPEC §5.1): compute the % change
-		// in imported / domestic average vs the PREVIOUS DISTINCT day with data.
-		// "Previous distinct day" (not "7 days ago") handles irregular beef-data
-		// cadence honestly. Falls back to nulls when there's no prior day.
+		// Imported-average trend (round-57, PRODUCT-SPEC §5.1; domestic split
+		// removed with the domestic dimension, round-155): % change vs the
+		// PREVIOUS DISTINCT day with data. "Previous distinct day" (not "7 days
+		// ago") handles irregular beef-data cadence honestly. Falls back to
+		// nulls when there's no prior day.
 		const previous = await prisma.beefCutPrice.findFirst({
 			where: { ...where, date: { lt: latest.date } },
 			orderBy: { date: "desc" },
@@ -271,7 +272,6 @@ router.get(
 		});
 		let trend = {
 			importedTrendPct: null as number | null,
-			domesticTrendPct: null as number | null,
 			latestDate: latest.date.toISOString() as string | null,
 			previousDate: null as string | null,
 		};

@@ -452,10 +452,10 @@ describe("useDashboardStats", () => {
 		expect(brisket?.forecast).toBeNull();
 	});
 
-	it("surfaces the backend beef-price trend on the hero cards (round-57, §5.1)", async () => {
-		// /beef/prices/latest now returns a `trend` object with origin-split %
-		// change vs the previous day. The hook must pass it through so the hero
-		// 进口/国产 cards can render ↓1.2%/↑0.5% badges instead of hiding them.
+	it("surfaces the backend beef-price trend on the hero card (round-57, §5.1)", async () => {
+		// /beef/prices/latest now returns a `trend` object with the imported
+		// average % change vs the previous day. The hook must pass it through so
+		// the hero card can render the trend badge instead of hiding it.
 		mockByKey({
 			"/beef/cuts": { data: { cuts: [] } },
 			"/beef/factories": { data: { factories: [] } },
@@ -464,7 +464,6 @@ describe("useDashboardStats", () => {
 					prices: [{ price: 50, cutCode: "X", date: "2026-07-31", factory: { country: "BR" } }],
 					trend: {
 						importedTrendPct: -12.1,
-						domesticTrendPct: 3.4,
 						latestDate: "2026-07-31T00:00:00.000Z",
 						previousDate: "2026-07-24T00:00:00.000Z",
 					},
@@ -479,10 +478,9 @@ describe("useDashboardStats", () => {
 		});
 
 		expect(result.current.stats?.beef.importedTrendPct).toBe(-12.1);
-		expect(result.current.stats?.beef.domesticTrendPct).toBe(3.4);
 	});
 
-	it("renders null trends when the backend omits the trend field (honest absence)", async () => {
+	it("renders null trend when the backend omits the trend field (honest absence)", async () => {
 		// Older backend / transient error → no trend field. The hook must not
 		// crash and must surface null (StatCard hides the badge) rather than a
 		// fabricated 0%.
@@ -501,6 +499,5 @@ describe("useDashboardStats", () => {
 		});
 
 		expect(result.current.stats?.beef.importedTrendPct).toBeNull();
-		expect(result.current.stats?.beef.domesticTrendPct).toBeNull();
 	});
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Beef,
 	Bell,
 	Database,
 	Globe,
@@ -45,7 +44,6 @@ const AlertDistributionChart = dynamic(
 // icons are static, so hoisting them to module scope keeps their reference
 // stable across renders.
 const BEEF_ICON = <Globe className="size-5" />;
-const DOMESTIC_ICON = <Beef className="size-5" />;
 const FACTORY_ICON = <Warehouse className="size-5" />;
 const RECORDS_ICON = <TrendingUp className="size-5" />;
 const DATASET_ICON = <Database className="size-5" />;
@@ -167,13 +165,6 @@ export default function DashboardPage() {
 		() => beefLive?.series?.map((p) => p.close).slice(-30) ?? [],
 		[beefLive?.series],
 	);
-	const domesticTrend = useMemo<TrendIndicator | undefined>(
-		() =>
-			beef?.domesticTrendPct == null
-				? undefined
-				: { value: Math.abs(beef.domesticTrendPct), isPositive: beef.domesticTrendPct >= 0 },
-		[beef?.domesticTrendPct],
-	);
 	const alertsTrend = useMemo<TrendIndicator | undefined>(
 		() =>
 			stats?.alerts?.trend == null
@@ -246,14 +237,14 @@ export default function DashboardPage() {
 						</div>
 					</div>
 
-					{/* KPI HERO — three headline cards per PRODUCT-SPEC §5.1:
+					{/* KPI HERO per PRODUCT-SPEC §5.1:
 					 * 全球牛肉价（IMF 月度基准，FRED PBEEFUSDM — D2 换掉长期冻结的进口均价种子值）/
-					 * 国产均价 (domestic avg) / AI 牛肉月度预测.
+					 * AI 牛肉月度预测. 国产均价卡已随国产维度删除（round-155）。
 					 * Each surfaces an honest "--" when its data source is empty rather
 					 * than fabricating a number. The AI card's directional color comes
 					 * from the consensus direction (green up / red down / muted flat). */}
 					<div
-						className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6"
+						className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6"
 						aria-live="polite"
 						aria-atomic="true"
 					>
@@ -268,15 +259,6 @@ export default function DashboardPage() {
 							// month-over-month) — unit-invariant, honest.
 							trend={beefTrend}
 							sparklineData={beefSpark.length >= 2 ? beefSpark : undefined}
-						/>
-						<StatCard
-							title="国产均价 (Domestic)"
-							value={formatPrice(beef?.domesticAvg ?? null, false)}
-							suffix="/kg"
-							icon={DOMESTIC_ICON}
-							variant="info"
-							loading={loading}
-							trend={domesticTrend}
 						/>
 						<AIPredictionCard summary={stats?.aiSummary ?? null} loading={loading} />
 					</div>

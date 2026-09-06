@@ -211,11 +211,10 @@ export interface TrendPriceRow {
 }
 
 export interface BeefTrendSummary {
-	/** Imported (non-CN) avg % change, latest vs previous day. Null if
-	 * either period has no imported rows (can't compute a ratio). */
+	/** Imported avg % change, latest vs previous day. Null if either period
+	 * has no country-tagged rows (can't compute a ratio). The domestic-CN
+	 * split was removed with the domestic dimension (round-155). */
 	importedTrendPct: number | null;
-	/** Domestic (CN) avg % change, latest vs previous day. */
-	domesticTrendPct: number | null;
 	/** Date of the latest period (ISO). Null if no latest rows. */
 	latestDate: string | null;
 	/** Date of the previous period used for the delta (ISO). Null if none. */
@@ -223,32 +222,21 @@ export interface BeefTrendSummary {
 }
 
 /**
- * Compute the origin-split average for a set of rows.
- * Imported = country !== "CN" (BR/AU/AR/UY/US/...), domestic = country === "CN".
+ * Average price of rows that carry a factory country. All factories are
+ * overseas (import main line); rows without a country are excluded — that
+ * exclusion is pinned by tests and predates the domestic removal.
  */
-function originSplitAvg(rows: TrendPriceRow[]): {
-	importedAvg: number | null;
-	domesticAvg: number | null;
-} {
-	let importedSum = 0;
-	let importedCount = 0;
-	let domesticSum = 0;
-	let domesticCount = 0;
+function importedAverage(rows: TrendPriceRow[]): number | null {
+	let sum = 0;
+	let count = 0;
 	for (const r of rows) {
 		if (!Number.isFinite(r.price) || r.price <= 0) continue;
 		const country = (r.country ?? "").trim();
-		if (country === "CN") {
-			domesticSum += r.price;
-			domesticCount++;
-		} else if (country) {
-			importedSum += r.price;
-			importedCount++;
-		}
+		if (!country) continue;
+		sum += r.price;
+		count++;
 	}
-	return {
-		importedAvg: importedCount > 0 ? importedSum / importedCount : null,
-		domesticAvg: domesticCount > 0 ? domesticSum / domesticCount : null,
-	};
+	return count > 0 ? sum / count : null;
 }
 
 /**
@@ -261,7 +249,7 @@ function pctChange(curr: number | null, prev: number | null): number | null {
 }
 
 /**
- * Compute the origin-split trend from latest + previous period rows.
+ * Compute the imported-average trend from latest + previous period rows.
  *
  * Pure function — the route layer does the two DB queries (latest date +
  * previous distinct date) and passes the row sets here. This makes the math
@@ -273,11 +261,10 @@ export function computeBeefTrend(
 	latestDate: Date | null,
 	previousDate: Date | null,
 ): BeefTrendSummary {
-	const curr = originSplitAvg(latestRows);
-	const prev = originSplitAvg(previousRows);
+	const curr = importedAverage(latestRows);
+	const prev = importedAverage(previousRows);
 	return {
-		importedTrendPct: pctChange(curr.importedAvg, prev.importedAvg),
-		domesticTrendPct: pctChange(curr.domesticAvg, prev.domesticAvg),
+		importedTrendPct: pctChange(curr, prev),
 		latestDate: latestDate ? latestDate.toISOString() : null,
 		previousDate: previousDate ? previousDate.toISOString() : null,
 	};

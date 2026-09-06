@@ -53,19 +53,8 @@ export default function BeefOverview() {
 	const coldStorage = storageData?.data?.coldStorage ?? storageData?.coldStorage ?? [];
 	const cuts = cutsData?.data?.cuts ?? cutsData?.cuts ?? [];
 
-	// ── Origin filter + search + sort (PRODUCT-SPEC IA 进口/国产 split) ──────────
-	// Domestic = factory.country === "CN"; imported = everything else. "all"
-	// shows both. Currently all factories are overseas, so "domestic" honestly
-	// shows an empty state rather than fabricating CN data.
-	type OriginFilter = "all" | "imported" | "domestic";
-	const [originFilter, setOriginFilter] = useState<OriginFilter>("all");
-	// Domestic (CN) rows currently exist only via manual CSV import — until one
-	// arrives the domestic filter can only ever show the empty state, so it is
-	// disabled upfront rather than letting users discover the emptiness by
-	// clicking (the empty state below stays as defense in depth).
-	const hasDomestic = latestPrices.some(
-		(p: { factory?: { country?: string } }) => p.factory?.country === "CN",
-	);
+	// ── Search + sort (the 进口/国产 origin filter was removed with the
+	// domestic dimension — all factories are overseas, round-155) ──────────
 	const [search, setSearch] = useState("");
 	type SortKey = "cutCode" | "price" | "source";
 	const [sortKey, setSortKey] = useState<SortKey>("price");
@@ -73,12 +62,6 @@ export default function BeefOverview() {
 
 	const filteredPrices = useMemo(() => {
 		let rows = latestPrices;
-		if (originFilter !== "all") {
-			rows = rows.filter((p: { factory?: { country?: string } }) => {
-				const isDomestic = p.factory?.country === "CN";
-				return originFilter === "domestic" ? isDomestic : !isDomestic;
-			});
-		}
 		const q = search.trim().toLowerCase();
 		if (q) {
 			rows = rows.filter((p: { cutCode: string }) =>
@@ -95,7 +78,7 @@ export default function BeefOverview() {
 			return String(a.cutCode ?? "").localeCompare(String(b.cutCode ?? ""));
 		});
 		return sortDesc ? sorted.reverse() : sorted;
-	}, [latestPrices, originFilter, search, sortKey, sortDesc]);
+	}, [latestPrices, search, sortKey, sortDesc]);
 
 	function toggleSort(key: SortKey) {
 		if (sortKey === key) {
@@ -287,30 +270,6 @@ export default function BeefOverview() {
 						)}
 						{latestPrices.length > 0 && (
 							<div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-								{/* Origin filter — PRODUCT-SPEC IA 进口/国产 split */}
-								<div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs">
-									{(["all", "imported", "domestic"] as const).map((opt) => {
-										const unavailable = opt === "domestic" && !hasDomestic;
-										return (
-											<button
-												key={opt}
-												type="button"
-												onClick={() => setOriginFilter(opt)}
-												disabled={unavailable}
-												title={
-													unavailable ? "暂无国产（CN）数据——CSV 导入通道可写入后启用" : undefined
-												}
-												className={`px-3 py-1.5 font-medium capitalize transition-colors ${
-													originFilter === opt
-														? "bg-primary text-primary-foreground"
-														: "text-muted-foreground hover:bg-muted"
-												} ${unavailable ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}`}
-											>
-												{opt}
-											</button>
-										);
-									})}
-								</div>
 								{/* Search box */}
 								<div className="relative flex-1 max-w-xs">
 									<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -331,12 +290,8 @@ export default function BeefOverview() {
 						{filteredPrices.length === 0 && latestPrices.length > 0 && !pricesErr && (
 							<EmptyState
 								type="data"
-								title={originFilter === "domestic" ? "No Domestic (CN) Prices" : "No Matching Cuts"}
-								description={
-									originFilter === "domestic"
-										? "No Chinese domestic factory data yet. Import CN prices via CSV to populate this view."
-										: "Try a different search or filter."
-								}
+								title="No Matching Cuts"
+								description="Try a different search term."
 							/>
 						)}
 						{filteredPrices.length > 0 && (

@@ -50,7 +50,6 @@ const COUNTRY_LABELS: Record<string, string> = {
 	AR: "阿根廷 Argentina",
 	UY: "乌拉圭 Uruguay",
 	US: "美国 USA",
-	CN: "中国 China",
 };
 
 function countryLabel(code: string): string {

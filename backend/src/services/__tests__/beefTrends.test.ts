@@ -1,10 +1,10 @@
 /**
- * computeBeefTrend — pure-function unit tests (round-57).
+ * computeBeefTrend — pure-function unit tests (round-57; domestic-CN split
+ * removed with the domestic dimension, round-155).
  *
- * Pins the origin-split trend math: imported (non-CN) and domestic (CN)
- * average % change between the latest day and the previous distinct day.
- * This backs the dashboard hero's ↓1.2% / ↑0.5% trend badges
- * (PRODUCT-SPEC §5.1) that were previously null (design gap).
+ * Pins the imported-average trend math: average % change of country-tagged
+ * rows between the latest day and the previous distinct day. This backs the
+ * dashboard hero trend badge (PRODUCT-SPEC §5.1).
  */
 
 import { describe, expect, it } from "vitest";
@@ -14,56 +14,48 @@ const LATEST = new Date("2026-07-31T00:00:00Z");
 const PREV = new Date("2026-07-24T00:00:00Z");
 
 describe("computeBeefTrend", () => {
-	it("computes positive/negative deltas for imported and domestic independently", () => {
-		// Latest: imported avg = (50+55)/2 = 52.5, domestic avg = 40
-		// Prev:   imported avg = (48+50)/2 = 49.0, domestic avg = 42
+	it("computes the imported-average delta between periods", () => {
+		// Latest: imported avg = (50+55)/2 = 52.5
+		// Prev:   imported avg = (48+50)/2 = 49.0
 		// importedTrend = (52.5-49)/49 * 100 = +7.1%
-		// domesticTrend = (40-42)/42 * 100   = -4.8%
 		const latest = [
 			{ price: 50, country: "BR" },
 			{ price: 55, country: "AU" },
-			{ price: 40, country: "CN" },
 		];
 		const prev = [
 			{ price: 48, country: "BR" },
 			{ price: 50, country: "AU" },
-			{ price: 42, country: "CN" },
 		];
 		const t = computeBeefTrend(latest, prev, LATEST, PREV);
 		expect(t.importedTrendPct).toBe(7.1);
-		expect(t.domesticTrendPct).toBe(-4.8);
 		expect(t.latestDate).toBe(LATEST.toISOString());
 		expect(t.previousDate).toBe(PREV.toISOString());
 	});
 
-	it("returns null trend when either period has no rows for that origin", () => {
-		// Latest has imported but no domestic; prev has domestic but no imported.
+	it("returns null trend when either period has no country-tagged rows", () => {
+		// Latest has a country-tagged row; prev doesn't → can't compute ratio.
 		const latest = [{ price: 50, country: "BR" }];
-		const prev = [{ price: 42, country: "CN" }];
+		const prev = [{ price: 42, country: "" }];
 		const t = computeBeefTrend(latest, prev, LATEST, PREV);
-		// imported: curr=50, prev=null → null. domestic: curr=null, prev=42 → null.
 		expect(t.importedTrendPct).toBeNull();
-		expect(t.domesticTrendPct).toBeNull();
 	});
 
-	it("returns null/null when both periods are empty", () => {
+	it("returns null when both periods are empty", () => {
 		const t = computeBeefTrend([], [], null, null);
 		expect(t.importedTrendPct).toBeNull();
-		expect(t.domesticTrendPct).toBeNull();
 		expect(t.latestDate).toBeNull();
 		expect(t.previousDate).toBeNull();
 	});
 
-	it("treats rows with no country as neither imported nor domestic", () => {
-		// A row missing country must not pollute either bucket.
+	it("treats rows with no country as excluded from the average", () => {
+		// A row missing country must not pollute the bucket.
 		const latest = [
 			{ price: 50, country: "" },
 			{ price: 55, country: undefined },
 		];
 		const prev = [{ price: 50, country: "BR" }];
 		const t = computeBeefTrend(latest, prev, LATEST, PREV);
-		expect(t.importedTrendPct).toBeNull(); // latest imported bucket empty
-		expect(t.domesticTrendPct).toBeNull();
+		expect(t.importedTrendPct).toBeNull(); // latest bucket empty
 	});
 
 	it("ignores non-finite / non-positive prices (corrupt rows don't skew the avg)", () => {
