@@ -1,8 +1,8 @@
 ---
 title: "牛肉外贸（海关/贸易流）数据源研究报告"
 en_title: "Research Report: Beef Foreign-Trade Data Sources"
-version: "1.0.0"
-last_updated: "2026-08-31"
+version: "2.0.0"
+last_updated: "2026-09-07"
 status: "active"
 maintainer: "MT Team"
 tags:
@@ -16,15 +16,18 @@ related_docs:
   - "Info Landscape": "RESEARCH-BEEF-INFO-LANDSCAPE.md"
   - "数据源梳理报告": "中国进口牛肉贸易全链路数据源梳理报告.md"
   - "Known Issues D1": "KNOWN-ISSUES.md"
+  - "Scale/Density Evaluation (round-157)": "DATA-SOURCES-EVALUATION.md"
 ---
 
 # 牛肉外贸（海关/贸易流）数据源研究报告 — 向牧集搜索程度靠近的取数路径
 
-> **2026-08-31**。回答一个问题：**要实现牛肉外贸数据的丰富性和准确性（向牧集的搜索体验靠近），贸易数据应该从哪里获取？**
+> **2026-08-31 初版（v1.0.0）｜2026-09-07 v2.0.0 深挖扩版（round-160）**。回答一个问题：**要实现牛肉外贸数据的丰富性和准确性（向牧集的搜索体验靠近），贸易数据应该从哪里获取？**
 >
-> 与既有文档的分工：[COMPETITIVE-ANALYSIS-MOOKET.md](COMPETITIVE-ANALYSIS-MOOKET.md)（下称 CA）回答"MT vs 牧集差距"；[RESEARCH-BEEF-INFO-LANDSCAPE.md](RESEARCH-BEEF-INFO-LANDSCAPE.md)（下称 Landscape）覆盖行情信息供给全景；[中国进口牛肉贸易全链路数据源梳理报告.md](中国进口牛肉贸易全链路数据源梳理报告.md)（2026-05-12，下称"旧梳理"）覆盖泛数据源清单。**本文只深挖"贸易数据"一层**——海关量价统计、厂号注册状态、提单/企业级明细——并对每个关键源做**本机 live 取证**（旧梳理的结论多为检索转述且已 3.5 个月，未含本机可达性与接口实测）。
+> 与既有文档的分工：[COMPETITIVE-ANALYSIS-MOOKET.md](COMPETITIVE-ANALYSIS-MOOKET.md)（下称 CA）回答"MT vs 牧集差距"；[RESEARCH-BEEF-INFO-LANDSCAPE.md](RESEARCH-BEEF-INFO-LANDSCAPE.md)（下称 Landscape）覆盖行情信息供给全景；[中国进口牛肉贸易全链路数据源梳理报告.md](中国进口牛肉贸易全链路数据源梳理报告.md)（2026-05-12，下称"旧梳理"）覆盖泛数据源清单；[DATA-SOURCES-EVALUATION.md](DATA-SOURCES-EVALUATION.md)（2026-09-06，round-157）回答"规模/密度对标与逐层取数决策"。**本文只深挖"贸易数据"一层**——海关量价统计、厂号注册状态、提单/企业级明细——并对每个关键源做**本机 live 取证**（旧梳理的结论多为检索转述且已 3.5 个月，未含本机可达性与接口实测）。
 >
-> 取证环境：本机直连 + mihomo 代理（127.0.0.1:7890，订阅 51 节点、**无中国大陆节点**，见 KNOWN-ISSUES D1 round-118 口径）。证据分级沿用 Landscape 约定：**【实测】**=2026-08-31 一手 curl/解析；**【转述】**=网页检索口径（含链接）；未标处默认【实测】。
+> 取证环境：本机直连 + mihomo 代理（127.0.0.1:7890，订阅 51 节点、**无中国大陆节点**，见 KNOWN-ISSUES D1 round-118 口径）。证据分级沿用 Landscape 约定：**【实测】**=当日本机一手 curl/解析（v1.0.0=2026-08-31、v2.0.0=2026-09-07）；**【代理实测】**=本会话调研子代理在相同机器上的取证（curl 直跑本机 / WebFetch 经其通道）；**【转述】**=网页检索口径（含链接）；未标处默认【实测】。
+>
+> **v2.0.0 增量（round-160，2026-09-07）**：在 v1.0.0 + round-157/158/159 落地（comtrade_mirror / argentina_exports / inac 复活 / ibge_sidra）之上，六块此前未深挖的面：**§八 国内现货/资讯免费面**（肉交所、Mysteel 牛羊业——国内现货层首批可编程源）、**§九 替代贸易统计镜像**（Eurostat Comext 免 key 打通）、**§十 年度/基线分析库**（OECD-FAO 直链 CSV）、**§十一 厂号名录扩展**（MPI/MGAP/foodmate 等）、**§十二 运价指数免费面**（Drewry WCI/FBX）、**§十三 提单免费档**（ImportYeti）。排查性结论：俄罗斯月度官方路径全灭、ITC Trade Map/WITS 排除。
 
 ---
 
@@ -35,7 +38,16 @@ related_docs:
 3. **中国官方月度分国别口径（stats.customs.gov.cn）在本机直连与代理下均不可达**（000；代理无大陆节点）——该源仍是"需中国出口/人工月度导出"性质，与 KNOWN-ISSUES D1 结论一致。月度节奏可用 **Comtrade 镜像承接 + 中国年度明细校准**。
 4. **提单/进口商级明细没有免费路径**：中国海关提单数据不公开，商业库为镜像/第三方申报数据——Volza $1,500 起步（积分制）、环球慧思 ¥4-5 万/年、腾道 ¥5-10 万/年（含 API）【转述】。买不买是预算决策，不是技术问题。
 5. **阿根廷是国家开放数据路径的样板**：`datos.gob.ar` / `datos.magyp.gob.ar` CKAN API 本机直连可用（SSPM 出口月度序列 CSV 直链）；SENASA 官方页（含按目的国筛选已注册工厂的"Mercados Abiertos"）需经 mihomo 代理（200）。
-6. **确认死路**：乌拉圭 INAC / catalogo.datos.gub.uy 直连+代理均 000（全球性下线，维持 KNOWN-ISSUES D1 round-103 结论）；巴西 ComexStat API 403（Cloudflare WAF，镜像已可替代）；USMEF 出口统计会员制；FAO 401（需 key）。
+6. **确认死路**：乌拉圭 INAC / catalogo.datos.gub.uy 直连+代理均 000（~~全球性下线~~ **2026-09-07 已修正：inac.uy 新域复活并落地，见 round-159**）；巴西 ComexStat API 403（Cloudflare WAF，镜像已可替代）；USMEF 出口统计会员制；FAO 401（需 key）。
+
+**v2.0.0 新增发现（round-160，2026-09-07）**：
+
+7. **Eurostat Comext `DS-045409` 免 key 打通（本轮最大增量）**：欧盟批准国（爱尔兰/荷兰/法国/波兰）对华牛肉**月度 CN8 级量价**，本机直连匿名取数（IE→CN HS0202 2024-06 出口额 **€645,967**，亲手复核与调研代理逐位一致）；数据集 2026-08-14 更新已含 2026-06 月度（约 T+6 周），**快于 Comtrade 的欧盟月度报送**。v1.0.0 及旧文档所载 `/sale/` 路径已失效，现行端点见 §九。
+8. **国内现货层首次找到免费可编程源（向牧集核心壁垒最近的一步）**：**肉交所 roujiaosuo.com**（进口/国产部位现货挂价 + 带厂号件套成交价，日更 SSR HTML——本机 200/95KB、价格标记 122 处实证）与 **Mysteel 牛羊业频道**（国产热鲜批发市场价 + 进口牛副价 + 冷冻分割品价表，日更 SSR HTML）。但真正核心的"进口分部位日度现货报价"仍锁在微信公众号（冻师傅/冻品攻略/优顶特研究院）与 App（冻品e港）——网页免费层是挂价流与转载，不是牧集级人工行情日报。
+9. **厂号名录三个新免费入口**：foodmate 输华注册企业查询库（GACC 数据免费网页版，SSR 免登录，本机 200）；新西兰 MPI 输华肉类企业清单（SSR 含厂号+有效期，但本机双通道被 Incapsula 拦，需浏览器级会话）；乌拉圭 MGAP 输华厂专页（PDF 资产在、带更新日期，直链 JS 隐藏待逆向）。
+10. **运价指数免费三源可拼**：Drewry WCI 免费文本值（本机实证 **$4,465/40ft**，周四更新）、Freightos FBX 匿名综合指数（日更）、SCFI（图片渲染+CSRF 壳，不采）——到岸成本工具的运价因子可零成本接入。
+11. **俄罗斯整块排查无解**：联邦海关局分商品分国别明细自 2022-03 停更、Agroexport 仅新闻稿数字、肉业协会仅评论级——RU 对华月度量价无免费程序化路径（唯一解=中国官方口径/商业库，均在本仓既有门槛内）。
+12. **明确排除**：ITC Trade Map（条款禁抓取+禁再分发）、World Bank WITS（仅年度，Comtrade 年度库的子集）、ImportYeti（仅美国进口方向+本机 CF 403 墙，无中国方向）、SCFI（见 10）、uktradeinfo/StatCan（免 key 可商用但供应量小，P3 备用）。
 
 ---
 
@@ -81,6 +93,31 @@ related_docs:
 | `api-comexstat.mdic.gov.br`（巴西 ComexStat） | 403 | 403（round-118 经巴西节点同拦） | ❌ Cloudflare WAF（镜像已可替代其月度量价） |
 
 复现命令形如：`curl -s -m 8 -o /dev/null -w "%{http_code}" <url>`（完整取证脚本见附录）。
+
+**v2.0.0 新增主机矩阵（round-160，2026-09-07 实测）**：
+
+| 源/主机 | 直连 | 经 mihomo 代理 | 判定 |
+|---|---|---|---|
+| `ec.europa.eu/eurostat/api/comext/...`（Comext API） | **可用**（取到真值） | — | ✅ 免 key 可编程 |
+| `sdmx.oecd.org`（OECD-FAO Outlook CSV） | **200**（30.5MB 实拉） | — | ✅ 免 key 直链 |
+| `www.roujiaosuo.com`（肉交所） | **200**（95KB SSR 价格表） | — | ✅ 可编程（ToS 复核先行） |
+| `m.mysteel.com` / `ncp.m.mysteel.com/nyy/`（Mysteel 牛羊业） | **200**（桌面版文章 SSR 表格） | — | ✅ 可编程（移动版正文缺失，须桌面 UA） |
+| `jwqyp.foodmate.net`（输华注册企业查询） | **200** | — | ✅ 可编程 |
+| `www.drewry.co.uk`（WCI 免费页） | **200**（文本值在） | — | ✅ 文本抽取 |
+| `api.uktradeinfo.com`（HMRC OTS） | 200【代理实测】 | — | ✅ 免 key（P3，量小） |
+| `www150.statcan.gc.ca`（CIMT） | 301→经代理 **200** | 200 | ✅ 页面可用（P3） |
+| `wits.worldbank.org` | **200** | — | ⚠️ 页面活但 API 形状迁移未打通；**仅年度→排除** |
+| `www.trademap.org`（ITC） | **200**（JS 壳） | — | ❌ 条款禁抓取/禁再分发 |
+| `customs.gov.ru` / `www.agroexport.gov.ru` | 000 | 000 | ❌ 俄域双通道封锁（明细 2022-03 起停更，见 §九） |
+| `aemcx.ru` / `nspg.ru` | —（代理 web 侧可读） | — | ⚠️ 仅新闻稿/评论级【代理实测】 |
+| `www.importyeti.com` | 403 | 403 | ❌ CF 墙（且仅美国方向） |
+| `www.mpi.govt.nz`（输华清单页） | 200 但 849B 壳 | 200 但 849B 壳 | ❌ Incapsula 拦 curl（数据面存在，需浏览器级会话） |
+| `www.gub.uy`（MGAP 输华厂页） | **200**（44KB，PDF 资产 JS 隐藏） | — | ⚠️ P2（直链待逆向） |
+| `sigsif.agricultura.gov.br`（MAPA 按国别授权报表） | 502 | — | ❌ 本机不可达（现行入口身份经 ABIEC 官方按钮确证） |
+| `www.aussiemeattradehub.com.au/rmed/search`（MLA RMED） | **200**（476KB，XHR 驱动） | — | ⚠️ 端点逆向 P2（有 China 准入筛选） |
+| `www.sse.net.cn`（SCFI） | **200**（数值图片渲染；POST 端点回 CSRF HTML 壳） | — | ❌ 无结构化免费面 |
+| `fbx.freightos.com` | 301→terminal 页【代理实测值可见】 | www 变体 000 | ⚠️ 匿名综合值可见，航线明细需免费注册 |
+| `apps.fas.usda.gov`（PSD/circulars） | 000 | 000 | ❌ 主机级封锁（内容经 NAL 存档确证有效） |
 
 ---
 
@@ -187,7 +224,7 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
 | 按厂号（注册状态/准入变动） | Factory 表 21 家（site-stats 口径），无注册状态维度 | 单一窗口注册查询（需实名账号）+ SENASA 目的国工厂筛选（代理） | 用户动作（注册账号）；ToS 待复核 |
 | 中国官方口径（含收发货地/贸易方式） | 无 | stats.customs.gov.cn | 需中国出口或人工月度导出 |
 | 提单/进口商级 | 无（也不在 PRODUCT-SPEC 当前范围） | Volza/环球慧思/腾道/必孚 | ¥1-40 万/年级 |
-| 现货盘口（部位×厂号×VL×吨） | BeefCutPrice 冻结（D1）；CSV 手动导入通道可用 | 场外（CA §二.2 结论不变） | 用户运营（周度导入 runbook 已有） |
+| 现货盘口（部位×厂号×VL×吨） | BeefCutPrice 冻结（D1）；CSV 手动导入通道可用 | 场外（CA §二.2 结论不变）——**round-160 修正**：场外"人工行情日报"仍无公开源，但挂价流免费层存在（肉交所带厂号件套成交价，见 §八） | 用户运营（周度导入 runbook 已有）+ 肉交所采集（P1b，ToS 复核先行） |
 
 ---
 
@@ -210,6 +247,16 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
 
 **不做清单**：爬付费墙转售（Landscape §7.4 红线）；中国官方平台无中国出口时的硬闯（维持 D1 口径）；乌拉圭死站等待（登记待其恢复）。
 
+**v2.0.0 路线增补（round-160，2026-09-07；未实施，供排期决策）**：
+
+- **P1a — Comext 欧盟月度镜像**：`DS-045409` 逐产品逐指标查询（避免 413），reporter=IE/NL/FR/PL × product=0201/0202/020230/020220/0206 族 × partner=CN × flow=2，月度节奏；落 MarketFactor（type=`export_to_cn_{hs}` 复用现有命名，region=`IE→CN` 等，**EUR→USD 口径换算或双币并存的口径注记必须先行设计**，与 Comtrade USD 镜像互校不合并）。署名条款遵守（Eurostat source 标注）。
+- **P1b — 国内现货免费层（肉交所 + Mysteel）**：肉交所部位挂价表 + 带厂号件套成交价（**这是 MT 首个"现货层"自动源**——落 BeefCutPrice 需先解决词汇映射与仓储/物流点语义）；Mysteel 国产热鲜批发 + 进口牛副（落 BeefCutPrice 国产线需先复核 PRODUCT-SPEC 国产维度删除边界——round-155 已删国产维度，**Mysteel 牛副/冷冻分割品若做需产品决策先行**）。两者 ToS 复核先行、日 1 次低频。
+- **P2 — 厂号名录三源**：foodmate GACC 镜像（免登录，最优先）；MGAP PDF 直链逆向；MPI 需浏览器级会话（playwright 引入需独立决策）。落 Factory 参照表快照（周/月）。
+- **P2 — 运价因子**：Drewry WCI 文本抽取（周四）+ FBX 综合值（日更）进 landing-cost 白名单（USD/40ft 口径标注）。
+- **P2 — OECD-FAO 基线**：年度 CSV 本地过滤入 MarketFactor（供需平衡表关键序列），服务预测叙事。
+- **P3 — uktradeinfo/StatCan**（全供应国覆盖时再议）。
+- **不做（本轮确证）**：ITC Trade Map（ToS 禁抓取/再分发）、WITS（仅年度）、SCFI（无结构化免费面）、ImportYeti/52wmb（方向不符/伪免费）、俄罗斯官方月度（停更+封锁）。
+
 ---
 
 ## 七、合规与风险
@@ -221,7 +268,106 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
 
 ---
 
-## 八、附录：关键取证命令（2026-08-31，可复现）
+## 八、国内现货/资讯免费面（v2.0.0 新增，round-160 核心增量之一）
+
+> 回答"牧集现货日报层是否存在任何免费可编程源"。调研方式：三路并发子代理（本机 curl + WebFetch/WebSearch）+ 本机亲手复核承重项。此前 v1.0.0/round-157 只覆盖了牧集/必孚付费终端结论，未排查免费层。
+
+| 平台 | URL | 免费数据面 | 节奏 | 形态 | 判定（证据分级） |
+|---|---|---|---|---|---|
+| **肉交所** | `roujiaosuo.com` | 进口/国产部位现货**挂价表**（产地/仓库/更新日期）+"最新成交"**带厂号件套价**（例：牛霖 411厂 57,878 元/吨、牛腩 90VL 52,828 元/吨）+ 50+ 产国筛选 + 行情资讯 | 日更（当日有更新） | **SSR HTML 表格** | **可编程采集**【实测：本机 200/95KB，"元/公斤"标记 122 处、牛腩/牛霖/厂号在页】 |
+| **Mysteel 牛羊业频道** | 频道 `ncp.m.mysteel.com/nyy/`；读数用桌面文章页 `m.mysteel.com/a/...` | 国内重点省份热鲜牛肉批发价（北京岳各庄/顺鑫石门/大洋路、天津韩家墅海吉星、内蒙古/新疆/宁夏/山东/江苏/上海/广东佛山中南，元/公斤）、**进口牛副价格汇总**（天津/河南）、**冷冻牛肉分割品价格**（山东）、屠宰企业出厂价 | 日更（多篇/日） | SSR HTML 表格 | **可编程采集**【实测：文章页 200，岳各庄/大洋路/韩家墅/元/公斤在页】。**坑**：移动版域名正文表格缺失（只有 AI 摘要），必须桌面版域名/UA |
+| **食品伙伴网** | 资讯 `foodmate.net`；查询库 `jwqyp.foodmate.net` | 进口肉类产业资讯（SSR 免登录）+ **进口食品境外生产企业注册信息查询**（数据源海关总署，肉类 5 类产品）+ 疫病国家禁止输入名录 | 资讯日更 | SSR HTML | **可编程采集（厂号镜像 ⭐，无报价）**【实测：jwqyp 200】 |
+| 玉湖福谷 | `frozengoods.com.hk`（价格行情栏 `/news?cate=138&child=1457`） | 转载"冻品攻略"行情文章，正文价格数字免费可见（牛肉批发价、巴西配额进度） | 跟随公众号（滞后） | SSR HTML | 可编程（转载源）【代理实测】 |
+| 中国价格信息网 | `chinaprice.cn/sysp` | 官方周更全国各省农批市场牛肉价（~33.94 元/500克 级） | 周更 | HTML | 可编程（官方周频，非现货件套）【代理实测】 |
+| 新华·阳信牛肉价格指数 | `indices.cnfin.com` | 活牛收购/胴体指数 | 日/周 | HTML | 可编程（指数非现货报价）【代理实测】 |
+| 冻师傅 | 知乎专栏（zhuanlan.zhihu.com） | 进口牛羊分部位日报价 | 日更 | 专栏 403 反爬 | **公众号墙**（内容免费但需登录态）【代理实测】 |
+| 冻品攻略 / 优顶特研究院 | 微信公众号 | 进口牛肉行情日报/准入动态解读 | 日更 | 公众号 | **公众号墙**（玉湖福谷为其滞后网页转载） |
+| 冻品e港 | App（北京建设 0925.HK 旗下） | 价格报盘/行情报告 | 日更 | App | **App 墙** |
+| 一亩田 / 21food | `ymt.com` / `price.21food.cn` | 国产牛肉批发行情/冻肉批发价 | 日更 | JS 渲染 | 待确认（需 headless 或其接口） |
+| 找牛网 | `zhaoniuw.com`（36氪 记录域名） | （无法验证） | — | — | **待确认**：该域名现为无关体育导航站（疑易主）；zhaoniu.com/zhaoniu888.com 连接重置；App 在架（清真牛羊 B2B）【代理实测】 |
+| 牛羊天地网 | `niuyangtiandi.com` | （无法验证） | — | — | **待确认**：连接重置、搜索引擎零收录，疑公众号形态或关站 |
+| 农产品集购网 | `16988.com` | 无牛肉数据（主打白糖/豆油，证书过期，SPA） | — | — | 无免费牛肉数据【代理实测】 |
+| 涌益咨询 | `data.yongyizixun888.com` | 仅生猪产业链 | 日/周 | HTML | 与牛肉无关【代理实测】 |
+
+**分层结论**：国内现货层存在**少量**免费可编程源（肉交所=Mooket 型挂价流最近似的免费镜像；Mysteel=国产热鲜+进口牛副官方级日更）；**牧集核心的"人工行情员日报+件套价"不存在免费等价物**——维持 round-157 §2.3 三层结论，但把"现货层无任何公开源"收窄为"无人工行情日报级公开源，挂价流免费层存在"。
+
+**合规注记**：肉交所/Mysteel 自动采集的 ToS 未复核——接入前查各自条款，低频（日 1 次）+ 限速，与 CEPEA 同级风险登记（KNOWN-ISSUES 惯例）。转载源（玉湖福谷）只可作佐证不作主源。
+
+## 九、替代贸易统计镜像（v2.0.0 新增）
+
+### 9.1 Eurostat Comext `DS-045409`（本轮最大增量，免 key 打通）
+
+**现行端点（v1.0.0 时代的 `/sale/` 路径已 404 失效）**：
+
+```
+GET https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/ds-045409
+    ?lang=EN&freq=M&reporter=IE&partner=CN&product=0202&flow=2
+    &indicators=VALUE_IN_EUROS&time=2024-06
+```
+
+- **维度契约（实测确认，非文档推测）**：`freq=M`；`reporter`=ISO2（IE/NL/FR/PL…）；`partner=CN`（或 WORLD）；`product`=HS2/4/6 及 CN8（0201、0202、020230…）；**`flow=2` 出口 / `1` 进口**；`indicators`∈{`VALUE_IN_EUROS`, `QUANTITY_IN_100KG`, `SUPPLEMENTARY_QUANTITY`}；区间用 `sinceTimePeriod=2026-01&untilTimePeriod=2026-06`（`time=2026-01..2026-06` 冒号语法无效）。
+- **坑（实测）**：多值过滤用 `+`（`product=0201+0202`）会触发 413 异步排队（ASYNCHRONOUS_RESPONSE）——**逐产品逐指标查询**；`indic_de`/`formatType` 是无效参数名（400）。
+- **本机亲手复核**：IE→CN 0202 2024-06 出口额 **€645,967**（与调研代理逐位一致）；NL→CN 近月空值经 partner=WORLD 对照验证为真实近零流量而非查询失败。
+- **新鲜度**：数据集 updated=2026-08-14，已含 2026-06 月度（约 T+6 周）——**快于欧盟成员国在 Comtrade 的月度报送**。
+- **价值定位**：欧盟输华批准国（爱尔兰/荷兰/法国/波兰…）月度 CN8 级对华量价——是 comtrade_mirror 六通道之外**唯一的月度增量通道**；口径为欧盟申报 FOB-EUR（注意与 Comtrade USD 口径换算与互校，勿合并）。
+- **条款**：Eurostat 免费复用（含商用）需署名（copyright 页 200 实测）；官方指南明示禁止全量批量下载（逐查询过滤）。
+
+### 9.2 小供应国免 key API（P3 备用）
+
+| 源 | 契约 | 实测 | 条款 |
+|---|---|---|---|
+| UK HMRC `api.uktradeinfo.com`（OTS） | OData：月度 × CN8（CommodityId 去前导零）× 伙伴国（`/Country` 查 id）× FlowTypeId；限流 60 req/min | `/OTS?$top=1` 取到真数据【代理实测，本机】；批量 CSV 在 data.gov.uk | **OGL 3.0 允许商用再分发（署名）** |
+| 加拿大 StatCan CIMT | 月度 HS8 × 伙伴国，网页查询+CSV（catalogue 65F0013X）；WDS API 免 key | 页面 200（直连 301、代理 200）【实测】 | Canada OGL 可商用 |
+
+供应量小（UK/加对华牛肉均为小几百~千吨级年量），列为 P3——若做"全供应国覆盖"时再接。
+
+### 9.3 排除项与俄罗斯缺口
+
+- **World Bank WITS**：页面 200 但 REST 端点 307→405 未打通；**根本问题：仅年度（Comtrade 年度库+TRAINS 关税），无月度**——对月度量价目标价值≈0，排除（关税表面若做税率工具再评估）。
+- **ITC Trade Map**：免费注册可看月/季/年度 HS6 双边（MAT Pro beta 期免费，正式化后月度及时数据转付费档）；**条款（ITC Market Analysis 工具族统一条款）明文禁机器人批量抽取 + 限非商用自用 + 未经书面授权禁再分发**——只能人工交叉核查，不入管道。
+- **俄罗斯（对华前几大供应国，整块排查）**：①联邦海关局 ФТС `customs.gov.ru/statistic` 明细统计**自 2022-03 起停更**（分商品分国别月度不可用，年度汇编仍在）；本机直连+代理双 000；②Agroexport（`aemcx.ru`）仅新闻稿数字（2024 对华冻牛肉 $86.6M；2026 1-7 月 $80.2M，口径实为中方数据）；③НСПГ 肉业协会仅评论级。**结论：RU 对华月度量价无免费程序化路径**——解法只剩中国官方口径（D1 既有门槛）或商业库；Comtrade 的 RU 报送同样中断，comtrade_mirror 无法补此通道。
+
+## 十、年度/基线分析库（v2.0.0 新增，非月度）
+
+| 库 | 直链/入口 | 实测 | 用途定位 |
+|---|---|---|---|
+| **OECD-FAO Agricultural Outlook** | `sdmx.oecd.org/public/rest/data/OECD.TAD.ATM,DSD_AGR@DF_OUTLOOK_2026_2035,1.1?format=csvfilewithlabels&startPeriod=...`（历史各版同在；UI=data-explorer.oecd.org，bovine meat=CPC_EX_BV） | **200，30.5MB 实拉**【实测】。坑：`c[COMMODITY]` 服务端过滤 422，须全量下+本地过滤 | 年度 × 国家/区域 × 供需平衡表 + **10 年预测**——价格基准与中长期基线（预测叙事弹药），非月度监测 |
+| USDA FAS Livestock & Poultry: World Markets and Trade | 半年刊 PDF `apps.fas.usda.gov/psdonline/circulars/livestock_poultry.PDF`（最新 2026-04-09）；机读替代=PSD downloads CSV（apps 域，Beef×全部国家×营销年） | apps 域本机 000（内容经 NAL 存档确证）【代理实测+实测】 | 年度供需+贸易展望；PSD 通道已在我们 key 门清单（usda_psd 同族） |
+
+## 十一、厂号注册名录扩展（v1.0.0 §4.3 增补）
+
+| 入口 | 对华维度 | 本机实测 | 判定 |
+|---|---|---|---|
+| **foodmate 输华注册企业查询** `jwqyp.foodmate.net` | GACC 注册数据镜像（肉类 5 类产品，按国家/企业/产品查） | **200 免登录 SSR**【实测】 | **P1 候选**：单一窗口的免登录免费镜像，可作 Factory 参照表快照源（周/月低频；ToS 复核先行，数据实源为海关总署） |
+| 新西兰 MPI 输华肉类企业清单（`mpi.govt.nz/.../mpi-list-for-china-meat-establishments`） | 清单即输华名单：厂号（ME118 等）+物种+活动+**Valid until（至 2028）** | 页面 200 但双通道均 849B Incapsula 壳（数据面存在【代理实测】，curl 被拦） | P2：需浏览器级会话（playwright）或人工导出 |
+| 乌拉圭 MGAP 输华厂专页（`gub.uy/.../china-lista-establecimientos-habilitados`） | 专门输华 PDF（文件名带日期：`China_2026_17032026_0.pdf`，2026-03-17） | 页面 200/44KB，**PDF 资产直链 JS 隐藏**【实测】 | P2：直链待逆向（下载按钮的 data 端点） |
+| 阿根廷 SENASA | Mercados Abiertos/APSA=**市场级**（协议开放+条件，非厂级，JSF POST 表单无 JSON）；厂级对华 PDF **停在 2021-09-26**（过期）；活工厂登记查询（aps2）无目的国列 | 代理 200（v1.0.0 口径）【代理实测】 | 维持 v1.0.0：阿方厂级以 GACC 侧为准 |
+| 巴西 MAPA SIGSIF 按国别授权报表（`sigsif.agricultura.gov.br/sigsif_cons/!ap_exportador_nac_pais_rep_net`，行业入口 ABIEC `abiec.com.br/habilitacoes-por-pais/`） | **有**：按目的国（含 China）出已注册 SIF 企业 | 本机 502/000【实测】（ABIEC 官方按钮确证其现行入口身份） | P2：需巴西出口节点（mihomo 无 BR 节点，D1 同类） |
+| 澳大利亚 DAFF / MLA RMED | DAFF **不发布免费肉类厂名录**（乳/蛋/鱼有清单，肉没有；对华走中国 CIFER）；MLA RMED（`aussiemeattradehub.com.au/rmed/search`）有 **"Specific Country Export Eligibility: China"** 筛选（Beef 物种），但**公司级非厂号级**、XHR 驱动 | RMED 页面 200/476KB（China 筛选值在页），端点逆向未做【实测】 | P2：RMED XHR 逆向 + key 门之外的免费澳方补充 |
+
+## 十二、海运运价指数免费面（到岸成本工具的运价因子）
+
+| 指数 | 免费面 | 节奏 | 实测 |
+|---|---|---|---|
+| **Drewry WCI**（`drewry.co.uk/maritime-research-opinion-browser/world-container-index-assessed-by-drewry`） | 综合指数 + 8 条东西向航线即期运价**纯文本值**（本期综合 $4,465/40ft；上海-洛杉矶 $7,185 等） | 每周四 | **200，$4,465 在页可抽取**【实测】 |
+| Freightos FBX（301→`freightos.com/enterprise/terminal/...`） | 匿名综合指数（~$3,520）；航线明细"View Data for Free"需免费注册；API 付费 | 日更（06:00 UTC 算，14:00 发布） | terminal 页值可见【代理实测】；www 变体代理 000 |
+| SCFI（上海航运交易所，`en.sse.net.cn/indices/scfinew.jsp`） | 页面免登录但当期值**图片渲染**（`/index/indexImg`）；页面 JS 暴露 `/index/currentIndex`、`/singleIndex/scfi` POST 端点但本机两步 CSRF 实测均回 HTML 壳 | 每周五 15:00 北京 | **不采**【实测：图片+CSRF 壳】；历史查询是否强制登录待确认 |
+
+**落地形态**：landing-cost 的运价因子可零成本拼 "WCI（周四）+ FBX（日更综合）" 双源交叉（均为 USD/40ft 口径，标注评估口径）；SCFI 仅人工参照。
+
+## 十三、提单级免费档（v1.0.0 §4.6 增补）
+
+| 源 | 免费 | 中国方向 | 判定 |
+|---|---|---|---|
+| ImportYeti（`importyeti.com`） | 免费注册无限检索 ~7.1 亿条**美国海运进口**提单（供应商/发货国/重量/提单数画像，日更）；付费 Power Query ~$130/30 天解锁明细+CSV | **无**（仅美国进口方向） | 本机 CF 403 双通道【实测】——且方向不符，**不接**；仅当未来做"美国进口面"参考 |
+| 52wmb 外贸邦（`52wmb.com/billsearch`） | "免费送数据"实为**注册限量体验**，完整明细/下载付费 | 无中国方向（限于提单公开国） | 不接【代理实测】 |
+| Volza / Panjiva / ImportGenius | 无免费档（v1.0.0 §4.6 已登记） | 中国方向覆盖需试用验证 | 预算决策，维持 |
+
+**结论不变**：中国进口方向提单级明细不存在免费路径（v1.0.0 §4.6 口径成立）。
+
+---
+
+## 十四、附录：关键取证命令（v1.0.0=2026-08-31；v2.0.0 增补=2026-09-07，均可复现）
 
 ```bash
 # Comtrade：巴西对华冻牛肉月度（注意 motCode==0 过滤与 flowCode=X）
@@ -246,3 +392,33 @@ curl -s -o /dev/null -m 8 -x http://127.0.0.1:7890 -w "%{http_code}" \
 ```
 
 原始输出摘要：巴西 2026-06 mot=0 行 `netWgt=158365xxx kg / fobvalue=1069158523`；单一窗口 POST 返回"中国国际贸易单一窗口"登录壳页 HTML；阿根廷 CKAN `success:true` + SSPM CSV 直链。
+
+```bash
+# ── v2.0.0（round-160，2026-09-07）────────────────────────────────────────
+# Eurostat Comext：爱尔兰对华冻牛肉月度出口额（免 key；flow=2 出口；逐产品查避免 413）
+curl -s "https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/ds-045409?lang=EN&freq=M&reporter=IE&partner=CN&product=0202&flow=2&indicators=VALUE_IN_EUROS&time=2024-06"
+# → value: {'0': 645967}（€645,967，本机亲手复核）
+
+# OECD-FAO Outlook 全量 CSV（30.5MB 实拉；服务端商品过滤 422，须本地过滤）
+curl -sO "https://sdmx.oecd.org/public/rest/data/OECD.TAD.ATM,DSD_AGR@DF_OUTLOOK_2026_2035,1.1?format=csvfilewithlabels&startPeriod=2025"
+
+# 肉交所（SSR 现货挂价+带厂号成交价）与 Mysteel 牛羊业（桌面版文章页才含表格）
+curl -s -A "$UA" https://www.roujiaosuo.com/ | grep -c "元/公斤"          # 122
+curl -s -A "$UA" "https://m.mysteel.com/a/26031811/3579DDB5B855FCC7_abc.html" | grep -cE "岳各庄|大洋路"
+
+# foodmate 输华注册企业查询（GACC 镜像，免登录）
+curl -s -o /dev/null -w "%{http_code}\n" https://jwqyp.foodmate.net/        # 200
+
+# Drewry WCI 免费文本值
+curl -sL -A "$UA" "https://www.drewry.co.uk/maritime-research-opinion-browser/world-container-index-assessed-by-drewry" | grep -oE "\\\$[0-9,]+ per 40ft" | head -1   # $4,465 per 40ft
+
+# 判死面复测（直连+代理）
+for u in https://customs.gov.ru/ https://www.agroexport.gov.ru/ https://www.importyeti.com/ \
+         https://www.mpi.govt.nz/export/export-requirements/country-listing-requirements-for-animal-products/lists-of-approved-premises-for-specified-products/mpi-list-for-china-meat-establishments/ \
+         http://sigsif.agricultura.gov.br/sigsif_cons/!ap_exportador_nac_pais_rep_net ; do
+  printf "%s direct:%s proxy:%s\n" "$u" \
+    "$(curl -s -o /dev/null -m 10 -w '%{http_code}' -A "$UA" "$u")" \
+    "$(curl -s -o /dev/null -m 12 -x http://127.0.0.1:7890 -w '%{http_code}' -A "$UA" "$u")"
+done
+# → customs.gov.ru 000/000；agroexport 000/000；importyeti 403/403；MPI 200(849B壳)/200(849B壳)；SIGSIF 502/—
+```

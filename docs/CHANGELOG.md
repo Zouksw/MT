@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-160：调研轮 — 贸易信息平台深挖（TradeSources v1.0.0→v2.0.0：国内现货免费面 + Comext 欧盟月度镜像 + 厂号/运价/基线/提单六板块）
+
+用户指令"更加深入探索可能获取到牛肉贸易信息的网站平台"。docs-only 调研轮（round-148/151 同例），三路并发子代理（国内现货/替代统计镜像/厂号+运价+B/L）+ 本机亲手复核承重项（Comext 真值/OECD 直链/肉交所/Mysteel/foodmate/WCI）。时间背景：round-157/158/159 已落地评估文档与 inac/ibge_sidra 源，本轮补的是此前未排查的六块空白。
+
+- **Eurostat Comext `DS-045409` 免 key 打通（最大增量）**：欧盟输华批准国（IE/NL/FR/PL）**月度 CN8 级**对华量价；旧 `/sale/` 路径已死，现行 `comext/dissemination/statistics/1.0/data/` 端点；维度契约实测钉死（flow=2 出口、indicators 枚举、sinceTimePeriod 区间、多值 `+` 触发 413 须逐产品查）；本机复核 IE→CN 0202 2024-06 = **€645,967**（与代理逐位一致）；数据集 08-14 更新含 2026-06（T+6 周，快于 Comtrade 欧盟月度报送）；复用需署名、禁全量下载。
+- **国内现货层首批免费可编程源**：**肉交所**（进口/国产部位挂价 + **带厂号件套成交价**——牛霖411厂 57,878 元/吨级，日更 SSR HTML，本机 200/95KB 价格标记 122 处实证）；**Mysteel 牛羊业**（热鲜批发市场价/进口牛副/冷冻分割品日更 SSR，桌面版域名才含表格）；foodmate 输华注册企业查询（GACC 镜像免登录）。牧集级"人工行情日报"仍无公开源（公众号/App 墙确证：冻师傅/冻品攻略/优顶特研究院/冻品e港）；"现货层无公开源"口径收窄为"无日报级，挂价流免费层存在"。
+- **排查性结论（省后人的路）**：俄罗斯月度官方路径全灭（ФТС 明细 2022-03 停更 + 双通道 000；Agroexport 新闻稿级；НСПГ 评论级）→ RU 通道唯一解仍是中方口径/商业库；ITC Trade Map 条款禁抓取+禁再分发（仅人工核查）；WITS 仅年度排除；SCFI 图片渲染+CSRF 壳不采；ImportYeti 仅美国方向且 CF 403；uktradeinfo/StatCan 免 key 可商用但量小（P3）。
+- **其他新面**：OECD-FAO Outlook 免 key 直链 CSV（30.5MB 实拉，年度供需+10 年预测基线）；厂号名录扩展（MPI 输华清单含 Valid until 但 Incapsula 拦 curl、MGAP 输华 PDF 带日期、MAPA SIGSIF 502、RMED 有 China 准入筛选 XHR 待逆向）；运价指数免费三源（Drewry WCI 文本值 **$4,465/40ft** 实证 + FBX 日更综合值；SCFI 不采）。
+- **文档四件**：TradeSources **v2.0.0**（TL;DR 7-12 增补、round-160 主机矩阵、§八—§十三 六新板块、路线增补 P1a/P1b/P2/P3+不做清单、附录 v2 命令块）；DATA-SOURCES-EVALUATION §六 round-160 增补（新 P1×3/P2×4/不做×5 + 现货层口径修正）；INDEX 条目升 v2.0.0；本 CHANGELOG。零代码改动、无测试门禁（docs-only）；工作树其余改动属并发会话未动。
+
 ### 2026-09-07 — round-159 — inac 源复活（乌拉圭通道恢复）：inac.uy DIAE 新契约，novillo_gordo_uy 月度价 91 行入库，注册源 19→20
 
 - **勘察定案**：旧域 inac.gub.uy SSL 死亡（08-15 退役根因），门户迁 www.inac.uy（Liferay）；统计区入口为 **DIAE Interactiva** 应用，后端 `POST/GET /inac/DIAEUtils`——`cmdaction=datosiniciales` 返回最新年月（maxAno=2026/maxMes=7），`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 返回"育肥牛（Novillos gordos）活重月度价"CSV（Y 与 Y-1 双年列 + 同比）。
