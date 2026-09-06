@@ -1,7 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import type React from "react";
 import { useMemo, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
@@ -11,43 +9,14 @@ import {
 	chartTooltipStyles,
 } from "@/lib/chart-config";
 import { formatPercentValue } from "@/lib/format";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
 import type { ModelWithBacktest } from "@/types/accuracy";
 import { MODEL_COLORS } from "@/types/accuracy";
 
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-const ResponsiveContainer = dynamic<any>(
-	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-	{ ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> },
-) as React.ComponentType<Record<string, unknown>>;
-
-const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.LineChart })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const CartesianGrid = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
-	{ ssr: false },
-) as React.ComponentType<Record<string, unknown>>;
-
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+// Lazy recharts primitives via the shared module (ssr:false — recharts needs
+// the DOM); replaces 8 per-component dynamic() casts.
+const { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } =
+	dynamicRecharts();
 
 type WindowSize = 7 | 30 | 90;
 

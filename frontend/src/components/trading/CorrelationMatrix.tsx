@@ -62,10 +62,9 @@ export default function CorrelationMatrixChart({
 				}}
 			>
 				<div style={{ display: "flex", marginLeft: labelWidth }}>
-					{commodities.map((name, j) => (
+					{commodities.map((name) => (
 						<div
-							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-							key={j}
+							key={name}
 							style={{
 								width: cellSize,
 								textAlign: "center",
@@ -81,8 +80,7 @@ export default function CorrelationMatrixChart({
 					))}
 				</div>
 				{matrix.map((row, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-					<div key={i} style={{ display: "flex", alignItems: "center" }}>
+					<div key={commodities[i]} style={{ display: "flex", alignItems: "center" }}>
 						<div
 							style={{
 								width: labelWidth,
@@ -99,8 +97,8 @@ export default function CorrelationMatrixChart({
 						{row.map((value, j) => (
 							// biome-ignore lint/a11y/noStaticElementInteractions: interactive tooltip cell
 							<div
-								// biome-ignore lint/suspicious/noArrayIndexKey: matrix cell position is the key
-								key={`${i}-${j}`}
+								key={`${commodities[i]}-${commodities[j]}`}
+								// cell identity = row×col commodity pair
 								style={{
 									width: cellSize,
 									height: cellSize,

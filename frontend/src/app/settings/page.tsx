@@ -151,11 +151,10 @@ export default function SettingsPage() {
 							<span className="font-display font-semibold">Account Settings</span>
 						</div>
 						<div className="space-y-2">
-							{settingsSections.map((section, index) => (
+							{settingsSections.map((section) => (
 								<button
 									type="button"
-									// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-									key={index}
+									key={section.path}
 									onClick={() => router.push(section.path)}
 									className="w-full flex items-center gap-4 p-4 rounded-xl text-left transition-all duration-200 hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] group"
 								>
@@ -230,9 +229,8 @@ export default function SettingsPage() {
 							<span className="font-display font-semibold">Security Status</span>
 						</div>
 						<div className="space-y-3 mb-6">
-							{securityItems.map((item, idx) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-								<div key={idx} className="flex items-center gap-3">
+							{securityItems.map((item) => (
+								<div key={item.label} className="flex items-center gap-3">
 									{item.status === "enabled" ? (
 										<CircleCheck className="size-4 text-success" />
 									) : (
@@ -293,11 +291,10 @@ export default function SettingsPage() {
 								path: "/settings/profile",
 								icon: <User className="size-4" />,
 							},
-						].map((action, idx) => (
+						].map((action) => (
 							<button
 								type="button"
-								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-								key={idx}
+								key={action.path}
 								onClick={() => router.push(action.path)}
 								className="w-full p-4 rounded-xl text-left group transition-shadow duration-200 bg-card hover:shadow-md"
 							>

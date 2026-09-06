@@ -1,7 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import type React from "react";
 import { useMemo } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getMapeFillColor } from "@/lib/ai-utils";
@@ -12,47 +10,22 @@ import {
 	chartTooltipStyles,
 } from "@/lib/chart-config";
 import { formatPercentValue } from "@/lib/format";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
 import type { ModelWithBacktest } from "@/types/accuracy";
 
-// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-const ResponsiveContainer = dynamic<any>(
-	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-	{ ssr: false, loading: () => <div className="h-[350px] bg-muted animate-pulse rounded" /> },
-) as React.ComponentType<Record<string, unknown>>;
-
-const BarChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.BarChart })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const CartesianGrid = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
-	{ ssr: false },
-) as React.ComponentType<Record<string, unknown>>;
-
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const ReferenceLine = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.ReferenceLine })),
-	{ ssr: false },
-) as React.ComponentType<Record<string, unknown>>;
+// Lazy recharts primitives via the shared module (ssr:false — recharts needs
+// the DOM); replaces 9 per-component dynamic() casts.
+const {
+	ResponsiveContainer,
+	BarChart,
+	Bar,
+	Cell,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip,
+	ReferenceLine,
+} = dynamicRecharts();
 
 interface ModelPerformanceBarChartProps {
 	models: ModelWithBacktest[];
@@ -174,9 +147,8 @@ export function ModelPerformanceBarChart({ models }: ModelPerformanceBarChartPro
 							isAnimationActive={true}
 							animationDuration={chartAnimations.duration}
 						>
-							{chartData.map((entry, index) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-								<Cell key={index} fill={entry.fill} />
+							{chartData.map((entry) => (
+								<Cell key={entry.modelId} fill={entry.fill} />
 							))}
 						</Bar>
 					</BarChart>

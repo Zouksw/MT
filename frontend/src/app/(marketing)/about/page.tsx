@@ -59,8 +59,7 @@ export default function AboutPage() {
 							{ number: `${SITE_STATS.aiModels}`, label: "AI Models", Icon: TrendingUp },
 							{ number: `${SITE_STATS.dataSources}+`, label: "Data Sources", Icon: Database },
 						].map((stat, idx) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-							<StaggerChild key={idx}>
+							<StaggerChild key={stat.label}>
 								<ShimmerCard
 									className={`stagger-slide-up bg-white dark:bg-background rounded-xl p-6 text-center relative overflow-hidden group transition-all duration-200 ring-1 ring-black/[0.06] dark:ring-white/[0.08] ${idx === 0 ? "md:py-8" : ""}`}
 								>
@@ -120,9 +119,8 @@ export default function AboutPage() {
 											{ value: `${SITE_STATS.aiModels}`, label: "AI Models" },
 											{ value: `${SITE_STATS.sourceCountries}`, label: "Source Countries" },
 											{ value: `${SITE_STATS.dataSources}+`, label: "Data Sources" },
-										].map((stat, idx) => (
-											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-											<div key={idx} className="text-center">
+										].map((stat) => (
+											<div key={stat.label} className="text-center">
 												<div className="text-2xl font-display font-semibold text-primary mb-1 tabular-nums">
 													{stat.value}
 												</div>
@@ -182,9 +180,8 @@ export default function AboutPage() {
 								Icon: Users,
 								span: "",
 							},
-						].map((value, idx) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-							<StaggerChild key={idx} className={value.span}>
+						].map((value) => (
+							<StaggerChild key={value.title} className={value.span}>
 								<div
 									className={`relative bg-white dark:bg-background rounded-xl p-8 group transition-all duration-300 ring-1 ring-black/[0.06] dark:ring-white/[0.08] h-full`}
 								>

@@ -203,9 +203,11 @@ export default function TrackRecordPage() {
 										</tr>
 									</thead>
 									<tbody>
-										{record.samples.slice(0, 25).map((s, i) => (
-											// biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id
-											<tr key={i} className="border-t border-black/5 dark:border-white/5">
+										{record.samples.slice(0, 25).map((s) => (
+											<tr
+												key={`${s.seriesLabel}-${s.modelId}`}
+												className="border-t border-black/5 dark:border-white/5"
+											>
 												<td className="max-w-52 truncate px-4 py-2.5">{s.seriesLabel}</td>
 												<td className="px-4 py-2.5 font-mono text-xs">{s.modelId}</td>
 												<td className="px-4 py-2.5 text-muted-foreground">

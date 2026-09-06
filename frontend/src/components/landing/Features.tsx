@@ -178,8 +178,7 @@ export const Features: React.FC = () => {
 				{/* Metrics strip */}
 				<StaggerContainer className="mb-16 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4 lg:mb-20">
 					{metrics.map((metric, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-						<StaggerChild key={index}>
+						<StaggerChild key={metric.label}>
 							<div
 								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-5 md:p-7 text-center transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] ${index === 0 ? "md:py-9" : ""}`}
 							>
@@ -194,9 +193,8 @@ export const Features: React.FC = () => {
 
 				{/* Features Grid */}
 				<StaggerContainer className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:gap-6 grid-flow-dense">
-					{features.map((feature, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-						<StaggerChild key={index} className={feature.span}>
+					{features.map((feature) => (
+						<StaggerChild key={feature.title} className={feature.span}>
 							<div
 								className={`group rounded-2xl ring-1 ring-black/[0.06] dark:ring-white/[0.08] bg-white dark:bg-gray-950 p-5 md:p-6 transition-all duration-300 hover:ring-black/[0.12] dark:hover:ring-white/[0.14] h-full${feature.goldAccent ? " bg-[rgba(139, 105, 20,0.03)] dark:bg-[rgba(139, 105, 20,0.06)]" : ""}`}
 							>
@@ -212,10 +210,9 @@ export const Features: React.FC = () => {
 								{feature.visual === "trade" && <TradeVisual />}
 
 								<div className="mt-4 flex flex-wrap gap-2">
-									{feature.details.map((detail, idx) => (
+									{feature.details.map((detail) => (
 										<span
-											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-											key={idx}
+											key={detail}
 											className="bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary rounded-full"
 										>
 											{detail}

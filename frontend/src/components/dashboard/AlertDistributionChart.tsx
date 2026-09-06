@@ -1,44 +1,12 @@
 "use client";
 
 import { ArrowRight, TriangleAlert } from "lucide-react";
-import dynamic from "next/dynamic";
 import React from "react";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
 
-// Dynamic imports for Recharts
-const BarChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.BarChart })), {
-	loading: () => (
-		<div className="flex items-center justify-center h-full">
-			<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-		</div>
-	),
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const ResponsiveContainer = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-	{ ssr: false },
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-) as React.ComponentType<any>;
-
-const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+// Lazy recharts primitives via the shared module (ssr:false — recharts needs
+// the DOM); replaces 7 per-component dynamic() casts.
+const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } = dynamicRecharts();
 
 interface AlertDistributionChartProps {
 	data?: {
@@ -131,7 +99,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 										padding: "10px 14px",
 										fontSize: 13,
 									}}
-									formatter={(value: number, name: string) => [`${value} alerts`, name]}
+									formatter={(value, name) => [`${value} alerts`, name]}
 									cursor={{ fill: "rgba(0, 0, 0, 0.03)" }}
 								/>
 								<Bar
@@ -142,9 +110,8 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 									animationDuration={600}
 									animationEasing="ease-out"
 								>
-									{chartData.map((entry, index) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-										<Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.85} />
+									{chartData.map((entry) => (
+										<Cell key={`cell-${entry.name}`} fill={entry.color} fillOpacity={0.85} />
 									))}
 								</Bar>
 							</BarChart>

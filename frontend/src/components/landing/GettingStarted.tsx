@@ -124,9 +124,8 @@ export default function GettingStarted() {
 					<div className="absolute left-6 top-0 bottom-0 w-px bg-muted hidden md:block" />
 
 					<div className="space-y-6">
-						{steps.map((step, index) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-							<StaggerChild key={index}>
+						{steps.map((step) => (
+							<StaggerChild key={step.title}>
 								<div className="flex gap-6 items-start">
 									<div className="relative flex-shrink-0">
 										<div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full ring-1 ring-primary/30 text-sm font-semibold text-primary">
@@ -153,9 +152,8 @@ export default function GettingStarted() {
 
 				{/* Feature list */}
 				<StaggerContainer className="mx-auto mb-12 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
-					{features.map((feature, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-						<StaggerChild key={index}>
+					{features.map((feature) => (
+						<StaggerChild key={feature}>
 							<div className="flex items-center gap-3 rounded-xl outline outline-black/5 dark:outline-white/10 px-5 py-4">
 								<CheckCircle2 size={20} className="text-success flex-shrink-0" />
 								<span className="text-sm font-medium text-foreground">{feature}</span>

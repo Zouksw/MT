@@ -1,7 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import type React from "react";
 import {
 	chartAnimations,
 	chartAxisStyles,
@@ -9,50 +7,22 @@ import {
 	chartTooltipStyles,
 } from "@/lib/chart-config";
 import { formatDecimal } from "@/lib/format";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
 import type { PredictionLog } from "@/types/accuracy";
 
-const ResponsiveContainer = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-	{ ssr: false, loading: () => <div className="h-[300px] bg-muted animate-pulse rounded" /> },
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-) as React.ComponentType<any>;
-
-const ComposedChart = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.ComposedChart })),
-	{ ssr: false },
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-) as React.ComponentType<any>;
-
-const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-}) as React.ComponentType<any>;
-
-const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-}) as React.ComponentType<any>;
-
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const CartesianGrid = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
-	{ ssr: false },
-) as React.ComponentType<Record<string, unknown>>;
-
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
-
-const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
-	ssr: false,
-}) as React.ComponentType<Record<string, unknown>>;
+// Lazy recharts primitives via the shared module (ssr:false — recharts needs
+// the DOM); replaces 9 per-component dynamic() casts.
+const {
+	ResponsiveContainer,
+	ComposedChart,
+	Line,
+	Area,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip,
+	Legend,
+} = dynamicRecharts();
 
 interface BacktestDetailChartProps {
 	prediction: PredictionLog;

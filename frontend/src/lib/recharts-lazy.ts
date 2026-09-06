@@ -56,5 +56,14 @@ export function dynamicRecharts() {
 			() => import("recharts").then((m) => ({ default: m.ResponsiveContainer })),
 			{ ssr: false },
 		),
+		Scatter: dynamic(() => import("recharts").then((m) => ({ default: m.Scatter })), {
+			ssr: false,
+		}),
+		Cell: dynamic(() => import("recharts").then((m) => ({ default: m.Cell })), {
+			ssr: false,
+		}),
+		ReferenceLine: dynamic(() => import("recharts").then((m) => ({ default: m.ReferenceLine })), {
+			ssr: false,
+		}),
 	};
 }

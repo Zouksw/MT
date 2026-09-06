@@ -58,9 +58,8 @@ export const SocialProof: React.FC = () => {
 		<section className="py-12 shadow-[0_-1px_0_0_rgba(0,0,0,0.05),0_1px_0_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_0_0_rgba(255,255,255,0.08),0_1px_0_0_rgba(255,255,255,0.08)] bg-white dark:bg-background">
 			<div className="max-w-6xl mx-auto px-6">
 				<StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-					{stats.map((stat, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-						<StaggerChild key={i} className="text-center">
+					{stats.map((stat) => (
+						<StaggerChild key={stat.label} className="text-center">
 							<div className="mb-1">
 								<AnimatedNumber target={stat.numericValue} suffix={stat.suffix} />
 							</div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { BarChart3, Clock, Database, TriangleAlert, Zap } from "lucide-react";
-import dynamic from "next/dynamic";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ContentCard } from "@/components/layout/ContentCard";
@@ -14,47 +13,13 @@ import { StatCard } from "@/components/ui/StatCard";
 import { type Column, Table } from "@/components/ui/Table";
 import { Tag } from "@/components/ui/Tag";
 import { apiFetch } from "@/lib/apiFetch";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
 import { useIsMobile } from "@/lib/responsive-utils";
 
-const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.LineChart })), {
-	loading: () => (
-		<div className="flex items-center justify-center h-full">
-			<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-		</div>
-	),
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-}) as React.ComponentType<any>;
-const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-}) as React.ComponentType<any>;
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-}) as React.ComponentType<any>;
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-}) as React.ComponentType<any>;
-const CartesianGrid = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })),
-	{ ssr: false },
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-) as React.ComponentType<any>;
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-}) as React.ComponentType<any>;
-const ResponsiveContainer = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-	{ ssr: false },
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-) as React.ComponentType<any>;
-const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), {
-	ssr: false,
-	// biome-ignore lint/suspicious/noExplicitAny: recharts dynamic imports need any for correct prop inference
-}) as React.ComponentType<any>;
+// Lazy recharts primitives via the shared module (ssr:false — recharts needs
+// the DOM); replaces 8 per-component dynamic() + ComponentType<any> casts.
+const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } =
+	dynamicRecharts();
 
 interface MemoryPoint {
 	time: string;
@@ -508,17 +473,15 @@ export default function PerformancePage() {
 			{error && <ErrorDisplay error={error} retry={loadData} context="Performance Metrics" />}
 
 			<div className={`grid grid-cols-2 md:grid-cols-4 ${gapClass} mb-3`}>
-				{statCards.map((stat, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-					<StatCard key={`wv-${i}`} {...stat} loading={loading} />
+				{statCards.map((stat) => (
+					<StatCard key={stat.title} {...stat} loading={loading} />
 				))}
 			</div>
 
 			<div className={`grid grid-cols-2 md:grid-cols-4 ${gapClass} mb-6`}>
-				{serverStatCards.map((stat, i) => (
+				{serverStatCards.map((stat) => (
 					<StatCard
-						// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-						key={`srv-${i}`}
+						key={stat.title}
 						{...stat}
 						loading={loading}
 						sparklineData={stat.sparklineData}

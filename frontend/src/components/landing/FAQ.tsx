@@ -74,8 +74,7 @@ export default function FAQ() {
 							{faqs.map((faq, index) => (
 								<button
 									type="button"
-									// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-									key={index}
+									key={faq.question}
 									role="tab"
 									aria-selected={selectedIndex === index}
 									onClick={() => setSelectedIndex(index)}

@@ -166,9 +166,8 @@ export default function PricingPage() {
 										</Link>
 									</div>
 									<ul className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-										{proPlan.features.map((feature, featureIdx) => (
-											// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-											<li key={featureIdx} className="flex items-start gap-3">
+										{proPlan.features.map((feature) => (
+											<li key={feature} className="flex items-start gap-3">
 												<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 												<span className="text-body text-muted-foreground">{feature}</span>
 											</li>
@@ -204,9 +203,8 @@ export default function PricingPage() {
 									</Button>
 								</Link>
 								<ul className="space-y-3">
-									{freePlan.features.map((feature, featureIdx) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-										<li key={featureIdx} className="flex items-start gap-3">
+									{freePlan.features.map((feature) => (
+										<li key={feature} className="flex items-start gap-3">
 											<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 											<span className="text-body text-muted-foreground">{feature}</span>
 										</li>
@@ -243,9 +241,8 @@ export default function PricingPage() {
 									</Button>
 								</Link>
 								<ul className="space-y-3">
-									{enterprisePlan.features.map((feature, featureIdx) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-										<li key={featureIdx} className="flex items-start gap-3">
+									{enterprisePlan.features.map((feature) => (
+										<li key={feature} className="flex items-start gap-3">
 											<CheckCircle2 size={20} className="text-primary flex-shrink-0 mt-0.5" />
 											<span className="text-body text-muted-foreground">{feature}</span>
 										</li>
@@ -293,9 +290,8 @@ export default function PricingPage() {
 								q: "What does the Enterprise plan include?",
 								a: "Enterprise includes private deployment, custom AI model training, dedicated API endpoints, SLA guarantees, priority support, and a dedicated account manager.",
 							},
-						].map((faq, idx) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: no stable key available
-							<StaggerChild key={idx}>
+						].map((faq) => (
+							<StaggerChild key={faq.q}>
 								<div className="bg-card rounded-lg p-6 outline outline-black/5 dark:outline-white/10">
 									<h3 className="text-h4 font-display font-semibold text-foreground mb-2">
 										{faq.q}
