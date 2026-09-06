@@ -105,12 +105,10 @@ psql mt_db 全量实测（Explore 代理执行，同日）：
 - 修复三选一（按优先序）：① 勘察 eWAPS 新报告端点（`search.ams.usda.gov` 本机 TLS 失败，需经 mihomo 代理再探）；② USDA MARS API key（`USDA_MARS_API_KEY`，data.gov 免费注册体系；与 usda_ams 同 key，一次注册两源受益）；③ LMR DataMart（`mpr.datamart.ams.usda.gov` 今日 500，待复核是否瞬时故障）。
 - **注意**：usda_ams（LM_XB405 部位级）若走 mnreports 通道也受同样影响；走 MARS API 通道则只差 key。
 
-### 4.2 INAC 域名复活（P1 勘察项）
+### 4.2 INAC 域名复活（✅ 已落地，round-159）
 
-- 旧域 `www.inac.gub.uy` SSL 握手失败（= 08-31 判死原因）；**新域 `www.inac.uy` 今日 HTTP 200**（61KB）。
-- 但 `/estadisticas`、`/estadisticas/exportaciones.html`（旧爬虫端点）均 404；`/inac/diae/`（统计部门页）是 2.9KB 壳；根页可见 Liferay innovaportal 文件存储仍在服务（如 `inac_anuario_2025_web-esp.pdf` 年鉴）。
-- 国家开放数据目录 `catalogodatos.gub.uy/organization/inac` 404（组织 slug 变更或下线），`/dataset?q=faena` 检索页可达但为前端渲染。
-- 结论：**乌拉圭通道存在低成本复活路径，但需要一次人工页面勘察**定位新统计入口（或以 Anuario 年鉴 PDF + 周报通讯作过渡）。
+- 旧域 `www.inac.gub.uy` SSL 握手失败（= 08-31 判死原因）；**新域 `www.inac.uy` 2026-09-06 实测 200**。
+- 09-07 勘察定案并落地：统计区 = **DIAE Interactiva** 应用，后端 `POST/GET www.inac.uy/inac/DIAEUtils`（`datosiniciales` 最新年月；`precios&format=CSV` 育肥牛活重月度价，双年列）。`inac` 源复活，落 CommodityPrice `novillo_gordo_uy` 月度（91 行 2019-01→2026-07）。faena（周屠宰）/expo（出口）两个 DIAE 应用为 P2 候选。详见 KNOWN-ISSUES D1 round-159 与 CHANGELOG。
 
 ### 4.3 IPCVA 改版（降级 P2）
 

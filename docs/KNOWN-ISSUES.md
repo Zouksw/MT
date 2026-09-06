@@ -56,6 +56,11 @@
 - **FX H.10 周批误报修复**（批C）：`usd_cny`/`brl_usd`/`eur_usd` 的 fred 行为逐营业日点位（库内实测连续工作日序列）但**上游按周一批次发布**——健康周期下最新点可龄 9-10 天，撞 7 天日度窗每周五至周日误报 stale（09-06 实况）。修复：cadence.ts 增 publication-rhythm 覆盖（该三元组 14 天窗，"一个发布节奏容忍"同月度 90 天口径），仅新鲜度面启用（预测/调度门保持原窗）。live 铁证：修复后 `eur_usd` 10 天龄 daily 点 → stale:false。
 - 顺带观察（不动刀）：boot `runAll`（并行全源）不写 ingestion_logs（定时/手动路径写）——既有行为，故 ibge_sidra 首灌 16 行在板上只显手动 0/0 触发记录。留尾登记，本批不扩范围。
 
+**2026-09-07 更新（round-159）——inac 按新契约复活（乌拉圭通道恢复）**：
+- `inac` **复活**：勘察定案——旧域 inac.gub.uy 死亡，门户迁 www.inac.uy（Liferay），数据走 **DIAE Interactiva** 后端 `POST/GET /inac/DIAEUtils`（`cmdaction=datosiniciales` 给最新年月；`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 给"育肥牛活重月度价"CSV，含 Y 与 Y-1 双年列）。新契约落 **CommodityPrice `novillo_gordo_uy`**（月度，2019-01→2026-07 共 91 行，2026-07=3.25 USD/kg 与 API 一致），替代死的 BeefCutPrice 部位 FOB 语义（后者或经 DIAE expo 应用另行复活，未排期）。注册源 19→20（AGENTS 已同步）。
+- 解析防线（live 取证）：Jasper CSV **表头与数据行列位错位**（标签 col3/col7、当前年值 col4）——按表头索引解析会静默丢当前年数据；解析器改"数值列发现 + 左新右旧 + 列同一性"（单值行不错配年份），仅双数值列契约成立，单列拒写（drift guard）。乌拉圭拼写 Setiembre、十进制逗号、页脚 Fuente 行均已钉测试（5 个解析测试）。
+- D1 的"复活即恢复乌拉圭周度"预期修正为：本轮恢复的是**月度价格**序列；faena（周屠宰）/expo（出口）两个 DIAE 应用仍在（P2 候选，未排期）。
+
 **2026-08-31 更新（round-153，数据维护轮）——fred 免 key 复活 + world_bank 幻影更新修复**：
 - `fred`（宏观 MarketFactor 序列）不再被 FRED_API_KEY 硬门控：无 key 走 fredgraph.csv 免费公开下载（与 fredCsv.ts 同端点，BALTIC_DRY 除外——非 FRED 序列），有 key 升级官方 JSON API。首轮 live 暴露并修正 5 个休眠期不可见的错误 series id（PALLFNFINDEX→PALLFNFINDEXM、PCOPPUSD→PCOPPUSDM、PWHEAMTUSD→PWHEAMTUSDM、PCOTTIND→PCOTTINDUSDM、PSUGAUSA→PSUGAISAUSDM，全部 live 探针核实 2026-08-31）。live 验收：market_factors **15 序列×12 观测**（dailies 至 2026-08-25/28、monthlies 至 2026-07-01），每周期 ~30 条 "Missing FRED_API_KEY" error 噪音归零。FRED_API_KEY 转为可选增强。
 - `world_bank`（fredCsv 月度通道）**每轮 23-35 行幻影更新已修**：FRED CSV 原始值带 14 位小数（实测 PPORKUSDM 89.61709686727274）vs Decimal(18,6) 存储（89.617097），samePrice 永不成立 → 每次 boot/定时运行重写全量行。修复：fredCsv.ts 解析边界统一 6dp 舍入（同源覆盖 cme 日度通道）+ 补 noChange 契约（月中重扫 0/0 → success 而非 warning）。live：boot run `world_bank success 0/0 (unchanged)`（此前 success 0/23-35）。该幻影更新此前一直掩盖 noChange 缺失。

@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-159 — inac 源复活（乌拉圭通道恢复）：inac.uy DIAE 新契约，novillo_gordo_uy 月度价 91 行入库，注册源 19→20
+
+- **勘察定案**：旧域 inac.gub.uy SSL 死亡（08-15 退役根因），门户迁 www.inac.uy（Liferay）；统计区入口为 **DIAE Interactiva** 应用，后端 `POST/GET /inac/DIAEUtils`——`cmdaction=datosiniciales` 返回最新年月（maxAno=2026/maxMes=7），`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 返回"育肥牛（Novillos gordos）活重月度价"CSV（Y 与 Y-1 双年列 + 同比）。
+- **解析防线（live 取证出的真坑）**：Jasper CSV 导出**表头与数据行列位错位**——年份标签在 col3/col7、当前年数值却在 col4（上一年 col7 对齐）；按表头索引解析会**静默丢弃全部当前年数据**。解析器改用数值列发现 + 左新右旧 + 列同一性（单值行按列位归属年份，不错配），%单元格先排除（parseFloat 会把 "29,47%" 读成数），仅当恰有两个数值列才解析（drift guard 单列拒写）；乌拉圭拼写 Setiembre/Septiembre 双收、十进制逗号、junk 首行与 Fuente 页脚均有测试钉住（5 个解析测试）。
+- **落库**：CommodityPrice `novillo_gordo_uy`（livestock，USD/kg，月度，平烛形态同 fred 月度惯例）；查询梯 ano=maxAno 步长 2（每 CSV 含两年，4 请求覆盖 8 年）+ noChange 契约（DAILY 节奏）。**live**：boot 首灌 **91 行（2019-01→2026-07）**，2026-07=3.25 USD/kg 与 API 一致；手动复跑 noChange:true。旧 BeefCutPrice 部位 FOB 语义（exportaciones.html 表）随旧域消亡，或经 DIAE expo 应用另行复活（P2 未排期）——头注如实记录语义变更。
+- **注册**：inac 双处复活（index.ts Tier2 + server.ts DAILY），墓碑注释改复活注记；注册源 19→**20**（AGENTS §二/§三 已同步）。
+- **门禁**：tsc 0 / biome 0 / 全量 **1112+1 skip 零回退**（+5 inac 解析）/ build 0 / PM2 重启 / live 验证如上。
+- 备注：novillo_gordo_uy 未加入 digest 公开白名单（白名单是隐私契约，扩容另行决策）；faena（周屠宰）/expo（出口）两个 DIAE 应用为 P2 候选。
+
 ### 2026-09-07 — round-158 — 数据供给批：SIDRA 官方源上线（18→19 注册）+ FX H.10 周批误报修复 + 90CL 断供定性收窄
 
 - **批 B（`ibge_sidra` 新源，政府官方免 key）**：IBGE SIDRA t/1092 巴西季度牛屠宰（Pesquisa Trimestral do Abate 国家总量）——变量 284 屠宰头数 + 285 胴体总重双序列，落 MarketFactor（`slaughter_bovines`/BR，seriesKey `animais_abatidos`/`peso_carcacas`；分析面，不入预测环）。`v/allxp` 单拉 + 客户端过滤（多变量斜杠语法 `v/284/285` 实测挂起）；YYYYQQ 季度码 → 季初日期（202601→01-01，防月表 YYYYMM 别名的正则钉死）；noChange 契约（DAILY 节奏重扫 8 季度）+ 5 个解析测试（schema 漂移 → 0 行拒写）。**live**：boot runAll 首灌 16 行（2024-Q2→2026-Q1），2026-Q1 头数 10,289,201 与 API 逐位一致；手动再触发 noChange:true 契约验证。weekly_kills 表刻意不动（周度美式表 ≠ 季度国家总量，硬塞破坏语义）。
