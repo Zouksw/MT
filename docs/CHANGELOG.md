@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-158 — 数据供给批：SIDRA 官方源上线（18→19 注册）+ FX H.10 周批误报修复 + 90CL 断供定性收窄
+
+- **批 B（`ibge_sidra` 新源，政府官方免 key）**：IBGE SIDRA t/1092 巴西季度牛屠宰（Pesquisa Trimestral do Abate 国家总量）——变量 284 屠宰头数 + 285 胴体总重双序列，落 MarketFactor（`slaughter_bovines`/BR，seriesKey `animais_abatidos`/`peso_carcacas`；分析面，不入预测环）。`v/allxp` 单拉 + 客户端过滤（多变量斜杠语法 `v/284/285` 实测挂起）；YYYYQQ 季度码 → 季初日期（202601→01-01，防月表 YYYYMM 别名的正则钉死）；noChange 契约（DAILY 节奏重扫 8 季度）+ 5 个解析测试（schema 漂移 → 0 行拒写）。**live**：boot runAll 首灌 16 行（2024-Q2→2026-Q1），2026-Q1 头数 10,289,201 与 API 逐位一致；手动再触发 noChange:true 契约验证。weekly_kills 表刻意不动（周度美式表 ≠ 季度国家总量，硬塞破坏语义）。
+- **批 C（FX 新鲜度误报修复）**：实测定性——H.10 三元组（usd_cny/brl_usd/eur_usd）fred 行为**逐营业日点位**但上游**周一批次发布**，健康周期最新点龄 9-10 天，撞 7 天日度窗每周五至日误报 stale（09-06 实况即此）。修复：`cadence.ts` 增 `PUBLICATION_WINDOW_DAYS` 覆盖表 + `stalenessWindowDaysForSeries(interval, slug)`（三元组 14 天 = 一个发布节奏 + 滑裕，同月度 90d 的"一个节奏容忍"口径），**仅新鲜度面传 slug**——预测/调度门保持原窗不受数据延迟怪癖放松。+5 测试（含 9 天非 stale / 15 天仍 stale 端到端集成）。live 铁证：`eur_usd` 10 天龄 daily 点 → stale:false。
+- **批 A（90CL 断供收窄）**：替代源定位 = My Market News 报告 2823（`mymarketnews.ams.usda.gov`，filerepo PDF 按期次编号需页面发现），但主机直连+代理双 000（round-149 首测 + 本日复测；代理可到 www.ams 母域，封锁为主机级）、DataMart 复测仍 500——**代码就绪卡出口**。期间 digest `beef_90cl_us` 按周度 21 天窗自然降级（~09-18 转 stale，诚实陈旧）；scraper 非 PDF 警告语改为明确陈述迁移事实与去处。
+- **门禁**：tsc 0 / biome 0 / 全量 **1107+1 skip 零回退**（+8：SIDRA 解析 5 + cadence/新鲜度 3）/ build 0 / PM2 重启 / live：19 源 boot runAll 全 succeeded、SIDRA 16 行入库、eur_usd 误报场景修正、90CL 新警告语上线。
+- 登记：AGENTS 源计数 22 文件/19 注册；KNOWN-ISSUES D1 round-158 块（含 boot runAll 不写 ingestion_logs 的既有行为留尾）；DATA-SOURCES-EVALUATION §8.1/§8.4 落地状态。
+
 ### 2026-09-06 — round-157 增补 — 政府官方 API 扩容实测：牧集/必孚数据流的官方构建可行性（纯文档）
 
 - **DATA-SOURCES-EVALUATION.md v1.0.0 → v1.1.0（§八增补）**：回答"能否尽量引入更多在线接口/用政府官方数据构建牧集/必孚级数据流"。**新验证 4 个可用官方接口**（全部本机实测）：USDA NASS QuickStats（401 契约活，免费 key——月度屠宰/**冻肉库存 Cold Storage**/Cattle on Feed）、USDA FAS 网关（GATS HS10 官方双边出口 + PSD 供需，免费 key）、**巴西 IBGE SIDRA 季度屠宰 API（免 key，参数校验应答=活）**、巴西 MAPA 工厂名录宿主（根域 200，SIF 入口待勘察）。

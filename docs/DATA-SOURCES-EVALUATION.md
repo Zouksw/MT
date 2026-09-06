@@ -198,7 +198,7 @@ psql 密度基线：见 §三（Explore 代理 2026-09-06 全量实测，命令�
 |---|---|---|---|---|
 | `quickstats.nass.usda.gov/api/api_GET/` | 美国 USDA NASS | **401（API 契约活，仅差 key）** | data.gov 免费注册 | MarketFactor：月度牛屠宰（头数/活重）、**冻肉库存 Cold Storage**（最接近"库存"的官方数据）、Cattle on Feed；月度；S |
 | `api.fas.usda.gov`（GATS + PSD） | 美国 USDA FAS | 网关活（根路径 JSON 404 属正常，08-31 同口径） | data.gov 免费注册 | MarketFactor：GATS 官方口径 HS10 双边出口（比 Comtrade HS6 更细，含 cutoff 子目）、PSD 全球供需；月/季度；M |
-| `apisidra.ibge.gov.br` | 巴西 IBGE（国家统计） | **API 活**（参数校验 400 应答 = 服务在处理查询） | **无 key** | MarketFactor：季度牛屠宰官方调查（SIDRA 表/变量编码接入时查表）；季度；S-M |
+| `apisidra.ibge.gov.br` | 巴西 IBGE（国家统计） | **✅ 已落地（round-158 批B）**：boot runAll 首灌 16 行（2024-Q2→2026-Q1，头数与胴体两条序列），2026-Q1 头数 10,289,201 与 API 逐位一致；noChange 契约 + 8 测试守护 | **无 key** | 已接（MarketFactor `slaughter_bovines`/BR，`animais_abatidos`+`peso_carcacas` 双序列） |
 | `sistemasweb.agricultura.gov.br` | 巴西 MAPA（农业部） | 根域 200（508KB 系统目录页）；SIF 具体查询入口 `/sipo` `/sidra` 均 404，**待勘察** | 无 | Factory 名录增强（巴西 SIF 注册出口企业 + 输华状态）；月快照；M（入口勘察 + HTML 解析） |
 | `datos.gob.ar` CKAN | 阿根廷 | 已在库（argentina_exports 活，2026-06） | 无 | 已接 | — |
 | `comtradeapi.un.org` | 联合国 | 已在库（922 行，2026-07） | 免费 key 可提配额 | 已接 | — |
@@ -236,7 +236,7 @@ psql 密度基线：见 §三（Explore 代理 2026-09-06 全量实测，命令�
 
 - **P0（eWAPS 修复）路径重排**：路径 B（MARS key）在本环境多一层出口封锁；**路径 C（LMR DataMart `mpr.datamart.ams.usda.gov`，今日 500 待复核）成为本环境内最可行路径**，路径 A（eWAPS 勘察）需换出口节点。
 - **P0 新增（key 清单）**：data.gov 免费 key 一把覆盖 NASS + FAS 两家（ slaughter/cold storage/GATS HS10/PSD 四组官方序列）；MLA key 独立。
-- **P1 新增**：IBGE SIDRA（免 key、API 已验证——四个新接口中唯一零依赖可立即写代码的）；MAPA SIF 入口勘察（补 Factory 名录动态）。
+- **P1 新增**：~~IBGE SIDRA（免 key、API 已验证——四个新接口中唯一零依赖可立即写代码的）~~ **已落地（round-158 批B，见 §8.1）**；MAPA SIF 入口勘察（补 Factory 名录动态）。
 - **P2 新增**：StatsNZ 复核、CEPII BACI 年度回填、WB 直连 API（无必要，FRED 已覆盖）。
 
 ### 8.5 增补批取证命令（2026-09-06）
