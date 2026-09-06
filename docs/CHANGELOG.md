@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-156 批 3c 改判 + 批 5（TECH-DEBT 收口部分）— 接缝证据驱动 + 三条 TD 终态
+
+- **批 3c 改判缓做（证据：三页面接缝扫描）**：performance/alerts-rules/data-sources 三页的自然接缝（Modal、badge、card 等子组件）已被历史轮次抽出，剩余 713/705/702 行主体是 15-23 个 hooks 的有状态编排——继续拆分等于给状态机加参数透传层，收益为负（过度工程化防线：拆分是重新分箱，不该造没人住的新房间）。待任一页面功能迭代时随批重构。
+- **TD-14 RESOLVED（冷启动终验）**：全新空库 `mt_coldstart_156` 上 `prisma migrate deploy` 全量应用成功、退出码 0——round-103 基线 squash 后的冷启动路径首次以空库实证，P3018 不复存在。
+- **TD-17 RESOLVED（三子项复核全关闭）**：孤儿 `pm2-start.sh` 实为 round-112 `1ae11b8` 已删（本轮实测不存在+零引用）；logrotate repo 副本与线上 diff 逐行一致（round-111 已同步）；mt.service round-114 已装（登记内已注）。
+- **TD-5 结案**：`AuthRequest`/`AuthenticatedRequest` 两变体是有意设计（optional/required 语义即文档），不强行收敛。
+- 留尾（不强行清）：TD-8 裸 fetch 收敛（~39 处，跨文件大改单列）、TD-6 剩余 timeseries.ts（10 处 prisma 直连）。
+
 ### 2026-09-06 — round-156 批 3b — beef.ts 胖路由拆 service 层（TD-6 主体）：851 → 381 行
 
 - 6 个胖 handler（合计 ~510 行业务逻辑）逐字平移至新 `services/beefPriceQueries.ts`（534 行）：`queryBeefPrices`（过滤器构造 + 分页 + freshness 映射）、`latestBeefPrices`（最新日快照 + imported 趋势）、`beefPriceHistory`（多厂号对比 + 日期窗）、`computeBeefSpreads`（价差聚合数学）、`batchBeefForecasts`（group-by 选优 + 4-worker 预测池）、`beefCutForecast`（taxonomy 校验 + 厂号钉定 + 诚实不可测态）。路由层只剩中间件链 + 薄委托——与文件内 `/by-country → aggregateBeefByCountry` 既有模式对齐；服务抛 NotFoundError/BadRequestError 沿 apiKeys/alerts 等六服务既有惯例。**逐字平移零逻辑改写**：/prices 与 /prices/latest 的过滤器构造差异（relation vs id-set 两种形状）刻意不合并，语义统一另行决策。

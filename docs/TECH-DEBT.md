@@ -59,7 +59,7 @@
 **审计**：2026-07-06，§3.3
 **当时证据**：`middleware/auth.ts:5` `AuthRequest`（userId optional）、`middleware/auth.ts:16` `AuthenticatedRequest`（userId required）、`types/index.ts:67` 第三份（shape 又不同）。119 处引用，8 个路由用 optional 旧版被迫写 `if(!req.userId) throw` 防御样板。第三个定义是纯重复。
 
-**部分清理（2026-07-27 复核）**：`types/index.ts` 第三份重复已删（仅留 NOTE 注释）。剩 2 个**有意**变体在 `middleware/auth.ts`：`AuthRequest`（userId optional，未认证路由用）+ `AuthenticatedRequest`（userId required，`authenticate` 后保证）。两变体共存是设计意图，非重复。本条基本 STALE。
+**部分清理（2026-07-27 复核）**：`types/index.ts` 第三份重复已删（仅留 NOTE 注释）。剩 2 个**有意**变体在 `middleware/auth.ts`：`AuthRequest`（userId optional，未认证路由用）+ `AuthenticatedRequest`（userId required，`authenticate` 后保证）。两变体共存是设计意图，非重复。本条基本 STALE。**TD-5 结案（2026-09-06 复核）**：维持两变体设计（optional/required 语义即文档），不强行收敛。
 
 ### TD-6 — 3 个无 service 层的胖路由（待重构）
 **审计**：2026-07-12，`reviews/2026-07-12-round-29.md` 后续
@@ -173,6 +173,8 @@
 1. 前置验证：`prisma migrate diff --from-url <prod> --to-schema-datamodel` = **No difference**（生产与 schema 零漂移，squash 安全前提）。
 2. 旧 8 个迁移整体移入 `prisma/migrations_archive_20260815/`（保留历史）；`prisma migrate diff --from-empty --to-schema-datamodel --script` 生成单一 `migrations/0_init/migration.sql`（930 行 / 31 表，**含 group_members 的 CREATE**）。
 3. 生产簿记：`_prisma_migrations` 备份（`pg_dump -t`）后清表 → `migrate resolve --applied 0_init` → `migrate deploy` no-op + status up-to-date。顺带清掉了簿记表里 3 组历史失败重试的重复行。
+
+**冷启动终验（2026-09-06，round-156 批5）**：全新空库 `mt_coldstart_156`（CREATE DATABASE 后零手工状态）→ `prisma migrate deploy` 全量应用成功（0_init 基线含 group_members CREATE + 后续迁移）、退出码 0，P3018 复现路径不复存在。**TD-14 RESOLVED（live 实证）。**
 4. **全新库重放证明**：scratch 库 `migrate deploy` → "All migrations have been successfully applied"；replay 后 `migrate diff` 对 schema = **No difference**。原 42P01 不复存在。
 5. CI 的 test-backend 从 `db push` 改回 `migrate deploy`（真实迁移路径重新受 CI 保护）。
 - 此后新增迁移只需对「生产现状 + 0_init 基线」兼容（两者现已一致）。
@@ -359,6 +361,8 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 - `scripts/logrotate.conf` vs `/etc/logrotate.d/trademind`：**内容已漂移**（repo 副本 `rotate 14` + postrotate `pm2 reloadLogs`；线上 `rotate 7` + `maxsize 50M` + `copytruncate`、无 postrotate）——repo 副本 stale，误导下次" reinstall"。
 - `scripts/mt.service`（systemd 单元，PM2 resurrect 开机复活）：**未安装**（`systemctl is-enabled mt` → No such file）→ 重启后 PM2 不会自动复活，脚手架存在但未接线（ops 缺口，非冗余）。**已安装启用（round-114，2026-08-21，7cb9a9c）**：`/etc/systemd/system/mt.service` enabled；redis.service 别名实测解析到 redis-server.service（单元无需改）；`pm2 save` 后 `systemctl start` 复活验证零扰动（同 PID/重启计数）。
 - 非冗余确认：health-check.sh（CI verify）/ cron-healthcheck.sh（5min 自愈）/ watchdog-nextserver.sh（2min 杀重复 next-server）职责互斥；backup/restore/db-migrate/bootstrap-test-db/setup 为合法运维对。
+
+**终态（2026-09-06，round-156 批5 复核）**：三子项全部关闭——① `pm2-start.sh` 已删除（round-112 `1ae11b8` setup-layer cleanup，本轮实测文件不存在、全仓零引用）；② logrotate repo 副本已与线上 `/etc/logrotate.d/trademind` 同步（round-111/112，本轮 diff 逐行一致复核）；③ mt.service 已安装启用（round-114，登记内已注）。**TD-17 RESOLVED。**
 
 ### TD-18 — 代码层新鲜抽查（对既有条目的 2026-08-20 复核）
 
