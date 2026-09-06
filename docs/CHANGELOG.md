@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-156 批 3a — seed.ts 热点拆解：2,696 → 1,174 行（数据模块化，逻辑零改动）
+
+- **拆分**：`prisma/seed.ts` 内联大块全部抽为 `prisma/seed/` 下 5 个纯数据/工具模块——`commodityData.ts`（968 行：COMMODITIES 目录 821 + PRICE_BASELINES 107 + DECLARED_SOURCES + MULTI_SOURCE_SLUGS）、`datasets.ts`（300：DATASETS + 接口 + DETECTION_METHODS）、`beefData.ts`（188：FACTORIES）、`random.ts`（47：rand/randInt/pick/sineWave/withSpike/slugify）、`users.ts`（34：USERS）；主文件只留编排 main()。块内代码逐行平移（in-main 块去一层缩进），零逻辑改写。
+- **门禁（seed 无运行时面，验证链完整）**：① standalone `tsc --strict` 对照 git HEAD：错误 **8=8 完全一致**（均为拆分前即存在的潜伏类型瑕疵——prisma/ 历来不在 tsc/tsconfig 范围、tsx 不查类型；3a 零新增）；② `bootstrap-test-db.sh --force` 用新模块端到端重建 mt_test **成功**；③ 数据平价：commodities **84**（目录逐一致）/ commodity_prices 16,531 / factories 20 / users 3 / market_factors 90；④ 全量 backend **1099+1 skip（106 文件）** 零回退。
+- **修复的 3 处迁移 import 缺口**（live 发现即修）：seed.ts 补 `TimeseriesDef`、datasets.ts 补 `StorageFormat`、users.ts 补 `UserRole` 类型导入。
+
 ### 2026-09-06 — round-156 批 2 + 批 4（覆盖基线部分）— biome-ignore 91→26 + 覆盖率基线首次落表
 
 - **批 2 `eefe946`（biome-ignore 91→26）**：① **7 个图表组件迁共享 `dynamicRecharts()`**（AnomalyChart/PredictionChart/BacktestDetailChart/AlertDistributionChart/ModelPerformanceBarChart/AccuracyTrendChart/performance 页 + 批 1 的 CommodityPriceChart），消灭全部本地 `dynamic() + as ComponentType<any>` 样板；工厂目录随扩 Scatter/Cell/ReferenceLine（BarChart 原已在内——早前 grep 误判漏看，live 撞重复后修正）。迁移暴露并修复旧 any cast 掩盖的 **recharts formatter 真实类型缺口 3 处**（CommodityPriceChart ×2 批 1、AlertDistributionChart ×1），AccuracyTrendChart 迁移中误吞 `WindowSize` 类型定义 live 发现即还。② **28 处索引 key 改稳定字段键**：营销静态数组用本体字段（feature 文本/stat.label/faq.question/step.title/modelId/商品名对），数据行用业务复合键（seriesLabel-modelId、date-factory、source-type 保留）；随清理未用 index 参数 ×14。③ 终态库存 26：noExplicitAny 41→**5**（beef/swr 文档化契约、Table 泛型 API、useTradingData ×2 API 形状缺口）、noArrayIndexKey 37→**8**（DB 回滚行号重复/用户可编辑列表可重复/装饰占位等，均带理由注释）；a11y 5/img 3/依赖抑制 3/断言 2 为批 2 范围外遗留。门禁：tsc 0、biome 0、jest 360 零回退、build 0、PM2 前端重启、pricing/about/performance live 200/307 正常。
