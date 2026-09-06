@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-157 增补 — 政府官方 API 扩容实测：牧集/必孚数据流的官方构建可行性（纯文档）
+
+- **DATA-SOURCES-EVALUATION.md v1.0.0 → v1.1.0（§八增补）**：回答"能否尽量引入更多在线接口/用政府官方数据构建牧集/必孚级数据流"。**新验证 4 个可用官方接口**（全部本机实测）：USDA NASS QuickStats（401 契约活，免费 key——月度屠宰/**冻肉库存 Cold Storage**/Cattle on Feed）、USDA FAS 网关（GATS HS10 官方双边出口 + PSD 供需，免费 key）、**巴西 IBGE SIDRA 季度屠宰 API（免 key，参数校验应答=活）**、巴西 MAPA 工厂名录宿主（根域 200，SIF 入口待勘察）。
+- **核心可行性结论**：必孚型"统计+名录"面**基本可由政府数据构建**（Comtrade 镜像在库 + 上述接口 + 税率/成本工具面组合推导）；牧集型"现货日报 + 港口库存"**确认无任何政府数据源**（必孚库存为自采商业数据；唯一官方近似=NASS 美国冻肉库存，须口径标注）。构建后官方口径节奏矩阵：日度 CME+FX / 周度 90CL+MLA / 月度 Comtrade+AR FOB+NASS+GATS / 季度 SIDRA+PSD / 年度中国上报校准。
+- **环境限制新证据**：`api.usda.gov`（MARS）与 `api.data.abs.gov.au`（澳 ABS）**直连+代理双通道 000**（与 ABARES 同族）——eWAPS 修复路径 B（MARS key）在本机多一层出口封锁，**路径 C（LMR DataMart，今日 500 待复核）成为环境内最可行路径**；`ewaps/search.ams.usda.gov` TLS 拒绝（代理可到 www.ams 母域，封锁为主机级）。
+- 优先级更新：P0 key 清单收敛为 data.gov 一把 key（NASS+FAS 两家四组序列）+ MLA key；P1 新增 SIDRA（零依赖可写代码）与 MAPA SIF 入口勘察；P2 新增 StatsNZ 复核、CEPII BACI 年度回填。
+
 ### 2026-09-06 — round-157 — 数据源评估（对标牧集规模/密度）：eWAPS 断供回归发现 + INAC 复活 + 逐层取数决策（纯文档轮）
 
 - **新增 [DATA-SOURCES-EVALUATION.md](DATA-SOURCES-EVALUATION.md)**：回答"要实现牧集量级的数据规模/密度，牛肉外贸信息从哪里获取"。核心结论：牧集密度=三层叠加（现货日更层**无公开源**=运营人工录入或商业采购决策；统计月更层 Comtrade 镜像已承接；工具参照层静态+名单页），MT 数据层 09-06 全量实测基线（18 在册源仅 5 产数；commodity_prices 66,560 行中 95% 为 fred 宏观；beef_cut_prices 2,401 行冻结 2026-04-30；weekly_kills/cold_storage 无在册写入者）。

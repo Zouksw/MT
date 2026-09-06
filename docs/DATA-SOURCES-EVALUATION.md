@@ -1,7 +1,7 @@
 ---
 title: "牛肉外贸数据规模/密度评估——对标牧集的取数决策"
 en_title: "Data Scale & Density Evaluation: Sourcing Beef Foreign-Trade Information (Mooket Benchmark)"
-version: "1.0.0"
+version: "1.1.0"
 last_updated: "2026-09-06"
 status: "active"
 maintainer: "MT Team"
@@ -35,6 +35,7 @@ related_docs:
 4. **INAC 复活信号【实测】**：TradeSources 08-31 判"全球性下线"已过时——`www.inac.uy` 根域今日 200（旧域 `inac.gub.uy` SSL 已死），但 `/estadisticas/*` 404、DIAE 页为壳，统计新入口待勘察。乌拉圭周度数据存在低成本复活路径。
 5. **最高 ROI 仍是两个 key 门（用户动作，代码端到端就绪）**：`MLA_API_KEY`（恢复 mla_nlrs 的 1,440 行级部位价 + EYCI/OTH）、`USDA_MARS_API_KEY`（LM_XB405 美国部位级；注意 marsapi 直连 000、需走 mihomo 代理出口，round-80 口径）。
 6. 中国官方口径维持 TradeSources 结论不变（stats.customs.gov.cn 今日文章页 412 反爬复现；月度节奏已由 Comtrade 镜像承接）；IPCVA 官网 2026-04 改版后 sitemap 已无价格区（降级为 P2）；ComexStat 403 复现（Cloudflare，镜像已替代，不再必要）。
+7. **增补批（同日晚）——政府官方 API 扩容实测**：新验证 4 个可用官方接口（USDA NASS QuickStats 屠宰/冻肉库存、USDA FAS 网关、巴西 IBGE SIDRA 季度屠宰 API、巴西 MAPA 工厂名录宿主），加上已在库的 Comtrade/CKAN/FRED——**必孚型"统计+名录"面的政府数据流版基本可构建**（含到岸成本组合推导、税率/成本计算工具面）；牧集型"现货日报"面确认无任何政府数据源；**api.usda.gov（MARS）经直连+代理双通道均 000**，对 §四.1 eWAPS 修复路径 B 是新的环境限制。详见 §八。
 
 ---
 
@@ -184,3 +185,72 @@ curl -s 'http://localhost:8000/api/market/public/digest' | jq '.data.digest.seri
 ```
 
 psql 密度基线：见 §三（Explore 代理 2026-09-06 全量实测，命令含 per-source group by + min/max date + 近 30/7 天计数）。
+
+---
+
+## 八、增补批（同日晚）：政府官方在线 API 扩容实测——牧集/必孚数据流的官方构建可行性
+
+> 回答追问：**"能不能尽量引入更多在线接口、用政府官方公布数据构建出类似牧集/必孚的数据流？"** 全部结论基于本机（直连 + mihomo 代理）2026-09-06 二次实测。
+
+### 8.1 新验证可用的官方接口（上轮评估未覆盖）
+
+| 接口 | 机构 | 今日实测 | key | 接入形状（落库/节奏/工作量） |
+|---|---|---|---|---|
+| `quickstats.nass.usda.gov/api/api_GET/` | 美国 USDA NASS | **401（API 契约活，仅差 key）** | data.gov 免费注册 | MarketFactor：月度牛屠宰（头数/活重）、**冻肉库存 Cold Storage**（最接近"库存"的官方数据）、Cattle on Feed；月度；S |
+| `api.fas.usda.gov`（GATS + PSD） | 美国 USDA FAS | 网关活（根路径 JSON 404 属正常，08-31 同口径） | data.gov 免费注册 | MarketFactor：GATS 官方口径 HS10 双边出口（比 Comtrade HS6 更细，含 cutoff 子目）、PSD 全球供需；月/季度；M |
+| `apisidra.ibge.gov.br` | 巴西 IBGE（国家统计） | **API 活**（参数校验 400 应答 = 服务在处理查询） | **无 key** | MarketFactor：季度牛屠宰官方调查（SIDRA 表/变量编码接入时查表）；季度；S-M |
+| `sistemasweb.agricultura.gov.br` | 巴西 MAPA（农业部） | 根域 200（508KB 系统目录页）；SIF 具体查询入口 `/sipo` `/sidra` 均 404，**待勘察** | 无 | Factory 名录增强（巴西 SIF 注册出口企业 + 输华状态）；月快照；M（入口勘察 + HTML 解析） |
+| `datos.gob.ar` CKAN | 阿根廷 | 已在库（argentina_exports 活，2026-06） | 无 | 已接 | — |
+| `comtradeapi.un.org` | 联合国 | 已在库（922 行，2026-07） | 免费 key 可提配额 | 已接 | — |
+| FRED fredgraph.csv | 美联储 | 已在库（22 序列；World Bank Pink Sheet 的 PBEEFUSDM/IMF 月度/期货均经此通道，**无需再接 WB/BLS 直连 API**） | 可选 | 已接 | — |
+
+### 8.2 牧集/必孚产品 × 官方数据路径——构建可行性（核心回答）
+
+| 牧集/必孚的产品面 | 政府官方路径 | 可行性 |
+|---|---|---|
+| **中国进口月度量价，分国别 × HS**（必孚旗舰） | Comtrade 出口国镜像（BR t-1 / AU·NZ·US t-2 × 8 HS，已在库）+ 中国年度上报 CIF 校准（已在库）+ FAS GATS HS10（key）加密粒度；AR/UY 月度缺口走 INAC 勘察 / CKAN | ✅ **可构建**（口径=出口国 FOB 镜像 ≠ 中国 CIF 官方月度，必须口径标注——现有 source/metadata 机制已支持） |
+| **输华工厂名录 + 暂停/恢复动态** | 巴西 MAPA（宿主可达）+ 阿根廷 SENASA Mercados Abiertos（代理可达）+ 中国单一窗口（实名登录，低频半自动）+ DAFF（本机 000，待） | 🟡 出口国侧官方可自动化；中国侧半自动 |
+| **港口库存** | **无任何政府公布**（必孚为自采商业数据）；唯一官方近似 = USDA NASS Cold Storage（美国冻肉库存，月度，key 门） | ❌ 不可（近似替代需明确标"美国口径"） |
+| **现货日报（件套/部位 × 市场）** | **无任何政府数据源**；最近官方锚 = USDA 90CL 周度（eWAPS 修复中）+ MLA 指标（key） | ❌ 不可（维持 §五结论：人工录入/商业采购） |
+| **税率查询 / 成本计算**（牧集 App 工具面） | 公开税则公告（静态维护）+ Comtrade 均价 × 税率 × 运价指数（SCFI 公开头条数）组合推导 | ✅ 可构建（组合值须标"推导"） |
+| **屠宰/产量统计** | 美 NASS（key）/ 巴 SIDRA（免 key，API 已验证活）/ 澳 ABARES（000） | 🟡 两国可得（weekly_kills 表现成无写入者，正好承接） |
+| **国际行情（期货/汇率）** | CME via FRED+Yahoo + FX（已在库，日度至 09-04） | ✅ 已在库 |
+
+**构建后的节奏矩阵**（全部官方口径）：日度 CME+FX → 周度 90CL（修复后）+ MLA（key）→ 月度 Comtrade 6 通道 × 8 HS + AR FOB + NASS 屠宰/冻库存 + GATS → 季度 SIDRA + PSD → 年度中国上报校准。**统计面密度可对齐必孚的公开可见节奏**；牧集的差异化（现货日报 + 港口库存）确认不可由政府数据替代。
+
+### 8.3 本环境不可达清单（直连+代理双通道实测，2026-09-06）
+
+| 主机 | 直连 | 代理 | 影响 |
+|---|---|---|---|
+| `api.usda.gov`（MARS） | 000 | 000 | **§四.1 修复路径 B 受限**：即使注册 key，本机出口也连不上该网关（NASS/quickstats 同属 usda.gov 家族但可达——封锁是主机级非域名级） |
+| `search.ams.usda.gov` / `ewaps.ams.usda.gov` | TLS 拒绝 / 000 | TLS 拒绝 | eWAPS 端点勘察需更换出口节点（`www.ams.usda.gov` 经代理 200，代理本身可到 AMS） |
+| `api.data.abs.gov.au`（澳官方统计 ABS） | 000 | 000 | 与 ABARES 同族（agriculture.gov.au 000，round-118 口径）——澳官方 API 体系本环境整体不可达 |
+| `api.indec.gob.ar` | 000 | 000 | 阿根廷走 CKAN（datos.gob.ar）替代，已覆盖 |
+| `api.bls.gov` | 403（Akamai） | — | CPI/PPI 经 FRED 已覆盖，无需直连 |
+| `api.stats.govt.nz`（新西兰） | 502 | 502 | 待复核（可能是路径/瞬时故障；低优先——NZ 月度可由 Comtrade 镜像承接） |
+| `stats.customs.gov.cn` / `customs.gov.cn` | 412 | —（无大陆节点） | 维持：中国官方口径走镜像 + 条件路径 |
+| `api-comexstat.mdic.gov.br` | 403 | 403 | 维持：Comtrade 镜像已替代 |
+| CEPII BACI（`www.cepii.fr`） | 页面 404（站点活） | — | 年度全球双边贸易 bulk CSV，仅回填历史深度时用（P2） |
+
+### 8.4 对既有优先级的影响更新
+
+- **P0（eWAPS 修复）路径重排**：路径 B（MARS key）在本环境多一层出口封锁；**路径 C（LMR DataMart `mpr.datamart.ams.usda.gov`，今日 500 待复核）成为本环境内最可行路径**，路径 A（eWAPS 勘察）需换出口节点。
+- **P0 新增（key 清单）**：data.gov 免费 key 一把覆盖 NASS + FAS 两家（ slaughter/cold storage/GATS HS10/PSD 四组官方序列）；MLA key 独立。
+- **P1 新增**：IBGE SIDRA（免 key、API 已验证——四个新接口中唯一零依赖可立即写代码的）；MAPA SIF 入口勘察（补 Factory 名录动态）。
+- **P2 新增**：StatsNZ 复核、CEPII BACI 年度回填、WB 直连 API（无必要，FRED 已覆盖）。
+
+### 8.5 增补批取证命令（2026-09-06）
+
+```bash
+# 官方 API 活性（直连）
+curl -s 'https://quickstats.nass.usda.gov/api/api_GET/?commodity_desc=CATTLE'          # {"error":["unauthorized"]} = 契约活
+curl -s 'https://api.fas.usda.gov/'                                                     # JSON 404 框架应答 = 网关活
+curl -s 'https://apisidra.ibge.gov.br/values/t/1092/n1/1/v/265/p/last%201'              # 400 参数校验 = API 活（接入时查正确表/变量码）
+curl -s -o /dev/null -w '%{http_code}\n' 'https://sistemasweb.agricultura.gov.br/'     # 200
+# 代理通道（mihomo 127.0.0.1:7890）
+curl -x http://127.0.0.1:7890 -o /dev/null -w '%{http_code}\n' 'https://www.google.com/'   # 302 代理活
+curl -x http://127.0.0.1:7890 -o /dev/null -w '%{http_code}\n' 'https://www.ams.usda.gov/' # 200（代理可到 AMS 母域）
+curl -x http://127.0.0.1:7890 -o /dev/null -w '%{http_code}\n' 'https://api.usda.gov/'     # 000（主机级封锁）
+# eWAPS 子域
+curl -sS -o /dev/null -w '%{http_code}\n' 'https://ewaps.ams.usda.gov/'                    # 000
+```
