@@ -10,7 +10,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { stalenessWindowDays } from "@/services/cadence";
+import { stalenessWindowDays, stalenessWindowDaysForSeries } from "@/services/cadence";
 import { getCommodityFreshness } from "@/services/marketService";
 import {
 	createTestContext,
@@ -30,6 +30,21 @@ describe("stalenessWindowDays — cadence policy", () => {
 	it("unknown/absent cadence falls back to the daily window (fail-closed to the short window)", () => {
 		expect(stalenessWindowDays("weekly")).toBe(21);
 		expect(stalenessWindowDays("")).toBe(7);
+	});
+});
+
+describe("stalenessWindowDaysForSeries — publication-rhythm override (round-158 批C)", () => {
+	it("H.10 FX trio: weekly-batched daily series get the 14d window at ANY point cadence", () => {
+		expect(stalenessWindowDaysForSeries("daily", "usd_cny")).toBe(14);
+		expect(stalenessWindowDaysForSeries("daily", "brl_usd")).toBe(14);
+		expect(stalenessWindowDaysForSeries("daily", "eur_usd")).toBe(14);
+	});
+
+	it("unregistered slugs keep the cadence default (no accidental loosening)", () => {
+		expect(stalenessWindowDaysForSeries("daily", "live_cattle_cme")).toBe(7);
+		expect(stalenessWindowDaysForSeries("monthly", "beef_carcass_us")).toBe(90);
+		expect(stalenessWindowDaysForSeries("daily", undefined)).toBe(7);
+		expect(stalenessWindowDaysForSeries("daily", null)).toBe(7);
 	});
 });
 
@@ -114,6 +129,43 @@ describe("getCommodityFreshness — interval-aware (round-129 batch 6a)", () => 
 		expect(item).toBeDefined();
 		expect(item?.interval).toBe("daily");
 		expect(item?.stale).toBe(true);
+	});
+
+	it("H.10 FX daily points 9d old are NOT stale (weekly batch release, round-158 批C), 15d still are", async () => {
+		// Reuse the real slug so the publication override in cadence.ts is
+		// exercised end-to-end; the seeded rows for it are removed first (test
+		// DB is ephemeral) so the fixture fully owns the series.
+		await ctx.prisma.commodity.deleteMany({ where: { slug: "eur_usd" } });
+		const h10 = await ctx.prisma.commodity.create({
+			data: { slug: "eur_usd", name: "H.10 Fixture", category: "macro", unit: "USD" },
+		});
+		try {
+			for (const [days, expectStale] of [
+				[9, false],
+				[15, true],
+			] as const) {
+				await ctx.prisma.commodityPrice.deleteMany({ where: { commodityId: h10.id } });
+				const d = new Date(Date.now() - days * 24 * 3600 * 1000);
+				await ctx.prisma.commodityPrice.create({
+					data: {
+						commodityId: h10.id,
+						date: d,
+						interval: "daily",
+						source: "src-cad",
+						close: 100,
+						open: 100,
+						high: 100,
+						low: 100,
+					},
+				});
+				const result = await getCommodityFreshness();
+				const item = result.commodities.find((c) => c.slug === "eur_usd");
+				expect(item, `fixture ${days}d`).toBeDefined();
+				expect(item?.stale, `fixture ${days}d old`).toBe(expectStale);
+			}
+		} finally {
+			await ctx.prisma.commodity.delete({ where: { id: h10.id } }).catch(() => {});
+		}
 	});
 
 	it("commodity with no prices at any cadence stays stale with null cadence", async () => {

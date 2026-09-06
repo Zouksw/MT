@@ -699,8 +699,10 @@ router.get(
 
 // Per-commodity data freshness — last price date for each commodity.
 // Complements /sources/freshness (which tracks scraper runs) by answering
-// "which commodities actually have fresh price data". Stale threshold is one
-// week (price data is daily, so a week gap signals a stalled source).
+// "which commodities actually have fresh price data". Stale windows are
+// cadence-aware (7d daily / 21d weekly / 90d monthly, services/cadence.ts)
+// plus publication-rhythm overrides for weekly-batched daily series
+// (H.10 FX trio, round-158 批C).
 router.get(
 	"/commodities/freshness",
 	authenticate,

@@ -40,6 +40,34 @@ export function stalenessWindowDays(interval: string): number {
 	}
 }
 
+/** Publication-rhythm exceptions (round-158 批C): series whose POINTS are
+ * daily-spaced but whose UPSTREAM publishes them in a weekly batch. Measured
+ * live (psql 2026-09-06/07): the FRED H.10 FX trio (DEXCHUS/DEXBZUS/DEXUSEU
+ * → usd_cny/brl_usd/eur_usd) delivers consecutive business-day rows that all
+ * land at once on the weekly release — in a healthy cycle the newest point
+ * ages 9–10d by Sun, tripping the 7d daily window every Fri–Sun (the
+ * freshness board flagged usd_cny/brl_usd stale on 2026-09-06 with perfectly
+ * healthy data). 14d = one publication rhythm + slip margin, the same "one
+ * rhythm of tolerance" policy as the monthly 90d: a genuinely missed release
+ * still fires. */
+const PUBLICATION_WINDOW_DAYS: Record<string, number> = {
+	usd_cny: 14,
+	brl_usd: 14,
+	eur_usd: 14,
+};
+
+/** Staleness window for a specific commodity slug: the publication-rhythm
+ * override when one is registered, else the cadence default. Only freshness
+ * surfacing (boards/digest) should pass the slug — prediction/scheduling
+ * gates keep calling stalenessWindowDays(interval) so a data-lag quirk can
+ * never loosen the model-side gates. */
+export function stalenessWindowDaysForSeries(interval: string, slug?: string | null): number {
+	if (slug && PUBLICATION_WINDOW_DAYS[slug] !== undefined) {
+		return PUBLICATION_WINDOW_DAYS[slug];
+	}
+	return stalenessWindowDays(interval);
+}
+
 /** Display unit for horizon STEPS of a series cadence (ADR-0001 ①): a
  * monthly series' horizon 10 is ten MONTHS, not ten days. Unknown/legacy
  * (undefined) cadences default to day — the pre-ADR display semantics. */

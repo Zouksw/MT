@@ -13,7 +13,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib";
 import { MS_PER_DAY, MS_PER_WEEK } from "@/lib/constants";
 import { NotFoundError } from "@/middleware/errorHandler";
-import { stalenessWindowDays } from "@/services/cadence";
+import { stalenessWindowDaysForSeries } from "@/services/cadence";
 import { getDataHealth } from "@/services/dataHealth";
 import {
 	authoritativeSourceWhere,
@@ -301,7 +301,10 @@ export async function getCommodityFreshness() {
 	const items = commodities.map((c) => {
 		const last = lastByCommodity.get(c.id) ?? null;
 		const staleThreshold = new Date(
-			now.getTime() - stalenessWindowDays(last?.interval ?? "daily") * MS_PER_DAY,
+			// Series-aware window (round-158 批C): weekly-batched daily series
+			// (H.10 FX) get their publication-rhythm override; everything else
+			// keeps the plain cadence policy.
+			now.getTime() - stalenessWindowDaysForSeries(last?.interval ?? "daily", c.slug) * MS_PER_DAY,
 		);
 		return {
 			id: c.id,
