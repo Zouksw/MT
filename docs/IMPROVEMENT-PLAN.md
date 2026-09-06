@@ -1,8 +1,8 @@
 ---
 title: "改进方案 — 竞争分析落地执行计划"
 en_title: "Improvement Plan — Executing the Competitive Analysis"
-version: "3.6.0"
-last_updated: "2026-08-31"
+version: "3.7.0"
+last_updated: "2026-09-06"
 status: "active"
 maintainer: "MT Team"
 tags:
@@ -18,6 +18,18 @@ related_docs:
 ---
 
 # 改进方案 — 按 [牧集对标分析](COMPETITIVE-ANALYSIS-MOOKET.md) 制定的执行计划
+
+> ## 第九波 v3.7.0（2026-09-06，round-155）— 产品范围收敛轮：国产维度完全删除 + 外贸信息面丰富
+>
+> **指令来源**：用户"当前项目只负责牛肉外贸市场的预测"→"完全删除国产维度，丰富外贸维度的信息"。五批独立 commit 全门禁（tsc/biome/全量测试不回退/build/PM2 重启/live 验证）。
+>
+> **删除侧**（批 A `3e4f57f` / 批 B `e7c3761`）：/beef 国产筛选、dashboard 国产均价卡、trend 契约 `domesticTrendPct`（前后端+测试）全部移除；seed 与生产库删除 27 个 `_cn` 商品序列（国产牛肉部位/国内活牛谷物/11 条批发系列；180 价格行 + 4637 预测行，PredictionLog 无外键显式删，定向备份 `backups/round155-domestic/`）；`china_wholesale` 源退役（注册 19→18）；api-workflows 商品目录断言 ≥100→≥80（seed 目录 111→84）。**D16（国产数据路线）与 D22（新发地观察项）随维度删除永久关闭**——国产入口/筛选/数据通道不再存在，无路由可复用。
+>
+> **丰富侧**（批 C / 批 D `4fbc504`）：贸易流读侧深化——`TradeFlowEntry.history`（每国 24 期月度序列，数据本就在手只回最新 2 点）+ TradeFlowsCard HS 切换器（8 条 lane）/月度量柱+价线 ComposedChart/数量环比与月度金额列/阿根廷出口总额上下文行；`beef_90cl_us` 进公开 digest 白名单（节奏逻辑 interval-generic 零分支）+ dashboard hero 第二卡换"进口 90CL 周度基准"。D25（贸易流公开）维持鉴权内，~10 月按门复核。
+>
+> **顺手根治（live 发现）**：node-redis 4.7.1 变参 `del(k1,k2)` 只删第一个键——tradeFlows 测试清理的 spread 形式曾把 `hs=0202` 缓存键泄漏满 3600s TTL，向下一轮 run 直出陈旧形状；清理改逐键删（生产代码均为数组形式，实证不受影响）。
+>
+> **基线**：backend 1099+1 skip（0 净变化：扩展既有用例）；frontend 356→**360**（+4 TradeFlowsCard 组件测试）；inference 61 未动。
 
 > ## 第八波 v3.6.0（2026-08-31 规划）— 数据通路波：贸易流量价通路打通 + 厂号维度拓宽
 >

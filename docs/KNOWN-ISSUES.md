@@ -40,6 +40,11 @@
 - `china_customs_stats` 按 D23 退役（双处注册移除、文件保留）：其端点 `stats.customs.gov.cn/api/trade/query` 为虚构路径 + 主机封锁，ingestion_logs 历史全为 warning 0/0（零产出实证）。官方平台直连复活仍属 D1 网络结论（需中国出口节点或人工月度 CSV，见 IMPROVEMENT-PLAN 批 5 观察项）。
 - D1 其余部分（MLA/USDA key、beef_cut_prices 冻结 2026-04-30）**不变**。
 
+**2026-09-06 更新（round-155 批B）——国产维度整体删除**：
+- `china_wholesale`（MARA .gov.cn 批发价源，本表 round-63 归类"地域封锁"）随国产维度退役：双处注册移除、文件保留（inac/china_customs_stats 同款墓碑）。其 12 个 `*_wholesale_cn` 品类本就零产出。
+- 生产库删除 27 个 `_cn` 商品（10 个国产牛肉部位 + 国内活牛/谷物族 + 11 条批发系列）及 180 行价格、4637 条预测（PredictionLog 无外键显式删；定向备份 `backups/round155-domestic/`）；CommodityPrice/WatchlistItem 经 FK Cascade。mt_test 已按新 seed 重建。
+- D1 其余（MLA/USDA key、beef_cut_prices 冻结 2026-04-30）不变——冻结的部位级序列全部是**进口**源（mla_nlrs/usda_ams/cepea），不受本轮影响。
+
 **2026-08-31 更新（round-153，数据维护轮）——fred 免 key 复活 + world_bank 幻影更新修复**：
 - `fred`（宏观 MarketFactor 序列）不再被 FRED_API_KEY 硬门控：无 key 走 fredgraph.csv 免费公开下载（与 fredCsv.ts 同端点，BALTIC_DRY 除外——非 FRED 序列），有 key 升级官方 JSON API。首轮 live 暴露并修正 5 个休眠期不可见的错误 series id（PALLFNFINDEX→PALLFNFINDEXM、PCOPPUSD→PCOPPUSDM、PWHEAMTUSD→PWHEAMTUSDM、PCOTTIND→PCOTTINDUSDM、PSUGAUSA→PSUGAISAUSDM，全部 live 探针核实 2026-08-31）。live 验收：market_factors **15 序列×12 观测**（dailies 至 2026-08-25/28、monthlies 至 2026-07-01），每周期 ~30 条 "Missing FRED_API_KEY" error 噪音归零。FRED_API_KEY 转为可选增强。
 - `world_bank`（fredCsv 月度通道）**每轮 23-35 行幻影更新已修**：FRED CSV 原始值带 14 位小数（实测 PPORKUSDM 89.61709686727274）vs Decimal(18,6) 存储（89.617097），samePrice 永不成立 → 每次 boot/定时运行重写全量行。修复：fredCsv.ts 解析边界统一 6dp 舍入（同源覆盖 cme 日度通道）+ 补 noChange 契约（月中重扫 0/0 → success 而非 warning）。live：boot run `world_bank success 0/0 (unchanged)`（此前 success 0/23-35）。该幻影更新此前一直掩盖 noChange 缺失。

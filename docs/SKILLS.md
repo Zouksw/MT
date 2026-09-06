@@ -56,6 +56,7 @@
 
 | 触发场景 | skill | 为什么 |
 |---|---|---|
+| 项目实时状态 / 核实与维护 AGENTS.md 数字 | **project-status** | 只读实测五组规模计数 + git + 健康，对照 §三 修漂移（2026-08-31 创建，`~/.zcode/skills/project-status/`） |
 | 服务健康检查 / "为什么挂了" | **ops-check** | 3 fork 进程，health endpoint 真相 |
 | CI 流水线 / ci.yml | **ci-cd-and-automation** | 8 job（lint/typecheck/test/build/deploy/rollback） |
 | 部署 / 发布 | **shipping-and-launch** | DEPLOYMENT-CHECKLIST.md |

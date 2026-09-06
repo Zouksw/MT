@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-155：产品范围收敛轮 — 国产维度完全删除 + 外贸信息面丰富（五批全门禁）
+
+用户指令"当前项目只负责牛肉外贸市场的预测"→"完全删除国产维度，丰富外贸维度的信息"。
+
+- **批 A `3e4f57f`（删国产 UI 与聚合契约，前后端同批）**：/beef 页 origin 筛选（all/imported/domestic 三态按钮、disabled 诚实禁用、domestic 空态）整体移除；`useDashboardStats` 删 `domesticAvg/domesticTrendPct`（保留 imported 字段）；dashboard 删"国产均价"hero 卡与 DOMESTIC_ICON；后端 `beefQueries.originSplitAvg→importedAverage`（单桶均值，无 country 行不计入的行为钉住不变）、`BeefTrendSummary` 删 `domesticTrendPct`、/prices/latest 契约同步；analysis/origin 页 CN 标签删除。测试：beefTrends 7 用例重写（CN fixture 随组删）、useDashboardStats 2 用例改 imported 口径。live：trend 键只剩 importedTrendPct/latestDate/previousDate。
+- **批 B `e7c3761`（数据层删除 + 源退役 + 生产库操作）**：seed 删 27 个 `_cn` 商品（10 国产部位 + 国内活牛/谷物族 + 11 条 `*_wholesale_cn`）及其 PRICE_BASELINES/wheat_cn 多源 fixture/`originCountry!=='CN'` 死条件/MOFCOM 国产新闻 fixture；`china_wholesale` 双处注册移除（文件保留，墓碑注释写明非国产维度回归不重挂）；api-workflows 目录断言 ≥100→≥80（seed 111→84）。**生产库**：定向备份 `backups/round155-domestic/`（27 商品 + 180 价格 + 4637 预测 CSV）→ 事务删除（PredictionLog 无外键显式删；价格/关注走 FK Cascade；123 条 `cut:` 虚拟键"孤儿"为历史 cut 预测行，与本次删除无关）；mt_test `--force` 重建。live：search 搜"国产"零命中、commodities 0 个 `_cn`（86 total）、sources 面板无 china_wholesale。首跑 4 挂为 --force 后冷缓存已知 flaky（T3b 口径复跑全绿 106 文件）。
+- **批 C `2eeb4cd`（贸易流读侧深化）**：`getTradeFlows` 增 `TradeFlowEntry.history`（每国最近 24 期、oldest-first——take 400 本就在手只回最新 2 点）与 `arFobTotal`（export_fob_carnes 最新月全目的地出口额上下文）；TradeFlowsCard 重写：HS 切换器（8 条 pinned lane：0201/0202/020220/020230/020610/020621/020622/020629 中文标签）、月度量柱 + FOB 价线 ComposedChart（国家 pill，年度 lane 不进图）、数量环比/月度金额（百万 USD）两列、阿根廷上下文行；recharts-lazy 增 ComposedChart 导出。**live 发现并根治测试隔离 bug**：node-redis 4.7.1 变参 `del(k1,k2)` 实测只删第一个键——本套件 spread 清理一直泄漏 `hs=0202` 缓存键满 3600s TTL，向下一轮直出陈旧响应形状（本轮新 history 断言首次暴露）；beforeAll/afterAll 改逐键删（生产 `del` 调用点均为数组形式，实证不受影响）。缓存键由默认 keyGenerator 含 query string 天然分 hs——live 三码（0202/020230/020629）各 200 无串键。+4 前端组件测试（HS 切换/图表渲染/年度无图降级/401 整卡省略）+ 后端集成扩展（history 顺序/arFobTotal）。
+- **批 D `4fbc504`（外贸可见面）**：`PUBLIC_DIGEST_SLUGS` +1 `beef_90cl_us`（白名单相等性契约测试同步；digest 节奏逻辑 interval-generic——weekly 走"本周=上一周度点"+cadence.ts 21d 窗口，零新分支）；dashboard hero 第二卡由已删的国产均价卡换为**"进口 90CL 周度基准"**（USDA NW_LS421，USD/cwt，与 /market/digest 同源一致；trend=上一周度点环比，库中单点时诚实 null）。D25（贸易流公开）维持鉴权内不动。live：digest 6 序列、90CL ok（348 USD/cwt @08-28 weekly stale=false）、digest 页 200。
+- **文档对齐（批 E）**：PRODUCT-SPEC §一定位句去"国产"+round-155 修订注记、§四 IA 图/映射表删国产行、§5.1 hero 图与注记（三卡=全球牛肉价/进口90CL/AI）、§七 爬虫 19→18 注册、§九增补"国产维度不回归"；IMPROVEMENT-PLAN v3.7.0 第九波块（D16/D22 随维度关闭）；KNOWN-ISSUES D1 追加 2026-09-06 更新；AGENTS.md §三 18 注册+头注日期+定位句（收编上会话遗留的路由 18/页数 44 修正与 SKILLS.md 登记）。
+- **基线**：backend **1099+1 skip**（0 净变化）、frontend **360**（356→+4）、inference 61 未动；三服务 PM2 重启后在线。剩余用户侧解阻清单不变（MLA/USDA key、CSV 周导入、域名、SMTP）；批 0a 值守窗（FRED 8 月点，源头确认尚未发布）继续。
+
 ### 2026-08-31 — round-153：数据维护轮 — ingestion 三修 + 数据文档对齐（world_bank 幻影更新 / fred 免 key 复活 / T3 重新定性）
 
 用户目标"解决与数据有关的其他问题，维护项目数据相关的文档"。两代码批（独立 commit、全门禁、live 验证）+ 文档对齐批。

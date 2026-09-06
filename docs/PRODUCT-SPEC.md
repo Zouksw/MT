@@ -8,7 +8,9 @@
 
 ## 一、产品定位 (一句话)
 
-> **为中国牛肉产业链上下游提供进口/国产牛肉价格数据采集、行情展示、多维分析,并以 AI 模型预测未来价格走势的专业平台。**
+> **为中国牛肉产业链上下游提供进口牛肉（外贸市场）价格数据采集、行情展示、多维分析,并以 AI 模型预测未来价格走势的专业平台。**
+
+> **2026-09-06 修订（round-155）**:国产（中国国内市场）维度已**完全删除**——/beef 国产筛选、dashboard 国产均价卡、trend 契约 domestic 字段、27 个 `_cn` 商品序列与 china_wholesale 源全部移除。平台自此只做牛肉外贸市场。
 
 **对标**: 牧集网 (数据+资讯+交易) 的数据/分析层 + IoTDB AINode (预训练模型预测) 的智能层。
 **差异化**: 牧集网无 AI 预测;AINode 无行业数据。本项目 = **牧集的数据深度 × AINode 的预测智能**。
@@ -21,7 +23,7 @@
 
 | 模块 | 牧集网 | 本项目现状 | 差距 |
 |------|--------|-----------|------|
-| **行情数据** | 进口牛肉/国产牛肉/牛副产品价格 | ✅ 有 (7 源: abares/cepea/inac/mla/secex/usda_ams/usda_psd) | 数据源已具备,需激活+补采 |
+| **行情数据** | 进口牛肉/牛副产品价格（国产维度已删除,round-155） | ✅ 有 (7 源: abares/cepea/inac/mla/secex/usda_ams/usda_psd) | 数据源已具备,需激活+补采 |
 | **价格展示** | 按部位/产地/进口国分类 | ✅ beef 页有 cuts/factories | 需优化为牧集式的行情看板 |
 | **资讯服务** | 行业资讯/市场动态推送 | ✅ 有 (MarketNews model + route + service + 5 页, 2026-07-19 建) | 已建,需内容运营 |
 | **数据可视化** | 价格走势图/对比图 | ✅ ProfessionalChart (K线) + recharts | 需牧集式的行情总览页 |
@@ -61,7 +63,6 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 │  ◆ 行情  │                                              │
 │    价格总览│                                              │
 │    进口牛肉│                                              │
-│    国产牛肉│                                              │
 │    牛副产品│                                              │
 │          │                                              │
 │  ◆ 分析  │                                              │
@@ -94,8 +95,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | 新 IA | 现有路由 | 调整 |
 |-------|---------|------|
 | 行情 > 价格总览 | `/dashboard` | **重定位**: 库存计数 → 实时牛肉价格看板 |
-| 行情 > 进口牛肉 | `/beef` | 重命名/聚焦为进口牛肉行情 |
-| 行情 > 国产牛肉 | `/beef` (筛选) | 按产地拆分视图 |
+| 行情 > 进口牛肉 | `/beef` | 重命名/聚焦为进口牛肉行情（国产视图已随维度删除,round-155） |
 | 行情 > 牛副产品 | `/beef/cuts` | 按部位分类（round-120 起该 URL 为到 `/beef` primal 分组看板的重定向——功能实现于 /beef 页内） |
 | 分析 > 价格走势 | `/trading` | 保留 (ProfessionalChart 是核心资产) |
 | 分析 > 产地对比 | `/dashboard/analysis` | 聚焦多产地价格对比 |
@@ -121,12 +121,12 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 ### 5.1 行情总览页 (首页,对标牧集首页)
 
-> **修订注记（2026-08-23 round-126 D2）**：第一张 KPI 卡已由"进口均价"（04-30 冻结种子值）换为**全球牛肉价**（IMF 全球牛肉月度基准，FRED PBEEFUSDM，USC/lb）——全站唯一有活数据的牛肉序列；该槽位原挂的 CBBTCUSD 实为 Coinbase 比特币（KNOWN-ISSUES D4）。三卡现为：全球牛肉价 / 国产均价 / AI 7日预测。
+> **修订注记（2026-08-23 round-126 D2）**：第一张 KPI 卡已由"进口均价"（04-30 冻结种子值）换为**全球牛肉价**（IMF 全球牛肉月度基准，FRED PBEEFUSDM，USC/lb）——全站唯一有活数据的牛肉序列；该槽位原挂的 CBBTCUSD 实为 Coinbase 比特币（KNOWN-ISSUES D4）。三卡现为（2026-09-06 round-155 起）：全球牛肉价 / 进口 90CL 周度基准 / AI 7日预测——国产均价卡已随国产维度删除,由进口 90CL（USDA NW_LS421,USD/cwt 周度）接位。
 ```
 ┌────────────────────────────────────────────────────┐
 │  今日牛肉行情                                       │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐           │
-│  │ 进口均价  │ │ 国产均价  │ │ AI 7日预测│           │
+│  │ 全球牛肉价│ │ 进口90CL │ │ AI 7日预测│           │
 │  │ ¥XXX/kg  │ │ ¥XXX/kg  │ │ ↑2.3%    │           │
 │  │ ↓1.2%   │ │ ↑0.5%   │ │ 置信78%  │           │
 │  └──────────┘ └──────────┘ └──────────┘           │
@@ -173,7 +173,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 | **新** | AI 预测融入行情行 (每个商品旁显示预测摘要) | 阶段 3 | ✅ 已实现（`beef/page.tsx` 7d Forecast 列 + `CutForecastCell` + `MarketForecastBoard`） |
 | **新** | 资讯模块 (market dynamics feed) | 阶段 4 | ✅ 已建（MarketNews model + route + service + 5 页 + 5 条 seed）；⚠️ 外部 RSS 抓取源未接入（M3 待办） |
 | **新** | IA 重组: 行情/分析/AI预测/资讯/数据/系统 6 区 | 阶段 2 | ✅ 已实现（`AppShell.tsx:38-83` 6 个 NAV_SECTIONS；⚠️ 资讯/分析顺序与本文档 spec 略有出入，属产品微调） |
-| **调整** | dashboard hero = 牛肉均价+涨跌 (非覆盖率) | 阶段 3 | ✅ 已实现（`useDashboardStats.ts:282-334` 真实进口/国产均价聚合） |
+| **调整** | dashboard hero = 牛肉均价+涨跌 (非覆盖率) | 阶段 3 | ✅ 已实现（真实进口均价聚合；国产侧已随维度删除 round-155） |
 | **降级** | trading/portfolio+watchlist → 关注列表 | 阶段 4 | ✅ 已降级（`/trading` 标题为 "Market Intelligence"，`/portfolio` 目录已移除；无交易撮合语义） |
 
 ### 优先级不变
@@ -186,7 +186,7 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 
 | 最终形态需要 | 现状 | 差距 |
 |-------------|------|------|
-| 牛肉价格数据 (进口/国产/部位) | **免 key 活水已开**（2026-08-31 live 实测）：CME 活牛/架子牛 daily（08-28）、beef_90cl_us 进口 90CL weekly（USDA NW_LS421，round-150）、beef_carcass_us / beef_retail_us / pork_world / poultry_world monthly（FRED 免 key CSV，07-01，八月值 mid-Sep 发布属正常节奏）；**冻结面收窄至部位级**——usda_ams（beef_australia 等，2026-04-29）与 mla_nlrs 需 key（详见 KNOWN-ISSUES D1）；爬虫 21 文件/19 注册（chinaCustomsStats 已退役，comtrade_mirror/argentina_exports/usda_import_beef 接入）；CSV 手动导入路径已验证可用（round-81） | ◐ 进口基准与替代蛋白月度已自动化；**部位级 BeefCutPrice 是剩余硬缺口**（key 解阻或 CSV 运营） |
+| 牛肉价格数据 (进口/国产/部位) | **免 key 活水已开**（2026-08-31 live 实测）：CME 活牛/架子牛 daily（08-28）、beef_90cl_us 进口 90CL weekly（USDA NW_LS421，round-150）、beef_carcass_us / beef_retail_us / pork_world / poultry_world monthly（FRED 免 key CSV，07-01，八月值 mid-Sep 发布属正常节奏）；**冻结面收窄至部位级**——usda_ams（beef_australia 等，2026-04-29）与 mla_nlrs 需 key（详见 KNOWN-ISSUES D1）；爬虫 21 文件/18 注册（chinaCustomsStats 与 chinaWholesale 已退役〔后者随国产维度删除，round-155〕，comtrade_mirror/argentina_exports/usda_import_beef 接入）；CSV 手动导入路径已验证可用（round-81） | ◐ 进口基准与替代蛋白月度已自动化；**部位级 BeefCutPrice 是剩余硬缺口**（key 解阻或 CSV 运营） |
 | AI 价格预测 | 6 统计模型 + 3 chronos + Redis 缓存 + MAPE 验证 | ✅ 已具备（~~chronos MAPE 1.7% 显著优于 stat 3.6%~~ **2026-08-23 round-121 取证修订**：~~全时间轴 chronos 均值 46-59%~~（**round-129 口径再修**：46-59% 为 raw 口径，混入 stale 失效行——chronos 30d 窗 16 条 stale 行 avg≈9676% 主导；可引用的 verified-only 口径为 **chronos 全周期均值 7-10% vs naive 3.75%，中位 0.51-0.52 vs 0.33**）、中位数均 <1%——真实故事是"chronos 全面劣于 naive（约 2 倍均值）、被淘汰线清出投票"，详见 COMPETITIVE-ANALYSIS §三.3 v1.1.1 口径修正与 accuracy 页） |
 | 价格走势可视化 | ProfessionalChart (K线+预测叠加) | ✅ 已具备 |
 | 多模型共识 | generateForecast | ✅ 已具备 |
@@ -231,3 +231,4 @@ CLAUDE.md 已明确"信息平台,非交易平台"。交易撮合不做。这反�
 - ❌ **用户生成内容/社区** — 不是社交平台
 - ❌ **移动端原生 App** — 响应式 web 优先 (牧集有 App 但非必须)
 - ❌ **付费墙/订阅** — billing 已降级为静态,AI 分层留待用户基数到
+- ❌ **国产（中国国内市场）维度** — 2026-09-06 round-155 完全删除（产品只做牛肉外贸市场）：国产筛选/国产均价卡/`_cn` 序列/china_wholesale 源全部移除,不再回归

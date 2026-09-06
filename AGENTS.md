@@ -1,7 +1,7 @@
 # AGENTS.md
 
 > 本文件是 AI 代理（含 ZCode / Claude / Codex 等）在本仓库工作的**首要入口**。
-> 所有事实均经只读命令核实（2026-08-23）。改动数字类陈述前请重新核实。
+> 所有事实均经只读命令核实（2026-09-06）。改动数字类陈述前请重新核实。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **MT —— 牛肉贸易价格数据采集 / 行情展示 / 多维分析 / AI 预测平台。**
 
-- 为中国牛肉产业链上下游提供进口/国产牛肉价格数据、行情展示、多维分析，并以 AI 模型预测未来价格走势。
+- 为中国牛肉产业链上下游提供进口牛肉（外贸市场）价格数据、行情展示、多维分析，并以 AI 模型预测未来价格走势（国产维度已删除，round-155）。
 - **不是交易平台**：不做下单、账户余额、订单执行、实际支付。
 - **对标**：类[牧集网](https://web.mooket.com/)的数据/展示/分析 × 类 IoTDB AINode 的预训练模型预测。
 - 产品方向唯一事实来源：[`docs/PRODUCT-SPEC.md`](docs/PRODUCT-SPEC.md)
@@ -32,11 +32,11 @@
 
 ---
 
-## 三、规模事实（2026-08-23 实测，计数方式附后）
+## 三、规模事实（2026-09-06 实测，计数方式附后）
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **21 文件 / 19 注册** | `sources/*.ts`（排除 index/test）；2026-08-31 复核（round-151，V8 批0+2）：增 comtradeMirror/argentinaExports、退役 chinaCustomsStats（文件保留）后文件数 21；inac 与 chinaCustomsStats 为退役保留文件，注册数 19（`registerAllScrapers` 实数） |
+| 数据源爬虫 | **21 文件 / 18 注册** | `sources/*.ts`（排除 index/test）；2026-09-06 复核（round-155 批B）：china_wholesale 随国产维度退役（文件保留）后注册数 18（`registerAllScrapers` 实数）；inac/chinaCustomsStats/chinaWholesale 为退役保留文件 |
 | Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |
@@ -67,11 +67,11 @@
 
 ```
 backend/            Express + TS + Prisma
-  src/routes/       API 路由（17 个）
-  src/services/     业务服务（含 dataIngestion/sources/ 19 爬虫）
+  src/routes/       API 路由（18 个）
+  src/services/     业务服务（含 dataIngestion/sources/ 18 注册爬虫）
   src/middleware/   认证、限流、安全、日志
   prisma/           schema.prisma（25 模型）+ migrations
-frontend/           Next.js 15 App Router（47 页）
+frontend/           Next.js 15 App Router（44 页）
   src/app/          页面
   src/components/   组件库
   src/hooks/        SWR 数据钩子
