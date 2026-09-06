@@ -129,10 +129,9 @@ function backgroundJobs(): ScheduledJob[] {
 	// only a stale dist/ artifact), so every daily run threw
 	// "Unknown source: argentina". Re-add only alongside a real registration.
 	//
-	// "inac" removed 2026-08-15 — www.inac.gub.uy hangs on every path
-	// (direct + via proxy), so each run paid a fetch timeout to report
-	// success+0 rows. Registration commented out in
-	// dataIngestion/index.ts; restore both together if the site returns.
+	// "inac" REVIVED 2026-09-07 (round-159): portal moved to www.inac.uy
+	// (old gub.uy host SSL-dead). Monthly series on the daily cycle;
+	// non-release days confirm no change (noChange contract).
 	const DAILY_SOURCES = [
 		"world_bank",
 		"usda_psd",
@@ -152,6 +151,8 @@ function backgroundJobs(): ScheduledJob[] {
 		// confirm no change (noChange contract, same shape as comtrade_mirror
 		// and argentina_exports — round-158 批B).
 		"ibge_sidra",
+		// Uruguay DIAE monthly price ladder (stride-2 year queries; round-159).
+		"inac",
 		"usda_ams",
 		// Weekly NW_LS421 report on the daily cycle: the PDF always holds the
 		// current week, so the six non-publication days re-scrape the same row
