@@ -21,7 +21,7 @@ export const Input: React.FC<InputProps> = ({
 	const inputId = id || `input-${reactId}`;
 
 	const baseStyles =
-		"block px-3 py-2 rounded-md text-body bg-card border transition-all duration-150 ease-move focus:outline-none";
+		"block px-3 py-2 rounded-md text-body text-foreground placeholder:text-muted-foreground/70 bg-card border transition-all duration-150 ease-move focus:outline-none";
 
 	const normalStyles = "border-input focus:border-primary focus:ring-3 focus:ring-primary/20";
 	const errorStyles = "border-error focus:border-error focus:ring-3 focus:ring-error/20";
@@ -67,7 +67,7 @@ export const Textarea: React.FC<TextareaProps> = ({
 	const textareaId = id || `textarea-${reactId}`;
 
 	const baseStyles =
-		"block px-3 py-2 rounded-md text-body bg-card border transition-all duration-150 ease-move focus:outline-none";
+		"block px-3 py-2 rounded-md text-body text-foreground placeholder:text-muted-foreground/70 bg-card border transition-all duration-150 ease-move focus:outline-none";
 
 	const normalStyles = "border-input focus:border-primary focus:ring-3 focus:ring-primary/20";
 	const errorStyles = "border-error focus:border-error focus:ring-3 focus:ring-error/20";

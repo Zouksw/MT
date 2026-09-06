@@ -20,12 +20,22 @@ import { type DigestSeries, useMarketDigest } from "@/hooks/useMarketDigest";
 
 const CATEGORY_LABELS: Record<string, string> = {
 	beef_cuts: "牛肉基准",
+	proteins: "蛋白基准",
 	futures: "牲畜期货",
 	forex: "汇率",
 };
 
 /** Display order: benchmark & cattle futures first, FX last. */
-const CATEGORY_ORDER = ["beef_cuts", "futures", "forex"];
+const CATEGORY_ORDER = ["beef_cuts", "proteins", "futures", "forex"];
+
+/** Human-readable staleness window per cadence — must mirror the backend's
+ * cadence.ts (7 daily / 21 weekly / 90 monthly, plus FX publication overrides)
+ * so the 数据滞后 badge is self-explaining instead of reading as arbitrary. */
+const STALE_WINDOW_NOTE: Record<string, string> = {
+	daily: "日度序列 · 超过 7 天未更新标注滞后（汇率类为 14 天）",
+	weekly: "周度序列 · 超过 21 天未更新标注滞后",
+	monthly: "月度序列 · 超过 90 天未更新标注滞后",
+};
 
 function fmtDate(iso: string | null | undefined) {
 	if (!iso) return "—";
@@ -83,7 +93,10 @@ function SeriesCard({ entry }: { entry: DigestSeries }) {
 					<span className="font-medium">{label}</span>
 					<span className="flex items-center gap-1.5">
 						{entry.stale && (
-							<span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+							<span
+								className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400"
+								title={STALE_WINDOW_NOTE[entry.interval ?? "daily"]}
+							>
 								数据滞后
 							</span>
 						)}
@@ -106,12 +119,18 @@ function SeriesCard({ entry }: { entry: DigestSeries }) {
 							{fmtChange(wow)}
 						</span>
 					)}
-					<span className="flex items-center gap-1">
-						<span className="text-muted-foreground">
-							{entry.interval === "monthly" ? "环比" : "较上期"}
+					{mom !== null ? (
+						<span className="flex items-center gap-1">
+							<span className="text-muted-foreground">
+								{entry.interval === "monthly" ? "环比" : "较上期"}
+							</span>
+							{fmtChange(mom)}
 						</span>
-						{fmtChange(mom) ?? <span className="text-muted-foreground">—</span>}
-					</span>
+					) : (
+						/* A single-point series (first publication) has no prior point —
+						   saying so beats a bare "—". */
+						<span className="text-muted-foreground">首期，暂无对比</span>
+					)}
 				</div>
 				{entry.seriesId && (
 					<p className="text-xs text-muted-foreground">

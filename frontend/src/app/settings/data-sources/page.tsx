@@ -471,7 +471,8 @@ export default function DataSourcesPage() {
 					<div className="flex items-center gap-2">
 						<Clock className="size-4 text-amber-600 dark:text-amber-400" />
 						<span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-							{staleSources.length} source{staleSources.length > 1 ? "s" : ""} need attention:{" "}
+							{staleSources.length} source{staleSources.length > 1 ? "s" : ""}{" "}
+							{staleSources.length > 1 ? "need" : "needs"} attention:{" "}
 							{staleSources.map((s) => s.source).join(", ")}
 						</span>
 					</div>

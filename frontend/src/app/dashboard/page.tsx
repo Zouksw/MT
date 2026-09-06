@@ -307,42 +307,58 @@ export default function DashboardPage() {
 								</a>
 							</div>
 							{(beef?.hotCuts?.length ?? 0) > 0 ? (
-								<div className="overflow-x-auto">
-									<table className="w-full text-sm">
-										<thead>
-											<tr className="text-left text-xs text-muted-foreground border-b">
-												<th className="px-5 py-2 font-medium">部位 Cut</th>
-												<th className="px-3 py-2 font-medium text-left">产地</th>
-												<th className="px-5 py-2 font-medium text-right">今日价</th>
-												<th className="px-5 py-2 font-medium text-left">7d Forecast</th>
-											</tr>
-										</thead>
-										<tbody>
-											{beef?.hotCuts?.map((c) => (
-												<tr key={c.cutCode} className="border-b last:border-0 hover:bg-muted/40">
-													<td className="px-5 py-3">
-														<a
-															href={`/beef/cuts/${c.cutCode}`}
-															className="font-medium text-foreground hover:text-primary"
+								(() => {
+									// A column that is 100% "—" reads as a broken pipeline, not
+									// honesty (design-review round-160). Only render the AI column
+									// when at least one hot cut actually has a forecastable series;
+									// frozen-data periods hide the column entirely.
+									const hasCutForecasts = (beef?.hotCuts ?? []).some((c) => c.forecast);
+									return (
+										<div className="overflow-x-auto">
+											<table className="w-full text-sm">
+												<thead>
+													<tr className="text-left text-xs text-muted-foreground border-b">
+														<th className="px-5 py-2 font-medium">部位 Cut</th>
+														<th className="px-3 py-2 font-medium text-left">产地</th>
+														<th className="px-5 py-2 font-medium text-right">今日价</th>
+														{hasCutForecasts && (
+															<th className="px-5 py-2 font-medium text-left">7d Forecast</th>
+														)}
+													</tr>
+												</thead>
+												<tbody>
+													{beef?.hotCuts?.map((c) => (
+														<tr
+															key={c.cutCode}
+															className="border-b last:border-0 hover:bg-muted/40"
 														>
-															{c.cutCode.replace(/_/g, " ")}
-														</a>
-													</td>
-													<td className="px-3 py-3 text-muted-foreground">{c.country}</td>
-													<td
-														className="px-5 py-3 text-right font-mono tabular-nums text-foreground"
-														style={{ fontVariantNumeric: "tabular-nums" }}
-													>
-														{formatPrice(c.price, false)}
-													</td>
-													<td className="px-5 py-3">
-														<CutForecastCell forecast={c.forecast} />
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
+															<td className="px-5 py-3">
+																<a
+																	href={`/beef/cuts/${c.cutCode}`}
+																	className="font-medium text-foreground hover:text-primary"
+																>
+																	{c.cutCode.replace(/_/g, " ")}
+																</a>
+															</td>
+															<td className="px-3 py-3 text-muted-foreground">{c.country}</td>
+															<td
+																className="px-5 py-3 text-right font-mono tabular-nums text-foreground"
+																style={{ fontVariantNumeric: "tabular-nums" }}
+															>
+																{formatPrice(c.price, false)}
+															</td>
+															{hasCutForecasts && (
+																<td className="px-5 py-3">
+																	<CutForecastCell forecast={c.forecast} />
+																</td>
+															)}
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									);
+								})()
 							) : (
 								<div className="p-8 text-center text-sm text-muted-foreground">
 									No beef cut prices yet. The hot-cuts table will populate once price data is
@@ -474,7 +490,7 @@ export default function DashboardPage() {
 										<p className="text-body text-muted-foreground">
 											<span className="font-mono tabular-nums">{stats.aiModels.active}</span> of{" "}
 											<span className="font-mono tabular-nums">{stats.aiModels.total}</span> models
-											generating beef price forecasts
+											registered and online — consensus votes vary by series data
 										</p>
 									</div>
 									<div className="flex items-center gap-4">

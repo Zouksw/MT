@@ -99,7 +99,6 @@ export default function MarketNewsList() {
 	});
 	const totalArticles = stats?.total ?? 0;
 	const publishedCount = stats?.published ?? 0;
-	const draftCount = stats?.drafts ?? 0;
 	const thisWeek = stats?.thisWeek ?? 0;
 
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -120,6 +119,15 @@ export default function MarketNewsList() {
 	};
 
 	const columns: Column<Record<string, unknown>>[] = useMemo(() => {
+		// API summaries carry raw HTML entities (&quot; …) that leak into the
+		// rendered snippet — decode the handful we actually see before display.
+		const decodeEntities = (s: string) =>
+			s
+				.replace(/&quot;/g, '"')
+				.replace(/&#39;/g, "'")
+				.replace(/&amp;/g, "&")
+				.replace(/&lt;/g, "<")
+				.replace(/&gt;/g, ">");
 		return [
 			{
 				key: "title",
@@ -132,12 +140,17 @@ export default function MarketNewsList() {
 						<div className="max-w-md">
 							<button
 								type="button"
-								className="text-left font-medium text-foreground hover:text-primary"
+								/* 3-line clamp: one 300-word Federal Register title used to
+								   own the whole mobile viewport (design-review round-160). */
+								className="text-left font-medium text-foreground hover:text-primary line-clamp-3 sm:line-clamp-none"
+								title={r.title}
 								onClick={() => router.push(`/market-news/show/${r.id}`)}
 							>
-								{r.title}
+								{decodeEntities(r.title)}
 							</button>
-							<p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{r.summary}</p>
+							<p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+								{decodeEntities(r.summary)}
+							</p>
 						</div>
 					);
 				},
@@ -152,15 +165,21 @@ export default function MarketNewsList() {
 					return <Tag color="info">{CATEGORY_LABELS[r.category] ?? r.category}</Tag>;
 				},
 			},
-			{
-				key: "source",
-				title: "Source",
-				dataIndex: "source",
-				width: 120,
-				render: (_value, record) => (
-					<span className="text-sm text-muted-foreground">{asRow(record).source}</span>
-				),
-			},
+			// "USDA — Federal Register" clips every mobile row at the card's
+			// right edge — drop the column on phones instead of truncating.
+			...(isMobile
+				? []
+				: [
+						{
+							key: "source",
+							title: "Source",
+							dataIndex: "source",
+							width: 120,
+							render: (_value: unknown, record: Record<string, unknown>) => (
+								<span className="text-sm text-muted-foreground">{asRow(record).source}</span>
+							),
+						},
+					]),
 			{
 				key: "publishedAt",
 				title: "Published",
@@ -228,7 +247,7 @@ export default function MarketNewsList() {
 			/>
 
 			{/* Stat cards — info/primary variants only (no directional green/red). */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+			<div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
 				<StatCard
 					title="Total Articles"
 					value={totalArticles}
@@ -240,12 +259,6 @@ export default function MarketNewsList() {
 					title="Published"
 					value={publishedCount}
 					variant="info"
-					icon={<FileText className="size-4" />}
-					loading={loading}
-				/>
-				<StatCard
-					title="Drafts"
-					value={draftCount}
 					icon={<FileText className="size-4" />}
 					loading={loading}
 				/>

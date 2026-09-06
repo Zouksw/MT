@@ -58,8 +58,9 @@ export default function AIAnomaliesPage() {
 	const [_apiError, setApiError] = useState<string | null>(null);
 	const toast = useToast();
 
-	// Form state
-	const [formTimeseries, setFormTimeseries] = useState("root.test2");
+	// Form state — empty default: "root.test2" was a dev-test slug leaking as
+	// the consumer-facing default (design-review round-160).
+	const [formTimeseries, setFormTimeseries] = useState("");
 	const [formThreshold, setFormThreshold] = useState("2.5");
 	const [formMethod, setFormMethod] = useState("statistical");
 	const [formHistoryPoints, setFormHistoryPoints] = useState("100");
@@ -194,7 +195,7 @@ export default function AIAnomaliesPage() {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<Input
 								label="Time Series Path"
-								placeholder="e.g., root.test2"
+								placeholder="例如 beef_carcass_us（须为已注册时间序列）"
 								value={formTimeseries}
 								onChange={(e) => setFormTimeseries(e.target.value)}
 								error={errors.timeseries}

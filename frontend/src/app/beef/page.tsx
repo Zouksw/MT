@@ -27,12 +27,16 @@ export default function BeefOverview() {
 		error: pricesErr,
 		isLoading: pricesLoading,
 	} = useRetryableFetch("/api/beef/prices/latest", beefFetcher);
+	// Weekly-kill / cold-storage series are episodic: the newest report can be
+	// months old, so tight windows (4w/3m) zeroed these cards into dead "--"
+	// (design-review round-160). Fetch a wide window and surface the LATEST
+	// reporting period with its as-of date instead.
 	const { data: killData, isLoading: killLoading } = useRetryableFetch(
-		"/api/beef/weekly-kill?weeks=4",
+		"/api/beef/weekly-kill?weeks=52",
 		beefFetcher,
 	);
 	const { data: storageData, isLoading: storageLoading } = useRetryableFetch(
-		"/api/beef/cold-storage?months=3",
+		"/api/beef/cold-storage?months=12",
 		beefFetcher,
 	);
 	const { data: cutsData, isLoading: cutsLoading } = useRetryableFetch(
@@ -59,6 +63,11 @@ export default function BeefOverview() {
 	type SortKey = "cutCode" | "price" | "source";
 	const [sortKey, setSortKey] = useState<SortKey>("price");
 	const [sortDesc, setSortDesc] = useState(true);
+
+	// Dead-column rule (design-review round-160, same as the dashboard hot-cuts
+	// table): a 7d-forecast column that is 100% "—" reads as a broken pipeline.
+	// Only render it when at least one visible row actually has a forecast.
+	const hasCutForecasts = latestPrices.some((p: { cutCode: string }) => cutForecasts?.[p.cutCode]);
 
 	const filteredPrices = useMemo(() => {
 		let rows = latestPrices;
@@ -108,11 +117,19 @@ export default function BeefOverview() {
 	}
 
 	// Compute summary stats
-	const totalKills = weeklyKills.reduce(
-		(s: number, k: { headCount: number }) => s + k.headCount,
-		0,
+	const latestKillDate = weeklyKills.reduce(
+		(acc: string | null, k: { weekEnding?: string }) => {
+			const d = k.weekEnding ?? null;
+			return acc === null || (d !== null && d > acc) ? d : acc;
+		},
+		null as string | null,
 	);
-	const usStorage = coldStorage.find((s: { country: string }) => s.country === "US");
+	const latestWeekKills = weeklyKills
+		.filter((k: { weekEnding?: string }) => k.weekEnding === latestKillDate)
+		.reduce((s: number, k: { headCount: number }) => s + k.headCount, 0);
+	const usStorage = coldStorage
+		.filter((s: { country: string }) => s.country === "US")
+		.sort((a: { date: string }, b: { date: string }) => (a.date < b.date ? 1 : -1))[0];
 
 	// Loading is true until EVERY source settles (||, not &&: the old &&
 	// cleared the skeleton as soon as ANY one of the four requests finished,
@@ -201,7 +218,7 @@ export default function BeefOverview() {
 				title="Beef Market Intelligence"
 				description="Factory-level and cut-level beef trading data across global markets"
 				actions={
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center gap-2">
 						<a
 							href="/beef/forecast"
 							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -236,15 +253,19 @@ export default function BeefOverview() {
 				<StatCard title="Tracked Cuts" value={cuts.length} icon={<Beef />} />
 				<StatCard
 					title="Weekly Slaughter"
-					value={totalKills > 0 ? totalKills.toLocaleString() : "--"}
+					value={latestWeekKills > 0 ? latestWeekKills.toLocaleString() : "--"}
 					icon={<Target />}
 					variant="success"
+					footnote={latestKillDate ? `As of ${latestKillDate.slice(0, 10)}` : "No reporting week"}
 				/>
 				<StatCard
 					title="US Cold Storage"
 					value={usStorage ? `${usStorage.totalLbs} M lbs` : "--"}
 					icon={<Warehouse />}
 					variant="warning"
+					footnote={
+						usStorage?.date ? `As of ${String(usStorage.date).slice(0, 10)}` : "No US report"
+					}
 				/>
 			</div>
 
@@ -317,7 +338,7 @@ export default function BeefOverview() {
 													Price (USD/kg) {sortKey === "price" && (sortDesc ? "↓" : "↑")}
 												</button>
 											</th>
-											<th className="text-left">7d Forecast</th>
+											{hasCutForecasts && <th className="text-left">7d Forecast</th>}
 											<th className="text-left">
 												<button
 													type="button"
@@ -358,9 +379,11 @@ export default function BeefOverview() {
 														<td className="text-right font-mono font-medium text-foreground">
 															{formatPrice(p.price, false)}
 														</td>
-														<td>
-															<CutForecastCell forecast={cutForecasts?.[p.cutCode]} />
-														</td>
+														{hasCutForecasts && (
+															<td>
+																<CutForecastCell forecast={cutForecasts?.[p.cutCode]} />
+															</td>
+														)}
 														<td className="text-gray-500 text-xs">{p.source}</td>
 														<td>
 															<BeefFreshnessBadge

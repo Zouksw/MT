@@ -145,7 +145,13 @@ export function AccuracyTrendChart({ models }: AccuracyTrendChartProps) {
 						/>
 						<XAxis
 							dataKey="name"
-							tick={{ fontSize: 11, fill: chartAxisStyles.tick.fill }}
+							/* Show EVERY model tick: recharts' default thinning dropped
+							   2 of 7 labels and collided the rest (judge round-160). */
+							interval={0}
+							angle={-20}
+							textAnchor="end"
+							height={52}
+							tick={{ fontSize: 10, fill: chartAxisStyles.tick.fill }}
 							axisLine={{ stroke: chartAxisStyles.line.stroke }}
 							tickLine={false}
 						/>

@@ -414,10 +414,16 @@ function TradingPageInner() {
 									<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
 								</div>
 							) : (
-								<ModelConsensusTable
-									forecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
-									loading={d.signalLoading}
-								/>
+								/* min-w keeps the 置信度 column reachable by horizontal
+								   scroll on 390px instead of clipped mid-value. */
+								<div className="overflow-x-auto">
+									<div className="min-w-[340px]">
+										<ModelConsensusTable
+											forecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
+											loading={d.signalLoading}
+										/>
+									</div>
+								</div>
 							)}
 						</CardBody>
 					</Card>

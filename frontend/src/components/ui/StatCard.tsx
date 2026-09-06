@@ -20,6 +20,8 @@ export interface StatCardProps {
 	onClick?: () => void;
 	/** Optional unit/percent suffix rendered after the value, e.g. "%" or "ms". */
 	suffix?: string;
+	/** Muted one-liner under the value (e.g. the as-of date of a stale-but-real series). */
+	footnote?: string;
 }
 
 function useAnimatedCounter(target: number, duration = 800) {
@@ -172,6 +174,7 @@ export const StatCard = React.memo<StatCardProps>(
 		loading = false,
 		onClick,
 		suffix,
+		footnote,
 	}) => {
 		const colors = variantColors[variant];
 		const numericValue = typeof value === "number" ? value : 0;
@@ -231,6 +234,7 @@ export const StatCard = React.memo<StatCardProps>(
 						</span>
 					)}
 				</div>
+				{footnote && <p className="text-xs text-muted-foreground mt-1 mb-0">{footnote}</p>}
 				{sparklineData && sparklineData.length >= 2 && (
 					<Sparkline data={sparklineData} color={colors.text} />
 				)}
@@ -244,7 +248,8 @@ export const StatCard = React.memo<StatCardProps>(
 		prevProps.trend?.isPositive === nextProps.trend?.isPositive &&
 		prevProps.variant === nextProps.variant &&
 		prevProps.loading === nextProps.loading &&
-		prevProps.sparklineData?.length === nextProps.sparklineData?.length,
+		prevProps.sparklineData?.length === nextProps.sparklineData?.length &&
+		prevProps.footnote === nextProps.footnote,
 );
 StatCard.displayName = "StatCard";
 

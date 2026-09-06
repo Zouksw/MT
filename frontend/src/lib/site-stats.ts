@@ -42,7 +42,7 @@ export const SITE_STATS = {
 	/** Factories with beef price data. */
 	factories: 21,
 	/** Data source integrations shipped (see header comment for producing split). */
-	dataSources: 19,
+	dataSources: 20,
 	/** Import source countries. */
 	sourceCountries: 5,
 } as const;

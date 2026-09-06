@@ -120,7 +120,8 @@ export default function DataSourcePanel({
 											{src.label}
 										</span>
 										<span className="text-xs text-muted-foreground">
-											{src.priceCount.toLocaleString()} records
+											{src.priceCount.toLocaleString()}{" "}
+											{src.priceCount === 1 ? "record" : "records"}
 										</span>
 									</div>
 									<div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
@@ -157,7 +158,9 @@ export default function DataSourcePanel({
 										{f.type.replace(/_/g, " ")}
 									</span>
 								</div>
-								<span className="text-xs text-muted-foreground shrink-0">{f.count} records</span>
+								<span className="text-xs text-muted-foreground shrink-0">
+									{f.count} {f.count === 1 ? "record" : "records"}
+								</span>
 							</div>
 						))}
 					</div>

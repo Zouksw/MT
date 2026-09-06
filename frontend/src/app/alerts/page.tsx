@@ -350,8 +350,10 @@ export default function AlertList() {
 				}
 			/>
 
-			{/* Statistics */}
-			{stats && (
+			{/* Statistics — hidden while entirely zero: four all-0 cards over the
+			    "No alerts yet" empty state read as two redundant dead surfaces
+			    (design-review round-160). The tabs above already carry the counts. */}
+			{stats && stats.total > 0 && (
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 					<StatCard title="Total Alerts" value={stats.total} />
 					<StatCard title="Unread" value={stats.unread} variant="primary" />

@@ -30,7 +30,7 @@ export default function FreshnessBadge({ date, compact }: FreshnessBadgeProps) {
 	if (days <= 1) {
 		color = "text-success";
 		bg = "bg-success";
-		label = compact ? "Live" : "Updated today";
+		label = compact ? "今日" : "Updated today";
 	} else if (days <= 7) {
 		color = "text-warning";
 		bg = "bg-warning";
