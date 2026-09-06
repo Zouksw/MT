@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-156 批 1 — biome 34 条清零 + 日志级别归位 + 过期登记关闭
+
+- **backend（23→0）**：生产源码 5 处手工精修——cadence.ts 两处 `case "daily":` 冗余落空分支删除（行为等价，default 同值）、server.ts unhandledRejection 未用参 `_promise`、beefIngest.ts 判空改可选链、dataHealth.ts `daysSince(d)!` 断言改内联计算（诚实窄化）、dataIngestion/index.ts 删 inacScraper 休眠导入（墓碑注释保留）；测试文件 18 条经 `--write --unsafe` + 1 处手修（watchlistService.test:262 可选链后断言改 `toBeDefined` 守卫——unsafe 自动修在此造出更高严重级错误，live 发现 live 改）。
+- **frontend（12→0）**：CommodityPriceChart 迁移至共享 `dynamicRecharts()`（消灭 5 条 `as ComponentType<any>` + 1 条既有压制，顺带去重本地 dynamic 样板；迁移暴露旧 any cast 掩盖的 Tooltip formatter 真实类型缺口 2 处，按 recharts 官方签名改宽）；CutForecastSection `forecast!` 改守卫窄化；ImportResultTable 复合 key 加理由压制（DB 批回滚致行号重复，索引保唯一——文档化合理用例）；useDashboardStats.test 4 处 `(key: any)→(key: unknown)` 并删随之失效的 3 条旧压制；beef.ts/swr-fetcher.ts 两处文档化故意 `any` 契约加理由压制（重定型归批 2）；forecast 页测删未用 React 导入。
+- **日志归位**：useRetryableFetch 两处 dev-guarded `console.log` 按语义改 `console.warn`（重试错误路）/`console.info`（成功恢复），与邻居 console.error 惯例一致；backend 命中项为字符串内示例命令（非调用，不动）。
+- **过期登记关闭**：KNOWN-ISSUES 所载"frontend tsc 2 个既有类型错"（round-152 登记）实测已消失（净树 0 错退出码 0，后续轮次顺带修复未定位归属 commit），登记划线关闭。
+- **门禁**：biome 双端 0 findings（34→0）；tsc 双端 0 错；backend **1099+1 skip**（106 文件）/ frontend **360** 零回退；build exit 0（41/41 静态页）；PM2 重启 live 全绿（front 200 / health ok / inference 200 / market-news 307 鉴权重定向正常）。
+
 ### 2026-09-06 — round-156（进行中）：代码质量轮批 0 — 生产依赖漏洞清零（backend 7→0 / frontend 57→0）
 
 第十波 v3.8.0 首批（方案入库 `8af627c`）。`pnpm audit --prod`（npmjs registry）双端归零。

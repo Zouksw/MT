@@ -377,7 +377,7 @@
 ### T3 — 门禁基线两处既有噪音（round-152 登记；第二条 round-153 重新定性）
 
 **来源**：2026-08-31 round-152 V8 批次门禁实测（净树复现确认 pre-existing）
-- **frontend `tsc --noEmit` 2 个既有类型错**：`frontend/src/hooks/__tests__/useTradingData.test.ts:255/256`（`latestDate` 不在 `{id,slug,name}` 类型上）。净树（stash 全部改动后）复现同样报错，证明非 V8 批引入。影响：AGENTS 六所载前端类型检查命令当前红。待修（小改动：补类型或修 fixture），登记不擅动（非己所造）。
+- ~~**frontend `tsc --noEmit` 2 个既有类型错**：`frontend/src/hooks/__tests__/useTradingData.test.ts:255/256`（`latestDate` 不在 `{id,slug,name}` 类型上）。净树（stash 全部改动后）复现同样报错，证明非 V8 批引入。~~ **已消失（2026-09-06 round-156 批 1 关闭）**：`npx tsc --noEmit --project tsconfig.json` 净树复测 0 错、退出码 0——后续轮次（round-153~155 间）已顺带修复，未定位归属 commit，登记过期关闭。AGENTS 六所载命令现绿。
 - **backend 全量套件偶发 1 挂**：~~"mapeTracking.monthly 月末日期敏感 flaky"~~ **round-153 重新定性：并行负载型 flaky，非日期算术**。证据（2026-08-31）：① 08-30 全量 3 跑 1 挂于 mapeTracking.monthly "批0b restore" 用例，隔离复跑 9/9 过；② 08-31 19:01 全量 1 挂于**另一个用例** signals.test.ts "should generate a real signal"（30s 超时；隔离复跑 19/19 仅 1.5s——20× 争用放大）；③ 同日 19:21/19:32 两次全量全绿（1097+1 / 1099+1 skip）；④ restore SQL 窗口算术全部锚定月首（day-1），静态复核无 day-of-month 溢出路径。机制：vitest 多 worker 并行共享 mt_test DB + 同机并发会话负载 → 连接池/CPU 争用超时，挂点随负载漂移。
 - **门禁卫生（round-153 实录）**：`npx vitest run | tail` 管道使 tail 的 exit 0 掩盖测试失败——19:01 的失败最初以 exit 0 呈现。门禁命令须 `echo EXIT:${PIPESTATUS[0]}` 或免管道直读输出。
 **动作**：T3a（tsc 两错）待独立小轮次处理；T3b 维持 round-152 的门禁口径（复跑通过 + 失败项与本批无关（隔离绿）即放行），仅当复发且带完整失败输出时再议 timeout 上调/套件序列化（投机修复会掩盖共识链路的真实性能回归，暂不采纳）。

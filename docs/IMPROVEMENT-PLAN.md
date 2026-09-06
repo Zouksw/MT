@@ -63,7 +63,7 @@ related_docs:
 >
 > **执行顺序**：批 0（安全优先）→ 1 → 2 → 3（可拆子批穿插）→ 4 → 5。门禁沿用：tsc + biome + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
 >
-> **执行状态（2026-09-06，round-156，批 0 落地）**：`pnpm audit --prod`（npmjs registry）backend 7→**0**、frontend 57→**0**。根因：`shadcn` CLI（源内零 import）混在 frontend `dependencies`，把 @modelcontextprotocol/sdk→hono/express5/qs/ip-address/fast-uri 整条工具链拖进生产审计面 → 移 devDependencies；next ^15.5.25（15.5.x 线内 patch，D29 未启用）、js-cookie ^3.0.8；overrides 治理（更新 postcss/brace-expansion，移除 dev 侧 hono/ip-address 钉，新增 sharp/browserslist/@babel/core）；backend 新增 fast-uri/js-yaml/qs 三钉。门禁：tsc 双端 0、biome 34 不变（批 1 范围）、backend 1099+1 / frontend 360 零回退、build 0、PM2 重启、live 全绿（含 qs 6.16 查询串解析鉴权接口实测；sharp 0.35.4 休眠——源内零 next/image）。批 1–5 未动。
+> **执行状态（2026-09-06，round-156，批 0+1 落地）**：**批 0** `ec6a063`——`pnpm audit --prod`（npmjs registry）backend 7→**0**、frontend 57→**0**。根因：`shadcn` CLI（源内零 import）混在 frontend `dependencies`，把 @modelcontextprotocol/sdk→hono/express5/qs/ip-address/fast-uri 整条工具链拖进生产审计面 → 移 devDependencies；next ^15.5.25（15.5.x 线内 patch，D29 未启用）、js-cookie ^3.0.8；overrides 治理（更新 postcss/brace-expansion，移除 dev 侧 hono/ip-address 钉，新增 sharp/browserslist/@babel/core）；backend 新增 fast-uri/js-yaml/qs 三钉。**批 1**——biome 34→**0**（backend 23：生产 5 处手工精修 + 测试 18 条 unsafe 自动修 + 1 处手修——unsafe 修在可选链后断言处造出更高严重级错误，live 发现 live 改；frontend 12→0：CommodityPriceChart 迁 `dynamicRecharts()` 消 6 处 any 并暴露/修复 Tooltip formatter 真实类型缺口 2 处，其余守卫窄化/理由压制/unknown 化）；useRetryableFetch 两处 dev-guarded console.log 归位 warn/info；KNOWN-ISSUES"tsc 2 错"过期登记关闭（净树复测已消失）。门禁（两批同口径）：tsc 双端 0、backend 1099+1 / frontend 360 零回退、build 0、PM2 重启、live 全绿（含 qs 6.16 查询串解析鉴权接口实测；sharp 0.35.4 休眠——源内零 next/image）。批 2–5 未动。
 
 > ## 第九波 v3.7.0（2026-09-06，round-155）— 产品范围收敛轮：国产维度完全删除 + 外贸信息面丰富
 >
