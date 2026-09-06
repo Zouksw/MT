@@ -19,7 +19,7 @@
 ## 二、核心价值链（一切开发围绕这条链）
 
 ```
-19 个数据源爬虫 → PostgreSQL（CommodityPrice / BeefCutPrice）
+18 个数据源爬虫 → PostgreSQL（CommodityPrice / BeefCutPrice）
                           ↓
         inference-service（6 统计模型 + 3 Chronos 变体，共 9 个 model id）
                           ↓
