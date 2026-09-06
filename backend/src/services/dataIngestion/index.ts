@@ -10,7 +10,6 @@ import { abaresScraper } from "./sources/abaresData";
 import { argentinaExportsScraper } from "./sources/argentinaExports";
 import { balticDryScraper } from "./sources/balticDry";
 import { cepeaScraper } from "./sources/cepeaData";
-import { chinaWholesaleScraper } from "./sources/chinaWholesale";
 import { cmeFuturesScraper } from "./sources/cmeFutures";
 import { commodityPriceScraper } from "./sources/commodityPrices";
 import { comtradeMirrorScraper } from "./sources/comtradeMirror";
@@ -57,8 +56,7 @@ export function registerAllScrapers(): void {
 	scraperManager.registerSource("usda_import_beef", usdaImportBeefScraper);
 	scraperManager.registerSource("usda_psd", usdaPsdScraper);
 
-	// Tier 3 — China domestic & import data
-	scraperManager.registerSource("china_wholesale", chinaWholesaleScraper);
+	// Tier 3 — China import data
 	// "china_customs_stats" decommissioned 2026-08-31 (V8 批0, D23): its
 	// stats.customs.gov.cn endpoint was fabricated (never produced a row) and
 	// the host is egress-blocked — every daily run paid a timeout to report
@@ -66,6 +64,12 @@ export function registerAllScrapers(): void {
 	// to China, keyless). Source file kept; re-register in both places (here
 	// + DAILY_SOURCES in server.ts) only after the official portal becomes
 	// reachable AND the real endpoint contract is verified.
+	// "china_wholesale" decommissioned 2026-09-06 (round-155): the domestic
+	// (CN-market) dimension was removed from the product — the platform is
+	// beef-foreign-trade only. The source was additionally dead the whole
+	// time (mara.gov.cn egress-blocked, zero rows ever). Source file kept;
+	// do NOT re-register unless the domestic dimension is reinstated AND the
+	// host becomes reachable.
 	scraperManager.registerSource("comtrade_mirror", comtradeMirrorScraper);
 
 	// Tier 4 — Shipping & logistics

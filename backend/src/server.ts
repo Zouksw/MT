@@ -108,8 +108,9 @@ async function runSourcesAndLog(sourceNames: string[], label: string) {
  * scrapers + alerts settle).
  */
 function backgroundJobs(): ScheduledJob[] {
-	// Hourly: exchange rates, China wholesale
-	const HOURLY_SOURCES = ["commodity_prices", "china_wholesale"];
+	// Hourly: exchange rates ("china_wholesale" decommissioned 2026-09-06
+	// round-155 — domestic dimension removed; see dataIngestion/index.ts)
+	const HOURLY_SOURCES = ["commodity_prices"];
 
 	// Every 6 hours: futures, shipping, FRED, FAO, Baltic Dry, weather
 	const SIX_HOUR_SOURCES = [

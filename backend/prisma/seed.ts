@@ -903,67 +903,8 @@ async function main() {
 	await prisma.commodity.deleteMany();
 
 	const COMMODITIES = [
-		// Domestic beef cuts
-		{
-			slug: "brisket_cn",
-			name: "Brisket (Domestic)",
-			nameCn: "牛腩（国产）",
-			category: "beef_cuts",
-			subcategory: "brisket",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "shin_cn",
-			name: "Shin/Shank (Domestic)",
-			nameCn: "牛腱（国产）",
-			category: "beef_cuts",
-			subcategory: "shin",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "sirloin_cn",
-			name: "Sirloin (Domestic)",
-			nameCn: "西冷（国产）",
-			category: "beef_cuts",
-			subcategory: "sirloin",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "fatty_brisket_cn",
-			name: "Fatty Brisket (Domestic)",
-			nameCn: "肥牛（国产）",
-			category: "beef_cuts",
-			subcategory: "fatty_brisket",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "thick_flank_cn",
-			name: "Thick Flank (Domestic)",
-			nameCn: "牛展（国产）",
-			category: "beef_cuts",
-			subcategory: "thick_flank",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "oyster_blade_cn",
-			name: "Oyster Blade (Domestic)",
-			nameCn: "板腱（国产）",
-			category: "beef_cuts",
-			subcategory: "oyster_blade",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
+		// Domestic beef cuts were removed with the domestic dimension
+		// (round-155) — the platform is beef-foreign-trade only.
 
 		// Imported beef - Australia
 		{
@@ -1110,16 +1051,8 @@ async function main() {
 			currency: "CNY",
 		},
 
-		// Live cattle
-		{
-			slug: "live_cattle_cn",
-			name: "Live Cattle (China)",
-			nameCn: "国内活牛",
-			category: "live_cattle",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
+		// Live cattle (domestic CN live-cattle removed with the domestic
+		// dimension, round-155; CME live/feeder futures remain below)
 
 		// International futures
 		{
@@ -1141,25 +1074,8 @@ async function main() {
 			currency: "USD",
 		},
 
-		// Grain & Feed
-		{
-			slug: "corn_cn",
-			name: "Corn (China)",
-			nameCn: "玉米",
-			category: "grain",
-			originCountry: "CN",
-			unit: "CNY/ton",
-			currency: "CNY",
-		},
-		{
-			slug: "soybean_meal_cn",
-			name: "Soybean Meal (China)",
-			nameCn: "豆粕",
-			category: "feed",
-			originCountry: "CN",
-			unit: "CNY/ton",
-			currency: "CNY",
-		},
+		// Grain & Feed (domestic CN corn/soybean-meal removed with the
+		// domestic dimension, round-155; global grain/futures series remain)
 
 		// Exchange rates
 		{
@@ -1187,47 +1103,8 @@ async function main() {
 			currency: "USD",
 		},
 
-		// Additional domestic beef cuts
-		{
-			slug: "ribeye_cn",
-			name: "Ribeye (Domestic)",
-			nameCn: "眼肉（国产）",
-			category: "beef_cuts",
-			subcategory: "ribeye",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "tenderloin_cn",
-			name: "Tenderloin (Domestic)",
-			nameCn: "牛柳（国产）",
-			category: "beef_cuts",
-			subcategory: "tenderloin",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "beef_tripe_cn",
-			name: "Beef Tripe (Domestic)",
-			nameCn: "牛肚（国产）",
-			category: "beef_cuts",
-			subcategory: "offal",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "beef_tendon_cn",
-			name: "Beef Tendon (Domestic)",
-			nameCn: "牛筋（国产）",
-			category: "beef_cuts",
-			subcategory: "offal",
-			originCountry: "CN",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
+		// Additional domestic beef cuts removed with the domestic dimension
+		// (round-155).
 
 		// Additional imported beef
 		{
@@ -1311,34 +1188,8 @@ async function main() {
 			currency: "CNY",
 		},
 
-		// Additional grain & feed
-		{
-			slug: "wheat_cn",
-			name: "Wheat (China)",
-			nameCn: "小麦",
-			category: "grain",
-			originCountry: "CN",
-			unit: "CNY/ton",
-			currency: "CNY",
-		},
-		{
-			slug: "sorghum_cn",
-			name: "Sorghum (China)",
-			nameCn: "高粱",
-			category: "grain",
-			originCountry: "CN",
-			unit: "CNY/ton",
-			currency: "CNY",
-		},
-		{
-			slug: "soybean_oil_cn",
-			name: "Soybean Oil (China)",
-			nameCn: "豆油",
-			category: "feed",
-			originCountry: "CN",
-			unit: "CNY/ton",
-			currency: "CNY",
-		},
+		// Additional grain & feed (domestic CN wheat/sorghum/soybean-oil
+		// removed with the domestic dimension, round-155)
 		{
 			slug: "dalian_palm_oil",
 			name: "Palm Oil (Dalian)",
@@ -1841,25 +1692,10 @@ async function main() {
 			currency: "USD",
 		},
 
-		// ── CN wholesale + CBOT + FRED carcass (parity with the live prod
-		// catalog; api-workflows asserts ≥100 commodities, and these slugs
-		// exist in production from scraper-era writes) ──
-		{
-			slug: "apple_wholesale_cn",
-			name: "Apple Wholesale (China)",
-			nameCn: "全国富士苹果批发价",
-			category: "fruits",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "banana_wholesale_cn",
-			name: "Banana Wholesale (China)",
-			nameCn: "全国香蕉批发价",
-			category: "fruits",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
+		// ── CBOT + FRED carcass (parity with the live prod catalog; these
+		// slugs exist in production from scraper-era writes. The 11
+		// `*_wholesale_cn` domestic wholesale series were removed with the
+		// domestic dimension, round-155) ──
 		{
 			slug: "beef_carcass_us",
 			// §十七 fix (v3.3.0 批2): seed mirrors the post-round-126 PROD
@@ -1873,75 +1709,11 @@ async function main() {
 			currency: "USD",
 		},
 		{
-			slug: "beef_wholesale_cn",
-			name: "Beef Wholesale (China)",
-			nameCn: "全国牛肉批发价",
-			category: "beef_cuts",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "cabbage_wholesale_cn",
-			name: "Cabbage Wholesale (China)",
-			nameCn: "全国大白菜批发价",
-			category: "vegetables",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "carp_wholesale_cn",
-			name: "Carp Wholesale (China)",
-			nameCn: "全国鲤鱼批发价",
-			category: "aquatic",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "chicken_wholesale_cn",
-			name: "Chicken Wholesale (China)",
-			nameCn: "全国白条鸡批发价",
-			category: "other_meat",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
 			slug: "corn_cbOT",
 			name: "Corn (CBOT)",
 			category: "grain",
 			unit: "USD/ton",
 			currency: "USD",
-		},
-		{
-			slug: "egg_wholesale_cn",
-			name: "Egg Wholesale (China)",
-			nameCn: "全国鸡蛋批发价",
-			category: "other_meat",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "mutton_wholesale_cn",
-			name: "Mutton Wholesale (China)",
-			nameCn: "全国羊肉批发价",
-			category: "other_meat",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "pork_wholesale_cn",
-			name: "Pork Wholesale (China)",
-			nameCn: "全国猪肉批发价",
-			category: "other_meat",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
-		{
-			slug: "potato_wholesale_cn",
-			name: "Potato Wholesale (China)",
-			nameCn: "全国土豆批发价",
-			category: "vegetables",
-			unit: "CNY/kg",
-			currency: "CNY",
 		},
 		{
 			slug: "soybeans_cbOT",
@@ -1950,24 +1722,11 @@ async function main() {
 			unit: "USD/ton",
 			currency: "USD",
 		},
-		{
-			slug: "tomato_wholesale_cn",
-			name: "Tomato Wholesale (China)",
-			nameCn: "全国西红柿批发价",
-			category: "vegetables",
-			unit: "CNY/kg",
-			currency: "CNY",
-		},
 	];
 
-	// Price baselines for generating realistic data
+	// Price baselines for generating realistic data (no `_cn` entries — the
+	// domestic dimension was removed, round-155)
 	const PRICE_BASELINES: Record<string, { base: number; volatility: number }> = {
-		brisket_cn: { base: 52, volatility: 3 },
-		shin_cn: { base: 68, volatility: 4 },
-		sirloin_cn: { base: 85, volatility: 5 },
-		fatty_brisket_cn: { base: 45, volatility: 3 },
-		thick_flank_cn: { base: 60, volatility: 4 },
-		oyster_blade_cn: { base: 72, volatility: 4 },
 		aus_brisket_m7: { base: 42, volatility: 3 },
 		aus_sirloin_m9: { base: 95, volatility: 6 },
 		aus_shin_m5: { base: 38, volatility: 2 },
@@ -1980,36 +1739,19 @@ async function main() {
 		arg_brisket: { base: 30, volatility: 2 },
 		ury_thick_flank: { base: 40, volatility: 3 },
 		ury_shin: { base: 42, volatility: 3 },
-		live_cattle_cn: { base: 24, volatility: 1.5 },
 		cme_live_cattle: { base: 185, volatility: 8 },
 		cme_feeder_cattle: { base: 245, volatility: 12 },
-		corn_cn: { base: 2600, volatility: 100 },
-		soybean_meal_cn: { base: 3800, volatility: 150 },
 		usd_cny: { base: 7.25, volatility: 0.1 },
 		aud_usd: { base: 0.65, volatility: 0.015 },
 		// brl_usd baseline sits at the exchange_rate_api scale (1/BRL ≈ 0.18)
 		// on purpose — the authoritative-source guards assert fred's USD/BRL
 		// ≈ 5.0 wins over this inverted scale (see the DEXBZUS fixture below).
 		brl_usd: { base: 0.18, volatility: 0.008 },
-		// CN wholesale + CBOT + FRED carcass (slugs above)
-		apple_wholesale_cn: { base: 6.0, volatility: 0.3 },
-		banana_wholesale_cn: { base: 4.0, volatility: 0.3 },
+		// CBOT + FRED carcass (slugs above; CN wholesale baselines removed
+		// with the domestic dimension, round-155)
 		beef_carcass_us: { base: 330, volatility: 6 },
-		beef_wholesale_cn: { base: 60, volatility: 2.5 },
-		cabbage_wholesale_cn: { base: 1.6, volatility: 0.2 },
-		carp_wholesale_cn: { base: 12, volatility: 0.6 },
-		chicken_wholesale_cn: { base: 16, volatility: 0.8 },
 		corn_cbOT: { base: 170, volatility: 6 },
-		egg_wholesale_cn: { base: 9.0, volatility: 0.5 },
-		mutton_wholesale_cn: { base: 62, volatility: 2.5 },
-		pork_wholesale_cn: { base: 22, volatility: 1.2 },
-		potato_wholesale_cn: { base: 2.2, volatility: 0.2 },
 		soybeans_cbOT: { base: 380, volatility: 12 },
-		tomato_wholesale_cn: { base: 4.0, volatility: 0.4 },
-		ribeye_cn: { base: 120, volatility: 5 },
-		tenderloin_cn: { base: 180, volatility: 8 },
-		beef_tripe_cn: { base: 35, volatility: 2 },
-		beef_tendon_cn: { base: 55, volatility: 3 },
 		aus_rump_m5: { base: 48, volatility: 2 },
 		aus_cube_roll_m9: { base: 110, volatility: 6 },
 		bra_topside: { base: 28, volatility: 1.5 },
@@ -2017,9 +1759,6 @@ async function main() {
 		arg_forequarter: { base: 24, volatility: 1 },
 		ury_boneless: { base: 30, volatility: 1.5 },
 		nz_lamb_leg: { base: 65, volatility: 4 },
-		wheat_cn: { base: 2900, volatility: 60 },
-		sorghum_cn: { base: 2400, volatility: 50 },
-		soybean_oil_cn: { base: 8200, volatility: 200 },
 		dalian_palm_oil: { base: 7800, volatility: 180 },
 		eur_usd: { base: 1.08, volatility: 0.008 },
 		gbp_usd: { base: 1.27, volatility: 0.01 },
@@ -2224,7 +1963,10 @@ async function main() {
 			);
 
 			let metadata: Record<string, unknown> | null = null;
-			if (commodity.category === "beef_cuts" && commodity.originCountry !== "CN") {
+			// Domestic-CN beef cuts were removed (round-155) — every beef_cuts
+			// commodity is imported now, so the old `originCountry !== "CN"`
+			// guard is gone.
+			if (commodity.category === "beef_cuts") {
 				metadata = {
 					spot_cny_kg: close,
 					shipping_cost_usd_ton: 250 + Math.random() * 60,
@@ -2361,12 +2103,6 @@ async function main() {
 				source: "USDA summary",
 			},
 			{
-				title: "China wholesale beef price inches down",
-				summary: "Domestic wholesale beef eased slightly on softer out-of-home demand.",
-				category: "PRICE_MOVE",
-				source: "MOFCOM weekly",
-			},
-			{
 				title: "CME live cattle futures consolidate",
 				summary: "Front-month live cattle held a narrow range ahead of the Cattle on Feed report.",
 				category: "MARKET_INSIGHT",
@@ -2414,7 +2150,6 @@ async function main() {
 		"gold_lbma",
 		"copper_lme",
 		"beef_australia",
-		"wheat_cn",
 		"corn_cme",
 	];
 	const multiBatch: typeof priceBatch = [];

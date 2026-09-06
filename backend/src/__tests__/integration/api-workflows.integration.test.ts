@@ -204,7 +204,10 @@ describe("API Workflow Integration Tests", () => {
 
 			expect(res.status).toBe(200);
 			expect(res.body.success).toBe(true);
-			expect(res.body.data.commodities.length).toBeGreaterThanOrEqual(100);
+			// ≥80 (was ≥100 before round-155 removed the 27 domestic `_cn`
+			// commodities along with the domestic dimension — the seed catalog
+			// is now 84 slugs).
+			expect(res.body.data.commodities.length).toBeGreaterThanOrEqual(80);
 
 			// Verify structure of first commodity
 			const c = res.body.data.commodities[0];
