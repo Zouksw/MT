@@ -36,7 +36,7 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **22 文件 / 20 注册** | `sources/*.ts`（排除 index/test）；2026-09-07 复核（round-159）：inac 按新契约复活（inac.uy DIAEUtils，CommodityPrice novillo_gordo_uy 月度）后注册 20；chinaCustomsStats/chinaWholesale 为退役保留文件 |
+| 数据源爬虫 | **24 文件 / 22 注册** | `sources/*.ts`（排除 index/test）；2026-09-07 复核（round-161）：comext_eu（Eurostat 欧盟月度 FOB-EUR 镜像）+ drewry_wci（Drewry WCI 周度运价）上线后注册 22；inac 复活于 round-159；chinaCustomsStats/chinaWholesale 为退役保留文件 |
 | Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |

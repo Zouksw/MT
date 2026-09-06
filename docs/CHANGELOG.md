@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-161：开发轮 — 按探索方案落地（comext_eu 欧盟月度镜像 + 双币贸易流读侧 + Drewry WCI 运价基准 + 肉交所勘察）
+
+用户指令"根据新的探索方案，进行后续的开发"。输入 = round-160 TradeSources v2.0.0 路线增补（P1a/P2 运价/P1b 勘察）。三批独立 commit、全门禁（tsc/biome/全量/构建/PM2/live）。
+
+- **批 1 `05191e4` — comext_eu 欧盟月度贸易流镜像（P1a，最大增量）**：Eurostat Comext `DS-045409` 免 key（旧 `/sale/` 路径已死）；IE/NL/FR/PL × 8 HS × FOB-**EUR** 独立 type（`export_eu_to_cn_*`），与 USD 镜像同表并列**绝不合并**。契约陷阱全部实测钉死并由测试守护：indicators 多值静默坍缩为 0（须单值逐查）、product 多值 413、`sinceTimePeriod/untilTimePeriod` 区间使**回填请求量恒定**（64 查询/轮）、JSON-stat 扁平索引=时间索引（其余维度单值）、QUANTITY_IN_100KG×100=kg、缺月=无流量非零值。**读侧泛化**：TradeFlowPoint 字段 `unitPriceUsdPerT/valueUsdM`→`unitPricePerT/valueM`+每行 `currency`，前端卡按行渲染 $/t vs €/t + ·EUR 口径标，第 4 条口径注记随载荷。live：boot 64 查询→IE 3 行；37 月回填 125 解析/122 入库（**15 序列**：IE 0202/020230 各 33 个月，FR/NL/PL 集中于杂碎与偶发牛肉线，2023-08→2026-06）；`GET /trade-flows?hs=0202` → IE €2,560.6/t（环比 −55.1% 与回填数据自洽）+ FR 年内线；生产缓存旧形状键清除后复验。+6 解析测试、路由测试加 EUR 播种例、前端卡 4/4（含 EUR 断言）。
+- **批 2 `797baa9` — drewry_wci 周度运价基准（P2 运价因子）**：Drewry 免费页纯文本抽取（首个 `\$N per 40ft` = 综合指数、评估周四标题定日期；reformat → 0 行+warning 不猜值）→ CommodityPrice 周度序列 `ocean_freight_wci`（USD/40ft）+ noChange。**口径设计**：按柜计价**不做 per-kg 换算**（装载吨数是用户假设，换算即造数）——landing-cost 响应新增 `freightBenchmark` 参照（值/日期/天数/stale）+ 工具页"海运参照（Drewry WCI）"溯源卡 + 注记。live：boot `$4,465/40ft（2026-09-03）` 1 行入库；`/api/tools/landing-cost` 返回 freightBenchmark+注记，中档 ¥68.03/kg 计算不受影响。+4 解析测试；landingCost 9/9、工具页 4/4 零回退。
+- **批 3（勘察，不携代码）— 肉交所 ToS/robots 取证**：robots.txt 为 DESTOON B2B 默认模板（禁 `/api/`、`/member/`、`/*search*`，**允许 `/sell/` 公开列表页**）；公开 about 页无反爬条款（注册协议在登录墙后未核验）；条目页字段统一（品名/价格 元每公斤/数量公斤/现货状态/产地/仓库位置），厂号在"最新成交"条目。**结论：采集面合规可试（低频日 1 次+仅公开列表页），实现待独立轮次**（BeefCutPrice 词汇映射与厂号→factoryCode 解析设计先行）。
+- **注册与文档**：注册源 **20→22**（Tier 3 comext_eu / Tier 4 drewry_wci；AGENTS §二/§三 同步 24 文件/22 注册，实测复核）；PRODUCT-SPEC §七 贸易流量层行更新（欧盟 EUR 通道 + WCI 参照）；DATA-SOURCES-EVALUATION round-161 执行记录；IMPROVEMENT-PLAN Wave-8 链追加。基线：backend **1118+1 skip**（1112→1119，+6，零回退）、frontend 相关套件零回退（全量 tsc 因并发会话 WIP 文件报错，非本批文件）。
+
 ### 2026-09-07 — round-160：调研轮 — 贸易信息平台深挖（TradeSources v1.0.0→v2.0.0：国内现货免费面 + Comext 欧盟月度镜像 + 厂号/运价/基线/提单六板块）
 
 用户指令"更加深入探索可能获取到牛肉贸易信息的网站平台"。docs-only 调研轮（round-148/151 同例），三路并发子代理（国内现货/替代统计镜像/厂号+运价+B/L）+ 本机亲手复核承重项（Comext 真值/OECD 直链/肉交所/Mysteel/foodmate/WCI）。时间背景：round-157/158/159 已落地评估文档与 inac/ibge_sidra 源，本轮补的是此前未排查的六块空白。

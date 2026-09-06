@@ -83,6 +83,8 @@ related_docs:
 >
 > **追加（2026-08-31，round-153，数据维护轮）**：用户指令"解决与数据有关的其他问题，维护项目数据相关的文档"。同主题三修——① `8fb2d92`：fredCsv 共享模块 Decimal(18,6) 6dp 舍入（world_bank 每轮 23-35 行幻影更新终结，live 实证 PPORKUSDM 14 位小数 vs 库内 6dp 截断）+ world_bank noChange 契约补齐（月中重扫 0/0 → success）；② `2ab1fa9`：fred 免 key fredgraph.csv 回退（15 宏观 MarketFactor 序列复活，首轮 live 修正 5 个休眠错误 series id，"Missing FRED_API_KEY" error 噪音归零，FRED_API_KEY 转可选）；③ T3 重新定性为并行负载型 flaky（挂点漂移实录 signals 30s 超时/隔离 1.5s）+ `PIPESTATUS` 门禁卫生登记。数据文档对齐：API.md 补 trade-flows 行（批 4 漏登）、PRODUCT-SPEC §七 数据层两行重写（2026-08-31 live 实测）、KNOWN-ISSUES D1 追加。基线 backend **1099+1 skip**（1092→1100，+8，零回退）。详见 CHANGELOG round-153。
 >
+> **追加（2026-09-07，round-161，开发轮）**：用户指令"根据新的探索方案，进行后续的开发"（输入=round-160 TradeSources v2.0.0）。两代码批+一勘察批——① `05191e4` comext_eu（Eurostat DS-045409 欧盟月度 FOB-EUR 镜像：indicators 单值/413/区间单请求契约钉死，读侧 TradeFlowPoint 泛化为 unitPricePerT/valueM+currency 双币呈现；boot 3 行+回填 122 行 15 序列）；② `797baa9` drewry_wci（WCI 周度 USD/40ft 序列+landing-cost freightBenchmark 参照卡，按柜口径不做 per-kg 换算）；③ 肉交所 ToS/robots 勘察（robots 允许 /sell/，DESTOON 字段统一，实现待独立轮次）。注册源 20→22（AGENTS 已同步 24 文件/22 注册）。
+>
 > **指令来源**：用户"结合探究的报告，制定打通和拓宽数据通路的方案"。**输入**：[RESEARCH-BEEF-TRADE-DATA-SOURCES.md](RESEARCH-BEEF-TRADE-DATA-SOURCES.md) v1.0.0（2026-08-31，全部关键源本机 live 取证——下称"贸易报告"）。
 >
 > **波次论断**：V7-二.9 曾把海关源登记为"环境阻塞（stats.customs.gov.cn 不可达），不排期"——贸易报告用**出口国镜像策略**绕开了这个死结：**UN Comtrade 公共预览 API 免 key、本机直连可用**（巴西月度新鲜到 t-1、澳/新/美 t-2、中国年度分国别官方口径），无需中国出口、无需爬虫、无需 key。这意味着"对华贸易流量价"这层数据**从环境死锁变为零成本可执行**。本波两件事：**打通**（把断掉/零行的贸易统计通路接通——批 0/2）+ **拓宽**（新增厂号注册状态维度与 HS10 粒度——批 1/3），最后补最小读侧面让数据可见（批 4）。
