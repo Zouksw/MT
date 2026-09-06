@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-08-31"
+last_updated: "2026-09-06"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-09-06 — round-156（进行中）：代码质量轮批 0 — 生产依赖漏洞清零（backend 7→0 / frontend 57→0）
+
+第十波 v3.8.0 首批（方案入库 `8af627c`）。`pnpm audit --prod`（npmjs registry）双端归零。
+
+- **根因发现**：`shadcn` CLI（源内零 import）混在 frontend `dependencies`，把 `@modelcontextprotocol/sdk` → hono / @hono/node-server / express 5 / body-parser / qs / express-rate-limit→ip-address / ajv→fast-uri 整条工具链拖进**生产**审计面 → 移入 devDependencies（工具保留，风险面剔除）。
+- **frontend 升级**：next ^15.5.20→^15.5.25（SSRF×2 / 内部信息泄露 / 图像 DoS 四公告，15.5.x 线内 patch，D29 未启用；其 sharp 范围已含 ^0.35.4）、js-cookie ^3.0.1→^3.0.8（原型劫持 high）。**overrides 治理**：过期钉更新（postcss ^8.5.10→^8.5.23、brace-expansion ^1.1.13→^1.1.18）、dev 侧专属钉移除（hono ^4.12.16 / ip-address ^10.1.1，随 shadcn 移 dev 后退出生产面）、新增 sharp ^0.35.4 / browserslist ^4.28.7 / @babel/core ^7.29.6。
+- **backend overrides 新增**：fast-uri ^3.1.6（swagger 链 ajv，6 公告）、js-yaml@<4.3.1→^4.3.1（omap 二次复杂度 high）、qs ^6.16.0（express→body-parser 链，2 公告）。
+- **门禁**：audit 双端 0；tsc 双端 0 错；biome 34 条与基线持平（批 1 范围）；backend **1099+1 skip** / frontend **360** 零回退（零用例改动）；next build exit 0；PM2 重启（backend+frontend，inference 未动）。live：front 200、/health ok、digest 6 序列、/market/digest 200、login ok、`trade-flows?hs=020230` 经 qs 6.16 查询串解析 6 国 + 24 期 history + arFobTotal 全绿；sharp 0.35.4 就位但源内零 `next/image` 使用（休眠 optional，无行为面）。
 
 ### 2026-09-06 — round-155：产品范围收敛轮 — 国产维度完全删除 + 外贸信息面丰富（五批全门禁）
 

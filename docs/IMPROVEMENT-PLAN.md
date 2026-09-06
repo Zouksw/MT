@@ -62,6 +62,8 @@ related_docs:
 > 不引新重构框架、不做全量重写、不夹带功能改动、覆盖率不设阈值门禁（D28 未过门）、不修三方库内部 warning（statsmodels/starlette）。批 3 拆解严守"只移动不改逻辑"，行为由既有 1099/360/64 基线守护。
 >
 > **执行顺序**：批 0（安全优先）→ 1 → 2 → 3（可拆子批穿插）→ 4 → 5。门禁沿用：tsc + biome + 全量测试（数不回退）+ build + PM2 重启 + live 验证 + 独立 commit。
+>
+> **执行状态（2026-09-06，round-156，批 0 落地）**：`pnpm audit --prod`（npmjs registry）backend 7→**0**、frontend 57→**0**。根因：`shadcn` CLI（源内零 import）混在 frontend `dependencies`，把 @modelcontextprotocol/sdk→hono/express5/qs/ip-address/fast-uri 整条工具链拖进生产审计面 → 移 devDependencies；next ^15.5.25（15.5.x 线内 patch，D29 未启用）、js-cookie ^3.0.8；overrides 治理（更新 postcss/brace-expansion，移除 dev 侧 hono/ip-address 钉，新增 sharp/browserslist/@babel/core）；backend 新增 fast-uri/js-yaml/qs 三钉。门禁：tsc 双端 0、biome 34 不变（批 1 范围）、backend 1099+1 / frontend 360 零回退、build 0、PM2 重启、live 全绿（含 qs 6.16 查询串解析鉴权接口实测；sharp 0.35.4 休眠——源内零 next/image）。批 1–5 未动。
 
 > ## 第九波 v3.7.0（2026-09-06，round-155）— 产品范围收敛轮：国产维度完全删除 + 外贸信息面丰富
 >
