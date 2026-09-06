@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-06 — round-156 批 2 + 批 4（覆盖基线部分）— biome-ignore 91→26 + 覆盖率基线首次落表
+
+- **批 2 `eefe946`（biome-ignore 91→26）**：① **7 个图表组件迁共享 `dynamicRecharts()`**（AnomalyChart/PredictionChart/BacktestDetailChart/AlertDistributionChart/ModelPerformanceBarChart/AccuracyTrendChart/performance 页 + 批 1 的 CommodityPriceChart），消灭全部本地 `dynamic() + as ComponentType<any>` 样板；工厂目录随扩 Scatter/Cell/ReferenceLine（BarChart 原已在内——早前 grep 误判漏看，live 撞重复后修正）。迁移暴露并修复旧 any cast 掩盖的 **recharts formatter 真实类型缺口 3 处**（CommodityPriceChart ×2 批 1、AlertDistributionChart ×1），AccuracyTrendChart 迁移中误吞 `WindowSize` 类型定义 live 发现即还。② **28 处索引 key 改稳定字段键**：营销静态数组用本体字段（feature 文本/stat.label/faq.question/step.title/modelId/商品名对），数据行用业务复合键（seriesLabel-modelId、date-factory、source-type 保留）；随清理未用 index 参数 ×14。③ 终态库存 26：noExplicitAny 41→**5**（beef/swr 文档化契约、Table 泛型 API、useTradingData ×2 API 形状缺口）、noArrayIndexKey 37→**8**（DB 回滚行号重复/用户可编辑列表可重复/装饰占位等，均带理由注释）；a11y 5/img 3/依赖抑制 3/断言 2 为批 2 范围外遗留。门禁：tsc 0、biome 0、jest 360 零回退、build 0、PM2 前端重启、pricing/about/performance live 200/307 正常。
+- **批 4（覆盖基线部分，零代码改动）**：双端 `test:coverage` 首次产出报告——**backend 语句 70.82% / 分支 62.39% / 函数 76.35% / 行 72.26%；frontend 语句 39.68% / 分支 69.72% / 函数 50.43% / 行 39.68%**（前端低数主因 44 页仅 ~9 页有直接测试，与批 3 拆解/批 4 补测排期呼应；D28 维持"可见不加门"）。两个 flaky 项无需动代码——round-153 已重新定性为并行负载型（KNOWN-ISSUES 在案），非日期/确定性缺陷。coverage/ 产物已 gitignore 不入库。
+
 ### 2026-09-06 — round-156 批 1 — biome 34 条清零 + 日志级别归位 + 过期登记关闭
 
 - **backend（23→0）**：生产源码 5 处手工精修——cadence.ts 两处 `case "daily":` 冗余落空分支删除（行为等价，default 同值）、server.ts unhandledRejection 未用参 `_promise`、beefIngest.ts 判空改可选链、dataHealth.ts `daysSince(d)!` 断言改内联计算（诚实窄化）、dataIngestion/index.ts 删 inacScraper 休眠导入（墓碑注释保留）；测试文件 18 条经 `--write --unsafe` + 1 处手修（watchlistService.test:262 可选链后断言改 `toBeDefined` 守卫——unsafe 自动修在此造出更高严重级错误，live 发现 live 改）。
