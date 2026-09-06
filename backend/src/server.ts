@@ -143,6 +143,9 @@ function backgroundJobs(): ScheduledJob[] {
 		// ever). Monthly/annual Comtrade data re-scanned daily: non-release
 		// days confirm no change (noChange contract, round-149 precedent).
 		"comtrade_mirror",
+		// EU lane of the trade mirror (Comext, monthly-on-daily with the same
+		// noChange contract; round-161 批1).
+		"comext_eu",
 		"secex",
 		// Monthly SSPM CSV on the daily cycle: non-release days confirm no
 		// change (noChange contract, same shape as comtrade_mirror).

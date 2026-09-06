@@ -11,6 +11,7 @@ import { argentinaExportsScraper } from "./sources/argentinaExports";
 import { balticDryScraper } from "./sources/balticDry";
 import { cepeaScraper } from "./sources/cepeaData";
 import { cmeFuturesScraper } from "./sources/cmeFutures";
+import { comextEuScraper } from "./sources/comextEu";
 import { commodityPriceScraper } from "./sources/commodityPrices";
 import { comtradeMirrorScraper } from "./sources/comtradeMirror";
 import { dceFuturesScraper } from "./sources/dceFutures";
@@ -78,6 +79,10 @@ export function registerAllScrapers(): void {
 	// do NOT re-register unless the domestic dimension is reinstated AND the
 	// host becomes reachable.
 	scraperManager.registerSource("comtrade_mirror", comtradeMirrorScraper);
+	// EU lane of the trade-flow mirror (Eurostat Comext DS-045409, keyless,
+	// FOB-EUR 口径 — separate type from the USD mirror, never merged;
+	// round-161 批1).
+	scraperManager.registerSource("comext_eu", comextEuScraper);
 
 	// Tier 4 — Shipping & logistics
 	scraperManager.registerSource("baltic_dry", balticDryScraper);

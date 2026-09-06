@@ -478,9 +478,13 @@ export async function getSourceFreshness() {
 export interface TradeFlowPoint {
 	period: string;
 	date: string;
-	unitPriceUsdPerT: number;
+	/** Denomination of unitPricePerT and valueM: "USD" (Comtrade FOB mirror)
+	 * or "EUR" (Comext EU lane). Carried per row — the two lanes sit side by
+	 * side and are never merged or converted (round-161 批1). */
+	currency: "USD" | "EUR";
+	unitPricePerT: number;
 	qtyTons: number;
-	valueUsdM: number;
+	valueM: number;
 }
 
 export interface TradeFlowEntry {
@@ -488,6 +492,8 @@ export interface TradeFlowEntry {
 	country: string;
 	freq: "M" | "A";
 	basis: string;
+	/** Denomination of this region's lane (USD mirror vs EUR Comext lane). */
+	currency: "USD" | "EUR";
 	latest: TradeFlowPoint;
 	/** Unit-price change vs the previous period, %. Null for annual lanes and
 	 * first points (no comparable previous row). */
@@ -540,13 +546,18 @@ function toPoint(row: FactorRow): TradeFlowPoint {
 		period?: string;
 		quantityKg?: number;
 		valueUsd?: number;
+		valueEur?: number;
+		currency?: "USD" | "EUR";
 	};
 	return {
 		period: meta.period ?? row.date.toISOString().slice(0, 7),
 		date: row.date.toISOString(),
-		unitPriceUsdPerT: Math.round(Number(row.value) * 10) / 10,
+		currency: meta.currency === "EUR" ? "EUR" : "USD",
+		unitPricePerT: Math.round(Number(row.value) * 10) / 10,
 		qtyTons: Math.round(((meta.quantityKg ?? 0) / 1000) * 10) / 10,
-		valueUsdM: Math.round(((meta.valueUsd ?? 0) / 1_000_000) * 10) / 10,
+		// Comtrade rows carry USD; Comext EU rows carry EUR — valueM is
+		// denominated by the point's currency, never mixed.
+		valueM: Math.round(((meta.valueUsd ?? meta.valueEur ?? 0) / 1_000_000) * 10) / 10,
 	};
 }
 
@@ -559,7 +570,10 @@ export async function getTradeFlows(hs: string): Promise<{
 }> {
 	const [mirrorRows, calibRows, arRow] = await Promise.all([
 		prisma.marketFactor.findMany({
-			where: { type: `export_to_cn_${hs}` },
+			// Two mirror lanes, deliberately distinct types: partner-reported
+			// FOB-USD (Comtrade) and EU-reported FOB-EUR (Comext) — grouped by
+			// region (BR→CN vs IE→CN), never merged (round-161 批1).
+			where: { type: { in: [`export_to_cn_${hs}`, `export_eu_to_cn_${hs}`] } },
 			orderBy: { date: "desc" },
 			take: 400,
 		}),
@@ -602,11 +616,9 @@ export async function getTradeFlows(hs: string): Promise<{
 
 		let momPct: number | null = null;
 		let qtyMomPct: number | null = null;
-		if (prev && prev.unitPriceUsdPerT > 0 && latest.period !== prev.period) {
+		if (prev && prev.unitPricePerT > 0 && latest.period !== prev.period) {
 			momPct =
-				Math.round(
-					((latest.unitPriceUsdPerT - prev.unitPriceUsdPerT) / prev.unitPriceUsdPerT) * 1000,
-				) / 10;
+				Math.round(((latest.unitPricePerT - prev.unitPricePerT) / prev.unitPricePerT) * 1000) / 10;
 		}
 		if (prev && prev.qtyTons > 0 && latest.period !== prev.period) {
 			qtyMomPct = Math.round(((latest.qtyTons - prev.qtyTons) / prev.qtyTons) * 1000) / 10;
@@ -630,6 +642,7 @@ export async function getTradeFlows(hs: string): Promise<{
 			country: region.split("→")[0],
 			freq,
 			basis: meta.basis ?? "FOB (partner-reported export)",
+			currency: latest.currency,
 			latest,
 			momPct,
 			qtyMomPct,
@@ -669,6 +682,7 @@ export async function getTradeFlows(hs: string): Promise<{
 		notes: [
 			"月度线为出口国报送的 FOB 镜像口径（巴西约滞后 1 个月，澳/新/美约 2 个月）；阿根廷/乌拉圭仅年度报送，缺失月份为未报送而非零值。",
 			"中国官方口径为年度 CIF（中国报送），与月度 FOB 镜像存在系统性差异（含运保费与时点），两口径并列展示、绝不合并。",
+			"欧盟通道（爱尔兰等）为 Comext 欧盟申报 FOB-**EUR** 口径（约滞后 6 周），与美元通道并列展示、不做汇率换算与合并；当前欧盟对华流量较小，缺失月份为无流量。",
 			"0202 为冻牛肉总量，其 6 位子目（020230 冻去骨 / 020220 冻带骨）为独立序列，读取时不可与 0202 加总。",
 		],
 	};

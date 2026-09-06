@@ -27,6 +27,7 @@ function monthsAgo(n: number): Date {
 }
 
 const MIRROR_TYPE = "export_to_cn_0202";
+const EU_TYPE = "export_eu_to_cn_0202";
 const CALIB_TYPE = "import_cn_cif_0202";
 const AR_FOB_TYPE = "export_fob_carnes";
 // Router-relative paths (Express req.path inside a mounted router — the
@@ -51,7 +52,7 @@ beforeAll(async () => {
 
 	const prisma = getPrisma();
 	await prisma.marketFactor.deleteMany({
-		where: { type: { in: [MIRROR_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
+		where: { type: { in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
 	});
 	await prisma.marketFactor.createMany({
 		data: [
@@ -112,6 +113,25 @@ beforeAll(async () => {
 				metadata: { serie: "ica_carnes", dataset: "sspm-75.3" },
 			},
 			{
+				// EU lane (round-161 批1): Comext FOB-EUR, its own type — the
+				// live IE shape (2026-06: €129,310 / 50.5 t = €2,560.59/t).
+				type: EU_TYPE,
+				region: "IE→CN",
+				date: monthsAgo(2),
+				value: 2560.594059,
+				unit: "EUR/ton",
+				source: "comext_eu",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: "202606",
+					quantityKg: 50500,
+					valueEur: 129310,
+					currency: "EUR",
+					basis: "FOB-EUR (EU-reported export, Comext DS-045409)",
+				},
+			},
+			{
 				type: CALIB_TYPE,
 				region: "CN←BR",
 				date: new Date(new Date().getUTCFullYear() - 1, 0, 1),
@@ -133,7 +153,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	await getPrisma().marketFactor.deleteMany({
-		where: { type: { in: [MIRROR_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
+		where: { type: { in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
 	});
 	try {
 		const r = await redis();
@@ -167,9 +187,11 @@ describe("GET /api/market/trade-flows", () => {
 		expect(br).toBeDefined();
 		expect(br.freq).toBe("M");
 		expect(br.stale).toBe(false);
-		expect(br.latest.unitPriceUsdPerT).toBeCloseTo(6751.2, 1);
+		expect(br.currency).toBe("USD");
+		expect(br.latest.currency).toBe("USD");
+		expect(br.latest.unitPricePerT).toBeCloseTo(6751.2, 1);
 		expect(br.latest.qtyTons).toBeCloseTo(158364.8, 1);
-		expect(br.latest.valueUsdM).toBeCloseTo(1069.2, 1);
+		expect(br.latest.valueM).toBeCloseTo(1069.2, 1);
 		// (6751.24 − 6400) / 6400 = 5.5%
 		expect(br.momPct).toBeCloseTo(5.5, 1);
 		// History (round-155 批C): oldest-first monthly series for charting.
@@ -177,7 +199,19 @@ describe("GET /api/market/trade-flows", () => {
 		expect(br.history.length).toBe(2);
 		expect(br.history[0].period).toBe("202605");
 		expect(br.history[1].period).toBe("202606");
-		expect(br.history[1].unitPriceUsdPerT).toBeCloseTo(6751.2, 1);
+		expect(br.history[1].unitPricePerT).toBeCloseTo(6751.2, 1);
+
+		// EU lane (round-161 批1): Comext EUR row sits in the same flows list
+		// — explicit currency, no conversion, no merge with the USD lanes.
+		const ie = flows.find((f: { region: string }) => f.region === "IE→CN");
+		expect(ie).toBeDefined();
+		expect(ie.freq).toBe("M");
+		expect(ie.currency).toBe("EUR");
+		expect(ie.latest.unitPricePerT).toBeCloseTo(2560.6, 1);
+		expect(ie.latest.valueM).toBeCloseTo(0.1, 2);
+		expect(ie.latest.qtyTons).toBeCloseTo(50.5, 1);
+		expect(ie.momPct).toBeNull(); // single seeded row
+		expect(ie.stale).toBe(false);
 
 		const ar = flows.find((f: { region: string }) => f.region === "AR→CN");
 		expect(ar.freq).toBe("A");
@@ -188,13 +222,15 @@ describe("GET /api/market/trade-flows", () => {
 		// Calibration lane: CIF, separate table, never merged into flows.
 		const cnBr = calibration.find((c: { region: string }) => c.region === "CN←BR");
 		expect(cnBr.basis).toContain("CIF");
-		expect(cnBr.latest.unitPriceUsdPerT).toBeCloseTo(4621.4, 1);
+		expect(cnBr.latest.unitPricePerT).toBeCloseTo(4621.4, 1);
 		expect(calibration.some((c: { region: string }) => c.region.includes("→CN"))).toBe(false);
 
-		// 口径注记 mandatory: the response always travels with its caliber notes.
+		// 口径注记 mandatory: the response always travels with its caliber notes
+		// (incl. the EU EUR-lane note, round-161 批1).
 		expect(Array.isArray(notes)).toBe(true);
 		expect(notes.length).toBeGreaterThanOrEqual(2);
 		expect(notes.join("")).toContain("绝不合并");
+		expect(notes.join("")).toContain("Comext");
 
 		// Argentina all-destinations FOB context (round-155 批C).
 		const { arFobTotal } = res.body.data;

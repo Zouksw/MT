@@ -3,7 +3,8 @@
  *
  * Pins the enrichment contract: the HS-code switcher (8 pinned lanes), the
  * per-country monthly volume/price chart over the new `history` payload, the
- * newly-rendered qtyMoM / valueUsdM columns, the AR all-destinations FOB
+ * newly-rendered qtyMoM / valueM columns, the per-row currency rendering for
+ * the Comext EUR lane (round-161), the AR all-destinations FOB
  * context line, and the honest-degrade paths (no data → card omitted;
  * annual-only lanes → table without chart). The 口径注记 footer stays
  * mandatory on every render that shows data.
@@ -42,12 +43,18 @@ jest.mock("@/lib/recharts-lazy", () => ({
 
 import { TradeFlowsCard } from "../TradeFlowsCard";
 
-const point = (period: string, qtyTons: number, price: number) => ({
+const point = (
+	period: string,
+	qtyTons: number,
+	price: number,
+	currency: "USD" | "EUR" = "USD",
+) => ({
 	period,
 	date: `2026-${period.slice(4)}-01T00:00:00.000Z`,
+	currency,
 	qtyTons,
-	unitPriceUsdPerT: price,
-	valueUsdM: Math.round(((qtyTons * price) / 1_000_000) * 10) / 10,
+	unitPricePerT: price,
+	valueM: Math.round(((qtyTons * price) / 1_000_000) * 10) / 10,
 });
 
 function makePayload(hs: string, opts: { monthlyHistory?: boolean } = {}) {
@@ -60,6 +67,7 @@ function makePayload(hs: string, opts: { monthlyHistory?: boolean } = {}) {
 					country: "BR",
 					freq: "M",
 					basis: "FOB (partner-reported export)",
+					currency: "USD",
 					latest: point("202607", 82714, 6398),
 					momPct: -5.2,
 					qtyMomPct: -3.1,
@@ -73,10 +81,25 @@ function makePayload(hs: string, opts: { monthlyHistory?: boolean } = {}) {
 						: [],
 				},
 				{
+					// Comext EU lane (round-161): EUR-denominated, sits in the
+					// same table with its own symbol — never converted.
+					region: "IE→CN",
+					country: "IE",
+					freq: "M",
+					basis: "FOB-EUR (EU-reported export, Comext DS-045409)",
+					currency: "EUR",
+					latest: point("202606", 50.5, 2560.59, "EUR"),
+					momPct: null,
+					qtyMomPct: null,
+					stale: false,
+					history: [point("202606", 50.5, 2560.59, "EUR")],
+				},
+				{
 					region: "AR→CN",
 					country: "AR",
 					freq: "A",
 					basis: "FOB (partner-reported export)",
+					currency: "USD",
 					latest: point("2025", 592360, 3723),
 					momPct: null,
 					qtyMomPct: null,
@@ -127,9 +150,18 @@ describe("TradeFlowsCard", () => {
 		expect(screen.getAllByText("巴西").length).toBeGreaterThan(0);
 		expect(screen.queryByText("阿根廷", { exact: false, selector: "button" })).toBeNull();
 
-		// 批C columns: monthly value (USD M) + qty MoM now rendered.
-		expect(screen.getByText("金额（百万 USD）")).toBeInTheDocument();
+		// 批C columns: monthly value + qty MoM now rendered (header is
+		// currency-neutral since round-161 — symbols live per row).
+		expect(screen.getByText("金额（百万）")).toBeInTheDocument();
 		expect(screen.getByText("数量环比")).toBeInTheDocument();
+
+		// round-161: per-row currency — BR renders $/t, the IE Comext lane
+		// renders €/t and a EUR caliber tag, never converted into USD.
+		expect(screen.getAllByText(/\$6,?398\/t/).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/€2,?561\/t/).length).toBeGreaterThan(0);
+		expect(screen.getByText("爱尔兰")).toBeInTheDocument();
+		expect(screen.getAllByText(/M€/).length).toBeGreaterThan(0);
+		expect(screen.getAllByText("月度 FOB·EUR").length).toBeGreaterThan(0);
 
 		// AR all-destinations FOB context line.
 		expect(screen.getByText(/阿根廷肉类月度出口总额/)).toBeInTheDocument();
@@ -162,7 +194,7 @@ describe("TradeFlowsCard", () => {
 		render(<TradeFlowsCard />);
 
 		expect(screen.queryByTestId("recharts-ComposedChart")).toBeNull();
-		expect(screen.getByText("金额（百万 USD）")).toBeInTheDocument();
+		expect(screen.getByText("金额（百万）")).toBeInTheDocument();
 	});
 
 	test("omits the card entirely when the fetch returns nothing (anonymous/401)", () => {

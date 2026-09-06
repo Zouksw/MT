@@ -10,8 +10,11 @@
  * 批C additions: an HS-code switcher (the mirror's 8 pinned lanes — zod enum
  * on the backend is the single source of truth), a per-country monthly
  * volume-bar + unit-price-line chart over the new `history` payload, the
- * previously-fetched-but-unrendered qtyMoM / valueUsdM fields, and the AR
+ * previously-fetched-but-unrendered qtyMoM / valueM fields, and the AR
  * all-destinations FOB context line.
+ *
+ * round-161: fields genericized (unitPricePerT/valueM + per-row currency) —
+ * the Comext EU lane (EUR) renders side by side with the USD mirror lanes.
  *
  * 口径注记 is mandatory UI, not decoration: the FOB mirror table (exporter
  * side, monthly where reported) and the China-reported annual CIF calibration
@@ -42,9 +45,12 @@ const {
 interface TradeFlowPoint {
 	period: string;
 	date: string;
-	unitPriceUsdPerT: number;
+	/** "USD" (Comtrade FOB mirror) or "EUR" (Comext EU lane) — denominates
+	 * unitPricePerT and valueM; lanes never merge (round-161). */
+	currency: "USD" | "EUR";
+	unitPricePerT: number;
 	qtyTons: number;
-	valueUsdM: number;
+	valueM: number;
 }
 
 interface TradeFlowEntry {
@@ -52,6 +58,7 @@ interface TradeFlowEntry {
 	country: string;
 	freq: "M" | "A";
 	basis: string;
+	currency: "USD" | "EUR";
 	latest: TradeFlowPoint;
 	momPct: number | null;
 	qtyMomPct: number | null;
@@ -99,6 +106,10 @@ const COUNTRY_LABELS: Record<string, string> = {
 	US: "美国",
 	AR: "阿根廷",
 	UY: "乌拉圭",
+	IE: "爱尔兰",
+	NL: "荷兰",
+	FR: "法国",
+	PL: "波兰",
 	WORLD: "全球",
 };
 
@@ -148,8 +159,10 @@ export function TradeFlowsCard() {
 		chartFlow?.history.map((h) => ({
 			label: fmtPeriod(h.period).slice(2), // "26-06" — compact x-axis
 			qtyTons: h.qtyTons,
-			unitPriceUsdPerT: h.unitPriceUsdPerT,
+			unitPricePerT: h.unitPricePerT,
 		})) ?? [];
+	// Chart price axis honors the selected lane's denomination.
+	const chartSymbol = chartFlow?.currency === "EUR" ? "€" : "$";
 
 	return (
 		<Card className="mt-6">
@@ -209,7 +222,7 @@ export function TradeFlowsCard() {
 											const label = String(name);
 											return label.includes("数量")
 												? [formatDecimal(Number(value), 0), label]
-												: [`$${formatDecimal(Number(value), 0)}/t`, label];
+												: [`${chartSymbol}${formatDecimal(Number(value), 0)}/t`, label];
 										}}
 									/>
 									<Legend wrapperStyle={{ fontSize: 12 }} />
@@ -223,8 +236,8 @@ export function TradeFlowsCard() {
 									/>
 									<Line
 										yAxisId="price"
-										dataKey="unitPriceUsdPerT"
-										name="FOB 均价（USD/吨）"
+										dataKey="unitPricePerT"
+										name={`FOB 均价（${chartSymbol}/吨）`}
 										stroke="#2563EB"
 										strokeWidth={2}
 										dot={false}
@@ -243,8 +256,8 @@ export function TradeFlowsCard() {
 								<th className="text-left">期间</th>
 								<th className="text-right">数量（吨）</th>
 								<th className="text-right">数量环比</th>
-								<th className="text-right">金额（百万 USD）</th>
-								<th className="text-right">FOB 均价（USD/吨）</th>
+								<th className="text-right">金额（百万）</th>
+								<th className="text-right">FOB 均价</th>
 								<th className="text-right">均价环比</th>
 								<th className="text-left">口径</th>
 							</tr>
@@ -268,15 +281,20 @@ export function TradeFlowsCard() {
 									<td className="text-right">
 										<MoM pct={f.qtyMomPct} />
 									</td>
-									<td className="text-right font-mono">{formatDecimal(f.latest.valueUsdM, 0)}</td>
 									<td className="text-right font-mono">
-										{formatDecimal(f.latest.unitPriceUsdPerT, 0)}
+										{formatDecimal(f.latest.valueM, f.latest.valueM < 10 ? 1 : 0)} M
+										{f.currency === "EUR" ? "€" : "$"}
+									</td>
+									<td className="text-right font-mono">
+										{f.currency === "EUR" ? "€" : "$"}
+										{formatDecimal(f.latest.unitPricePerT, 0)}/t
 									</td>
 									<td className="text-right">
 										<MoM pct={f.momPct} />
 									</td>
 									<td className="text-xs text-gray-500">
 										{f.freq === "M" ? "月度 FOB" : "年度 FOB"}
+										{f.currency === "EUR" ? "·EUR" : ""}
 									</td>
 								</tr>
 							))}
@@ -312,7 +330,7 @@ export function TradeFlowsCard() {
 											<td>{COUNTRY_LABELS[c.country] ?? c.country}</td>
 											<td className="text-right font-mono">{formatDecimal(c.latest.qtyTons, 0)}</td>
 											<td className="text-right font-mono">
-												{formatDecimal(c.latest.unitPriceUsdPerT, 0)}
+												{formatDecimal(c.latest.unitPricePerT, 0)}
 											</td>
 										</tr>
 									))}

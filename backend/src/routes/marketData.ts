@@ -6,7 +6,7 @@ import { success } from "@/lib/response";
 import { type AuthenticatedRequest, authenticate, authorize } from "@/middleware/auth";
 import { cacheRoute } from "@/middleware/cacheDecorator";
 import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
-import { stalenessWindowDays } from "@/services/cadence";
+import { stalenessWindowDaysForSeries } from "@/services/cadence";
 import { scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import { HS_CODES } from "@/services/dataIngestion/sources/comtradeMirror";
@@ -198,7 +198,11 @@ router.get(
 						prevPointChangePct,
 						wowChangePct,
 						momChangePct: interval === "monthly" ? prevPointChangePct : null,
-						stale: ageDays > stalenessWindowDays(interval),
+						// Publication-rhythm aware (round-158 批C): FX H.10 rows are
+						// weekly-batched, so the plain 7d daily window flagged healthy
+						// FX as 数据滞后 on this surface too — same override as
+						// /commodities/freshness so both faces agree.
+						stale: ageDays > stalenessWindowDaysForSeries(interval, slug),
 						series: points,
 					};
 				} catch {
@@ -414,6 +418,13 @@ router.get(
 				label: "UN Comtrade Mirror",
 				description:
 					"UN Comtrade 公共预览 API — 分国别×HS×月度对华出口量价（出口国 FOB 镜像 + 中国年度 CIF 校准，V8 批0）",
+				tier: "3",
+				beefRelevance: "adjacent",
+			},
+			comext_eu: {
+				label: "Eurostat Comext EU",
+				description:
+					"Eurostat Comext DS-045409 — 欧盟输华批准国（IE/NL/FR/PL）月度 CN8 级对华量价（FOB-EUR 口径，与美元镜像并列不合并）",
 				tier: "3",
 				beefRelevance: "adjacent",
 			},
