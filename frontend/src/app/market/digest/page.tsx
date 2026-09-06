@@ -155,7 +155,7 @@ export default function MarketDigestPage() {
 			<PageHeader
 				title="今日牛肉国际行情"
 				description="全球牛肉基准、活牛期货与主要汇率——国际公开源序列自动聚合，每日更新，全部数字可溯源"
-				breadcrumbs={[{ label: "Home", href: "/landing" }, { label: "行情摘要" }]}
+				breadcrumbs={[{ label: "首页", href: "/landing" }, { label: "行情摘要" }]}
 			/>
 
 			{error && <ErrorDisplay error={error} />}

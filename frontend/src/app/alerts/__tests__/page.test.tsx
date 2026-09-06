@@ -116,11 +116,11 @@ describe("AlertList", () => {
 		// animation is skipped (non-native rAF detected) so the final value
 		// is rendered synchronously.
 		await waitFor(() => {
-			expect(screen.getByText("Total Alerts")).toBeInTheDocument();
+			expect(screen.getByText("告警总数")).toBeInTheDocument();
 			expect(screen.getByText("15")).toBeInTheDocument();
-			expect(screen.getByText("Unread")).toBeInTheDocument();
-			expect(screen.getByText("Errors")).toBeInTheDocument();
-			expect(screen.getByText("Warnings")).toBeInTheDocument();
+			expect(screen.getByText("未读")).toBeInTheDocument();
+			expect(screen.getByText("错误")).toBeInTheDocument();
+			expect(screen.getByText("警告")).toBeInTheDocument();
 		});
 	});
 
@@ -141,7 +141,7 @@ describe("AlertList", () => {
 		// Should show the designed empty state after error (batch B3: an empty
 		// list with no active filters renders EmptyState, not the filter banner)
 		await waitFor(() => {
-			expect(screen.getByText("No alerts yet")).toBeInTheDocument();
+			expect(screen.getByText("暂无告警")).toBeInTheDocument();
 		});
 	});
 
@@ -164,7 +164,7 @@ describe("AlertList", () => {
 		render(<AlertList />);
 
 		await waitFor(() => {
-			expect(screen.getByText("No alerts yet")).toBeInTheDocument();
+			expect(screen.getByText("暂无告警")).toBeInTheDocument();
 		});
 	});
 });

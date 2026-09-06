@@ -25,7 +25,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 	showBackButton = false,
 }) => {
 	const items = showBackButton
-		? [{ label: "Home", href: "/" }, ...(breadcrumbs || [])]
+		? [{ label: "首页", href: "/" }, ...(breadcrumbs || [])]
 		: breadcrumbs;
 
 	return (

@@ -151,10 +151,7 @@ export default function BeefOverview() {
 	if (isLoading) {
 		return (
 			<PageContainer>
-				<PageHeader
-					title="Beef Market Intelligence"
-					description="Factory-level and cut-level beef trading data across global markets"
-				/>
+				<PageHeader title="牛肉行情" description="全球市场的工厂级与部位级牛肉交易数据" />
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 					{[1, 2, 3, 4].map((i) => (
 						<div key={i} className="h-24 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
@@ -171,10 +168,7 @@ export default function BeefOverview() {
 	if (pricesFailed && !isLoading) {
 		return (
 			<PageContainer>
-				<PageHeader
-					title="Beef Market Intelligence"
-					description="Factory-level and cut-level beef trading data across global markets"
-				/>
+				<PageHeader title="牛肉行情" description="全球市场的工厂级与部位级牛肉交易数据" />
 				<EmptyState
 					type="errors"
 					title="Unable to load beef data"
@@ -187,10 +181,7 @@ export default function BeefOverview() {
 	if (hasNoData) {
 		return (
 			<PageContainer>
-				<PageHeader
-					title="Beef Market Intelligence"
-					description="Factory-level and cut-level beef trading data across global markets"
-				/>
+				<PageHeader title="牛肉行情" description="全球市场的工厂级与部位级牛肉交易数据" />
 				<EmptyState
 					type="data"
 					title="No Beef Price Data Available"
@@ -215,8 +206,8 @@ export default function BeefOverview() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Beef Market Intelligence"
-				description="Factory-level and cut-level beef trading data across global markets"
+				title="牛肉行情"
+				description="全球市场的工厂级与部位级牛肉交易数据"
 				actions={
 					<div className="flex flex-wrap items-center gap-2">
 						<a
@@ -231,14 +222,14 @@ export default function BeefOverview() {
 							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 						>
 							<Factory className="size-4" />
-							Factories
+							工厂名录
 						</a>
 						<a
 							href="/beef/import"
 							className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 						>
 							<Upload className="size-4" />
-							Import Data
+							数据导入
 						</a>
 					</div>
 				}

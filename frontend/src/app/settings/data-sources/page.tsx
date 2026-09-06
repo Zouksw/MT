@@ -381,10 +381,10 @@ export default function DataSourcesPage() {
 		return (
 			<PageContainer>
 				<PageHeader
-					title="Data Sources"
-					description="Monitor and manage data pipeline health"
+					title="数据源"
+					description="监控与管理数据管道健康"
 					breadcrumbs={[
-						{ label: "Home", href: "/dashboard" },
+						{ label: "首页", href: "/dashboard" },
 						{ label: "Settings", href: "/settings" },
 						{ label: "Data Sources" },
 					]}
@@ -397,10 +397,10 @@ export default function DataSourcesPage() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Data Sources"
-				description="Monitor and manage data pipeline health"
+				title="数据源"
+				description="监控与管理数据管道健康"
 				breadcrumbs={[
-					{ label: "Home", href: "/dashboard" },
+					{ label: "首页", href: "/dashboard" },
 					{ label: "Settings", href: "/settings" },
 					{ label: "Data Sources" },
 				]}
@@ -427,37 +427,37 @@ export default function DataSourcesPage() {
 			<LoadingState loading={loading} skeletonType="stats">
 				<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
 					<StatCard
-						title="Total Sources"
+						title="注册源"
 						value={sources.length}
 						icon={<Database className="size-5" />}
 						variant="primary"
 					/>
 					<StatCard
-						title="Healthy (writing rows)"
+						title="健康（有写入）"
 						value={healthy}
 						icon={<CheckCircle className="size-5" />}
 						variant="success"
 					/>
 					<StatCard
-						title="Beef sources healthy"
+						title="牛肉源健康"
 						value={`${beefSourcesHealthy}/${beefDirectSources.length}`}
 						icon={<Beef className="size-5" />}
 						variant={beefSourcesHealthy > 0 ? "success" : "error"}
 					/>
 					<StatCard
-						title="Empty Runs"
+						title="空跑"
 						value={emptyRuns}
 						icon={<AlertCircle className="size-5" />}
 						variant={emptyRuns > 0 ? "warning" : "default"}
 					/>
 					<StatCard
-						title="Stale"
+						title="滞后"
 						value={staleSources.length}
 						icon={<Clock className="size-5" />}
 						variant={staleSources.length > 0 ? "warning" : "default"}
 					/>
 					<StatCard
-						title="Avg Success Rate"
+						title="平均成功率"
 						value={`${avgSuccessRate}%`}
 						icon={<Activity className="size-5" />}
 						variant={avgSuccessRate >= 90 ? "success" : avgSuccessRate >= 70 ? "warning" : "error"}
@@ -471,9 +471,8 @@ export default function DataSourcesPage() {
 					<div className="flex items-center gap-2">
 						<Clock className="size-4 text-amber-600 dark:text-amber-400" />
 						<span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-							{staleSources.length} source{staleSources.length > 1 ? "s" : ""}{" "}
-							{staleSources.length > 1 ? "need" : "needs"} attention:{" "}
-							{staleSources.map((s) => s.source).join(", ")}
+							{staleSources.length} 个数据源需关注：
+							{staleSources.map((s) => s.source).join("、")}
 						</span>
 					</div>
 				</div>
@@ -494,7 +493,7 @@ export default function DataSourcesPage() {
 			<LoadingState loading={loading} skeletonType="table">
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-sm font-medium">Source Status</CardTitle>
+						<CardTitle className="text-sm font-medium">数据源状态</CardTitle>
 					</CardHeader>
 					<CardBody className="p-0">
 						<div className="divide-y divide-border">
@@ -632,7 +631,7 @@ export default function DataSourcesPage() {
 						<CardBody>
 							<div className="flex items-center justify-between mb-4">
 								<div>
-									<h2 className="text-lg font-semibold">Commodity Freshness</h2>
+									<h2 className="text-lg font-semibold">商品新鲜度</h2>
 									<p className="text-xs text-muted-foreground mt-0.5">
 										Last price update per commodity — stale means no daily price in 7 days
 									</p>

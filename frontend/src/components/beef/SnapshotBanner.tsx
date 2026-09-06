@@ -34,9 +34,9 @@ interface SnapshotBannerProps {
 }
 
 function formatDate(iso: string | null | undefined): string {
-	if (!iso) return "an unknown date";
+	if (!iso) return "未知日期";
 	const d = new Date(iso);
-	if (Number.isNaN(d.getTime())) return "an unknown date";
+	if (Number.isNaN(d.getTime())) return "未知日期";
 	return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
@@ -48,8 +48,8 @@ export const SnapshotBanner: React.FC<SnapshotBannerProps> = ({ freshness }) => 
 
 	const dateStr = formatDate(freshness.latestDate);
 	const parts: string[] = [];
-	if (freshness.snapshotCount) parts.push(`${freshness.snapshotCount} snapshot`);
-	if (freshness.proxyCount) parts.push(`${freshness.proxyCount} proxy`);
+	if (freshness.snapshotCount) parts.push(`${freshness.snapshotCount} 条快照`);
+	if (freshness.proxyCount) parts.push(`${freshness.proxyCount} 条代理`);
 	const breakdown = parts.length ? ` (${parts.join(", ")})` : "";
 
 	return (
@@ -58,9 +58,8 @@ export const SnapshotBanner: React.FC<SnapshotBannerProps> = ({ freshness }) => 
 			<div className="text-sm flex-1">
 				<div className="flex items-center justify-between gap-2 flex-wrap">
 					<span>
-						<strong>Demo snapshot mode.</strong> Cut-level prices are frozen at{" "}
-						<strong>{dateStr}</strong>
-						{breakdown} — no live source is publishing right now.
+						<strong>演示快照模式。</strong>部位级价格冻结于 <strong>{dateStr}</strong>
+						{breakdown} —— 当前无实时数据源在发布。
 					</span>
 					<button
 						type="button"
@@ -68,16 +67,15 @@ export const SnapshotBanner: React.FC<SnapshotBannerProps> = ({ freshness }) => 
 						aria-expanded={expanded}
 						className="inline-flex items-center gap-1 text-xs font-medium text-warning hover:underline shrink-0"
 					>
-						{expanded ? "Less" : "Why?"}
+						{expanded ? "收起" : "为什么？"}
 						{expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
 					</button>
 				</div>
 				{expanded && (
 					<p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-						The full product experience (AI predictions per cut, alerts, real-time行情) is
-						functional and will activate automatically once a beef data source goes live (e.g. USDA
-						MARS or MLA API key configured). Until then every row below is labeled with its
-						provenance rather than passed off as live.
+						完整产品能力（部位级 AI 预测、告警、实时行情）均已就绪，一旦牛肉数据源上线 （如配置 USDA
+						MARS 或 MLA API key）即自动激活。在此之前，下方每一行都标注其数据来源，
+						绝不将快照数据冒充实时行情。
 					</p>
 				)}
 			</div>

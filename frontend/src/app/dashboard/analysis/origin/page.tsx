@@ -96,7 +96,7 @@ export default function OriginComparisonPage() {
 				title="产地对比"
 				description="Compare imported beef prices across origin countries — latest available date."
 				breadcrumbs={[
-					{ label: "Home", href: "/dashboard" },
+					{ label: "首页", href: "/dashboard" },
 					{ label: "分析", href: "/dashboard/analysis" },
 					{ label: "产地对比" },
 				]}

@@ -131,7 +131,7 @@ export default function MarketNewsList() {
 		return [
 			{
 				key: "title",
-				title: "Title",
+				title: "标题",
 				dataIndex: "title",
 				wrap: true,
 				render: (_value, record) => {
@@ -157,7 +157,7 @@ export default function MarketNewsList() {
 			},
 			{
 				key: "category",
-				title: "Category",
+				title: "类别",
 				dataIndex: "category",
 				width: 130,
 				render: (_value, record) => {
@@ -182,7 +182,7 @@ export default function MarketNewsList() {
 					]),
 			{
 				key: "publishedAt",
-				title: "Published",
+				title: "发布时间",
 				dataIndex: "publishedAt",
 				width: 140,
 				render: (value) => {
@@ -230,9 +230,9 @@ export default function MarketNewsList() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Market News"
-				description="Beef trade market dynamics, price moves, and policy updates"
-				breadcrumbs={[{ label: "Home", href: "/" }, { label: "资讯" }, { label: "Market News" }]}
+				title="市场动态"
+				description="牛肉贸易市场动态、价格波动与政策更新"
+				breadcrumbs={[{ label: "首页", href: "/" }, { label: "资讯" }, { label: "市场动态" }]}
 				actions={
 					<Button
 						variant="primary"
@@ -241,7 +241,7 @@ export default function MarketNewsList() {
 						onClick={() => router.push("/market-news/create")}
 					>
 						<Plus className="size-4 mr-1.5" />
-						{!isMobile && "New Article"}
+						{!isMobile && "新增文章"}
 					</Button>
 				}
 			/>
@@ -249,21 +249,21 @@ export default function MarketNewsList() {
 			{/* Stat cards — info/primary variants only (no directional green/red). */}
 			<div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
 				<StatCard
-					title="Total Articles"
+					title="文章总数"
 					value={totalArticles}
 					variant="primary"
 					icon={<Newspaper className="size-4" />}
 					loading={loading}
 				/>
 				<StatCard
-					title="Published"
+					title="已发布"
 					value={publishedCount}
 					variant="info"
 					icon={<FileText className="size-4" />}
 					loading={loading}
 				/>
 				<StatCard
-					title="This Week"
+					title="本周新增"
 					value={thisWeek}
 					variant="info"
 					icon={<Newspaper className="size-4" />}
@@ -285,7 +285,7 @@ export default function MarketNewsList() {
 					/>
 				</div>
 				<Input
-					placeholder="Search articles..."
+					placeholder="搜索文章…"
 					value={search}
 					onChange={(e) => {
 						setSearch(e.target.value);
@@ -302,7 +302,7 @@ export default function MarketNewsList() {
 					dataSource={data}
 					rowKey="id"
 					loading={loading}
-					emptyText="No articles yet"
+					emptyText="暂无文章"
 				/>
 
 				{/* Pagination */}
@@ -318,7 +318,7 @@ export default function MarketNewsList() {
 								disabled={page <= 1}
 								onClick={() => setPage((p) => Math.max(1, p - 1))}
 							>
-								Previous
+								上一页
 							</Button>
 							<span className="px-3 py-1 text-sm text-foreground">
 								Page {page} of {totalPages}
@@ -329,7 +329,7 @@ export default function MarketNewsList() {
 								disabled={page >= totalPages}
 								onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
 							>
-								Next
+								下一页
 							</Button>
 						</div>
 					</div>

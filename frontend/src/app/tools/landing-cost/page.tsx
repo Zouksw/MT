@@ -80,7 +80,7 @@ export default function LandingCostPage() {
 				title="进口成本计算器"
 				description="活序列基准价 × 你输入的关税/运费参数 → RMB/kg 到岸参考（输入可溯源、断流诚实降级）"
 				breadcrumbs={[
-					{ label: "Home", href: "/dashboard" },
+					{ label: "首页", href: "/dashboard" },
 					{ label: "牛肉行情", href: "/beef" },
 					{ label: "进口成本计算器" },
 				]}

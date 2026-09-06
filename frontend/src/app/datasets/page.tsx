@@ -195,9 +195,9 @@ export default function DatasetsList() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Datasets"
-				description="Manage your time series datasets"
-				breadcrumbs={[{ label: "Home", href: "/" }, { label: "Datasets" }]}
+				title="数据集"
+				description="管理你的时间序列数据集"
+				breadcrumbs={[{ label: "首页", href: "/" }, { label: "Datasets" }]}
 			/>
 
 			{/* Statistics */}

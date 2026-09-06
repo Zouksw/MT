@@ -63,7 +63,7 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 							<div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
 								<TriangleAlert className="size-4 text-error" />
 							</div>
-							<h5 className="text-base font-semibold mb-0!">Alert Distribution</h5>
+							<h5 className="text-base font-semibold mb-0!">告警分布</h5>
 						</div>
 						{total > 0 && (
 							<div className="flex items-baseline gap-1.5">

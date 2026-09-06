@@ -436,7 +436,7 @@ export default function PerformancePage() {
 	// the compiled CSS). Use literal strings so the scanner sees them.
 	const gapClass = isMobile ? "gap-2" : "gap-4";
 	const breadcrumbs = [
-		{ label: "Home", href: "/" },
+		{ label: "首页", href: "/" },
 		{ label: "Dashboard", href: "/dashboard" },
 		{ label: "Performance" },
 	];

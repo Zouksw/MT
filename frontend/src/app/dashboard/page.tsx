@@ -221,10 +221,10 @@ export default function DashboardPage() {
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
 						<div>
 							<h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground mb-1">
-								Welcome back, {user?.name || "User"}
+								欢迎回来，{user?.name || "User"}
 							</h1>
 							<p className="text-body text-muted-foreground">
-								Beef trade analytics at a glance — live prices, AI signals, and market movements.
+								牛肉贸易数据总览——实时价格、AI 信号与市场动态。
 							</p>
 						</div>
 						<div className="flex items-center gap-3">
@@ -233,7 +233,7 @@ export default function DashboardPage() {
 								onClick={handleLogout}
 								className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border hover:border-primary/40"
 							>
-								Sign out
+								退出登录
 							</button>
 							<div
 								className="flex items-center justify-center border-2 border-primary rounded-2xl bg-primary/10 text-primary overflow-hidden"
@@ -318,11 +318,11 @@ export default function DashboardPage() {
 											<table className="w-full text-sm">
 												<thead>
 													<tr className="text-left text-xs text-muted-foreground border-b">
-														<th className="px-5 py-2 font-medium">部位 Cut</th>
+														<th className="px-5 py-2 font-medium">部位</th>
 														<th className="px-3 py-2 font-medium text-left">产地</th>
 														<th className="px-5 py-2 font-medium text-right">今日价</th>
 														{hasCutForecasts && (
-															<th className="px-5 py-2 font-medium text-left">7d Forecast</th>
+															<th className="px-5 py-2 font-medium text-left">7 天预测</th>
 														)}
 													</tr>
 												</thead>
@@ -361,8 +361,7 @@ export default function DashboardPage() {
 								})()
 							) : (
 								<div className="p-8 text-center text-sm text-muted-foreground">
-									No beef cut prices yet. The hot-cuts table will populate once price data is
-									ingested.
+									暂无部位价格数据——价格数据入库后此表将自动填充。
 								</div>
 							)}
 						</div>
@@ -418,28 +417,28 @@ export default function DashboardPage() {
 						aria-atomic="true"
 					>
 						<StatCard
-							title="Factories"
+							title="工厂"
 							value={stats?.beef?.factories ?? 0}
 							icon={FACTORY_ICON}
 							variant="info"
 							loading={loading}
 						/>
 						<StatCard
-							title="Price Records"
+							title="价格记录"
 							value={formatCompact(stats?.beef?.prices ?? 0)}
 							icon={RECORDS_ICON}
 							variant="primary"
 							loading={loading}
 						/>
 						<StatCard
-							title="Datasets"
+							title="数据集"
 							value={stats?.datasets?.total ?? 0}
 							icon={DATASET_ICON}
 							variant="info"
 							loading={loading}
 						/>
 						<StatCard
-							title="Alerts"
+							title="告警"
 							value={stats?.alerts?.total || 0}
 							icon={ALERT_ICON}
 							trend={alertsTrend}
@@ -484,21 +483,20 @@ export default function DashboardPage() {
 										<div className="flex items-center gap-2 mb-1">
 											<TrendingUp className="size-[18px]" style={{ color: "#8B6914" }} />
 											<h3 className="text-h4 font-display font-semibold text-foreground mb-0">
-												AI Price Models
+												AI 价格模型
 											</h3>
 										</div>
 										<p className="text-body text-muted-foreground">
-											<span className="font-mono tabular-nums">{stats.aiModels.active}</span> of{" "}
-											<span className="font-mono tabular-nums">{stats.aiModels.total}</span> models
-											registered and online — consensus votes vary by series data
+											<span className="font-mono tabular-nums">{stats.aiModels.total}</span>{" "}
+											个模型已注册在线 · 共识票数随序列数据而定
 										</p>
 									</div>
 									<div className="flex items-center gap-4">
 										<div className="hidden sm:flex items-center gap-2">
 											{(
 												[
-													{ label: "Pretrained", family: stats.aiModels.pretrained },
-													{ label: "Statistical", family: stats.aiModels.statistical },
+													{ label: "预训练", family: stats.aiModels.pretrained },
+													{ label: "统计", family: stats.aiModels.statistical },
 												] as const
 											).map(
 												({ label, family }) =>
@@ -531,7 +529,7 @@ export default function DashboardPage() {
 											>
 												{stats.aiModels.active}
 											</div>
-											<p className="text-body-sm text-muted-foreground mt-1">Active Models</p>
+											<p className="text-body-sm text-muted-foreground mt-1">在线模型</p>
 										</div>
 									</div>
 								</div>

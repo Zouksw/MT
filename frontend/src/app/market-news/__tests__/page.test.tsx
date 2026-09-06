@@ -66,11 +66,11 @@ describe("MarketNewsList page", () => {
 
 	it("renders the page header and stat cards", () => {
 		render(<MarketNewsList />);
-		// "Market News" appears in both the PageHeader title and the breadcrumb.
-		expect(screen.getAllByText("Market News").length).toBeGreaterThan(0);
+		// "市场动态" appears in both the PageHeader title and the breadcrumb.
+		expect(screen.getAllByText("市场动态").length).toBeGreaterThan(0);
 		// Stat card labels
-		expect(screen.getByText("Total Articles")).toBeInTheDocument();
-		expect(screen.getByText("This Week")).toBeInTheDocument();
+		expect(screen.getByText("文章总数")).toBeInTheDocument();
+		expect(screen.getByText("本周新增")).toBeInTheDocument();
 	});
 
 	it("renders the article titles in the table", () => {

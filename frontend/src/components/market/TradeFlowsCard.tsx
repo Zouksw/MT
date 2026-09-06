@@ -79,11 +79,32 @@ interface ArFobTotal {
 	valueUsdM: number;
 }
 
+interface UyInacTotal {
+	period: string;
+	valueUsdM: number;
+}
+
+interface UyCutPoint {
+	period: string;
+	usdPerKg: number;
+}
+
+interface UyCutPrice {
+	key: string;
+	process: "frozen" | "chilled";
+	period: string;
+	usdPerKg: number;
+	tonnes: number;
+	history: UyCutPoint[];
+}
+
 interface TradeFlowsPayload {
 	hs: string;
 	flows: TradeFlowEntry[];
 	calibration: CalibrationEntry[];
 	arFobTotal: ArFobTotal | null;
+	uyInacTotal: UyInacTotal | null;
+	uyCuts: UyCutPrice[];
 	notes: string[];
 }
 
@@ -111,6 +132,20 @@ const COUNTRY_LABELS: Record<string, string> = {
 	FR: "法国",
 	PL: "波兰",
 	WORLD: "全球",
+};
+
+/** Uruguay cut-family slugs (INAC eDIAE n4 vocabulary) → zh labels. */
+const CUT_LABELS: Record<string, string> = {
+	carcass_bone_in: "胴体/四分体（带骨）",
+	carcass_boneless: "胴体/四分体（去骨）",
+	thin_cuts: "小件（胸/腱类）",
+	forequarter_bone_in: "前四分体带骨",
+	forequarter_boneless: "前四分体去骨",
+	hindquarter_bone_in: "后四分体带骨",
+	hindquarter_boneless: "后四分体去骨",
+	other_bone_in: "其他带骨",
+	other_boneless: "其他去骨",
+	generic: "通用（未分）",
 };
 
 function fmtPeriod(period: string) {
@@ -310,6 +345,14 @@ export function TradeFlowsCard() {
 					</p>
 				)}
 
+				{payload.uyInacTotal && (
+					<p className="mt-1 text-xs text-gray-500">
+						背景：乌拉圭 INAC 官方对华牛肉月度出口额——{fmtPeriod(payload.uyInacTotal.period)} 约{" "}
+						{formatDecimal(payload.uyInacTotal.valueUsdM, 0)} 百万美元（FOB，肉类族口径；eDIAE
+						无分国吨位，故不折均价）。
+					</p>
+				)}
+
 				{payload.calibration.length > 0 && (
 					<div className="mt-4">
 						<p className="mb-2 text-sm font-medium text-gray-700">
@@ -334,6 +377,44 @@ export function TradeFlowsCard() {
 											</td>
 										</tr>
 									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				)}
+
+				{payload.uyCuts && payload.uyCuts.length > 0 && (
+					<div className="mt-4">
+						<p className="mb-2 text-sm font-medium text-gray-700">
+							乌拉圭部位族 FOB（INAC eDIAE，全球口径·月度）
+						</p>
+						<div className="overflow-x-auto">
+							<table className="data-table">
+								<thead>
+									<tr>
+										<th className="text-left">部位族</th>
+										<th className="text-left">工艺</th>
+										<th className="text-left">期间</th>
+										<th className="text-right">FOB 均价（USD/kg）</th>
+										<th className="text-right">当月吨位</th>
+									</tr>
+								</thead>
+								<tbody>
+									{payload.uyCuts.map((c) => {
+										const [process, ...slugParts] = c.key.split("_");
+										const slug = slugParts.join("_");
+										return (
+											<tr key={c.key}>
+												<td>{CUT_LABELS[slug] ?? slug}</td>
+												<td className="text-xs text-gray-500">
+													{process === "chilled" ? "冷鲜" : "冷冻"}
+												</td>
+												<td className="text-xs text-gray-500">{c.period}</td>
+												<td className="text-right font-mono">{formatDecimal(c.usdPerKg, 2)}</td>
+												<td className="text-right font-mono">{formatDecimal(c.tonnes, 0)}</td>
+											</tr>
+										);
+									})}
 								</tbody>
 							</table>
 						</div>

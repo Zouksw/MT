@@ -186,14 +186,14 @@ export default function AIPredictPage() {
 			{permissionError && (
 				<Alert
 					variant="error"
-					title="AI Feature Access Restricted"
+					title="AI 功能访问受限"
 					closable
 					onClose={() => setPermissionError(null)}
 					className="mb-6"
 				>
 					{permissionError.includes("disabled")
-						? "AI features are currently disabled. Please contact your administrator to enable them."
-						: "AI prediction features are only available to administrators. If you are an administrator, please ensure you are logged in with your admin account."}
+						? "AI 功能当前已停用，请联系管理员开启。"
+						: "AI 预测功能仅对管理员开放。如果你是管理员，请使用管理员账号登录。"}
 				</Alert>
 			)}
 

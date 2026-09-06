@@ -84,7 +84,7 @@ export default function TimeseriesCreate() {
 			<PageHeader
 				title="Create Time Series"
 				breadcrumbs={[
-					{ label: "Home", href: "/" },
+					{ label: "首页", href: "/" },
 					{ label: "Time Series", href: "/timeseries" },
 					{ label: "Create" },
 				]}

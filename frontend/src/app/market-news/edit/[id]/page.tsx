@@ -65,7 +65,7 @@ export default function EditNewsPage() {
 				title="Edit Article"
 				description="Update an existing market dynamics article"
 				breadcrumbs={[
-					{ label: "Home", href: "/" },
+					{ label: "首页", href: "/" },
 					{ label: "资讯", href: "/market-news" },
 					{ label: "Market News", href: "/market-news" },
 					{ label: "Edit" },

@@ -117,6 +117,28 @@ function makePayload(hs: string, opts: { monthlyHistory?: boolean } = {}) {
 				},
 			],
 			arFobTotal: { period: "2026-06", valueUsdM: 210.5 },
+			uyInacTotal: { period: "2026-07", valueUsdM: 67.5 },
+			uyCuts: [
+				{
+					key: "frozen_hindquarter_boneless",
+					process: "frozen",
+					period: "2026-07",
+					usdPerKg: 8.94,
+					tonnes: 3711,
+					history: [
+						{ period: "2026-05", usdPerKg: 8.6 },
+						{ period: "2026-06", usdPerKg: 8.7 },
+					],
+				},
+				{
+					key: "chilled_forequarter_boneless",
+					process: "chilled",
+					period: "2026-07",
+					usdPerKg: 12.53,
+					tonnes: 758,
+					history: [],
+				},
+			],
 			notes: ["月度线为出口国报送的 FOB 镜像口径。", "两口径并列展示、绝不合并。"],
 		},
 	};
@@ -166,6 +188,14 @@ describe("TradeFlowsCard", () => {
 		// AR all-destinations FOB context line.
 		expect(screen.getByText(/阿根廷肉类月度出口总额/)).toBeInTheDocument();
 		expect(screen.getByText(/非对华流量/)).toBeInTheDocument();
+
+		// round-162: Uruguay INAC to-China value context + cut-family table.
+		expect(screen.getByText(/乌拉圭 INAC 官方对华牛肉月度出口额/)).toBeInTheDocument();
+		expect(screen.getByText(/乌拉圭部位族 FOB/)).toBeInTheDocument();
+		expect(screen.getByText("后四分体去骨")).toBeInTheDocument();
+		expect(screen.getByText("冷冻")).toBeInTheDocument();
+		expect(screen.getByText("冷鲜")).toBeInTheDocument();
+		expect(screen.getAllByText("2026-07").length).toBeGreaterThan(0);
 
 		// 口径注记 footer stays mandatory.
 		expect(screen.getByText(/绝不合并/)).toBeInTheDocument();

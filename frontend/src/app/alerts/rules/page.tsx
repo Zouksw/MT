@@ -293,7 +293,7 @@ export default function AlertRules() {
 	];
 
 	const breadcrumbItems = [
-		{ label: "Home", href: "/" },
+		{ label: "首页", href: "/" },
 		{ label: "Alerts & Notifications", href: "/alerts" },
 		{ label: "Alert Rules" },
 	];

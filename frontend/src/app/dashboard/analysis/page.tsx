@@ -53,8 +53,8 @@ export default function AnalysisPage() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Correlation Analysis"
-				description="Pearson correlation between commodity prices. 30-day rolling window, UTC timezone alignment."
+				title="相关性分析"
+				description="商品价格皮尔逊相关性。30 天滚动窗口，UTC 时区对齐。"
 			/>
 
 			<div className="flex items-center justify-between mb-4">

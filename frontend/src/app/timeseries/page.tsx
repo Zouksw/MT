@@ -150,7 +150,7 @@ export default function TimeseriesList() {
 			},
 			{
 				key: "dataPoints",
-				title: "Data Points",
+				title: "数据点",
 				width: 120,
 				align: "right",
 				render: (_v: unknown, record: Record<string, unknown>) => {
@@ -164,7 +164,7 @@ export default function TimeseriesList() {
 			},
 			{
 				key: "anomalies",
-				title: "Anomalies",
+				title: "异常",
 				width: 100,
 				align: "center",
 				render: (_v: unknown, record: Record<string, unknown>) => {
@@ -217,25 +217,25 @@ export default function TimeseriesList() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Time Series"
-				description="Manage your time series data with real-time analytics"
-				breadcrumbs={[{ label: "Home", href: "/" }, { label: "Time Series" }]}
+				title="时间序列"
+				description="管理你的时间序列数据与实时分析"
+				breadcrumbs={[{ label: "首页", href: "/" }, { label: "Time Series" }]}
 				actions={
 					<Button
 						icon={<Plus className="size-3.5" />}
 						onClick={() => router.push("/timeseries/create")}
 					>
-						{!isMobile && "Create Time Series"}
+						{!isMobile && "创建时间序列"}
 					</Button>
 				}
 			/>
 
 			{/* Statistics */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-				<StatCard title="Total Time Series" value={totalTimeseries} />
-				<StatCard title="Data Points" value={totalDataPoints} />
-				<StatCard title="Anomalies" value={totalAnomalies} />
-				<StatCard title="Storage" value="-" />
+				<StatCard title="序列总数" value={totalTimeseries} />
+				<StatCard title="数据点" value={totalDataPoints} />
+				<StatCard title="异常" value={totalAnomalies} />
+				<StatCard title="存储" value="-" />
 			</div>
 
 			{/* Table */}
@@ -245,7 +245,7 @@ export default function TimeseriesList() {
 					dataSource={data}
 					rowKey="id"
 					loading={loading}
-					emptyText="No time series found"
+					emptyText="尚未创建任何时间序列"
 				/>
 			</div>
 

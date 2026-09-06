@@ -134,12 +134,12 @@ describe("AccuracyPage — honesty rendering", () => {
 				}),
 			];
 			const { container } = render(<AccuracyPage />);
-			// Both tags render; one Pretrained (chronos), one Statistical (baseline).
+			// Both tags render; one 预训练 (chronos), one 统计 (baseline).
 			const pretrainedTags = Array.from(container.querySelectorAll("*")).filter(
-				(el) => el.textContent === "Pretrained",
+				(el) => el.textContent === "预训练",
 			);
 			const statisticalTags = Array.from(container.querySelectorAll("*")).filter(
-				(el) => el.textContent === "Statistical",
+				(el) => el.textContent === "统计",
 			);
 			expect(pretrainedTags.length).toBe(1);
 			expect(statisticalTags.length).toBe(1);

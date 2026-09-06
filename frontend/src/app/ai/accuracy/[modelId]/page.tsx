@@ -61,7 +61,7 @@ export default function ModelDetailPage() {
 					title={displayName}
 					description="Model prediction accuracy details"
 					breadcrumbs={[
-						{ label: "Home", href: "/dashboard" },
+						{ label: "首页", href: "/dashboard" },
 						{ label: "Accuracy", href: "/ai/accuracy" },
 						{ label: displayName },
 					]}
@@ -82,7 +82,7 @@ export default function ModelDetailPage() {
 				title={displayName}
 				description="Model prediction accuracy details"
 				breadcrumbs={[
-					{ label: "Home", href: "/dashboard" },
+					{ label: "首页", href: "/dashboard" },
 					{ label: "Accuracy", href: "/ai/accuracy" },
 					{ label: displayName },
 				]}

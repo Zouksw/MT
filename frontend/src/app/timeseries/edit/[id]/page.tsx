@@ -114,7 +114,7 @@ export default function TimeseriesEdit({ params }: { params: Promise<{ id: strin
 			<PageHeader
 				title="Edit Time Series"
 				breadcrumbs={[
-					{ label: "Home", href: "/" },
+					{ label: "首页", href: "/" },
 					{ label: "Time Series", href: "/timeseries" },
 					{ label: "Edit" },
 				]}

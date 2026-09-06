@@ -21,7 +21,7 @@ export default function CreateNewsPage() {
 				title="New Article"
 				description="Publish a market dynamics article for the 资讯 feed"
 				breadcrumbs={[
-					{ label: "Home", href: "/" },
+					{ label: "首页", href: "/" },
 					{ label: "资讯", href: "/market-news" },
 					{ label: "Market News", href: "/market-news" },
 					{ label: "New" },

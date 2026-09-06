@@ -197,7 +197,7 @@ export default function AlertList() {
 	const columns: Column<AlertItem>[] = [
 		{
 			key: "status",
-			title: "Status",
+			title: "状态",
 			dataIndex: "isRead",
 			width: 80,
 			align: "center",
@@ -213,7 +213,7 @@ export default function AlertList() {
 		},
 		{
 			key: "type",
-			title: "Type",
+			title: "类型",
 			dataIndex: "type",
 			width: 160,
 			render: (type: unknown) => {
@@ -232,7 +232,7 @@ export default function AlertList() {
 		},
 		{
 			key: "severity",
-			title: "Severity",
+			title: "级别",
 			dataIndex: "severity",
 			width: 110,
 			align: "center",
@@ -318,9 +318,9 @@ export default function AlertList() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Alerts & Notifications"
-				description="View and manage system alerts, anomalies, and notifications"
-				breadcrumbs={[{ label: "Home", href: "/" }, { label: "Alerts & Notifications" }]}
+				title="告警中心"
+				description="查看与管理告警、异常与通知"
+				breadcrumbs={[{ label: "首页", href: "/" }, { label: "Alerts & Notifications" }]}
 				actions={
 					<div className="flex items-center gap-3">
 						<a
@@ -355,10 +355,10 @@ export default function AlertList() {
 			    (design-review round-160). The tabs above already carry the counts. */}
 			{stats && stats.total > 0 && (
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-					<StatCard title="Total Alerts" value={stats.total} />
-					<StatCard title="Unread" value={stats.unread} variant="primary" />
-					<StatCard title="Errors" value={stats.bySeverity.ERROR || 0} variant="error" />
-					<StatCard title="Warnings" value={stats.bySeverity.WARNING || 0} variant="warning" />
+					<StatCard title="告警总数" value={stats.total} />
+					<StatCard title="未读" value={stats.unread} variant="primary" />
+					<StatCard title="错误" value={stats.bySeverity.ERROR || 0} variant="error" />
+					<StatCard title="警告" value={stats.bySeverity.WARNING || 0} variant="warning" />
 				</div>
 			)}
 
@@ -366,9 +366,9 @@ export default function AlertList() {
 			<Card className="mb-4">
 				<CardBody>
 					<div className="flex flex-wrap items-center gap-3">
-						<span className="font-semibold text-foreground">Filter by:</span>
+						<span className="font-semibold text-foreground">筛选：</span>
 						<Select
-							placeholder="Type"
+							placeholder="类型"
 							value={filters.type}
 							onChange={(value) => setFilters({ ...filters, type: value || undefined })}
 							options={[
@@ -378,7 +378,7 @@ export default function AlertList() {
 							]}
 						/>
 						<Select
-							placeholder="Severity"
+							placeholder="级别"
 							value={filters.severity}
 							onChange={(value) => setFilters({ ...filters, severity: value || undefined })}
 							options={[
@@ -388,7 +388,7 @@ export default function AlertList() {
 							]}
 						/>
 						<Select
-							placeholder="Status"
+							placeholder="状态"
 							value={filters.unreadOnly ? "unread" : undefined}
 							onChange={(value) => setFilters({ ...filters, unreadOnly: value === "unread" })}
 							options={[{ value: "unread", label: "Unread Only" }]}
@@ -433,13 +433,13 @@ export default function AlertList() {
 						) : (
 							<EmptyState
 								type="alerts"
-								title={activeTab === "unread" ? "You're all caught up" : "No alerts yet"}
+								title={activeTab === "unread" ? "已全部读毕" : "暂无告警"}
 								description={
 									activeTab === "unread"
 										? "Every alert has been read. New anomalies and forecast signals will land here."
 										: "Alerts appear when price anomalies are detected or AI signals fire. Set up rules to get notified on your terms."
 								}
-								actionText="Set up alert rules"
+								actionText="设置告警规则"
 								onAction={() => _router.push("/alerts/rules")}
 							/>
 						)
@@ -450,7 +450,7 @@ export default function AlertList() {
 								dataSource={paginatedAlerts}
 								rowKey="id"
 								loading={loading}
-								emptyText="No alerts found"
+								emptyText="未找到告警"
 							/>
 
 							{/* Pagination */}

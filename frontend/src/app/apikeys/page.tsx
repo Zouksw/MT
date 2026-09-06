@@ -266,9 +266,9 @@ export default function ApiKeyList() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="API Keys"
-				description="Manage your API keys for programmatic access"
-				breadcrumbs={[{ label: "Home", href: "/" }, { label: "API Keys" }]}
+				title="API 密钥"
+				description="管理用于程序化访问的 API 密钥"
+				breadcrumbs={[{ label: "首页", href: "/" }, { label: "API Keys" }]}
 				actions={
 					<Button
 						variant="primary"
@@ -282,7 +282,7 @@ export default function ApiKeyList() {
 			/>
 
 			{/* Info alert */}
-			<Alert variant="info" title="API Keys" className="mb-6">
+			<Alert variant="info" title="API 密钥" className="mb-6">
 				API keys allow you to authenticate with the MT API programmatically. Keep them secure and
 				never share them publicly.
 			</Alert>

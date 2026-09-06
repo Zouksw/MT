@@ -181,7 +181,7 @@ export default function BeefForecastPage() {
 				title="牛肉价格预测"
 				description="IMF 月度基准的下月 AI 共识、滚动回测证据、验证时间线与上游期货"
 				breadcrumbs={[
-					{ label: "Home", href: "/dashboard" },
+					{ label: "首页", href: "/dashboard" },
 					{ label: "牛肉行情", href: "/beef" },
 					{ label: "AI 预测" },
 				]}

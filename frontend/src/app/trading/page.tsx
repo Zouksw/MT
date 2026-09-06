@@ -41,8 +41,8 @@ function TradingPageInner() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Market Intelligence"
-				description="AI-powered commodity price forecasting and market analysis"
+				title="价格走势"
+				description="AI 驱动的商品价格预测与市场分析"
 				actions={
 					<div className="flex items-center gap-2">
 						<button

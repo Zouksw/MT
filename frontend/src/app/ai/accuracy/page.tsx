@@ -302,7 +302,7 @@ const columns = [
 						{record.displayName}
 					</Link>
 					<Tag color={primary ? "primary" : "default"} className="w-fit text-[10px]">
-						{primary ? "Pretrained" : "Statistical"}
+						{primary ? "预训练" : "统计"}
 					</Tag>
 				</div>
 			);
@@ -319,14 +319,14 @@ const columns = [
 	},
 	{
 		key: "directionHitRate",
-		title: "Direction",
+		title: "方向命中",
 		dataIndex: "directionHitRate" as const,
 		align: "right" as const,
 		render: (_value: unknown, record: ModelWithBacktest) => <DirectionCell model={record} />,
 	},
 	{
 		key: "lastVerifiedAt",
-		title: "Last Verified",
+		title: "最近验证",
 		dataIndex: "lastVerifiedAt" as const,
 		render: (value: unknown) => (
 			<FreshnessBadge date={value as string | null | undefined} compact />
@@ -334,14 +334,14 @@ const columns = [
 	},
 	{
 		key: "trend",
-		title: "Trend",
+		title: "趋势",
 		render: (_value: unknown, record: ModelWithBacktest) => (
 			<TrendIcon trend={record.backtest?.trend || "insufficient_data"} />
 		),
 	},
 	{
 		key: "predictionCount",
-		title: "Predictions",
+		title: "预测次数",
 		dataIndex: "predictionCount" as const,
 		align: "right" as const,
 		render: (value: number) => (
@@ -375,9 +375,9 @@ export default function AccuracyPage() {
 		return (
 			<PageContainer>
 				<PageHeader
-					title="Prediction Accuracy"
-					description="Monitor AI model performance and prediction accuracy over time"
-					breadcrumbs={[{ label: "Home", href: "/dashboard" }, { label: "Accuracy" }]}
+					title="模型准确率"
+					description="持续追踪 AI 模型表现与预测准确率"
+					breadcrumbs={[{ label: "首页", href: "/dashboard" }, { label: "模型准确率" }]}
 				/>
 				<ErrorDisplay error={error} retry={retry} context="accuracy data" />
 			</PageContainer>
@@ -387,34 +387,34 @@ export default function AccuracyPage() {
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Prediction Accuracy"
-				description="Monitor AI model performance and prediction accuracy over time"
-				breadcrumbs={[{ label: "Home", href: "/dashboard" }, { label: "Accuracy" }]}
+				title="模型准确率"
+				description="持续追踪 AI 模型表现与预测准确率"
+				breadcrumbs={[{ label: "首页", href: "/dashboard" }, { label: "模型准确率" }]}
 			/>
 
 			<LoadingState loading={loading} skeletonType="stats">
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 					<StatCard
-						title="Avg MAPE — All Models"
+						title="平均 MAPE · 全模型"
 						value={overallAccuracy !== null ? Number(overallAccuracy.toFixed(1)) : "--"}
 						suffix={overallAccuracy !== null ? "%" : undefined}
 						icon={<Target className="size-5" />}
 						variant="primary"
 					/>
 					<StatCard
-						title="Best Model"
+						title="最优模型"
 						value={bestModel?.displayName ?? "--"}
 						icon={<Trophy className="size-5" />}
 						variant="default"
 					/>
 					<StatCard
-						title="Total Predictions"
+						title="预测总数"
 						value={totalPredictions}
 						icon={<BarChart3 className="size-5" />}
 						variant="default"
 					/>
 					<StatCard
-						title="Verified"
+						title="已验证"
 						value={totalVerified}
 						icon={<CircleCheck className="size-5" />}
 						variant="success"
@@ -442,13 +442,13 @@ export default function AccuracyPage() {
 								columns={columns}
 								dataSource={models}
 								rowKey="modelId"
-								emptyText="No models with accuracy data"
+								emptyText="暂无带准确率数据的模型"
 							/>
 						) : (
 							<div className="py-12">
 								<EmptyState
 									type="data"
-									title="No accuracy data yet"
+									title="暂无准确率数据"
 									description="Prediction accuracy will appear here once models have generated and verified predictions."
 								/>
 							</div>

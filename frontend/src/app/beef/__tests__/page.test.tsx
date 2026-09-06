@@ -88,7 +88,7 @@ describe("BeefOverview page", () => {
 				cuts: LOADING_RETURN,
 			});
 			render(<BeefOverview />);
-			expect(screen.getByText("Beef Market Intelligence")).toBeInTheDocument();
+			expect(screen.getByText("牛肉行情")).toBeInTheDocument();
 			// Skeleton placeholders use animate-pulse — 4 stat cards + chart areas.
 			expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
 		});
@@ -140,7 +140,7 @@ describe("BeefOverview page", () => {
 			});
 			render(<BeefOverview />);
 			// The page header + price table must render (not the empty state).
-			expect(screen.getByText("Beef Market Intelligence")).toBeInTheDocument();
+			expect(screen.getByText("牛肉行情")).toBeInTheDocument();
 			expect(screen.queryByText("No Beef Price Data Available")).not.toBeInTheDocument();
 		});
 	});

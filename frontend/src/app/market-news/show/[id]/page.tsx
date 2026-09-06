@@ -100,7 +100,7 @@ export default function NewsDetailPage() {
 				title={article.title}
 				description={article.summary}
 				breadcrumbs={[
-					{ label: "Home", href: "/" },
+					{ label: "首页", href: "/" },
 					{ label: "资讯", href: "/market-news" },
 					{ label: "Market News", href: "/market-news" },
 					{ label: article.category },
