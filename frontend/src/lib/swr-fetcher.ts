@@ -8,6 +8,7 @@
  */
 import { apiFetch } from "./apiFetch";
 
+// biome-ignore lint/suspicious/noExplicitAny: return type stays open so useSWR<T> generics infer at ~20 call sites (see doc comment above)
 export async function swrFetcher(url: string): Promise<any> {
 	return apiFetch(url);
 }

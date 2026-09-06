@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/apiFetch";
 
 /** Default generic mirrors the historical untyped contract (Promise<any>)
  * so the beef pages' untyped call sites keep their `.data` access. */
+// biome-ignore lint/suspicious/noExplicitAny: deliberate historical default — retyping call sites is wave-10 batch-2 scope
 export async function beefFetcher<T = any>(url: string): Promise<T> {
 	return apiFetch<T>(url);
 }

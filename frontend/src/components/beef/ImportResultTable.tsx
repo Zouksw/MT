@@ -69,8 +69,7 @@ export function ImportResultTable({ result }: ImportResultTableProps) {
 							</thead>
 							<tbody>
 								{errors.map((err, i) => (
-									// row numbers can repeat if the DB batch rolls back; include index
-									// in key to stay stable.
+									// biome-ignore lint/suspicious/noArrayIndexKey: row numbers can repeat if the DB batch rolls back; the index keeps composite keys unique
 									<tr key={`${err.row}-${i}`}>
 										<td className="font-mono text-sm">{err.row}</td>
 										<td className="text-sm text-muted-foreground">{err.message}</td>

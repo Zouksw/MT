@@ -16,7 +16,6 @@ import { comtradeMirrorScraper } from "./sources/comtradeMirror";
 import { dceFuturesScraper } from "./sources/dceFutures";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
-import { inacScraper } from "./sources/inacData"; // dormant — see decommission note in registerAllScrapers
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";

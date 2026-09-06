@@ -86,7 +86,7 @@ function makeFetchResult(overrides: Partial<FetchResult> = {}): FetchResult {
 // hook reordering (no call-order dependence).
 // biome-ignore lint/suspicious/noExplicitAny: third-party library type
 function mockByKey(byKey: Record<string, any>) {
-	mockUseRetryableFetch.mockImplementation((key: any) => {
+	mockUseRetryableFetch.mockImplementation((key: unknown) => {
 		const url = String(key ?? "");
 		const matched = Object.entries(byKey).find(([k]) => url.includes(k));
 		return makeFetchResult({ data: matched ? matched[1] : { total: 0, data: [] } });
@@ -195,8 +195,7 @@ describe("useDashboardStats", () => {
 	it("should count alerts by severity correctly", async () => {
 		// Key-indexed mock so the alerts payload is returned regardless of
 		// call ordering (was: callCount === 4, fragile to hook reordering).
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
+		mockUseRetryableFetch.mockImplementation((key: unknown) => {
 			const url = String(key ?? "");
 			if (url.includes("/alerts?page=1&limit=100")) {
 				return makeFetchResult({
@@ -236,8 +235,7 @@ describe("useDashboardStats", () => {
 		// the limit=100 call already returns. It must slice the first 5 from
 		// the one response instead — one alerts request per dashboard load.
 		// Key-indexed mock so payloads land regardless of call order.
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
+		mockUseRetryableFetch.mockImplementation((key: unknown) => {
 			const url = String(key ?? "");
 			if (url.includes("/alerts?page=1&limit=100")) {
 				return makeFetchResult({
@@ -358,8 +356,7 @@ describe("useDashboardStats", () => {
 		// crashing /dashboard into the error boundary. The models fetch is
 		// auxiliary now: when it fails, stats must still build (0 models) and
 		// the hook must NOT surface it as a dashboard error.
-		// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-		mockUseRetryableFetch.mockImplementation((key: any) => {
+		mockUseRetryableFetch.mockImplementation((key: unknown) => {
 			const url = String(key ?? "");
 			if (url.includes("/inference/models")) {
 				return makeFetchResult({ data: undefined, error: new Error("HTTP error! status: 404") });

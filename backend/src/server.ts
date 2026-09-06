@@ -488,7 +488,7 @@ function start(): void {
 // a full stack trace so operators can diagnose the root cause, then exit
 // cleanly (PM2 restarts the process). We do NOT swallow — swallowing hides
 // bugs and can leave the process in an inconsistent state.
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason, _promise) => {
 	logger.error("[FATAL] Unhandled Promise rejection — process will exit", {
 		reason: reason instanceof Error ? reason.message : String(reason),
 		stack: reason instanceof Error ? reason.stack : undefined,

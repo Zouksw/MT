@@ -1,11 +1,10 @@
 "use client";
 
 import { TrendingUp } from "lucide-react";
-import dynamic from "next/dynamic";
-import type React from "react";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { apiFetch } from "@/lib/apiFetch";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
 
 /**
  * Embedded commodity price chart for the news detail page.
@@ -21,28 +20,9 @@ import { apiFetch } from "@/lib/apiFetch";
  * stays readable even if the price fetch breaks.
  */
 
-// Dynamic recharts imports (ssr:false — recharts needs the DOM).
-// biome-ignore lint/suspicious/noExplicitAny: recharts types are incompatible across dynamic() — same pattern as charts/PredictionChart.tsx.
-const AreaChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.AreaChart })), {
-	ssr: false,
-}) as React.ComponentType<any>;
-const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), {
-	ssr: false,
-}) as React.ComponentType<any>;
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), {
-	ssr: false,
-}) as React.ComponentType<any>;
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), {
-	ssr: false,
-}) as React.ComponentType<any>;
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), {
-	ssr: false,
-}) as React.ComponentType<any>;
-const ResponsiveContainer = dynamic(
-	() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })),
-	{ ssr: false },
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-) as React.ComponentType<any>;
+// Lazy recharts primitives via the shared module (ssr:false — recharts needs
+// the DOM); keeps this file free of the per-component dynamic() boilerplate.
+const { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } = dynamicRecharts();
 
 interface PricePoint {
 	date: string;
@@ -179,8 +159,10 @@ export function CommodityPriceChart({
 									border: "1px solid var(--border)",
 									background: "var(--popover)",
 								}}
-								labelFormatter={(d: string) => new Date(d).toLocaleDateString()}
-								formatter={(v: number) => [`$${Number(v).toFixed(2)}`, "Close"]}
+								labelFormatter={(d) =>
+									typeof d === "string" ? new Date(d).toLocaleDateString() : String(d)
+								}
+								formatter={(v) => [`$${Number(v).toFixed(2)}`, "Close"]}
 							/>
 							<Area
 								type="monotone"

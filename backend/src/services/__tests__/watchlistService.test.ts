@@ -137,7 +137,7 @@ describe("watchlistService — ownership enforcement", () => {
 	it("addWatchlistItem by non-owner throws NotFound", async () => {
 		const wl = await makeList(ownerId, "mine");
 		const commodity = await prisma.commodity.findFirst({});
-		await expect(addWatchlistItem(wl.id, otherUserId, commodity!.id)).rejects.toThrow(
+		await expect(addWatchlistItem(wl.id, otherUserId, commodity?.id)).rejects.toThrow(
 			NotFoundError,
 		);
 	});
@@ -146,9 +146,9 @@ describe("watchlistService — ownership enforcement", () => {
 		const wl = await makeList(ownerId, "mine");
 		const commodity = await prisma.commodity.findFirst({});
 		await prisma.watchlistItem.create({
-			data: { watchlistId: wl.id, commodityId: commodity!.id },
+			data: { watchlistId: wl.id, commodityId: commodity?.id },
 		});
-		await expect(removeWatchlistItem(wl.id, otherUserId, commodity!.id)).rejects.toThrow(
+		await expect(removeWatchlistItem(wl.id, otherUserId, commodity?.id)).rejects.toThrow(
 			NotFoundError,
 		);
 	});
@@ -171,13 +171,13 @@ describe("watchlistService — ownership enforcement", () => {
 		const wl = await makeList(ownerId, "with-item");
 		const commodity = await prisma.commodity.findFirst({});
 		await prisma.watchlistItem.create({
-			data: { watchlistId: wl.id, commodityId: commodity!.id },
+			data: { watchlistId: wl.id, commodityId: commodity?.id },
 		});
 		// Must not throw; structure must be correct regardless of whether the
 		// commodity has price rows.
 		const quotes = await getWatchlistQuotes(wl.id, ownerId);
 		expect(quotes).toHaveLength(1);
-		expect(quotes[0]).toHaveProperty("commodityId", commodity!.id);
+		expect(quotes[0]).toHaveProperty("commodityId", commodity?.id);
 		expect(quotes[0]).toHaveProperty("price");
 		expect(quotes[0]).toHaveProperty("changePercent");
 	});
@@ -190,7 +190,7 @@ describe("watchlistService — ownership enforcement", () => {
 		expect(brl).toBeTruthy();
 		const wl = await makeList(ownerId, "brl-source");
 		await prisma.watchlistItem.create({
-			data: { watchlistId: wl.id, commodityId: brl!.id },
+			data: { watchlistId: wl.id, commodityId: brl?.id },
 		});
 		const quotes = await getWatchlistQuotes(wl.id, ownerId);
 		expect(quotes).toHaveLength(1);
@@ -209,14 +209,14 @@ describe("watchlistService — ownership enforcement", () => {
 		expect(brl).toBeTruthy();
 		const wl = await makeList(ownerId, "brl-list-source");
 		await prisma.watchlistItem.create({
-			data: { watchlistId: wl.id, commodityId: brl!.id },
+			data: { watchlistId: wl.id, commodityId: brl?.id },
 		});
 		const lists = await listWatchlists(ownerId);
 		const target = lists.find((l) => l.id === wl.id);
 		expect(target).toBeDefined();
-		const item = target!.items.find((it) => it.commodityId === brl!.id);
+		const item = target?.items.find((it) => it.commodityId === brl?.id);
 		expect(item).toBeDefined();
-		const price = item!.latestPrice;
+		const price = item?.latestPrice;
 		expect(price).not.toBeNull();
 		// fred scale (~5.0), NOT exchange_rate_api scale (~0.197).
 		expect(Number(price)).toBeGreaterThan(4);
@@ -260,10 +260,13 @@ describe("watchlistService — ownership enforcement", () => {
 
 		const lists = await listWatchlists(ownerId);
 		const item = lists
-			.find((l) => l.id === wl.id)!
-			.items.find((it) => it.commodityId === commodity.id)!;
-		// Raw-SQL numerics arrive as Prisma Decimal — compare numerically
-		// (same convention as the round-67 test below/above).
+			.find((l) => l.id === wl.id)
+			?.items.find((it) => it.commodityId === commodity.id);
+		// Found-or-fail keeps the numeric assertions below assertion-free
+		// (biome noNonNullAssertion); raw-SQL numerics arrive as Prisma
+		// Decimal — compare numerically (round-67 convention).
+		expect(item).toBeDefined();
+		if (!item) return;
 		expect(Number(item.latestPrice)).toBe(110);
 		expect(item.latestDate).toEqual(new Date("2026-07-01T00:00:00Z"));
 	});

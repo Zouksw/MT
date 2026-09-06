@@ -173,7 +173,8 @@ export const CutForecastSection: React.FC<CutForecastSectionProps> = ({
 		);
 	}
 
-	const f = resp.forecast!;
+	const f = resp.forecast;
+	if (!f) return null; // unreachable when forecastable — honest narrowing, no assertion
 	const cfg = directionConfig[f.direction];
 	const DirectionIcon = cfg.icon;
 	const tier = confidenceTier(f.confidence);

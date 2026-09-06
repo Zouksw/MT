@@ -35,7 +35,6 @@ export function stalenessWindowDays(interval: string): number {
 			return 90;
 		case "weekly":
 			return 21;
-		case "daily":
 		default:
 			return 7;
 	}
@@ -72,7 +71,6 @@ export function accuracyWindowDays(interval: string): number {
 			return 180;
 		case "weekly":
 			return 90;
-		case "daily":
 		default:
 			return 30;
 	}

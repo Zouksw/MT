@@ -65,7 +65,7 @@ export function useRetryableFetch<T = unknown>(
 				const delay = getDelay(retryCount);
 
 				if (process.env.NODE_ENV === "development") {
-					console.log(
+					console.warn(
 						`[useRetryableFetch] Retry ${retryCount + 1}/${maxRetries} after ${delay}ms for ${key}:`,
 						safeError.message,
 					);
@@ -90,7 +90,7 @@ export function useRetryableFetch<T = unknown>(
 		onSuccess: () => {
 			if (retryCount > 0) {
 				if (process.env.NODE_ENV === "development") {
-					console.log(`[useRetryableFetch] Success after ${retryCount} retries for ${key}`);
+					console.info(`[useRetryableFetch] Success after ${retryCount} retries for ${key}`);
 				}
 				setRetryCount(0);
 				setIsRetrying(false);

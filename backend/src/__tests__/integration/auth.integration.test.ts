@@ -9,7 +9,7 @@ import { PrismaClient } from "@prisma/client";
 // Build a minimal Express app with real routes + error handler
 import express from "express";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { errorHandler } from "@/middleware/errorHandler";
 import { authRouter } from "@/routes/auth";
 import { requireDb } from "@/test/helpers/testApp";

@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import type React from "react";
 import "@testing-library/jest-dom";
 
 // Mock the consensus hook so the page renders against controlled fixtures —

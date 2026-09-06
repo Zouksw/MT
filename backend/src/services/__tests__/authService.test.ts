@@ -70,9 +70,9 @@ vi.mock("@/lib", () => ({
 	// authService touches directly on top of jsonwebtoken.
 	jwtUtils: {
 		generateToken: (userId: string) =>
-			jwt.sign({ userId, jti: "jti-" + Math.random() }, SECRET, { expiresIn: "15m" }),
+			jwt.sign({ userId, jti: `jti-${Math.random()}` }, SECRET, { expiresIn: "15m" }),
 		generateRefreshToken: (userId: string) =>
-			jwt.sign({ userId, type: "refresh", jti: "jti-" + Math.random() }, SECRET, {
+			jwt.sign({ userId, type: "refresh", jti: `jti-${Math.random()}` }, SECRET, {
 				expiresIn: "7d",
 			}),
 		verifyToken: (token: string) => jwt.verify(token, SECRET),
@@ -91,9 +91,9 @@ vi.mock("@/lib", () => ({
 vi.mock("@/lib/jwt", () => ({
 	jwtUtils: {
 		generateToken: (userId: string) =>
-			jwt.sign({ userId, jti: "jti-" + Math.random() }, SECRET, { expiresIn: "15m" }),
+			jwt.sign({ userId, jti: `jti-${Math.random()}` }, SECRET, { expiresIn: "15m" }),
 		generateRefreshToken: (userId: string) =>
-			jwt.sign({ userId, type: "refresh", jti: "jti-" + Math.random() }, SECRET, {
+			jwt.sign({ userId, type: "refresh", jti: `jti-${Math.random()}` }, SECRET, {
 				expiresIn: "7d",
 			}),
 		verifyToken: (token: string) => jwt.verify(token, SECRET),

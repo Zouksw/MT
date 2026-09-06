@@ -211,7 +211,7 @@ export async function getDataHealth(windowDays = 3): Promise<DataHealthSnapshot>
 		d ? Math.floor((Date.now() - d.getTime()) / MS_PER_DAY) : null;
 	const isStale = (d: Date | null, interval: string) => {
 		if (!d) return true;
-		return daysSince(d)! > stalenessWindowDays(interval);
+		return Math.floor((Date.now() - d.getTime()) / MS_PER_DAY) > stalenessWindowDays(interval);
 	};
 
 	const [cutLatest, benchmarkLatest, coverageRows] = await Promise.all([

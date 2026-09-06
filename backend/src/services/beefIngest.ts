@@ -446,7 +446,7 @@ export async function bridgeBeefPrices(): Promise<BridgeResult> {
 				where: { slug },
 				select: { id: true, grade: true, originCountry: true, factoryCode: true },
 			});
-			if (!commodity || !commodity.factoryCode || !commodity.originCountry) {
+			if (!commodity?.factoryCode || !commodity?.originCountry) {
 				logger.debug(`[BEEF-BRIDGE] ${slug}: missing commodity/factory/origin — skipped`);
 				skipped++;
 				continue;
