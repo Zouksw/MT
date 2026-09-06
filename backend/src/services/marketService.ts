@@ -491,6 +491,20 @@ export interface TradeFlowEntry {
 	momPct: number | null;
 	qtyMomPct: number | null;
 	stale: boolean;
+	/** Most recent periods, oldest-first — the monthly volume/price series
+	 * behind `latest` for charting (round-155 批C; the rows were already
+	 * fetched, only the newest 2 were surfaced before). */
+	history: TradeFlowPoint[];
+}
+
+export interface ArFobTotal {
+	/** "YYYY-MM" of the observation month. */
+	period: string;
+	/** Argentina's monthly meat-rubro FOB exports, ALL destinations, USD
+	 * millions (SSPM 75.3 `export_fob_carnes`). AR has no monthly to-China
+	 * mirror (annual fallback lane only), so this is context, never a
+	 * to-China flow. */
+	valueUsdM: number;
 }
 
 export interface CalibrationEntry {
@@ -508,6 +522,8 @@ export interface CalibrationEntry {
 const MONTHLY_STALE_MONTHS = 3;
 /** Annual lanes land ~1 year in arrears; 2 missing years = stale. */
 const ANNUAL_STALE_YEARS = 2;
+/** Per-region history depth returned to the read side (round-155 批C). */
+const TRADE_HISTORY_POINTS = 24;
 
 type FactorRow = {
 	region: string | null;
@@ -535,9 +551,10 @@ export async function getTradeFlows(hs: string): Promise<{
 	hs: string;
 	flows: TradeFlowEntry[];
 	calibration: CalibrationEntry[];
+	arFobTotal: ArFobTotal | null;
 	notes: string[];
 }> {
-	const [mirrorRows, calibRows] = await Promise.all([
+	const [mirrorRows, calibRows, arRow] = await Promise.all([
 		prisma.marketFactor.findMany({
 			where: { type: `export_to_cn_${hs}` },
 			orderBy: { date: "desc" },
@@ -548,7 +565,21 @@ export async function getTradeFlows(hs: string): Promise<{
 			orderBy: { date: "desc" },
 			take: 100,
 		}),
+		// Argentina monthly FOB context (all destinations — the to-China
+		// monthly cross doesn't exist at this level, registered gap).
+		prisma.marketFactor.findFirst({
+			where: { type: "export_fob_carnes" },
+			orderBy: { date: "desc" },
+		}),
 	]);
+
+	const arFobTotal: ArFobTotal | null =
+		arRow && arRow.region === "AR→WORLD"
+			? {
+					period: arRow.date.toISOString().slice(0, 7),
+					valueUsdM: Math.round(Number(arRow.value) * 10) / 10,
+				}
+			: null;
 
 	const now = Date.now();
 	const byRegion = new Map<string, FactorRow[]>();
@@ -600,6 +631,7 @@ export async function getTradeFlows(hs: string): Promise<{
 			momPct,
 			qtyMomPct,
 			stale,
+			history: rows.slice(0, TRADE_HISTORY_POINTS).map(toPoint).reverse(),
 		});
 	}
 	// Monthly lanes first (newest data), then annual fallbacks.
@@ -630,6 +662,7 @@ export async function getTradeFlows(hs: string): Promise<{
 		hs,
 		flows,
 		calibration,
+		arFobTotal,
 		notes: [
 			"月度线为出口国报送的 FOB 镜像口径（巴西约滞后 1 个月，澳/新/美约 2 个月）；阿根廷/乌拉圭仅年度报送，缺失月份为未报送而非零值。",
 			"中国官方口径为年度 CIF（中国报送），与月度 FOB 镜像存在系统性差异（含运保费与时点），两口径并列展示、绝不合并。",

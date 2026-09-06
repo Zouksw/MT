@@ -28,6 +28,7 @@ function monthsAgo(n: number): Date {
 
 const MIRROR_TYPE = "export_to_cn_0202";
 const CALIB_TYPE = "import_cn_cif_0202";
+const AR_FOB_TYPE = "export_fob_carnes";
 // Router-relative paths (Express req.path inside a mounted router — the
 // full /api/market prefix is NOT part of the cache key; live-verified).
 const CACHE_KEYS = ["market:trade-flows:/trade-flows", "market:trade-flows:/trade-flows:hs=0202"];
@@ -37,8 +38,21 @@ beforeAll(async () => {
 	await requireDb("trade-flows routes");
 	adminToken = await getAdminToken(app);
 
+	// A previous run can leak its cache keys (see the del note in afterAll;
+	// TTL is 3600s) — clear here too, or this run reads a stale response
+	// shape (live-found round-155: a leaked old-shape key made the new
+	// `history` assertions fail).
+	try {
+		const r = await redis();
+		if (r) for (const key of CACHE_KEYS) await r.del(key);
+	} catch {
+		// Redis down — cacheRoute is best-effort too; tests proceed.
+	}
+
 	const prisma = getPrisma();
-	await prisma.marketFactor.deleteMany({ where: { type: { in: [MIRROR_TYPE, CALIB_TYPE] } } });
+	await prisma.marketFactor.deleteMany({
+		where: { type: { in: [MIRROR_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
+	});
 	await prisma.marketFactor.createMany({
 		data: [
 			{
@@ -85,6 +99,19 @@ beforeAll(async () => {
 				},
 			},
 			{
+				// Argentina monthly meat-rubro FOB, ALL destinations (context —
+				// no to-China monthly cross exists at this level). Value is
+				// already USD millions (unit "USD M").
+				type: AR_FOB_TYPE,
+				region: "AR→WORLD",
+				date: monthsAgo(2),
+				value: 210.534,
+				unit: "USD M",
+				source: "argentina_exports",
+				seriesKey: "",
+				metadata: { serie: "ica_carnes", dataset: "sspm-75.3" },
+			},
+			{
 				type: CALIB_TYPE,
 				region: "CN←BR",
 				date: new Date(new Date().getUTCFullYear() - 1, 0, 1),
@@ -105,10 +132,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	await getPrisma().marketFactor.deleteMany({ where: { type: { in: [MIRROR_TYPE, CALIB_TYPE] } } });
+	await getPrisma().marketFactor.deleteMany({
+		where: { type: { in: [MIRROR_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
+	});
 	try {
 		const r = await redis();
-		if (r) await r.del(...CACHE_KEYS);
+		// NOTE: del one key per call. node-redis 4.7.1's variadic form
+		// `del(k1, k2)` deletes only k1 (live-proven round-155 — the spread
+		// here had silently leaked the `hs=0202` key for its full 3600s TTL,
+		// which then served a stale response shape to the next run).
+		if (r) for (const key of CACHE_KEYS) await r.del(key);
 	} catch {
 		// Redis down — the key expires on its own TTL.
 	}
@@ -139,11 +172,18 @@ describe("GET /api/market/trade-flows", () => {
 		expect(br.latest.valueUsdM).toBeCloseTo(1069.2, 1);
 		// (6751.24 − 6400) / 6400 = 5.5%
 		expect(br.momPct).toBeCloseTo(5.5, 1);
+		// History (round-155 批C): oldest-first monthly series for charting.
+		expect(Array.isArray(br.history)).toBe(true);
+		expect(br.history.length).toBe(2);
+		expect(br.history[0].period).toBe("202605");
+		expect(br.history[1].period).toBe("202606");
+		expect(br.history[1].unitPriceUsdPerT).toBeCloseTo(6751.2, 1);
 
 		const ar = flows.find((f: { region: string }) => f.region === "AR→CN");
 		expect(ar.freq).toBe("A");
 		expect(ar.momPct).toBeNull();
 		expect(ar.stale).toBe(false);
+		expect(ar.history.length).toBe(1);
 
 		// Calibration lane: CIF, separate table, never merged into flows.
 		const cnBr = calibration.find((c: { region: string }) => c.region === "CN←BR");
@@ -155,6 +195,12 @@ describe("GET /api/market/trade-flows", () => {
 		expect(Array.isArray(notes)).toBe(true);
 		expect(notes.length).toBeGreaterThanOrEqual(2);
 		expect(notes.join("")).toContain("绝不合并");
+
+		// Argentina all-destinations FOB context (round-155 批C).
+		const { arFobTotal } = res.body.data;
+		expect(arFobTotal).not.toBeNull();
+		expect(arFobTotal.valueUsdM).toBeCloseTo(210.5, 1);
+		expect(arFobTotal.period).toMatch(/^\d{4}-\d{2}$/);
 	});
 
 	test("rejects an hs code outside the mirror's pinned set", async () => {

@@ -16,8 +16,8 @@
 
 import React from "react";
 
-// biome-ignore lint/suspicious/noExplicitAny: third-party library, props are opaque
 const createComponent = (name: string) => {
+	// biome-ignore lint/suspicious/noExplicitAny: third-party library, props are opaque
 	const Comp = React.forwardRef((props: any, ref: any) => (
 		<div ref={ref} data-testid={`recharts-${name}`} {...props} />
 	));
@@ -41,6 +41,7 @@ const ComposedChart = ({ children, ...props }: any) => (
 
 module.exports = {
 	Line: createComponent("Line"),
+	Bar: createComponent("Bar"),
 	XAxis: createComponent("XAxis"),
 	YAxis: createComponent("YAxis"),
 	CartesianGrid: createComponent("CartesianGrid"),

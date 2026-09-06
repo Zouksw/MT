@@ -1,11 +1,17 @@
 "use client";
 
 /**
- * 对华贸易流卡 (V8 批4, round-151) — per-country monthly beef trade flows to
- * China from GET /api/market/trade-flows (comtrade_mirror lanes, V8 批0).
- * Auth-gated per D25 (鉴权内先行): anonymous/failed fetches omit the card
- * silently — the same degrade pattern as the cut-forecast column, never a
- * login wall inside the market page.
+ * 对华贸易流卡 (V8 批4, round-151; deepened round-155 批C) — per-country
+ * monthly beef trade flows to China from GET /api/market/trade-flows
+ * (comtrade_mirror lanes, V8 批0). Auth-gated per D25 (鉴权内先行):
+ * anonymous/failed fetches omit the card silently — the same degrade pattern
+ * as the cut-forecast column, never a login wall inside the market page.
+ *
+ * 批C additions: an HS-code switcher (the mirror's 8 pinned lanes — zod enum
+ * on the backend is the single source of truth), a per-country monthly
+ * volume-bar + unit-price-line chart over the new `history` payload, the
+ * previously-fetched-but-unrendered qtyMoM / valueUsdM fields, and the AR
+ * all-destinations FOB context line.
  *
  * 口径注记 is mandatory UI, not decoration: the FOB mirror table (exporter
  * side, monthly where reported) and the China-reported annual CIF calibration
@@ -14,10 +20,24 @@
  */
 
 import { TrendingDown, TrendingUp } from "lucide-react";
+import { useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
 import { formatDecimal } from "@/lib/format";
+import { dynamicRecharts } from "@/lib/recharts-lazy";
+
+const {
+	ComposedChart,
+	Bar,
+	Line,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip,
+	Legend,
+	ResponsiveContainer,
+} = dynamicRecharts();
 
 interface TradeFlowPoint {
 	period: string;
@@ -36,6 +56,7 @@ interface TradeFlowEntry {
 	momPct: number | null;
 	qtyMomPct: number | null;
 	stale: boolean;
+	history: TradeFlowPoint[];
 }
 
 interface CalibrationEntry {
@@ -46,12 +67,30 @@ interface CalibrationEntry {
 	stale: boolean;
 }
 
+interface ArFobTotal {
+	period: string;
+	valueUsdM: number;
+}
+
 interface TradeFlowsPayload {
 	hs: string;
 	flows: TradeFlowEntry[];
 	calibration: CalibrationEntry[];
+	arFobTotal: ArFobTotal | null;
 	notes: string[];
 }
+
+/** The mirror's pinned HS set (backend zod enum is the contract). */
+const HS_OPTIONS = [
+	{ code: "0202", label: "冻牛肉" },
+	{ code: "020230", label: "冻去骨牛肉" },
+	{ code: "020220", label: "冻带骨牛肉" },
+	{ code: "0201", label: "鲜/冷藏牛肉" },
+	{ code: "020610", label: "鲜/冷牛杂碎" },
+	{ code: "020621", label: "冻牛肝" },
+	{ code: "020622", label: "冻牛胃" },
+	{ code: "020629", label: "其他冻牛杂碎" },
+] as const;
 
 const COUNTRY_LABELS: Record<string, string> = {
 	BR: "巴西",
@@ -83,19 +122,119 @@ function MoM({ pct }: { pct: number | null }) {
 }
 
 export function TradeFlowsCard() {
-	const { data } = useRetryableFetch("/api/market/trade-flows?hs=0202", beefFetcher);
+	const [hs, setHs] = useState<string>("0202");
+	// Chart country pill — null means "first monthly lane" (newest data).
+	const [chartCountry, setChartCountry] = useState<string | null>(null);
+	const { data } = useRetryableFetch(`/api/market/trade-flows?hs=${hs}`, beefFetcher);
 	const payload = (data as { data?: TradeFlowsPayload } | undefined)?.data;
 
 	// Not logged in (401 per D25), fetch error, or no rows yet — omit the
-	// card entirely; honest absence, no fabricated placeholder.
-	if (!payload || !Array.isArray(payload.flows) || payload.flows.length === 0) return null;
+	// card entirely; honest absence, no fabricated placeholder. Array guards
+	// keep the beef-page tests' shapeless mocks safely degrading.
+	if (
+		!payload ||
+		!Array.isArray(payload.flows) ||
+		payload.flows.length === 0 ||
+		!Array.isArray(payload.calibration)
+	)
+		return null;
+
+	const hsLabel = HS_OPTIONS.find((o) => o.code === hs)?.label ?? hs;
+	const monthlyFlows = payload.flows.filter(
+		(f) => f.freq === "M" && Array.isArray(f.history) && f.history.length >= 2,
+	);
+	const chartFlow = monthlyFlows.find((f) => f.country === chartCountry) ?? monthlyFlows[0];
+	const chartData =
+		chartFlow?.history.map((h) => ({
+			label: fmtPeriod(h.period).slice(2), // "26-06" — compact x-axis
+			qtyTons: h.qtyTons,
+			unitPriceUsdPerT: h.unitPriceUsdPerT,
+		})) ?? [];
 
 	return (
 		<Card className="mt-6">
 			<CardHeader>
-				<CardTitle>对华贸易流 · 冻牛肉（HS 0202，FOB 月度镜像）</CardTitle>
+				<CardTitle>
+					对华贸易流 · {hsLabel}（HS {hs}，FOB 月度镜像）
+				</CardTitle>
+				<div className="mt-2 flex flex-wrap gap-1.5">
+					{HS_OPTIONS.map((opt) => (
+						<button
+							key={opt.code}
+							type="button"
+							onClick={() => setHs(opt.code)}
+							aria-pressed={hs === opt.code}
+							className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+								hs === opt.code
+									? "bg-primary text-primary-foreground"
+									: "border border-border text-muted-foreground hover:bg-muted"
+							}`}
+						>
+							{opt.label}
+							<span className="ml-1 font-mono opacity-70">{opt.code}</span>
+						</button>
+					))}
+				</div>
 			</CardHeader>
 			<CardBody>
+				{chartFlow && chartData.length >= 2 && (
+					<div className="mb-4">
+						<div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+							<span className="text-xs text-muted-foreground">月度量价走势：</span>
+							{monthlyFlows.map((f) => (
+								<button
+									key={f.region}
+									type="button"
+									onClick={() => setChartCountry(f.country)}
+									aria-pressed={chartFlow.country === f.country}
+									className={`rounded px-2 py-0.5 text-xs ${
+										chartFlow.country === f.country
+											? "bg-muted font-medium text-foreground"
+											: "text-muted-foreground hover:text-foreground"
+									}`}
+								>
+									{COUNTRY_LABELS[f.country] ?? f.country}
+								</button>
+							))}
+						</div>
+						<div className="h-[220px] w-full">
+							<ResponsiveContainer width="100%" height="100%">
+								<ComposedChart data={chartData}>
+									<CartesianGrid strokeDasharray="3 3" className="opacity-40" />
+									<XAxis dataKey="label" tick={{ fontSize: 11 }} />
+									<YAxis yAxisId="qty" tick={{ fontSize: 11 }} width={52} />
+									<YAxis yAxisId="price" orientation="right" tick={{ fontSize: 11 }} width={48} />
+									<Tooltip
+										formatter={(value, name) => {
+											const label = String(name);
+											return label.includes("数量")
+												? [formatDecimal(Number(value), 0), label]
+												: [`$${formatDecimal(Number(value), 0)}/t`, label];
+										}}
+									/>
+									<Legend wrapperStyle={{ fontSize: 12 }} />
+									<Bar
+										yAxisId="qty"
+										dataKey="qtyTons"
+										name="数量（吨）"
+										fill="#8B6914"
+										opacity={0.55}
+										radius={[3, 3, 0, 0]}
+									/>
+									<Line
+										yAxisId="price"
+										dataKey="unitPriceUsdPerT"
+										name="FOB 均价（USD/吨）"
+										stroke="#2563EB"
+										strokeWidth={2}
+										dot={false}
+									/>
+								</ComposedChart>
+							</ResponsiveContainer>
+						</div>
+					</div>
+				)}
+
 				<div className="overflow-x-auto">
 					<table className="data-table">
 						<thead>
@@ -103,6 +242,8 @@ export function TradeFlowsCard() {
 								<th className="text-left">国别</th>
 								<th className="text-left">期间</th>
 								<th className="text-right">数量（吨）</th>
+								<th className="text-right">数量环比</th>
+								<th className="text-right">金额（百万 USD）</th>
 								<th className="text-right">FOB 均价（USD/吨）</th>
 								<th className="text-right">均价环比</th>
 								<th className="text-left">口径</th>
@@ -124,6 +265,10 @@ export function TradeFlowsCard() {
 										{f.freq === "A" && "（年度）"}
 									</td>
 									<td className="text-right font-mono">{formatDecimal(f.latest.qtyTons, 0)}</td>
+									<td className="text-right">
+										<MoM pct={f.qtyMomPct} />
+									</td>
+									<td className="text-right font-mono">{formatDecimal(f.latest.valueUsdM, 0)}</td>
 									<td className="text-right font-mono">
 										{formatDecimal(f.latest.unitPriceUsdPerT, 0)}
 									</td>
@@ -138,6 +283,14 @@ export function TradeFlowsCard() {
 						</tbody>
 					</table>
 				</div>
+
+				{payload.arFobTotal && (
+					<p className="mt-2 text-xs text-gray-500">
+						背景：阿根廷肉类月度出口总额（全部目的地，SSPM）——{fmtPeriod(payload.arFobTotal.period)}{" "}
+						约 {formatDecimal(payload.arFobTotal.valueUsdM, 0)}{" "}
+						百万美元。阿根廷无对华月度镜像（上表仅年度线），此为出口总量上下文，非对华流量。
+					</p>
+				)}
 
 				{payload.calibration.length > 0 && (
 					<div className="mt-4">

@@ -299,11 +299,13 @@ router.get(
 );
 
 /**
- * Trade flows to China (V8 批4): per-country monthly volume / unit price / MoM
- * from the comtrade_mirror lanes, plus the China-reported annual CIF
- * calibration table. 鉴权内起步 per D25 — the 口径注记 (notes) travel with the
- * payload and are mandatory UI on every consumer. Single hs param from the
- * mirror's pinned HS set (query-set contract lives in the source module).
+ * Trade flows to China (V8 批4; deepened round-155 批C): per-country monthly
+ * volume / unit price / MoM + per-country history series (24 periods, for
+ * charting) + the Argentina all-destinations FOB context, plus the
+ * China-reported annual CIF calibration table. 鉴权内起步 per D25 — the
+ * 口径注记 (notes) travel with the payload and are mandatory UI on every
+ * consumer. Single hs param from the mirror's pinned HS set (query-set
+ * contract lives in the source module).
  */
 const tradeFlowsSchema = z.object({
 	hs: z.enum(HS_CODES).default("0202"),

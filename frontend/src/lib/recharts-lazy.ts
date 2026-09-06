@@ -31,6 +31,9 @@ export function dynamicRecharts() {
 		BarChart: dynamic(() => import("recharts").then((m) => ({ default: m.BarChart })), {
 			ssr: false,
 		}),
+		ComposedChart: dynamic(() => import("recharts").then((m) => ({ default: m.ComposedChart })), {
+			ssr: false,
+		}),
 		Bar: dynamic(() => import("recharts").then((m) => ({ default: m.Bar })), {
 			ssr: false,
 		}),
