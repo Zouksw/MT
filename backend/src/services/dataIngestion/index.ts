@@ -16,6 +16,7 @@ import { comtradeMirrorScraper } from "./sources/comtradeMirror";
 import { dceFuturesScraper } from "./sources/dceFutures";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
+import { ibgeSidraScraper } from "./sources/ibgeSidra";
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
@@ -48,6 +49,11 @@ export function registerAllScrapers(): void {
 	// missing Comtrade monthlies: product family × world, no destination
 	// cross (registered gap; V8 批2, round-151).
 	scraperManager.registerSource("argentina_exports", argentinaExportsScraper);
+	// Brazil official quarterly bovine slaughter (IBGE SIDRA t/1092, keyless —
+	// the only one of the four round-157-verified official APIs with zero
+	// dependencies; round-158 批B). MarketFactor analysis face, not a
+	// prediction series.
+	scraperManager.registerSource("ibge_sidra", ibgeSidraScraper);
 	scraperManager.registerSource("usda_ams", usdaAmsScraper);
 	// Weekly US import manufacturing-beef benchmark (NW_LS421 PDF, keyless —
 	// the MARS API behind usda_ams is key-gated and mymarketnews hosts are

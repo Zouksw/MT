@@ -148,6 +148,10 @@ function backgroundJobs(): ScheduledJob[] {
 		// Monthly SSPM CSV on the daily cycle: non-release days confirm no
 		// change (noChange contract, same shape as comtrade_mirror).
 		"argentina_exports",
+		// Quarterly IBGE SIDRA t/1092 on the daily cycle: non-release days
+		// confirm no change (noChange contract, same shape as comtrade_mirror
+		// and argentina_exports — round-158 批B).
+		"ibge_sidra",
 		"usda_ams",
 		// Weekly NW_LS421 report on the daily cycle: the PDF always holds the
 		// current week, so the six non-publication days re-scrape the same row

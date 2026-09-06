@@ -19,7 +19,7 @@
 ## 二、核心价值链（一切开发围绕这条链）
 
 ```
-18 个数据源爬虫 → PostgreSQL（CommodityPrice / BeefCutPrice）
+19 个数据源爬虫 → PostgreSQL（CommodityPrice / BeefCutPrice）
                           ↓
         inference-service（6 统计模型 + 3 Chronos 变体，共 9 个 model id）
                           ↓
@@ -36,7 +36,7 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **21 文件 / 18 注册** | `sources/*.ts`（排除 index/test）；2026-09-06 复核（round-155 批B）：china_wholesale 随国产维度退役（文件保留）后注册数 18（`registerAllScrapers` 实数）；inac/chinaCustomsStats/chinaWholesale 为退役保留文件 |
+| 数据源爬虫 | **22 文件 / 19 注册** | `sources/*.ts`（排除 index/test）；2026-09-07 复核（round-158 批B）：增 ibgeSidra（IBGE SIDRA 季度屠宰，免 key）后文件 22、注册 19；inac/chinaCustomsStats/chinaWholesale 为退役保留文件 |
 | Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |
