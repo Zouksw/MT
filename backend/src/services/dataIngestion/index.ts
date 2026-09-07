@@ -20,6 +20,7 @@ import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
 import { ibgeSidraScraper } from "./sources/ibgeSidra";
 import { inacScraper } from "./sources/inacData";
+import { inacExpoScraper } from "./sources/inacExpo";
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
@@ -45,6 +46,11 @@ export function registerAllScrapers(): void {
 	// price (CommodityPrice novillo_gordo_uy) instead of the dead
 	// BeefCutPrice cut-FOB tables — see sources/inacData.ts header.
 	scraperManager.registerSource("inac", inacScraper);
+	// INAC eDIAE export stats (same DIAEUtils service as "inac", expo app):
+	// official UY→CN monthly bovine FOB value + cut-family FOB USD/kg
+	// worldwide — fills the mirror's UY hole and resurrects the INAC cut
+	// semantics at family level (round-162 批1).
+	scraperManager.registerSource("inac_expo", inacExpoScraper);
 	scraperManager.registerSource("mla_nlrs", mlaNlrsScraper);
 	scraperManager.registerSource("secex", secexScraper);
 	scraperManager.registerSource("abares", abaresScraper);

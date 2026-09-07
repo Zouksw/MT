@@ -30,6 +30,8 @@ const MIRROR_TYPE = "export_to_cn_0202";
 const EU_TYPE = "export_eu_to_cn_0202";
 const CALIB_TYPE = "import_cn_cif_0202";
 const AR_FOB_TYPE = "export_fob_carnes";
+const UY_INAC_TYPE = "export_fob_inac_bovina";
+const UY_CUT_PREFIX = "export_fob_cut_uy_";
 // Router-relative paths (Express req.path inside a mounted router — the
 // full /api/market prefix is NOT part of the cache key; live-verified).
 const CACHE_KEYS = ["market:trade-flows:/trade-flows", "market:trade-flows:/trade-flows:hs=0202"];
@@ -52,7 +54,14 @@ beforeAll(async () => {
 
 	const prisma = getPrisma();
 	await prisma.marketFactor.deleteMany({
-		where: { type: { in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
+		where: {
+			type: {
+				in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE, UY_INAC_TYPE],
+			},
+		},
+	});
+	await prisma.marketFactor.deleteMany({
+		where: { type: { startsWith: UY_CUT_PREFIX } },
 	});
 	await prisma.marketFactor.createMany({
 		data: [
@@ -132,6 +141,77 @@ beforeAll(async () => {
 				},
 			},
 			{
+				// Uruguay INAC official monthly to-China bovine FOB value
+				// (round-162 批1) — value-only lane, USD millions.
+				type: UY_INAC_TYPE,
+				region: "UY→CN",
+				date: monthsAgo(1),
+				value: 67.491,
+				unit: "USD M",
+				source: "inac_expo",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: monthsAgo(1).toISOString().slice(0, 7),
+					usdThousands: 67491,
+					ytdUsdThousands: 381236,
+					currency: "USD",
+					basis: "FOB-USD (Uruguay INAC eDIAE, Carne bovina, Cifras primarias)",
+				},
+			},
+			{
+				// Uruguay cut-family FOB unit prices (round-162 批1) —
+				// hindquarter boneless, frozen, latest month + prior (history).
+				type: `${UY_CUT_PREFIX}frozen_hindquarter_boneless`,
+				region: "UY→WORLD",
+				date: monthsAgo(1),
+				value: 8.941123,
+				unit: "USD/kg",
+				source: "inac_expo",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: monthsAgo(1).toISOString().slice(0, 7),
+					usdThousands: 33216,
+					tonnes: 3711,
+					process: "frozen",
+					currency: "USD",
+				},
+			},
+			{
+				type: `${UY_CUT_PREFIX}frozen_hindquarter_boneless`,
+				region: "UY→WORLD",
+				date: monthsAgo(2),
+				value: 8.5,
+				unit: "USD/kg",
+				source: "inac_expo",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: monthsAgo(2).toISOString().slice(0, 7),
+					tonnes: 3600,
+					process: "frozen",
+					currency: "USD",
+				},
+			},
+			{
+				// Chilled lane rows exist too — sorted after frozen families.
+				type: `${UY_CUT_PREFIX}chilled_forequarter_boneless`,
+				region: "UY→WORLD",
+				date: monthsAgo(1),
+				value: 12.5,
+				unit: "USD/kg",
+				source: "inac_expo",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: monthsAgo(1).toISOString().slice(0, 7),
+					tonnes: 758,
+					process: "chilled",
+					currency: "USD",
+				},
+			},
+			{
 				type: CALIB_TYPE,
 				region: "CN←BR",
 				date: new Date(new Date().getUTCFullYear() - 1, 0, 1),
@@ -153,7 +233,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	await getPrisma().marketFactor.deleteMany({
-		where: { type: { in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE] } },
+		where: {
+			type: {
+				in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE, UY_INAC_TYPE],
+			},
+		},
+	});
+	await getPrisma().marketFactor.deleteMany({
+		where: { type: { startsWith: UY_CUT_PREFIX } },
 	});
 	try {
 		const r = await redis();
@@ -237,6 +324,30 @@ describe("GET /api/market/trade-flows", () => {
 		expect(arFobTotal).not.toBeNull();
 		expect(arFobTotal.valueUsdM).toBeCloseTo(210.5, 1);
 		expect(arFobTotal.period).toMatch(/^\d{4}-\d{2}$/);
+
+		// Uruguay INAC official to-China value + cut-family unit prices
+		// (round-162 批1): separate payload fields, never flows rows.
+		const { uyInacTotal, uyCuts } = res.body.data;
+		expect(uyInacTotal).not.toBeNull();
+		expect(uyInacTotal.valueUsdM).toBeCloseTo(67.5, 1);
+		expect(uyInacTotal.period).toMatch(/^\d{4}-\d{2}$/);
+		expect(flows.some((f: { region: string }) => f.region === "UY→CN")).toBe(false);
+
+		expect(Array.isArray(uyCuts)).toBe(true);
+		const hind = uyCuts.find((c: { key: string }) => c.key === "frozen_hindquarter_boneless");
+		expect(hind).toBeDefined();
+		expect(hind.process).toBe("frozen");
+		expect(hind.period).toBe(monthsAgo(1).toISOString().slice(0, 7));
+		expect(hind.usdPerKg).toBeCloseTo(8.94, 2);
+		expect(hind.tonnes).toBe(3711);
+		// History oldest-first (round-155 批C convention).
+		expect(hind.history.length).toBe(1);
+		expect(hind.history[0].usdPerKg).toBeCloseTo(8.5, 2);
+		const chilled = uyCuts.find((c: { key: string }) => c.key === "chilled_forequarter_boneless");
+		expect(chilled?.process).toBe("chilled");
+		// Frozen families sort before chilled ones.
+		expect(uyCuts.indexOf(hind)).toBeLessThan(uyCuts.indexOf(chilled));
+		expect(notes.join("")).toContain("INAC");
 	});
 
 	test("rejects an hs code outside the mirror's pinned set", async () => {

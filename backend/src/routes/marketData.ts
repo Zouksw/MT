@@ -448,6 +448,13 @@ router.get(
 				tier: "2",
 				beefRelevance: "direct",
 			},
+			inac_expo: {
+				label: "INAC eDIAE Exports",
+				description:
+					"INAC eDIAE — 乌拉圭官方月度出口统计：对华牛肉 FOB 金额 + 冻/冷部位族 FOB 均价（全球口径，round-162）",
+				tier: "2",
+				beefRelevance: "direct",
+			},
 			mla_nlrs: {
 				label: "MLA Australia",
 				description:

@@ -516,6 +516,36 @@ export interface ArFobTotal {
 	valueUsdM: number;
 }
 
+export interface UyInacTotal {
+	/** "YYYY-MM" of the observation month. */
+	period: string;
+	/** Uruguay INAC-official monthly bovine FOB exports TO CHINA, USD
+	 * millions (eDIAE query3, `export_fob_inac_bovina`). Fills the
+	 * comtrade_mirror's UY hole with a rubro-level value lane — no per-country
+	 * tonnage exists at eDIAE, so no unit price is derived (registered gap). */
+	valueUsdM: number;
+}
+
+export interface UyCutPoint {
+	period: string;
+	usdPerKg: number;
+}
+
+export interface UyCutPrice {
+	/** process + cut family, e.g. "frozen_hindquarter_boneless". */
+	key: string;
+	process: "frozen" | "chilled";
+	/** "YYYY-MM" of the latest observation. */
+	period: string;
+	/** Latest month's FOB unit price, USD/kg product weight — ALL
+	 * destinations (eDIAE query4 carries no destination dimension). */
+	usdPerKg: number;
+	/** Latest month's shipment tonnes. */
+	tonnes: number;
+	/** Prior months, oldest-first (excludes `period`). */
+	history: UyCutPoint[];
+}
+
 export interface CalibrationEntry {
 	region: string;
 	country: string;
@@ -566,9 +596,11 @@ export async function getTradeFlows(hs: string): Promise<{
 	flows: TradeFlowEntry[];
 	calibration: CalibrationEntry[];
 	arFobTotal: ArFobTotal | null;
+	uyInacTotal: UyInacTotal | null;
+	uyCuts: UyCutPrice[];
 	notes: string[];
 }> {
-	const [mirrorRows, calibRows, arRow] = await Promise.all([
+	const [mirrorRows, calibRows, arRow, uyRow, uyCutRows] = await Promise.all([
 		prisma.marketFactor.findMany({
 			// Two mirror lanes, deliberately distinct types: partner-reported
 			// FOB-USD (Comtrade) and EU-reported FOB-EUR (Comext) — grouped by
@@ -588,6 +620,17 @@ export async function getTradeFlows(hs: string): Promise<{
 			where: { type: "export_fob_carnes" },
 			orderBy: { date: "desc" },
 		}),
+		// Uruguay INAC-official monthly to-China bovine FOB value (round-162).
+		prisma.marketFactor.findFirst({
+			where: { type: "export_fob_inac_bovina", region: "UY→CN" },
+			orderBy: { date: "desc" },
+		}),
+		// Uruguay cut-family FOB unit prices (both process drills).
+		prisma.marketFactor.findMany({
+			where: { type: { startsWith: "export_fob_cut_uy_" }, region: "UY→WORLD" },
+			orderBy: { date: "desc" },
+			take: 1000,
+		}),
 	]);
 
 	const arFobTotal: ArFobTotal | null =
@@ -597,6 +640,48 @@ export async function getTradeFlows(hs: string): Promise<{
 					valueUsdM: Math.round(Number(arRow.value) * 10) / 10,
 				}
 			: null;
+
+	const uyInacTotal: UyInacTotal | null =
+		uyRow && uyRow.region === "UY→CN"
+			? {
+					period: uyRow.date.toISOString().slice(0, 7),
+					valueUsdM: Math.round(Number(uyRow.value) * 10) / 10,
+				}
+			: null;
+
+	// Cut-family lanes: rows are newest-first — the first row of each type is
+	// the latest, the rest fill history (reversed to oldest-first after).
+	const uyCutsByKey = new Map<string, UyCutPrice>();
+	for (const row of uyCutRows) {
+		const key = row.type.replace("export_fob_cut_uy_", "");
+		const meta = (row.metadata ?? {}) as {
+			period?: string;
+			tonnes?: number;
+			process?: string;
+		};
+		const period = meta.period ?? row.date.toISOString().slice(0, 7);
+		const usdPerKg = Math.round(Number(row.value) * 100) / 100;
+		let entry = uyCutsByKey.get(key);
+		if (!entry) {
+			entry = {
+				key,
+				process: meta.process === "chilled" ? "chilled" : "frozen",
+				period,
+				usdPerKg,
+				tonnes: Math.round(meta.tonnes ?? 0),
+				history: [],
+			};
+			uyCutsByKey.set(key, entry);
+			continue;
+		}
+		if (entry.history.length < TRADE_HISTORY_POINTS) {
+			entry.history.push({ period, usdPerKg });
+		}
+	}
+	for (const entry of uyCutsByKey.values()) entry.history.reverse();
+	const uyCuts = [...uyCutsByKey.values()].sort((a, b) =>
+		a.process === b.process ? b.tonnes - a.tonnes : a.process === "frozen" ? -1 : 1,
+	);
 
 	const now = Date.now();
 	const byRegion = new Map<string, FactorRow[]>();
@@ -679,10 +764,13 @@ export async function getTradeFlows(hs: string): Promise<{
 		flows,
 		calibration,
 		arFobTotal,
+		uyInacTotal,
+		uyCuts,
 		notes: [
 			"月度线为出口国报送的 FOB 镜像口径（巴西约滞后 1 个月，澳/新/美约 2 个月）；阿根廷/乌拉圭仅年度报送，缺失月份为未报送而非零值。",
 			"中国官方口径为年度 CIF（中国报送），与月度 FOB 镜像存在系统性差异（含运保费与时点），两口径并列展示、绝不合并。",
 			"欧盟通道（爱尔兰等）为 Comext 欧盟申报 FOB-**EUR** 口径（约滞后 6 周），与美元通道并列展示、不做汇率换算与合并；当前欧盟对华流量较小，缺失月份为无流量。",
+			"乌拉圭为 INAC eDIAE 官方月度 FOB 金额（肉类族口径、无分国吨位故不折均价）；乌拉圭部位族均价为全球口径（eDIAE 无目的地维度），非对华专属。",
 			"0202 为冻牛肉总量，其 6 位子目（020230 冻去骨 / 020220 冻带骨）为独立序列，读取时不可与 0202 加总。",
 		],
 	};

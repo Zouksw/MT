@@ -156,6 +156,9 @@ function backgroundJobs(): ScheduledJob[] {
 		"ibge_sidra",
 		// Uruguay DIAE monthly price ladder (stride-2 year queries; round-159).
 		"inac",
+		// Uruguay eDIAE export stats on the daily cycle (monthly CN value +
+		// cut-family USD/kg re-scan; noChange contract; round-162 批1).
+		"inac_expo",
 		// Weekly Drewry WCI on the daily cycle: non-Thursday runs confirm no
 		// change (noChange contract; round-161 批2).
 		"drewry_wci",
