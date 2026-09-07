@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-162：开发轮 — 细粒度深挖（INAC eDIAE 乌拉圭官方出口统计 + Comext CN8 部位级）
+
+用户目标"探索更加细粒度、更加深入的牛肉贸易数据挖掘"。两批独立 commit、全门禁（tsc/测试/构建/PM2/live）。
+
+- **`inac_expo` 新源（批 1，commit c45c79a）**：INAC eDIAE expo 子应用两通道——对华牛肉月度 FOB 金额（`exportaciones-query3`，官方初步数 T+1，填补 comtrade_mirror 乌拉圭月度缺口）+ 冻/冷部位族 FOB USD/kg 全球口径（`exportaciones-query4`，老 BeefCutPrice 部位语义的族级复活；千美元÷吨=USD/kg）。响应为 JS 包裹的 JasperReports HTML（\uXXXX 转义/空标记瞬时抖动/n4 显式空串），解析纯函数 12 测试钉死（含 live fixture）。落库 MarketFactor 16 序列 495 行（2023-08→2026-07）；读侧 /trade-flows 增 `uyInacTotal` + `uyCuts`（15 序列 24 点历史），前端对华贸易流卡同步（UY 背景行 + 部位族表）。登记缺口：eDIAE 无分国吨位、query4 无目的地维度。
+- **Comext CN8 部位级（批 2，commit 9e5a93f）**：DS-045409 产品维度实测——02023011/19/30/60 **无效**（不可凭 CN 名录推测），02023050（前部块）/02023090（其他冻去骨，主干 IE 32 月）/02022090（其他冻带骨）有真实流量、02022010 有效零流量；comext_eu 扫描集 HS+CN8（96 查询/日不变式保留），trade-flows 枚举/前端 pills/标题 CN8 分级显示。
+- **文档**：AGENTS 源计数 25 文件/23 注册；PRODUCT-SPEC §七 贸易流量层行；RESEARCH §9.2 INAC eDIAE 契约（新）+ §9.4 重编号；DATA-SOURCES-EVALUATION round-162 执行记录。
+- **基线**：backend **1134+1 skip**（1119→1135，+16，零回退）；frontend TradeFlowsCard 4/4、tsc 零错误。注：批 1 前端行（TradeFlowsCard +81/+30）被并发会话 b552664 整目录提交顺带收编，内容经 grep 验证完整在 HEAD。
+
 ### 2026-09-07 — round-161：开发轮 — 按探索方案落地（comext_eu 欧盟月度镜像 + 双币贸易流读侧 + Drewry WCI 运价基准 + 肉交所勘察）
 
 用户指令"根据新的探索方案，进行后续的开发"。输入 = round-160 TradeSources v2.0.0 路线增补（P1a/P2 运价/P1b 勘察）。三批独立 commit、全门禁（tsc/biome/全量/构建/PM2/live）。

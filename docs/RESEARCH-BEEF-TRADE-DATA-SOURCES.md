@@ -38,7 +38,7 @@ related_docs:
 3. **中国官方月度分国别口径（stats.customs.gov.cn）在本机直连与代理下均不可达**（000；代理无大陆节点）——该源仍是"需中国出口/人工月度导出"性质，与 KNOWN-ISSUES D1 结论一致。月度节奏可用 **Comtrade 镜像承接 + 中国年度明细校准**。
 4. **提单/进口商级明细没有免费路径**：中国海关提单数据不公开，商业库为镜像/第三方申报数据——Volza $1,500 起步（积分制）、环球慧思 ¥4-5 万/年、腾道 ¥5-10 万/年（含 API）【转述】。买不买是预算决策，不是技术问题。
 5. **阿根廷是国家开放数据路径的样板**：`datos.gob.ar` / `datos.magyp.gob.ar` CKAN API 本机直连可用（SSPM 出口月度序列 CSV 直链）；SENASA 官方页（含按目的国筛选已注册工厂的"Mercados Abiertos"）需经 mihomo 代理（200）。
-6. **确认死路**：乌拉圭 INAC / catalogo.datos.gub.uy 直连+代理均 000（~~全球性下线~~ **2026-09-07 已修正：inac.uy 新域复活并落地，见 round-159**）；巴西 ComexStat API 403（Cloudflare WAF，镜像已可替代）；USMEF 出口统计会员制；FAO 401（需 key）。
+6. **确认死路**：乌拉圭 INAC / catalogo.datos.gub.uy 直连+代理均 000（~~全球性下线~~ **2026-09-07 已修正：inac.uy 新域复活并落地，见 round-159；round-162 又打通其出口统计面（§9.2）**）；巴西 ComexStat API 403（Cloudflare WAF，镜像已可替代）；USMEF 出口统计会员制；FAO 401（需 key）。
 
 **v2.0.0 新增发现（round-160，2026-09-07）**：
 
@@ -196,7 +196,7 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
 ### 4.5 其他出口国现状（与 KNOWN-ISSUES D1 对照，本轮增量）
 
 - **巴西**：ComexStat API 被 Cloudflare WAF 拦（403，换出口 IP 同拦）——**不再必要**：Comtrade 镜像 t-1 已覆盖月度量价；ComexStat 的增量价值只剩市级/NCM8 更细粒度（P2 级，可经 basedosdados 等镜像【待确认】）。
-- **乌拉圭**：INAC 官网与国家开放数据目录**全球性下线**（直连+代理 000）。月度数据目前**无免费程序化路径**；年度镜像（Comtrade）可用。**待确认**：INAC 重构后的新入口。
+- **乌拉圭**：~~INAC 官网与国家开放数据目录全球性下线~~（v1.0.0 时实测；**2026-09-07 已两度修正**：round-159 复活 novillo 价格，round-162 打通 eDIAE 出口统计——对华月度 FOB 金额 + 部位族 USD/kg 已落地 `inac_expo`，契约见 §9.2）。Comtrade 侧 UY 月度报送仍稀疏，INAC 官方通道即月度主路径。
 - **澳洲**：MLA 统计 API 需 key（D1 A1 口径）；ABARES 报告为 PDF/Excel。Comtrade 镜像 t-2 已覆盖月度量价。
 - **美国**：FAS GATS（双边、HS10、官方出口口径）API 主机可达（`api.fas.usda.gov`），需 data.gov 免费 key——**HS10 粒度比 Comtrade HS6 更细（含 cutoff/trimming 等子目）**，值得作为 P1 扩展（配额待确认）。
 
@@ -312,7 +312,17 @@ GET https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/d
 - **价值定位**：欧盟输华批准国（爱尔兰/荷兰/法国/波兰…）月度 CN8 级对华量价——是 comtrade_mirror 六通道之外**唯一的月度增量通道**；口径为欧盟申报 FOB-EUR（注意与 Comtrade USD 口径换算与互校，勿合并）。
 - **条款**：Eurostat 免费复用（含商用）需署名（copyright 页 200 实测）；官方指南明示禁止全量批量下载（逐查询过滤）。
 
-### 9.2 小供应国免 key API（P3 备用）
+### 9.2 INAC eDIAE 乌拉圭官方出口统计（round-162 打通并落地 `inac_expo`，免 key）
+
+乌拉圭官方统计所 INAC 的交互数据应用后端 `https://www.inac.uy/inac/DIAEUtils`（与 round-159 复活的 novillo 价格同一服务，expo 子应用；前端在 `/inac/diae/expo.html`，契约经 `expo/expo.js` 逆向）：
+
+- **按目的地×月（Lane A）** `?cmdaction=exportaciones-query3`：`n1="Carne bovina"`、`pais="REPÚBLICA POPULAR CHINA "`（**尾随空格是服务端自己的下拉值**）、`apertura=Pais`、`desglozar=0`、`mostrar=-1` → 中国行 4 数（当月/当年累计 USD 千元 × 今年/去年）。实测 2026-06 对华 **67,491 千美元**（YTD 381,236），与全目的地表中国行逐位一致；2023-06 历史深验通过（81,272）。**新鲜度 T+1**（datosiniciales app=expo 报 maxAno/maxMes，2026-09-07 时=2026-07）。
+- **按产品×月（Lane B）** `?cmdaction=exportaciones-query4`：钻取 `n1="Carne bovina"→n2="Refrigerada"→n3∈{Congelada,Enfriada}→n4=""`（**n4 必须显式传空**，省略则稳定返回空表）→ 部位族叶行带 USD(千) + 装船吨位 → **USD/kg 均价**（千美元÷吨=USD/kg 恰好）。部位族词表（n4）：胴体/四分体带骨与去骨、小件、前四带骨/去骨、后四带骨/去骨、其他带骨/去骨。注意：主干冻品在 **Refrigerada→Congelada** 分支（193M USD/月），"Producto carnico bovino" 是小的预制食品支，别钻错。
+- **响应形态坑**：JasperReports HTML 包在 `$('#reportplace').html('…')` JS 片段里（`\n \' \" \uXXXX` 转义、全部分页合并在单响应、结尾 `');doNextPage=false;`）；`html('')` 空标记是**瞬时抖动**（重试即恢复）；query4 标题带 `Mes 7/2026` 应与请求月互核（防服务端忽略参数回落默认月）；数字用点千分位（"193.021"）。
+- **robots**：`/robots.txt` 404 无声明；服务为公开查询应用，无登录。
+- **登记缺口**：eDIAE 无分国吨位（Lane A 金额-only，不折均价）；query4 无目的地维度（Lane B 为全球口径）；"部位×目的地交叉"不存在。
+
+### 9.3 小供应国免 key API（P3 备用）
 
 | 源 | 契约 | 实测 | 条款 |
 |---|---|---|---|
@@ -321,7 +331,7 @@ GET https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/d
 
 供应量小（UK/加对华牛肉均为小几百~千吨级年量），列为 P3——若做"全供应国覆盖"时再接。
 
-### 9.3 排除项与俄罗斯缺口
+### 9.4 排除项与俄罗斯缺口
 
 - **World Bank WITS**：页面 200 但 REST 端点 307→405 未打通；**根本问题：仅年度（Comtrade 年度库+TRAINS 关税），无月度**——对月度量价目标价值≈0，排除（关税表面若做税率工具再评估）。
 - **ITC Trade Map**：免费注册可看月/季/年度 HS6 双边（MAT Pro beta 期免费，正式化后月度及时数据转付费档）；**条款（ITC Market Analysis 工具族统一条款）明文禁机器人批量抽取 + 限非商用自用 + 未经书面授权禁再分发**——只能人工交叉核查，不入管道。
