@@ -35,6 +35,12 @@
 - **key 现状（.env 实查）**：`MLA_API_KEY` / `USDA_MARS_API_KEY` / `OPENWEATHER_API_KEY` 为**空串**（占位名存在、值为空），`FRED_API_KEY` 整行缺失——fred/weather 每 6h 的 "Missing KEY" error 行即此因。**源复活仍是 key 获取问题（用户动作），代码侧端到端就绪，优先级不变**。
 - **旁路通道已开**：资讯侧 RSS（Beef Central + USDA Federal Register）自 2026-08-22 起每 6h 注入 market_news（M3，round-118），是当前唯一自动新增的外部内容通道。
 
+**2026-09-07 更新（round-160 前端设计巡查轮）——三条数据侧显影登记（前端侧已做诚实呈现）**：
+- **track-record 公开端点零牛系样本**：/ai/track-record "Recent verified predictions" 表当前 25 行全部是宏观序列（Natural Gas/Crude/EUR-USD/Cotton），无任何牛肉行——样本来自公开已验证预测池，牛系（月度基准）实际值按月度节奏落地晚，近窗内无牛系样本进入池中。前端已把牛系排序置顶（有即优先显示）并把脚注改为如实说明；根治需后端在样本选取上为牛系保留槽位或放宽窗口（owner 决策，未动）。
+- **cotton #2 chronos 预测尺度错位**：chronos_base 预测 18.94 vs 实际 0.82（MAPE 1117%）、chronos_mini 10.77 vs 0.82（404%）——同序列统计模型均 ~1-5%，量级差 ~23× 提示 chronos 推理链在 cotton 序列上单位/缩放错位（美分/磅 vs 美元/磅嫌疑）。前端已加 "尺度?" 琥珀标记；根因在推断/数据侧（R5 邻接项，owner）。
+- **timeseries/anomalies 子产品休眠**：time_series 表 0 行注册，anomalies 页无可用默认序列（dev 默认 root.test2 已移除，空表已加行内创建 CTA）。该子面是否继续投入属产品决策（PRODUCT-SPEC 未列核心链），当前为诚实空态而非功能缺口。
+- 界面验证基线：25 张全页截图 + console 无错误（仅登录前 auth/verify 401 属正常）；judge 视检三轮，其中 "Bit Categories"/"live-hog"/"24 models" 三条引述经对码证伪为视觉误读，未据改码。
+
 **2026-08-31 更新（round-152，V8 批0）——贸易流量价层脱离 D1 困境**：
 - 对华贸易统计层（原 china_customs_stats 职责）已由 `comtrade_mirror` 打通（UN Comtrade 公共预览 API，免 key、本机直连）：928 行入库（6 国×8 HS×37 个月 + 中国年度 CIF 校准 7 行），live 验收与贸易报告逐位对齐。**该子层不再依赖任何用户 key**。
 - `china_customs_stats` 按 D23 退役（双处注册移除、文件保留）：其端点 `stats.customs.gov.cn/api/trade/query` 为虚构路径 + 主机封锁，ingestion_logs 历史全为 warning 0/0（零产出实证）。官方平台直连复活仍属 D1 网络结论（需中国出口节点或人工月度 CSV，见 IMPROVEMENT-PLAN 批 5 观察项）。
@@ -60,6 +66,12 @@
 - `inac` **复活**：勘察定案——旧域 inac.gub.uy 死亡，门户迁 www.inac.uy（Liferay），数据走 **DIAE Interactiva** 后端 `POST/GET /inac/DIAEUtils`（`cmdaction=datosiniciales` 给最新年月；`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 给"育肥牛活重月度价"CSV，含 Y 与 Y-1 双年列）。新契约落 **CommodityPrice `novillo_gordo_uy`**（月度，2019-01→2026-07 共 91 行，2026-07=3.25 USD/kg 与 API 一致），替代死的 BeefCutPrice 部位 FOB 语义（后者或经 DIAE expo 应用另行复活，未排期）。注册源 19→20（AGENTS 已同步）。
 - 解析防线（live 取证）：Jasper CSV **表头与数据行列位错位**（标签 col3/col7、当前年值 col4）——按表头索引解析会静默丢当前年数据；解析器改"数值列发现 + 左新右旧 + 列同一性"（单值行不错配年份），仅双数值列契约成立，单列拒写（drift guard）。乌拉圭拼写 Setiembre、十进制逗号、页脚 Fuente 行均已钉测试（5 个解析测试）。
 - D1 的"复活即恢复乌拉圭周度"预期修正为：本轮恢复的是**月度价格**序列；faena（周屠宰）/expo（出口）两个 DIAE 应用仍在（P2 候选，未排期）。
+
+**2026-09-07 更新（round-160 前端设计巡查）——UI 视检暴露的数据侧三项 + 一项外观残留**：
+- **track-record 公开端点零牛系已验证样本**：`/ai/track-record` "Recent verified predictions" 表 25 行全为宏观序列（天然气/原油/欧元/棉花），牛系样本为 0（前端已按 `/beef/i` 牛系优先排序 + 脚注如实化"月度实际值落地后进入此表"，排序后仍无牛系行证明 payload 本身无）。根因待后端复核：预测验证管道对 beef 月度基准的 actual 回填滞后（IMF 月度点 T+2 月）或端点窗口过滤把牛系行排除。UI 侧无修复空间，留后端数据项。
+- **cotton #2 chronos 预测尺度错位**：同序列同时刻 chronos_base PREDICTED 18.94 / chronos_mini 10.77 vs ACTUAL 0.82 USD/lb（MAPE 1117%/404%），而 chronos_tiny/arima/naive 预测 0.86-0.89 正常——疑似部分模型链路把磅/美分单位搞混（推断或特征装配侧）。前端已加 "尺度?" 琥珀离群标记（MAPE>200% 显示，title 注明"疑似预测尺度错位"）；指标本身不动（R5 同款纪律：不因展示层需求改指标）。
+- **相关矩阵 30 天窗零重叠对**：`/dashboard/analysis` 20×20 矩阵非对角全部 null（judge 视检 P0 证据），根因 = 窗口内无两序列共享观测日期（数据冻结期 + 发布节奏错位的现实）。前端已改诚实空态（"暂无可计算的相关性"+原因句）；数据恢复后矩阵自动填充，无需后端改动。
+- **外观残留（未修）**：ProfessionalChart 右轴孤儿红色 "10.00" 标签（疑为某隐藏副序列的最后值标签，130-140 主序列上纯视觉噪音）；深度 EN 余量清单（QuickActions 瓷砖、accuracy 卡头、alerts tabs、trading 图表工具词汇）见 CHANGELOG round-160 余量登记，留后续语言批。
 
 **2026-08-31 更新（round-153，数据维护轮）——fred 免 key 复活 + world_bank 幻影更新修复**：
 - `fred`（宏观 MarketFactor 序列）不再被 FRED_API_KEY 硬门控：无 key 走 fredgraph.csv 免费公开下载（与 fredCsv.ts 同端点，BALTIC_DRY 除外——非 FRED 序列），有 key 升级官方 JSON API。首轮 live 暴露并修正 5 个休眠期不可见的错误 series id（PALLFNFINDEX→PALLFNFINDEXM、PCOPPUSD→PCOPPUSDM、PWHEAMTUSD→PWHEAMTUSDM、PCOTTIND→PCOTTINDUSDM、PSUGAUSA→PSUGAISAUSDM，全部 live 探针核实 2026-08-31）。live 验收：market_factors **15 序列×12 观测**（dailies 至 2026-08-25/28、monthlies 至 2026-07-01），每周期 ~30 条 "Missing FRED_API_KEY" error 噪音归零。FRED_API_KEY 转为可选增强。

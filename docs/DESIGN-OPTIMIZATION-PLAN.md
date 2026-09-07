@@ -1,9 +1,10 @@
 # 前端界面美学优化计划（DESIGN-OPTIMIZATION-PLAN）
 
-> 版本 v1.0.0 · 2026-08-31
+> 版本 v1.1.0 · 2026-09-07（v1.0.0 · 2026-08-31）
 > 方法：live 生产前端截图评估（14 张，桌面 1440×900 + 移动 390×844，含登录态）+ 静态 token 扫描（design-review 方法论）+ 世界级产品设计实现调研（Linear / Vercel Geist / TradingView / Mercury-Stripe-Ramp 拆解）。
 > 证据基线：`/tmp/design_audit/*.png`（易失目录，复现命令见附录 A）。
 > 关系：本文档不推翻 [`DESIGN.md`](DESIGN.md) 的 "Refined Industrial" 方向与 [`DESIGN-SYSTEM-AUDIT.md`](DESIGN-SYSTEM-AUDIT.md) §七 "设计方向正确，勿改" 的结论；它处理的是**系统层之上的体验层差距**。
+> **v1.1.0 执行记录（round-160）**：批 A/B/C/E2 已于 2026-08-31 落地；**批 D（语言一致性）于 round-160 批B 落地**（规则：chrome 中文 / 数据专名与模型名英文，成文于 DESIGN.md Decisions Log；营销与登录页维持英文为既定设计）；批 E1（dashboard 金线行情条）**未做**，留作后续签名批。round-160 新增死面复活/布局平衡/空态三批，详见 CHANGELOG round-160。
 
 ---
 

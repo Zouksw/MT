@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-160：前端设计巡查与完善轮 — 死面复活 / 语言统一 / 布局与空态
+
+用户目标"分析当前项目前端界面存在的问题并进行完善"。方法：25 张实况截图（20 桌面 + 5 移动，Playwright）+ console/API 错误采集 + 3 组 judge 视检 + 逐条对码防幻觉（judge 引述中 "Bit Categories"/"live-hog"/"24 models" 三条为视觉误读，未修）。四个 commit、每批全门禁（tsc/biome/测试/build/PM2/live），frontend 360/360、backend 1118 零回退。
+
+- **批A 死面复活与语义硬伤（11acc9d）**：dashboard/beef 全 "—" 的 7 天预测列条件隐藏；weekly-kill/cold-storage 两张死卡按最新报告期复活（宽窗拉取 + As-of 脚注，StatCard 增 footnote 槽）；digest FX "数据滞后" 误标修复（后端 /public/digest 接入 round-158 发布节奏窗 stalenessWindowDaysForSeries，usd_cny 9 天龄 stale:false live 验证）+ 90CL 卡 蛋白基准 类目 + "首期，暂无对比"；accuracy 趋势图 7/7 轴标签；market-news "&quot;" 实体泄漏解码、Drafts 死卡移除、移动 SOURCE 列裁切、标题 3 行钳制；"1 records" 单复数；Input 值色；anomalies dev 默认值 root.test2 移除；模型卡措辞对齐注册语义。
+- **批B 语言统一（b552664）**：上轮搁置的批D（语言规则）落地——chrome/页面标题/卡头/表头/KPI 标签/空态收口中文（面包屑 首页、~14 页标题、dashboard 全部卡头、accuracy/alerts/market-news/timeseries/data-sources 等），数据专名/模型名/单位保留英文；SnapshotBanner 中文化；规则成文于 DESIGN.md；测试断言随组改。营销与登录页维持英文为既定设计。
+- **批C 布局与空态（d49ab33）**：trading 双列再平衡（Data Provenance 入左轨、Model Consensus 入右轨，消除 judge 两轮指出的双侧死区）；analysis 相关矩阵零重叠诚实空态（原 20×20 全 "—"）；timeseries 空表行内 CTA；track-record 近期表牛系优先排序 + cotton 尺度离群 "尺度?" 标记 + 脚注如实化；Select 值色修复；dashboard 告警分布空态紧凑化。
+- **批D 数据清理**：生产库 4 个测试残留 watchlist（dbg2-*/r29-*）备份后清删（backups/round160-watchlists/），API 验证归零。
+- **余量登记**：①track-record 公开端点当前零牛系已验证样本（后端数据项，KNOWN-ISSUES）；②cotton #2 chronos 预测尺度错位（MAPE 1117%，推断/数据侧）；③深度 EN 余量（QuickActions 瓷砖、accuracy 卡头、alerts tabs、trading 图表工具词汇等）与 trading 孤儿 "10.00" 轴标签留待后续批。
+
 ### 2026-09-07 — round-162：开发轮 — 细粒度深挖（INAC eDIAE 乌拉圭官方出口统计 + Comext CN8 部位级）
 
 用户目标"探索更加细粒度、更加深入的牛肉贸易数据挖掘"。两批独立 commit、全门禁（tsc/测试/构建/PM2/live）。
