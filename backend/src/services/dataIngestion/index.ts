@@ -21,6 +21,7 @@ import { fredScraper } from "./sources/fredData";
 import { ibgeSidraScraper } from "./sources/ibgeSidra";
 import { inacScraper } from "./sources/inacData";
 import { inacExpoScraper } from "./sources/inacExpo";
+import { indecComexScraper } from "./sources/indecComex";
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
@@ -59,6 +60,11 @@ export function registerAllScrapers(): void {
 	// missing Comtrade monthlies: product family × world, no destination
 	// cross (registered gap; V8 批2, round-151).
 	scraperManager.registerSource("argentina_exports", argentinaExportsScraper);
+	// INDEC COMEX official monthly exports to China — NCM8 × destination FOB
+	// cross (comexbe.indec.gob.ar public-api, keyless): closes the AR
+	// product×destination registered gap; lands per-NCM + HS6-aggregate
+	// layers (round-163 批1).
+	scraperManager.registerSource("indec_comex", indecComexScraper);
 	// Brazil official quarterly bovine slaughter (IBGE SIDRA t/1092, keyless —
 	// the only one of the four round-157-verified official APIs with zero
 	// dependencies; round-158 批B). MarketFactor analysis face, not a

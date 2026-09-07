@@ -11,6 +11,7 @@ import { scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
 import { CN8_CODES } from "@/services/dataIngestion/sources/comextEu";
 import { HS_CODES } from "@/services/dataIngestion/sources/comtradeMirror";
+import { NCM_CODES } from "@/services/dataIngestion/sources/indecComex";
 import {
 	getCommodityFreshness,
 	getFundamentals,
@@ -319,8 +320,9 @@ router.get(
  */
 const tradeFlowsSchema = z.object({
 	// HS lanes (Comtrade mirror + Comext) plus the CN8 cut-level mix
-	// (Comext-only lanes, round-162 批2).
-	hs: z.enum([...HS_CODES, ...CN8_CODES] as [string, ...string[]]).default("0202"),
+	// (Comext-only lanes, round-162 批2) and INDEC NCM8 codes (AR official
+	// per-NCM lanes, round-163 批1).
+	hs: z.enum([...HS_CODES, ...CN8_CODES, ...NCM_CODES] as [string, ...string[]]).default("0202"),
 });
 
 router.get(
@@ -435,6 +437,13 @@ router.get(
 				label: "CEPEA/B3",
 				description:
 					"Centro de Estudos Avançados em Economia Aplicada — Brazilian beef and commodity prices",
+				tier: "2",
+				beefRelevance: "direct",
+			},
+			indec_comex: {
+				label: "INDEC COMEX Argentina",
+				description:
+					"comexbe.indec.gob.ar 公共 API — 阿根廷官方月度出口 NCM8×目的地利价（对华 FOB 金额+净重，round-163）",
 				tier: "2",
 				beefRelevance: "direct",
 			},

@@ -150,6 +150,10 @@ function backgroundJobs(): ScheduledJob[] {
 		// Monthly SSPM CSV on the daily cycle: non-release days confirm no
 		// change (noChange contract, same shape as comtrade_mirror).
 		"argentina_exports",
+		// INDEC COMEX NCM×destination monthly on the daily cycle: one
+		// request re-scans the current data year (noChange contract;
+		// round-163 批1).
+		"indec_comex",
 		// Quarterly IBGE SIDRA t/1092 on the daily cycle: non-release days
 		// confirm no change (noChange contract, same shape as comtrade_mirror
 		// and argentina_exports — round-158 批B).

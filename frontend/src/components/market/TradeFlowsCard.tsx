@@ -344,8 +344,8 @@ export function TradeFlowsCard() {
 				{payload.arFobTotal && (
 					<p className="mt-2 text-xs text-gray-500">
 						背景：阿根廷肉类月度出口总额（全部目的地，SSPM）——{fmtPeriod(payload.arFobTotal.period)}{" "}
-						约 {formatDecimal(payload.arFobTotal.valueUsdM, 0)}{" "}
-						百万美元。阿根廷无对华月度镜像（上表仅年度线），此为出口总量上下文，非对华流量。
+						约 {formatDecimal(payload.arFobTotal.valueUsdM, 0)} 百万美元。阿根廷对华月度线另见 INDEC
+						官方行（上表），此为全部目的地的出口总量上下文，非对华流量。
 					</p>
 				)}
 

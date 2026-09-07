@@ -602,10 +602,14 @@ export async function getTradeFlows(hs: string): Promise<{
 }> {
 	const [mirrorRows, calibRows, arRow, uyRow, uyCutRows] = await Promise.all([
 		prisma.marketFactor.findMany({
-			// Two mirror lanes, deliberately distinct types: partner-reported
-			// FOB-USD (Comtrade) and EU-reported FOB-EUR (Comext) — grouped by
-			// region (BR→CN vs IE→CN), never merged (round-161 批1).
-			where: { type: { in: [`export_to_cn_${hs}`, `export_eu_to_cn_${hs}`] } },
+			// Mirror lanes, deliberately distinct types: partner-reported
+			// FOB-USD (Comtrade), EU-reported FOB-EUR (Comext), and
+			// AR-official FOB-USD per NCM/HS6 (INDEC COMEX — its HS6 rows are
+			// sums of own NCM children, never cross-source) — grouped by
+			// region (BR→CN vs IE→CN vs AR→CN), never merged.
+			where: {
+				type: { in: [`export_to_cn_${hs}`, `export_eu_to_cn_${hs}`, `export_ar_to_cn_${hs}`] },
+			},
 			orderBy: { date: "desc" },
 			take: 400,
 		}),
@@ -684,16 +688,36 @@ export async function getTradeFlows(hs: string): Promise<{
 	);
 
 	const now = Date.now();
-	const byRegion = new Map<string, FactorRow[]>();
+	// Group by region, then by type within it: a region can carry lanes from
+	// multiple sources (AR→CN has INDEC monthly + the Comtrade annual
+	// fallback). Mixing them would corrupt history/MoM — keep only the
+	// type-bucket with the newest observation (the official monthly lane
+	// supersedes the annual fallback, round-163 批1).
+	const byRegion = new Map<string, Map<string, FactorRow[]>>();
 	for (const row of mirrorRows) {
 		if (!row.region) continue;
-		const list = byRegion.get(row.region) ?? [];
+		const byType = byRegion.get(row.region) ?? new Map<string, FactorRow[]>();
+		const list = byType.get(row.type) ?? [];
 		list.push(row);
-		byRegion.set(row.region, list);
+		byType.set(row.type, list);
+		byRegion.set(row.region, byType);
 	}
 
 	const flows: TradeFlowEntry[] = [];
-	for (const [region, rows] of byRegion) {
+	for (const [region, byType] of byRegion) {
+		let rows: FactorRow[] | undefined;
+		let pickedType = "";
+		for (const [type, list] of byType) {
+			if (
+				!rows ||
+				list[0].date > rows[0].date ||
+				(list[0].date === rows[0].date && type < pickedType)
+			) {
+				rows = list;
+				pickedType = type;
+			}
+		}
+		if (!rows) continue;
 		const meta = (rows[0].metadata ?? {}) as { freq?: string; basis?: string };
 		const freq = meta.freq === "A" ? "A" : "M";
 		const latest = toPoint(rows[0]);
@@ -767,7 +791,7 @@ export async function getTradeFlows(hs: string): Promise<{
 		uyInacTotal,
 		uyCuts,
 		notes: [
-			"月度线为出口国报送的 FOB 镜像口径（巴西约滞后 1 个月，澳/新/美约 2 个月）；阿根廷/乌拉圭仅年度报送，缺失月份为未报送而非零值。",
+			"月度线为出口国报送的 FOB 镜像口径（巴西约滞后 1 个月，澳/新/美约 2 个月）；阿根廷月度线为 INDEC 官方 NCM 口径（约滞后 1 个月），乌拉圭月度线为 INAC 官方口径；其余缺失月份为未报送而非零值。",
 			"中国官方口径为年度 CIF（中国报送），与月度 FOB 镜像存在系统性差异（含运保费与时点），两口径并列展示、绝不合并。",
 			"欧盟通道（爱尔兰等）为 Comext 欧盟申报 FOB-**EUR** 口径（约滞后 6 周），与美元通道并列展示、不做汇率换算与合并；当前欧盟对华流量较小，缺失月份为无流量。",
 			"乌拉圭为 INAC eDIAE 官方月度 FOB 金额（肉类族口径、无分国吨位故不折均价）；乌拉圭部位族均价为全球口径（eDIAE 无目的地维度），非对华专属。",

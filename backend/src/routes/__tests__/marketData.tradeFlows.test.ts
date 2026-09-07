@@ -31,6 +31,7 @@ const EU_TYPE = "export_eu_to_cn_0202";
 const CALIB_TYPE = "import_cn_cif_0202";
 const AR_FOB_TYPE = "export_fob_carnes";
 const UY_INAC_TYPE = "export_fob_inac_bovina";
+const AR_INDEC_TYPE = "export_ar_to_cn_0202";
 const UY_CUT_PREFIX = "export_fob_cut_uy_";
 // Router-relative paths (Express req.path inside a mounted router — the
 // full /api/market prefix is NOT part of the cache key; live-verified).
@@ -56,7 +57,7 @@ beforeAll(async () => {
 	await prisma.marketFactor.deleteMany({
 		where: {
 			type: {
-				in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE, UY_INAC_TYPE],
+				in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE, UY_INAC_TYPE, AR_INDEC_TYPE],
 			},
 		},
 	});
@@ -120,6 +121,26 @@ beforeAll(async () => {
 				source: "argentina_exports",
 				seriesKey: "",
 				metadata: { serie: "ica_carnes", dataset: "sspm-75.3" },
+			},
+			{
+				// Argentina INDEC official monthly to-China lane (round-163 批1):
+				// HS6 aggregate shape, USD/ton unit price.
+				type: AR_INDEC_TYPE,
+				region: "AR→CN",
+				date: monthsAgo(1),
+				value: 6014.285714,
+				unit: "USD/ton",
+				source: "indec_comex",
+				seriesKey: "",
+				metadata: {
+					freq: "M",
+					period: monthsAgo(1).toISOString().slice(0, 7).replace("-", ""),
+					quantityKg: 21022098,
+					valueUsd: 126336766,
+					currency: "USD",
+					productLevel: "HS6",
+					basis: "FOB-USD (Argentina INDEC COMEX, HS6 0202 aggregate, official)",
+				},
 			},
 			{
 				// EU lane (round-161 批1): Comext FOB-EUR, its own type — the
@@ -235,7 +256,7 @@ afterAll(async () => {
 	await getPrisma().marketFactor.deleteMany({
 		where: {
 			type: {
-				in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE, UY_INAC_TYPE],
+				in: [MIRROR_TYPE, EU_TYPE, CALIB_TYPE, AR_FOB_TYPE, UY_INAC_TYPE, AR_INDEC_TYPE],
 			},
 		},
 	});
@@ -300,11 +321,19 @@ describe("GET /api/market/trade-flows", () => {
 		expect(ie.momPct).toBeNull(); // single seeded row
 		expect(ie.stale).toBe(false);
 
-		const ar = flows.find((f: { region: string }) => f.region === "AR→CN");
-		expect(ar.freq).toBe("A");
-		expect(ar.momPct).toBeNull();
-		expect(ar.stale).toBe(false);
-		expect(ar.history.length).toBe(1);
+		// AR→CN carries both the Comtrade annual fallback and the INDEC
+		// monthly lane — one region, one entry: the official monthly bucket
+		// (newest observation) supersedes the annual fallback (round-163 批1).
+		const arRows = flows.filter((f: { region: string }) => f.region === "AR→CN");
+		expect(arRows.length).toBe(1);
+		const arMonthly = arRows[0];
+		expect(arMonthly.freq).toBe("M");
+		expect(arMonthly.currency).toBe("USD");
+		expect(arMonthly.latest.unitPricePerT).toBeCloseTo(6014.3, 1);
+		expect(arMonthly.latest.qtyTons).toBeCloseTo(21022.1, 1);
+		expect(arMonthly.latest.valueM).toBeCloseTo(126.3, 1);
+		expect(arMonthly.stale).toBe(false);
+		expect(arMonthly.basis).toContain("INDEC");
 
 		// Calibration lane: CIF, separate table, never merged into flows.
 		const cnBr = calibration.find((c: { region: string }) => c.region === "CN←BR");
@@ -348,6 +377,16 @@ describe("GET /api/market/trade-flows", () => {
 		// Frozen families sort before chilled ones.
 		expect(uyCuts.indexOf(hind)).toBeLessThan(uyCuts.indexOf(chilled));
 		expect(notes.join("")).toContain("INAC");
+	});
+
+	test("accepts the INDEC NCM8 lanes (round-163 批1)", async () => {
+		for (const hs of ["02023000", "02022010", "02022020", "02022090", "02062990"]) {
+			const res = await request(app)
+				.get(`/api/market/trade-flows?hs=${hs}`)
+				.set({ Authorization: `Bearer ${adminToken}` });
+			expect(res.status, hs).toBe(200);
+			expect(res.body.data.hs).toBe(hs);
+		}
 	});
 
 	test("accepts the Comext CN8 cut-level lanes (round-162 批2)", async () => {
