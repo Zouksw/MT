@@ -108,7 +108,8 @@ interface TradeFlowsPayload {
 	notes: string[];
 }
 
-/** The mirror's pinned HS set (backend zod enum is the contract). */
+/** The mirror's pinned HS set + the Comext CN8 cut-level mix (backend zod
+ * enum is the contract; CN8 lanes are EU-reported only). */
 const HS_OPTIONS = [
 	{ code: "0202", label: "冻牛肉" },
 	{ code: "020230", label: "冻去骨牛肉" },
@@ -118,6 +119,9 @@ const HS_OPTIONS = [
 	{ code: "020621", label: "冻牛肝" },
 	{ code: "020622", label: "冻牛胃" },
 	{ code: "020629", label: "其他冻牛杂碎" },
+	{ code: "02023050", label: "冻去骨·前部块" },
+	{ code: "02023090", label: "冻去骨·其他" },
+	{ code: "02022090", label: "冻带骨·其他" },
 ] as const;
 
 const COUNTRY_LABELS: Record<string, string> = {
@@ -203,7 +207,7 @@ export function TradeFlowsCard() {
 		<Card className="mt-6">
 			<CardHeader>
 				<CardTitle>
-					对华贸易流 · {hsLabel}（HS {hs}，FOB 月度镜像）
+					对华贸易流 · {hsLabel}（{hs.length === 8 ? "CN8" : "HS"} {hs}，FOB 月度镜像）
 				</CardTitle>
 				<div className="mt-2 flex flex-wrap gap-1.5">
 					{HS_OPTIONS.map((opt) => (

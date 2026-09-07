@@ -9,6 +9,7 @@ import { asyncHandler, NotFoundError } from "@/middleware/errorHandler";
 import { stalenessWindowDaysForSeries } from "@/services/cadence";
 import { scraperManager } from "@/services/dataIngestion";
 import { classifyIngestionStatus } from "@/services/dataIngestion/helpers";
+import { CN8_CODES } from "@/services/dataIngestion/sources/comextEu";
 import { HS_CODES } from "@/services/dataIngestion/sources/comtradeMirror";
 import {
 	getCommodityFreshness,
@@ -317,7 +318,9 @@ router.get(
  * contract lives in the source module).
  */
 const tradeFlowsSchema = z.object({
-	hs: z.enum(HS_CODES).default("0202"),
+	// HS lanes (Comtrade mirror + Comext) plus the CN8 cut-level mix
+	// (Comext-only lanes, round-162 批2).
+	hs: z.enum([...HS_CODES, ...CN8_CODES] as [string, ...string[]]).default("0202"),
 });
 
 router.get(

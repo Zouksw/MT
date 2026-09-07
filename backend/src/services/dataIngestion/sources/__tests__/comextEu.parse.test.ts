@@ -14,6 +14,7 @@ import {
 	type JsonStatDataset,
 	parseComextSeries,
 } from "@/services/dataIngestion/sources/comextEu";
+import { CN8_CODES, CN8_LABELS } from "../comextEu";
 
 const IE_VALUE_FIXTURE: JsonStatDataset = {
 	value: {
@@ -171,5 +172,29 @@ describe("comextUrl — single product / single indicator / time range", () => {
 				"?lang=EN&freq=M&reporter=IE&partner=CN&product=0202&flow=2" +
 				"&indicators=VALUE_IN_EUROS&sinceTimePeriod=2026-04&untilTimePeriod=2026-07",
 		);
+	});
+});
+
+describe("CN8 cut-level lanes (round-162 批2)", () => {
+	it("pins the API-verified CN8 vocabulary with labels", () => {
+		expect(CN8_CODES).toEqual(["02022010", "02022090", "02023050", "02023090"]);
+		for (const code of CN8_CODES) {
+			expect(CN8_LABELS[code]).toBeDefined();
+		}
+	});
+
+	it("marks 8-digit products CN8 in metadata with the label carried", () => {
+		const rows = parseComextSeries(
+			new Map([["2026-01", 349543]]),
+			new Map([["2026-01", 453]]), // 45,300 kg → €7,716.18/t
+			"IE",
+			"02023050",
+			CN8_LABELS["02023050"],
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0].type).toBe("export_eu_to_cn_02023050");
+		expect(rows[0].metadata.productLevel).toBe("CN8");
+		expect(rows[0].metadata.productLabel).toContain("brisket");
+		expect(rows[0].value).toBeCloseTo(7716.18, 1);
 	});
 });

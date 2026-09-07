@@ -159,8 +159,15 @@ describe("TradeFlowsCard", () => {
 		// Title reflects the selected HS lane.
 		expect(screen.getByText(/对华贸易流 · 冻牛肉（HS 0202/)).toBeInTheDocument();
 
-		// All 8 HS lanes are offered as pills.
-		for (const label of ["冻去骨牛肉", "鲜/冷藏牛肉", "其他冻牛杂碎"]) {
+		// All 11 lanes are offered as pills (8 HS + 3 CN8 cut-level, 批2).
+		for (const label of [
+			"冻去骨牛肉",
+			"鲜/冷藏牛肉",
+			"其他冻牛杂碎",
+			"冻去骨·前部块",
+			"冻去骨·其他",
+			"冻带骨·其他",
+		]) {
 			expect(screen.getByText(new RegExp(label))).toBeInTheDocument();
 		}
 
@@ -212,7 +219,7 @@ describe("TradeFlowsCard", () => {
 		render(<TradeFlowsCard />);
 		expect(screen.getByText(/HS 0202/)).toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole("button", { name: /020230/ }));
+		fireEvent.click(screen.getByRole("button", { name: "冻去骨牛肉 020230" }));
 		expect(screen.getByText(/HS 020230/)).toBeInTheDocument();
 	});
 

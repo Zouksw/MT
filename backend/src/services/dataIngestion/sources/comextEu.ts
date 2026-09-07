@@ -46,6 +46,28 @@ const SOURCE_ID = "comext_eu";
 /** EU member states approved to export beef to China (reporter = ISO2). */
 export const EU_REPORTERS = ["IE", "NL", "FR", "PL"] as const;
 
+/**
+ * CN8 codes with verified EU→CN flow — the cut-level product mix inside the
+ * HS6 frozen lanes (round-162 批2). Codes + labels are the API's own product
+ * dimension, probed live 2026-09-07 (IE→CN, 2024-01..2026-06 window):
+ * 02023050 → 4 obs, 02023090 → 27 obs (the bulk), 02022090 → 1 obs,
+ * 02022010 → valid but zero flow so far. The candidate codes 02023011/19/30
+ * and 02023060 do NOT exist in DS-045409's product dimension (no label, no
+ * size) — do not re-add them from the CN nomenclature spec alone.
+ */
+export const CN8_CODES = ["02022010", "02022090", "02023050", "02023090"] as const;
+
+/** API product-dimension labels, embedded for read-side 口径 display. */
+export const CN8_LABELS: Record<(typeof CN8_CODES)[number], string> = {
+	"02022010": "Frozen compensated bovine quarters, bone in",
+	"02022090": "Frozen bovine cuts, bone in (other)",
+	"02023050": "Frozen bovine boneless crop, chuck and blade and brisket cuts",
+	"02023090": "Frozen bovine boneless meat (other)",
+};
+
+/** Every product this source sweeps: HS lanes + the CN8 mix. */
+const ALL_PRODUCTS = [...HS_CODES, ...CN8_CODES] as string[];
+
 /** Rolling window the daily run re-scans (revision catch + fresh months). */
 export const DAILY_LOOKBACK_MONTHS = 3;
 /** One-time backfill depth — one range query per lane, same request count. */
@@ -106,7 +128,9 @@ export function parseComextSeries(
 	valueByPeriod: Map<string, number>,
 	qtyByPeriod: Map<string, number>,
 	reporterIso: string,
-	hsCode: string,
+	productCode: string,
+	/** CN8 lanes carry the API product label for 口径 display. */
+	productLabel?: string,
 ): ParsedEuRow[] {
 	const out: ParsedEuRow[] = [];
 	for (const [period, valueEur] of valueByPeriod) {
@@ -118,7 +142,7 @@ export function parseComextSeries(
 
 		const quantityKg = qtyHundredKg * 100;
 		out.push({
-			type: `export_eu_to_cn_${hsCode}`,
+			type: `export_eu_to_cn_${productCode}`,
 			region: `${reporterIso}→CN`,
 			date,
 			// Decimal(18,6) scale — see the comtradeMirror rounding note.
@@ -127,7 +151,9 @@ export function parseComextSeries(
 			metadata: {
 				freq: "M",
 				period,
-				hsCode,
+				hsCode: productCode,
+				productLevel: productCode.length === 8 ? "CN8" : "HS",
+				...(productLabel ? { productLabel } : {}),
 				quantityKg,
 				valueEur,
 				currency: "EUR",
@@ -211,7 +237,7 @@ export async function runComextEu(monthsLookback: number): Promise<ScraperResult
 
 	const queries: Array<{ url: string; reporter: string; hs: string; indicator: string }> = [];
 	for (const reporter of EU_REPORTERS) {
-		for (const hs of HS_CODES) {
+		for (const hs of ALL_PRODUCTS) {
 			for (const indicator of [VALUE_INDICATOR, QTY_INDICATOR]) {
 				queries.push({
 					url: comextUrl({ reporter, product: hs, indicator, since, until }),
@@ -242,12 +268,14 @@ export async function runComextEu(monthsLookback: number): Promise<ScraperResult
 	}
 
 	for (const reporter of EU_REPORTERS) {
-		for (const hs of HS_CODES) {
+		for (const hs of ALL_PRODUCTS) {
+			const cn8Label = CN8_LABELS[hs as (typeof CN8_CODES)[number]];
 			const rows = parseComextSeries(
 				valueMaps.get(laneKey(reporter, hs)) ?? new Map(),
 				qtyMaps.get(laneKey(reporter, hs)) ?? new Map(),
 				reporter,
 				hs,
+				cn8Label,
 			);
 			for (const parsed of rows) {
 				parsedRows++;

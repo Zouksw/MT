@@ -350,6 +350,16 @@ describe("GET /api/market/trade-flows", () => {
 		expect(notes.join("")).toContain("INAC");
 	});
 
+	test("accepts the Comext CN8 cut-level lanes (round-162 批2)", async () => {
+		for (const hs of ["02023050", "02023090", "02022090", "02022010"]) {
+			const res = await request(app)
+				.get(`/api/market/trade-flows?hs=${hs}`)
+				.set({ Authorization: `Bearer ${adminToken}` });
+			expect(res.status, hs).toBe(200);
+			expect(res.body.data.hs).toBe(hs);
+		}
+	});
+
 	test("rejects an hs code outside the mirror's pinned set", async () => {
 		const res = await request(app)
 			.get("/api/market/trade-flows?hs=999999")
