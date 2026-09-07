@@ -221,6 +221,8 @@ box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 7. **2-column grids for data-dense pages**, never 3-column (too cramped).
 8. **Minimum radius `rounded` (4px).** No `rounded-sm` or arbitrary sub-4px values.
 9. **No dead columns in list views.** A column that is all `0` or all `--` is layout noise: hide it, or demote it to a tooltip/detail page. Long-text columns must opt into wrapping (`ui/Table` `wrap: true`) — the default nowrap is for short enumerated values only, and unwrapped long titles overflow into the next cell (2026-08-31 design-optimization batch A).
+10. **Chinese chrome, English data.** Page titles, card/section headers, table headers, KPI labels, breadcrumbs, buttons and empty-state copy are zh-CN; data values, model names (Chronos-T5-Tiny, ARIMA), proper nouns (USDA, MLA, MAPE), units and source ids stay in their canonical form. Auth (login/register) and marketing pages (`/landing`, `(marketing)/*`) are deliberately English — do not "fix" them as inconsistencies (2026-09-07 round-160 批B, audience = Chinese beef trade professionals).
+11. **Empty states must explain + act.** An empty region carries one line of *why* and one next-step link/button — never a bare box, and never an all-zero KPI row stacked over an empty state that already says the same thing (hide the KPI row while it is all zeros) (round-160 批A/C).
 
 ---
 
@@ -240,6 +242,7 @@ box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-07 | Chinese chrome / English data language split (rule 10) | Sidebar was Chinese while page titles mixed EN/CN at random; unified to zh-CN chrome for the CN trade audience, EN retained for data proper nouns and marketing/auth surfaces |
 | 2026-05 | Gold (#B8860B) as primary | Commodity/precious metal association, professional warmth |
 | 2026-05 | Removed Ant Design/Refine | Simplified to Tailwind + shadcn/ui for full design control |
 | 2026-05 | 2-column grid standard | Data-heavy pages need space; 3-column too cramped |
