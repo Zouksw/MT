@@ -247,6 +247,16 @@ export default function TimeseriesList() {
 					loading={loading}
 					emptyText="尚未创建任何时间序列"
 				/>
+				{/* In-panel CTA: the only create action used to live in the far
+				    top-right — an empty page with no next step read as dead
+				    (design-review round-160). */}
+				{!loading && total === 0 && (
+					<div className="pb-6 text-center">
+						<a href="/timeseries/create" className="text-sm text-primary hover:underline">
+							创建第一个时间序列 →
+						</a>
+					</div>
+				)}
 			</div>
 
 			{/* Pagination */}

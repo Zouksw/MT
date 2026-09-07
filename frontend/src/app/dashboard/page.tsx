@@ -318,11 +318,17 @@ export default function DashboardPage() {
 											<table className="w-full text-sm">
 												<thead>
 													<tr className="text-left text-xs text-muted-foreground border-b">
-														<th className="px-5 py-2 font-medium">部位</th>
-														<th className="px-3 py-2 font-medium text-left">产地</th>
-														<th className="px-5 py-2 font-medium text-right">今日价</th>
+														<th className="px-5 py-2 font-medium whitespace-nowrap">部位</th>
+														<th className="px-3 py-2 font-medium text-left whitespace-nowrap">
+															产地
+														</th>
+														<th className="px-5 py-2 font-medium text-right whitespace-nowrap">
+															今日价
+														</th>
 														{hasCutForecasts && (
-															<th className="px-5 py-2 font-medium text-left">7 天预测</th>
+															<th className="px-5 py-2 font-medium text-left whitespace-nowrap">
+																7 天预测
+															</th>
 														)}
 													</tr>
 												</thead>

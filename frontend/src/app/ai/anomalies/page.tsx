@@ -175,10 +175,8 @@ export default function AIAnomaliesPage() {
 			{/* Page Header */}
 			<div className="flex items-start justify-between gap-4 mb-6">
 				<div>
-					<h1 className="text-2xl font-semibold text-foreground">AI Anomaly Detection</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						Detect anomalies in your time series data using AI
-					</p>
+					<h1 className="text-2xl font-semibold text-foreground">异常检测</h1>
+					<p className="text-sm text-muted-foreground mt-1">用 AI 检测时间序列中的异常点</p>
 				</div>
 			</div>
 

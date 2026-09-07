@@ -42,6 +42,24 @@ export default function CorrelationMatrixChart({
 		);
 	}
 
+	// Dead-surface guard (design-review round-160): a matrix whose off-diagonal
+	// is 100% null (no two series overlap in the window) rendered a 20×20 grid
+	// of "—" with the only explanation trapped in a hover tooltip. Say it once,
+	// plainly, instead.
+	const hasAnyPairValue = matrix.some((row, i) => row.some((v, j) => i !== j && v !== null));
+
+	if (!hasAnyPairValue) {
+		return (
+			<div className="text-center p-10">
+				<p className="text-sm font-medium text-foreground mb-1">暂无可计算的相关性</p>
+				<p className="text-xs text-muted-foreground max-w-md mx-auto">
+					30 天窗口内没有两个序列存在重叠的观测日期（多为数据冻结期或发布节奏错位所致）。
+					待窗口内出现重叠数据后，矩阵会自动填充。
+				</p>
+			</div>
+		);
+	}
+
 	const cellSize = Math.max(50, Math.min(80, 500 / commodities.length));
 	const labelWidth = 100;
 

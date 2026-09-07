@@ -202,19 +202,17 @@ export default function AIPredictPage() {
 				<div>
 					<div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
 						<a href="/" className="hover:text-primary">
-							Home
+							首页
 						</a>
 						<ChevronRight className="size-3" />
 						<a href="/ai/accuracy" className="hover:text-primary">
 							AI
 						</a>
 						<ChevronRight className="size-3" />
-						<span>AI Prediction</span>
+						<span>价格预测</span>
 					</div>
-					<h1 className="text-2xl font-semibold text-foreground">AI Prediction</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						Generate single-time predictions using AI models
-					</p>
+					<h1 className="text-2xl font-semibold text-foreground">价格预测</h1>
+					<p className="text-sm text-muted-foreground mt-1">使用 AI 模型生成单序列点预测</p>
 				</div>
 				<Button
 					variant="ghost"
@@ -269,6 +267,7 @@ export default function AIPredictPage() {
 									label="Prediction Horizon"
 									type="number"
 									placeholder="e.g., 10"
+									helperText="预测未来 N 天（horizon，单位：天）"
 									value={formHorizon}
 									onChange={(e) => setFormHorizon(e.target.value)}
 									error={errors.horizon}

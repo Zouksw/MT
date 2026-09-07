@@ -205,10 +205,12 @@ function TradingPageInner() {
 									<BarChart3 className="size-4" />
 									<span>
 										{d.beefMode
-											? d.selectedCut
-												? `${d.selectedCut.replace(/_/g, " ")} — Beef Cut Price`
-												: "Select a beef cut"
-											: `${d.selected?.name || "Loading..."} — Price Chart`}
+											? d.beefCutInfo?.displayName
+												? `${d.beefCutInfo.displayName} — 部位价格`
+												: d.selectedCut
+													? `${d.selectedCut.replace(/_/g, " ")} — 部位价格`
+													: "选择部位"
+											: `${d.selected?.nameCn || d.selected?.name || "加载中…"} — 价格图`}
 									</span>
 								</div>
 							</CardTitle>
@@ -349,6 +351,15 @@ function TradingPageInner() {
 					)}
 
 					<MarketFactorsPanel factors={d.factors} loading={d.factorsLoading} />
+
+					{/* Data provenance moved into the left rail (round-160 批C): as a
+					    full-width row below the grid it left ~640px of dead black under
+					    Market Factors while the forecast panel owned the right side. */}
+					<DataSourcePanel
+						priceSources={d.priceSources}
+						factorSources={d.factorSources}
+						loading={d.sourcesLoading}
+					/>
 				</div>
 
 				{/* Right column: AI forecast panel (TradingView-style detail pane) */}
@@ -385,50 +396,45 @@ function TradingPageInner() {
 							AI signal unavailable for this commodity.
 						</div>
 					)}
-				</div>
 
-				<div className="lg:col-span-5">
-					<DataSourcePanel
-						priceSources={d.priceSources}
-						factorSources={d.factorSources}
-						loading={d.sourcesLoading}
-					/>
+					{/* Model consensus table — moved into the right rail (round-160
+					    批C): as a full-width row below the grid it left the shorter
+					    forecast panel with a tall dead gap; stacked here it belongs to
+					    the same AI detail pane and balances the left rail. */}
+					{
+						<div className="mt-4">
+							<Card>
+								<CardHeader>
+									<CardTitle>
+										<div className="flex items-center gap-2">
+											<Zap className="size-4" />
+											<span>Model Consensus</span>
+										</div>
+									</CardTitle>
+								</CardHeader>
+								<CardBody>
+									{d.signalLoading ? (
+										<div className="flex items-center justify-center py-8">
+											<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+										</div>
+									) : (
+										/* min-w keeps the 置信度 column reachable by horizontal
+										   scroll on 390px instead of clipped mid-value. */
+										<div className="overflow-x-auto">
+											<div className="min-w-[340px]">
+												<ModelConsensusTable
+													forecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
+													loading={d.signalLoading}
+												/>
+											</div>
+										</div>
+									)}
+								</CardBody>
+							</Card>
+						</div>
+					}
 				</div>
 			</div>
-
-			{/* Model consensus table — only in normal mode */}
-			{
-				<div className="mt-4">
-					<Card>
-						<CardHeader>
-							<CardTitle>
-								<div className="flex items-center gap-2">
-									<Zap className="size-4" />
-									<span>Model Consensus</span>
-								</div>
-							</CardTitle>
-						</CardHeader>
-						<CardBody>
-							{d.signalLoading ? (
-								<div className="flex items-center justify-center py-8">
-									<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-								</div>
-							) : (
-								/* min-w keeps the 置信度 column reachable by horizontal
-								   scroll on 390px instead of clipped mid-value. */
-								<div className="overflow-x-auto">
-									<div className="min-w-[340px]">
-										<ModelConsensusTable
-											forecasts={(d.signal?.individualForecasts ?? []).filter(Boolean)}
-											loading={d.signalLoading}
-										/>
-									</div>
-								</div>
-							)}
-						</CardBody>
-					</Card>
-				</div>
-			}
 
 			{/* Prediction History — only in normal mode */}
 			{d.predictionHistory.length > 0 && (

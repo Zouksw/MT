@@ -187,7 +187,9 @@ export default function TrackRecordPage() {
 							</h2>
 							<p className="mb-3 text-xs text-muted-foreground">
 								Predicted value = end-of-horizon forecast at log time; actual = the value that later
-								arrived. Only public series (macro commodities and beef cuts) are shown.
+								arrived. Only public series are shown. Beef samples enter this table once the
+								monthly actual lands — beef actuals publish on a monthly cadence, so macro rows lead
+								until then.
 							</p>
 							<div className="overflow-x-auto rounded-lg ring-1 ring-black/5 dark:ring-white/10">
 								<table className="w-full text-sm">
@@ -203,26 +205,47 @@ export default function TrackRecordPage() {
 										</tr>
 									</thead>
 									<tbody>
-										{record.samples.slice(0, 25).map((s) => (
-											<tr
-												key={`${s.seriesLabel}-${s.modelId}`}
-												className="border-t border-black/5 dark:border-white/5"
-											>
-												<td className="max-w-52 truncate px-4 py-2.5">{s.seriesLabel}</td>
-												<td className="px-4 py-2.5 font-mono text-xs">{s.modelId}</td>
-												<td className="px-4 py-2.5 text-muted-foreground">
-													{fmtDate(s.predictedAt)}
-												</td>
-												<td className="px-4 py-2.5 tabular-nums">{s.horizon}d</td>
-												<td className="px-4 py-2.5 tabular-nums">{fmtNum(s.predicted)}</td>
-												<td className="px-4 py-2.5 tabular-nums">{fmtNum(s.actual)}</td>
-												<td className="px-4 py-2.5 tabular-nums">
-													<span className={s.mape != null && s.mape <= 5 ? "text-success" : ""}>
-														{fmtMape(s.mape)}
-													</span>
-												</td>
-											</tr>
-										))}
+										{/* Beef series first: this is a beef platform's credibility
+										    page — macro rows were burying every beef sample
+										    (design-review round-160). Stable within-group order. */}
+										{[...record.samples]
+											.sort(
+												(a, b) =>
+													Number(/beef/i.test(b.seriesLabel)) - Number(/beef/i.test(a.seriesLabel)),
+											)
+											.slice(0, 25)
+											.map((s) => (
+												<tr
+													key={`${s.seriesLabel}-${s.modelId}`}
+													className="border-t border-black/5 dark:border-white/5"
+												>
+													<td className="max-w-52 truncate px-4 py-2.5">{s.seriesLabel}</td>
+													<td className="px-4 py-2.5 font-mono text-xs">{s.modelId}</td>
+													<td className="px-4 py-2.5 text-muted-foreground">
+														{fmtDate(s.predictedAt)}
+													</td>
+													<td className="px-4 py-2.5 tabular-nums">{s.horizon}d</td>
+													<td className="px-4 py-2.5 tabular-nums">{fmtNum(s.predicted)}</td>
+													<td className="px-4 py-2.5 tabular-nums">{fmtNum(s.actual)}</td>
+													<td className="px-4 py-2.5 tabular-nums">
+														<span className={s.mape != null && s.mape <= 5 ? "text-success" : ""}>
+															{fmtMape(s.mape)}
+														</span>
+														{/* Scale-mismatch marker: a 3-digit+ MAPE against
+													    same-series peers at ~1-5% means the prediction
+													    landed in a different unit (cotton #2 case,
+													    KNOWN-ISSUES round-160). */}
+														{s.mape != null && s.mape > 200 && (
+															<span
+																className="ml-1 text-[10px] text-amber-600 dark:text-amber-400"
+																title="疑似预测尺度错位——与同序列其他模型量级不符，已登记核查"
+															>
+																尺度?
+															</span>
+														)}
+													</td>
+												</tr>
+											))}
 									</tbody>
 								</table>
 							</div>

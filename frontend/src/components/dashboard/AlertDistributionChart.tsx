@@ -119,16 +119,18 @@ export const AlertDistributionChart: React.FC<AlertDistributionChartProps> = ({
 					) : (
 						<div
 							className="flex items-center justify-center text-muted-foreground"
-							style={{ height: 250 }}
+							/* 250px reserved for the chart reads as a half-empty box when
+							   quiet — collapse to one compact line (round-160 批C). */
+							style={{ height: 72 }}
 						>
-							<div className="text-center">
-								<div className="text-4xl mb-2">&#10003;</div>
-								<p className="text-sm">No alerts — all monitored series are quiet</p>
+							<div className="flex items-center gap-3 text-sm">
+								<span className="text-success">&#10003;</span>
+								<span>暂无告警——所有监控序列运行平稳</span>
 								<a
 									href="/alerts/rules"
-									className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+									className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
 								>
-									Set up alert rules <ArrowRight className="size-3" />
+									设置告警规则 <ArrowRight className="size-3" />
 								</a>
 							</div>
 						</div>
