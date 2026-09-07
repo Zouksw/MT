@@ -177,7 +177,16 @@ describe("comextUrl — single product / single indicator / time range", () => {
 
 describe("CN8 cut-level lanes (round-162 批2)", () => {
 	it("pins the API-verified CN8 vocabulary with labels", () => {
-		expect(CN8_CODES).toEqual(["02022010", "02022090", "02023050", "02023090"]);
+		expect(CN8_CODES).toEqual([
+			"02022010",
+			"02022090",
+			"02023050",
+			"02023090",
+			"02061010",
+			"02062210",
+			"02062290",
+			"02062910",
+		]);
 		for (const code of CN8_CODES) {
 			expect(CN8_LABELS[code]).toBeDefined();
 		}

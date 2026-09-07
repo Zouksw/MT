@@ -55,7 +55,20 @@ export const EU_REPORTERS = ["IE", "NL", "FR", "PL"] as const;
  * and 02023060 do NOT exist in DS-045409's product dimension (no label, no
  * size) — do not re-add them from the CN nomenclature spec alone.
  */
-export const CN8_CODES = ["02022010", "02022090", "02023050", "02023090"] as const;
+export const CN8_CODES = [
+	"02022010",
+	"02022090",
+	"02023050",
+	"02023090",
+	// Offal family (round-163 批2 probed): the EU→CN offal flow splits mostly
+	// along "for manufacture of pharmaceutical products" (heparin-grade
+	// glands/livers). 02061090/02062990 and the 020621/020630/41/49/70 splits
+	// do NOT exist in DS-045409's dimension.
+	"02061010",
+	"02062210",
+	"02062290",
+	"02062910",
+] as const;
 
 /** API product-dimension labels, embedded for read-side 口径 display. */
 export const CN8_LABELS: Record<(typeof CN8_CODES)[number], string> = {
@@ -63,6 +76,10 @@ export const CN8_LABELS: Record<(typeof CN8_CODES)[number], string> = {
 	"02022090": "Frozen bovine cuts, bone in (other)",
 	"02023050": "Frozen bovine boneless crop, chuck and blade and brisket cuts",
 	"02023090": "Frozen bovine boneless meat (other)",
+	"02061010": "Fresh/chilled edible bovine offal for pharma manufacture",
+	"02062210": "Frozen edible bovine livers for pharma manufacture",
+	"02062290": "Frozen edible bovine livers (other)",
+	"02062910": "Frozen edible bovine offal for pharma manufacture",
 };
 
 /** Every product this source sweeps: HS lanes + the CN8 mix. */
