@@ -190,7 +190,7 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
 - **`datos.gob.ar` CKAN API（直连可用）**：`/api/3/action/package_search` 实测可用。相关数据集：SSPM 宏观出口序列（Exportaciones FOB por rubro，月度 CSV 直链 `infra.datos.gob.ar/catalog/sspm/...`）——**月度出口总额级**，牛肉专项需在目录中再定位（本轮检索未命中牛肉专项月度序列，**待确认**）。
 - **`datos.magyp.gob.ar`（农贸部 CKAN，直连可用）**：现有 carnes 相关数据集 = SIO Carnes（指数/分区）、Producción de carne bovina（产量）——**产量/价格面，非分目的国出口**。
 - **SENASA 统计页（需代理）**：`argentina.gob.ar/senasa/estadisticas-historicas-de-exportacion-e-importacion-de-carne-bovina-bubalina-y-lacteos`——按年度的出口/进口统计（含按厂/目的国口径的细分表，**粒度待下载核验**）。
-- INDEC 出口按 NCM 立场的月度库【待确认可达性与下载形态】。
+- ~~INDEC 出口按 NCM 立场的月度库【待确认可达性与下载形态】~~ **2026-09-07 已打通（round-163）**：comex.indec.gob.ar 公共 API 全量可达，NCM8×目的地×月度量价已落地 `indec_comex`，契约见 §9.3。
 - 兜底：Comtrade 阿根廷**年度**对华明细可用（镜像校准）。
 
 ### 4.5 其他出口国现状（与 KNOWN-ISSUES D1 对照，本轮增量）
@@ -322,7 +322,18 @@ GET https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/d
 - **robots**：`/robots.txt` 404 无声明；服务为公开查询应用，无登录。
 - **登记缺口**：eDIAE 无分国吨位（Lane A 金额-only，不折均价）；query4 无目的地维度（Lane B 为全球口径）；"部位×目的地交叉"不存在。
 
-### 9.3 小供应国免 key API（P3 备用）
+### 9.3 INDEC COMEX 阿根廷官方查询系统（round-163 打通并落地 `indec_comex`，免 key）
+
+[comex.indec.gob.ar](https://comex.indec.gob.ar/)（React SPA）的后端 **`https://comexbe.indec.gob.ar/public-api/*`**（契约经 SPA bundle 逆向，本机直连可达；SPA 域名本身需代理+TLS1.2，后端域名不需要）：
+
+- **核心查询** `GET /public-api/search/?commerceType=export&year=Y&period=monthly&countryQuery=allCountries&products=["02023000",…]&countries=["CN-310"]` → 产品×国家×月行 `{amount(FOB USD), weight(kg), month, isConfidential?}`，**一次请求返回全年全国家**（`countries` 过滤形同虚设，客户端按 iso2=CN 过滤）；products 支持多码合单——15 个牛肉族 NCM 一次请求全覆盖。period 取值 `monthly`/`yearly`。
+- **辅助**：`/public-api/staticData`（{lastYear,lastMonth} 新鲜度界，2026-09-07 时=2026-07，T+1；另含 zipFiles 整年月度归档下载面）；`/public-api/search/products|countries`（NCM8 词表/国家 id——中国=310）。
+- **保密规则（关键）**：小目的地流被财政保密（amount=0/weight=0 + isConfidential）——这正是 AR 在 Comtrade 月度报送稀疏的根因；中国行公开。
+- **NCM 词表（实测）**：冻品 02021000/02022010/02022020/02022090/02023000；冷鲜 02011000/02012010/02012020/02012090/02013000；杂碎 02061000/02062100/02062200/**02062910（牛尾）/02062990（其他）**（02062900 不存在）。对华有流：02023000（主干，2025 年 $1.51B/310.8kt、$4.87/kg）、02022010/20/90（带骨三兄弟，$4.3M/$3.2M/$362M）、02062990、02013000（冷鲜去骨——2023 起有流，冷鲜协议通道）。
+- **robots**：无 robots.txt（SPA 404）；查询 API 温和使用（年请求≈数据年数）。
+- **登记缺口关闭**：v1.0/v2.0 的"阿根廷产品×目的国交叉不存在于 SSPM 75/77"由本通道补齐（SSPM 75/77 缺口登记正式关闭）；出口商级（提单最接近的免费面）未见公开端点。
+
+### 9.4 小供应国免 key API（P3 备用）
 
 | 源 | 契约 | 实测 | 条款 |
 |---|---|---|---|
@@ -331,7 +342,7 @@ GET https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/d
 
 供应量小（UK/加对华牛肉均为小几百~千吨级年量），列为 P3——若做"全供应国覆盖"时再接。
 
-### 9.4 排除项与俄罗斯缺口
+### 9.5 排除项与俄罗斯缺口
 
 - **World Bank WITS**：页面 200 但 REST 端点 307→405 未打通；**根本问题：仅年度（Comtrade 年度库+TRAINS 关税），无月度**——对月度量价目标价值≈0，排除（关税表面若做税率工具再评估）。
 - **ITC Trade Map**：免费注册可看月/季/年度 HS6 双边（MAT Pro beta 期免费，正式化后月度及时数据转付费档）；**条款（ITC Market Analysis 工具族统一条款）明文禁机器人批量抽取 + 限非商用自用 + 未经书面授权禁再分发**——只能人工交叉核查，不入管道。

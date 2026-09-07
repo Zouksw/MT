@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-07 — round-163：开发轮 — 阿根廷官方月度通道打通（INDEC COMEX NCM8×目的地 + Comext 杂碎 CN8）
+
+用户目标"探索更加细粒度、更加深入的牛肉贸易数据挖掘"（续 round-162）。两批独立 commit、全门禁。
+
+- **`indec_comex` 新源（批 1，commit 05dc166）**：comex.indec.gob.ar 的后端公共 API（comexbe.indec.gob.ar/public-api，免 key、本机直连）——**关闭平台最老的镜像缺口**（AR 产品×目的地月度交叉，v1.0 起 SSPM 75/77 互补缺口登记）。15 个牛肉族 NCM 一次请求/年返回全年全国家行（amount/weight/isConfidential；中国 id=310；小目的地财政保密即 AR 在 Comtrade 稀疏的根因）。三层落地：NCM8 全保真 + HS6 聚合 + 0201/0202 HS4 聚合（金额吨位先求和再折价，绝不平均平均数）。回填 4 年 399 行/14 序列；读侧 trade-flows 镜像查询加入 AR 通道 + region 内按 type 分桶取最新（官方月度取代 Comtrade 年度回退），live：冻品总 pill 上 AR→CN 月度行 2026-07 $4,598.8/t、37,540t、$172.6M、24 点历史。冷鲜去骨 02013000 对华 2023 起有流（冷鲜协议通道，真实发现）。路由枚举纳 NCM8 码。
+- **Comext 杂碎 CN8（批 2，commit a6012a9）**：实测 DS-045409 杂碎 CN8 有效码 4 个（02061010/02062210/02062290/02062910——欧盟输华杂碎主力是"制药用"档：肝素级肝/腺；02062990 等不存在），扫描集 HS+CN8 扩至 8 码 ×4 国（128 查询/日），落 NL/FR 制药档 6 观测。
+- **文档**：AGENTS 26 文件/24 注册；PRODUCT-SPEC §七（AR 缺口登记关闭）；RESEARCH §9.3 INDEC COMEX 契约（新）+ §4.4 待确认项关闭 + 重编号；DATA-SOURCES-EVALUATION round-163 执行记录。
+- **基线**：backend vitest 全绿（1138→1140+1 skip，零回退）；frontend TradeFlowsCard 4/4、tsc 零错误。
+
 ### 2026-09-07 — round-160：前端设计巡查与完善轮 — 死面复活 / 语言统一 / 布局与空态
 
 用户目标"分析当前项目前端界面存在的问题并进行完善"。方法：25 张实况截图（20 桌面 + 5 移动，Playwright）+ console/API 错误采集 + 3 组 judge 视检 + 逐条对码防幻觉（judge 引述中 "Bit Categories"/"live-hog"/"24 models" 三条为视觉误读，未修）。四个 commit、每批全门禁（tsc/biome/测试/build/PM2/live），frontend 360/360、backend 1118 零回退。

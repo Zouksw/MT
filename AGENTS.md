@@ -36,7 +36,7 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **25 文件 / 23 注册** | `sources/*.ts`（排除 index/test）；2026-09-07 复核（round-162）：inac_expo（INAC eDIAE 乌拉圭官方出口统计：对华月度 FOB 金额 + 冻/冷部位族 USD/kg）上线后注册 23；inac 复活于 round-159、comext_eu/drewry_wci 上线于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
+| 数据源爬虫 | **26 文件 / 24 注册** | `sources/*.ts`（排除 index/test）；2026-09-07 复核（round-163）：indec_comex（INDEC COMEX 阿根廷官方月度 NCM8×目的地对华量价）上线后注册 24；inac_expo 上线于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 上线于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
 | Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |
