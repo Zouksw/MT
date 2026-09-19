@@ -7,7 +7,7 @@
 		"build": "tsc && tsc-alias",
 		"start": "node dist/server.js",
 		"test": "vitest run",
-		"type-check": "tsc --noEmit",
+		"type-check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.scripts.json",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"test:unit": "vitest run --exclude '**/integration/**'",

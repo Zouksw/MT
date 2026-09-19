@@ -10,13 +10,14 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
     "types": ["node"]
   },
-  "include": ["src/**/*", "config/**/*", "scripts/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**"],
   "ts-node": {
     "compilerOptions": {
