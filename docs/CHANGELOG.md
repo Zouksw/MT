@@ -42,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-19 — round-165：肉交所现货源上线 — 首个部位级"现货层"自动通道（roujiaosuo_spot，CNY 挂价 × 虚拟厂隔离）
+
+用户指令"继续下一步"（承接 round-164 评估规划的排序：数据轨第二优先 = 肉交所实现轮，设计已由 round-164 批C 登记）。一批独立 commit、全门禁。
+
+- **`roujiaosuo_spot` 新源（Tier 2 注册 + DAILY 调度）**：肉交所 `/sell/` 公开挂牌流（免 key、robots 允许 /sell/ 且禁 /*search* —— 牛肉过滤客户端做）。实现按登记设计全量落地：翻页 walker（`index-htm-page-N`，page-0/1 同页镜像 + page-2 空壳两项 live 实证怪癖以内建去重/跳空页处理，≤8 页/日 + 1.5s 限速，DB 持久性早停）；解析器钉 7 列契约（品名/供货类型/**原产国**/价格 元每公斤/数量/仓库/相对时间——列表页字段齐全无需抓详情）；**词汇门**（标题须含"牛" + 排除加工品标记黑椒/腌制/调理/预煮/即食/熟食/卤味 + 75 规范 nameZh ∪ 中文 ALIASES 最长子串匹配，宁缺勿错不猜码——"后腿肉"无牛标拒、"牛后腿"过）；**合理性带 5–300 CNY/kg**（live 实证拦截"雪花肥牛砖 16000 元/公斤"级箱价/错标，拒绝+warn 不钳制）；相对时间解析（N分钟/小时/天前 + MM-DD/YYYY-MM-DD 绝对格式）。
+- **落库与币种隔离**：虚拟厂 `RJS-SPOT`（Factory 表 CN + metadata.virtual）承载 CNY/kg 挂价行——与冻结 USD FOB 厂序列**按 factory 维度天然隔离，绝不换算合并**；`(factoryId, cutCode, date, source)` 唯一键 createMany skipDuplicates 幂等（当日首见挂牌胜出，竞争卖家不覆写不抖动）；metadata 全溯源（priceType='listing' 挂价≠成交、listingId/标题/匹配词/原产国/仓库/sourceUrl）；无价格（电询/面议）不落行；noChange 契约（重扫同日行 0/0 confirmed-unchanged）。
+- **前端币种隔离（配套必改）**：beef 表头 "Price (USD/kg)"→"Price (/kg)" + 逐行 `formatPriceCcy`（¥/$ 按行 currency，CNY 价永不带 $ 符号）；部位详情页 min/max/latest 统计与标签按最新行币种过滤（混合币种绝不进同一区间）；`computeBeefTrend` **币种对齐**（live 抓到跨币种假趋势 166.5%=纯汇率信号，修复为同币种对比、无同币种基准则 null）。
+- **live 首灌与幂等验证**：boot 周期首跑 140 条目扫过 → **3 行入库**（全去骨牛蹄 19 / 牛肠 20 / 牛肚 52 CNY/kg，均郑州仓、匹配词/溯源齐）+ 3 个未映射标题如实记录（牛杂/带皮牛头/牛脂肪——词表迭代候选）；手动复跑 0 inserted / 3 known-day / noChange（幂等成立）；`/api/beef/prices/latest` **翻活**（2026-09-19、liveCount 3、allStale false——部位级数据面自 2026-04-30 冻结以来首次有活水）；两日内 ≥2 点后 cut 级预测门自然解锁（CNY 序列内部自洽）。
+- **文档**：AGENTS 27 文件/25 注册（§三/§五 + 头部核实日期）；DATA-SOURCES-EVALUATION round-165 执行记录。
+- **基线**：backend vitest **1169 pass + 1 skip**（114 文件，+17 全为新测：源契约 14 + 趋势币种对齐 3）；frontend jest **365**（42 套件，+3 formatPriceCcy）；双端 tsc 0 / biome 本批文件 0 findings / build 0 / PM2 重启 / live 如上。
+- **登记**：词表迭代观察项（牛杂/牛脂肪/带皮牛头 等未映射标题随日志积累，命中率稳定后评估扩词）；厂号成交价二阶段仍待厂号→factoryCode 映射批；D1（MLA/USDA key）不变——本源是新增现货通道而非部位级 FOB 解冻。
+
 ### 2026-09-19 — round-164：值守兑现轮 — 批0a 首批牛肉 verified 三面核查 + 公开战绩页牛系槽位 + 批0b 共识卡校准 90% 区间
 
 用户指令"review开发计划，确认后进行后续的开发"（承接当日项目评估轮的规划：第一优先=值守窗兑现）。两批独立 commit、全门禁（tsc/biome/全量测试零回退/build/PM2/live）。

@@ -6,7 +6,10 @@
  * Intl.NumberFormat calls that are consistent, testable, and SSR-safe.
  *
  * Design rules (PRODUCT-SPEC, FRONTEND-IMPROVEMENT-PLAN):
- *  - Beef prices are USD/kg. formatPrice() always renders the currency symbol + unit.
+ *  - Beef prices are per-kg but NOT single-currency since round-165: plant
+ *    FOB series are USD/kg, the 肉交所 spot channel lands CNY/kg. Rows carry
+ *    their own currency — render it (formatPriceCcy); formatPrice stays the
+ *    USD default for USD-only surfaces.
  *  - Percent values are passed as fractions (0.78) OR already-scaled (78.3) — each
  *    helper is explicit about which it expects so callers can't mix them up.
  *  - Compact formatting is for large counts (price records, total lbs) only.
@@ -29,6 +32,21 @@ export function formatPrice(value: number | null | undefined, includeUnit = true
 	if (value == null || Number.isNaN(value)) return "--";
 	const formatted = priceFormatter.format(value);
 	return includeUnit ? `$${formatted}/kg` : `$${formatted}`;
+}
+
+/**
+ * Format a price with the ROW's own currency symbol — mixed-currency tables
+ * (USD plant FOB ∥ CNY 肉交所 spot, round-165) must never show a ¥ price
+ * with a $ sign. Unknown/undefined currency falls back to the USD default.
+ * Unit is the caller's business (headers usually carry the shared /kg).
+ */
+export function formatPriceCcy(
+	value: number | null | undefined,
+	currency: string | null | undefined,
+): string {
+	if (value == null || Number.isNaN(value)) return "--";
+	const formatted = priceFormatter.format(value);
+	return currency === "CNY" ? `¥${formatted}` : `$${formatted}`;
 }
 
 /**

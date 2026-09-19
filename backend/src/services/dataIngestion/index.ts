@@ -23,6 +23,7 @@ import { inacScraper } from "./sources/inacData";
 import { inacExpoScraper } from "./sources/inacExpo";
 import { indecComexScraper } from "./sources/indecComex";
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
+import { roujiaosuoSpotScraper } from "./sources/roujiaosuoSpot";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
 import { usdaAmsScraper } from "./sources/usdaAms";
@@ -76,6 +77,10 @@ export function registerAllScrapers(): void {
 	// egress-blocked from this machine; V7 批1, round-149).
 	scraperManager.registerSource("usda_import_beef", usdaImportBeefScraper);
 	scraperManager.registerSource("usda_psd", usdaPsdScraper);
+	// Domestic spot LISTING quotes (肉交所 /sell/ feed, keyless, CNY/kg under
+	// the virtual RJS-SPOT factory — listing≠transaction, canonical-term
+	// mapping only, 5-300 CNY/kg plausibility band; round-165).
+	scraperManager.registerSource("roujiaosuo_spot", roujiaosuoSpotScraper);
 
 	// Tier 3 — China import data
 	// "china_customs_stats" decommissioned 2026-08-31 (V8 批0, D23): its

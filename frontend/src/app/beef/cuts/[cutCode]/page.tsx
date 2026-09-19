@@ -9,7 +9,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
-import { formatPrice, formatPriceRange } from "@/lib/format";
+import { formatPriceCcy } from "@/lib/format";
 
 /** Quotation-spec dimensions carried on BeefCutPrice.metadata (V7 批3,
  * CSV-imported, optional) — rendered when present, absent rows show "—". */
@@ -36,6 +36,8 @@ type PricePoint = {
 	date: string;
 	price: number;
 	source: string;
+	/** Row currency — USD (plant FOB) or CNY (肉交所 spot, round-165). */
+	currency?: string;
 	grade?: string;
 	/** Backend writes spec dims flat at metadata top level (beefIngest V7 批3). */
 	metadata?: SpecDims;
@@ -118,11 +120,18 @@ export default function CutDetail() {
 		[prices],
 	);
 
-	// Compute price range
-	const allPrices = prices.map((p: { price: number }) => p.price);
-	const minPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
-	const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 0;
-	const latestPrice = allPrices.length > 0 ? allPrices[allPrices.length - 1] : 0;
+	// Compute price range — CURRENCY-AWARE (round-165): the 肉交所 CNY spot
+	// series coexists with USD plant FOB rows on the same cut. Stats and the
+	// headline number follow the LATEST row's currency; the other currency's
+	// rows stay in the chart (grouped by source/factory), never mixed into
+	// one min/max.
+	const latestCcy = prices.length > 0 ? (prices[prices.length - 1].currency ?? "USD") : "USD";
+	const sameCcyPrices = prices
+		.filter((p) => (p.currency ?? "USD") === latestCcy)
+		.map((p) => p.price);
+	const minPrice = sameCcyPrices.length > 0 ? Math.min(...sameCcyPrices) : 0;
+	const maxPrice = sameCcyPrices.length > 0 ? Math.max(...sameCcyPrices) : 0;
+	const latestPrice = sameCcyPrices.length > 0 ? sameCcyPrices[sameCcyPrices.length - 1] : 0;
 
 	return (
 		<PageContainer>
@@ -150,8 +159,8 @@ export default function CutDetail() {
 						<CardBody>
 							<p className="text-xs text-gray-500">Price Range (90d)</p>
 							<p className="font-medium mt-1">
-								{formatPriceRange(minPrice, maxPrice, false)}{" "}
-								<span className="text-xs text-muted-foreground">USD/kg</span>
+								{formatPriceCcy(minPrice, latestCcy)} — {formatPriceCcy(maxPrice, latestCcy)}{" "}
+								<span className="text-xs text-muted-foreground">{latestCcy}/kg</span>
 							</p>
 						</CardBody>
 					</Card>
@@ -159,8 +168,8 @@ export default function CutDetail() {
 						<CardBody>
 							<p className="text-xs text-gray-500">Latest Price</p>
 							<p className="text-2xl font-semibold mt-1">
-								{formatPrice(latestPrice, false)}{" "}
-								<span className="text-sm font-normal text-muted-foreground">USD/kg</span>
+								{formatPriceCcy(latestPrice, latestCcy)}{" "}
+								<span className="text-sm font-normal text-muted-foreground">{latestCcy}/kg</span>
 							</p>
 						</CardBody>
 					</Card>
@@ -267,6 +276,7 @@ export default function CutDetail() {
 												p: {
 													date: string;
 													price: number;
+													currency?: string;
 													grade?: string;
 													metadata?: SpecDims;
 													factory?: { code: string; name: string; country: string };
@@ -282,7 +292,9 @@ export default function CutDetail() {
 															{new Date(p.date).toLocaleDateString()}
 														</td>
 														<td className="text-xs">{p.factory ? `${p.factory.name}` : "--"}</td>
-														<td className="text-right font-mono">{formatPrice(p.price, false)}</td>
+														<td className="text-right font-mono">
+															{formatPriceCcy(p.price, p.currency)}
+														</td>
 														<td className="text-xs text-gray-500">{p.grade || "--"}</td>
 														<td
 															className="text-xs text-gray-500"

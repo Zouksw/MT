@@ -210,10 +210,12 @@ export async function latestBeefPrices(query: BeefQuery) {
 			pricesWithFreshness.map((p) => ({
 				price: p.price,
 				country: p.factory?.country,
+				currency: p.currency,
 			})),
 			previousRows.map((p) => ({
 				price: Number(p.price),
 				country: p.factory?.country,
+				currency: p.currency,
 			})),
 			latest.date,
 			previous.date,

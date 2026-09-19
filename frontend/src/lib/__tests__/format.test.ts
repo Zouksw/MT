@@ -6,6 +6,7 @@ import {
 	formatPercent,
 	formatPercentValue,
 	formatPrice,
+	formatPriceCcy,
 	formatPriceRange,
 	formatSignedPercent,
 	toNum,
@@ -43,6 +44,23 @@ describe("formatPriceRange", () => {
 
 	it("returns placeholder when both bounds are missing", () => {
 		expect(formatPriceRange(null, undefined)).toBe("--");
+	});
+});
+
+describe("formatPriceCcy (row-currency prices, round-165)", () => {
+	it("renders CNY rows with the ¥ symbol — never a $ on a yuan price", () => {
+		expect(formatPriceCcy(33.9, "CNY")).toBe("¥33.90");
+	});
+
+	it("renders USD and unknown/missing currency as the USD default", () => {
+		expect(formatPriceCcy(4.52, "USD")).toBe("$4.52");
+		expect(formatPriceCcy(4.52, undefined)).toBe("$4.52");
+		expect(formatPriceCcy(4.52, null)).toBe("$4.52");
+	});
+
+	it("returns placeholder for null/NaN values", () => {
+		expect(formatPriceCcy(null, "CNY")).toBe("--");
+		expect(formatPriceCcy(Number.NaN, "CNY")).toBe("--");
 	});
 });
 

@@ -91,4 +91,46 @@ describe("computeBeefTrend", () => {
 		);
 		expect(t.importedTrendPct).toBeNull();
 	});
+
+	it("never computes a cross-currency ratio (round-165: CNY spot ∥ USD FOB)", () => {
+		// Live CNY spot day vs a previous day that only has USD snapshot rows:
+		// ¥30.3 vs $11.4 is a pure FX artifact — the honest answer is null.
+		const t = computeBeefTrend(
+			[
+				{ price: 19, country: "CN", currency: "CNY" },
+				{ price: 52, country: "CN", currency: "CNY" },
+			],
+			[
+				{ price: 5.1, country: "AU", currency: "USD" },
+				{ price: 6.3, country: "BR", currency: "USD" },
+			],
+			LATEST,
+			PREV,
+		);
+		expect(t.importedTrendPct).toBeNull();
+	});
+
+	it("compares same-currency rows when both days have them", () => {
+		const t = computeBeefTrend(
+			[{ price: 20, country: "CN", currency: "CNY" }],
+			[
+				{ price: 5.1, country: "AU", currency: "USD" },
+				{ price: 25, country: "CN", currency: "CNY" },
+			],
+			LATEST,
+			PREV,
+		);
+		// 20 vs 25 → -20.0%, the USD row excluded from the previous side.
+		expect(t.importedTrendPct).toBe(-20.0);
+	});
+
+	it("treats missing currency as the historical USD default", () => {
+		const t = computeBeefTrend(
+			[{ price: 100, country: "BR" }],
+			[{ price: 100, country: "AU", currency: "USD" }],
+			LATEST,
+			PREV,
+		);
+		expect(t.importedTrendPct).toBe(0.0);
+	});
 });

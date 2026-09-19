@@ -171,6 +171,10 @@ function backgroundJobs(): ScheduledJob[] {
 		// current week, so the six non-publication days re-scrape the same row
 		// and upsertPrice's samePrice path no-ops (V7 批1).
 		"usda_import_beef",
+		// Domestic spot LISTING quotes on the daily cycle: re-scans of the
+		// same listings no-op via the (factory, cut, day, source) unique key
+		// (noChange contract; round-165).
+		"roujiaosuo_spot",
 	];
 
 	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for

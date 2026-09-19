@@ -1,7 +1,7 @@
 # AGENTS.md
 
 > 本文件是 AI 代理（含 ZCode / Claude / Codex 等）在本仓库工作的**首要入口**。
-> 所有事实均经只读命令核实（2026-09-06）。改动数字类陈述前请重新核实。
+> 所有事实均经只读命令核实（2026-09-19）。改动数字类陈述前请重新核实。
 
 ---
 
@@ -36,7 +36,7 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **26 文件 / 24 注册** | `sources/*.ts`（排除 index/test）；2026-09-07 复核（round-163）：indec_comex（INDEC COMEX 阿根廷官方月度 NCM8×目的地对华量价）上线后注册 24；inac_expo 上线于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 上线于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
+| 数据源爬虫 | **27 文件 / 25 注册** | `sources/*.ts`（排除 index/test）；2026-09-19 复核（round-165）：roujiaosuo_spot（肉交所现货挂价，CNY/kg、虚拟厂 RJS-SPOT 隔离）上线后注册 25；indec_comex 上线于 round-163、inac_expo 于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
 | Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |
@@ -68,7 +68,7 @@
 ```
 backend/            Express + TS + Prisma
   src/routes/       API 路由（18 个）
-  src/services/     业务服务（含 dataIngestion/sources/ 18 注册爬虫）
+  src/services/     业务服务（含 dataIngestion/sources/ 25 注册爬虫）
   src/middleware/   认证、限流、安全、日志
   prisma/           schema.prisma（25 模型）+ migrations
 frontend/           Next.js 15 App Router（44 页）

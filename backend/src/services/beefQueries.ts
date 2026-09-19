@@ -208,6 +208,9 @@ export function parseCutSeriesKey(key: string): { factoryId: string; cutCode: st
 export interface TrendPriceRow {
 	price: number;
 	country?: string | null;
+	/** Row currency — USD (plant FOB) or CNY (肉交所 spot, round-165).
+	 * Undefined is treated as the historical USD default. */
+	currency?: string | null;
 }
 
 export interface BeefTrendSummary {
@@ -261,8 +264,16 @@ export function computeBeefTrend(
 	latestDate: Date | null,
 	previousDate: Date | null,
 ): BeefTrendSummary {
+	// Currency alignment (round-165): the live 肉交所 CNY spot rows coexist
+	// with the frozen USD FOB snapshot. Averaging ¥30 against $11 produces a
+	// pure-FX-rate "trend" — so both sides are restricted to the latest day's
+	// currency, and a previous day with none of it yields null (no basis),
+	// never a cross-currency ratio.
+	const latestCcy =
+		latestRows.find((r) => Number.isFinite(r.price) && r.price > 0)?.currency ?? "USD";
+	const sameCcyPrevious = previousRows.filter((r) => (r.currency ?? "USD") === latestCcy);
 	const curr = importedAverage(latestRows);
-	const prev = importedAverage(previousRows);
+	const prev = importedAverage(sameCcyPrevious);
 	return {
 		importedTrendPct: pctChange(curr, prev),
 		latestDate: latestDate ? latestDate.toISOString() : null,

@@ -15,7 +15,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { useBeefCutForecasts } from "@/hooks/useBeefCutForecasts";
 import { useRetryableFetch } from "@/hooks/useRetryableFetch";
 import { beefFetcher } from "@/lib/beef";
-import { formatDecimal, formatPrice } from "@/lib/format";
+import { formatDecimal, formatPrice, formatPriceCcy } from "@/lib/format";
 
 export default function BeefOverview() {
 	// All four beef endpoints are simple GETs with URL keys → use the shared
@@ -326,7 +326,7 @@ export default function BeefOverview() {
 													onClick={() => toggleSort("price")}
 													className="inline-flex items-center gap-1 hover:text-primary"
 												>
-													Price (USD/kg) {sortKey === "price" && (sortDesc ? "↓" : "↑")}
+													Price (/kg) {sortKey === "price" && (sortDesc ? "↓" : "↑")}
 												</button>
 											</th>
 											{hasCutForecasts && <th className="text-left">7d Forecast</th>}
@@ -352,6 +352,7 @@ export default function BeefOverview() {
 													cutCode: string;
 													price: number;
 													source: string;
+													currency?: string;
 													freshness?: "live" | "proxy" | "snapshot";
 													dataDate?: string | null;
 													reason?: string;
@@ -368,7 +369,7 @@ export default function BeefOverview() {
 															</a>
 														</td>
 														<td className="text-right font-mono font-medium text-foreground">
-															{formatPrice(p.price, false)}
+															{formatPriceCcy(p.price, p.currency)}
 														</td>
 														{hasCutForecasts && (
 															<td>
