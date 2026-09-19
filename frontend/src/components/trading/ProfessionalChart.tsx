@@ -55,10 +55,10 @@ interface ProfessionalChartProps {
 	volume?: VolumeDataPoint[];
 	/** AI prediction overlay with confidence bands */
 	predictions?: PredictionOverlay[];
-	/** Horizontal support price line */
-	supportLevel?: number;
-	/** Horizontal resistance price line */
-	resistanceLevel?: number;
+	/** Horizontal support price line; null = no model-implied level (round-106) */
+	supportLevel?: number | null;
+	/** Horizontal resistance price line; null = no model-implied level (round-106) */
+	resistanceLevel?: number | null;
 	/** Show loading skeleton */
 	loading?: boolean;
 	/** Chart height in pixels */

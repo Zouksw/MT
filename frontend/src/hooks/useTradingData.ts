@@ -18,6 +18,40 @@ const BEEF_API = API_BASE;
 
 type Timeframe = "daily" | "weekly" | "monthly";
 
+/**
+ * Wire shape of `GET /api/signals/:slug` → `data.data`. The authority is the
+ * backend's PriceForecast (backend/src/services/tradingSignals.ts); this
+ * mirror lists the fields the hook and /trading actually read, plus the
+ * empty-series degradation flag the route adds. Anything not read here is
+ * intentionally omitted.
+ */
+interface TradingSignal {
+	direction: "up" | "down" | "flat";
+	confidence: number;
+	modelsAgree: number;
+	totalModels: number;
+	individualForecasts?: Array<{
+		modelId: string;
+		direction: "up" | "down" | "flat";
+		predictedChange: number;
+		currentPrice: number;
+		predictedPrice: number;
+		confidence: number;
+		status: "available" | "unavailable";
+	}>;
+	predictedChange: number;
+	predictedPrice?: number;
+	horizon?: number;
+	horizonUnit: "day" | "month";
+	range: { lower: number; upper: number };
+	supportLevel: number | null;
+	resistanceLevel: number | null;
+	distribution: { up: number; down: number; flat: number };
+	bestModel?: string;
+	timestamp: string;
+	insufficientData?: boolean;
+}
+
 export function useTradingData(initialSlug?: string) {
 	// initialSlug is the ?slug= deep link — an INITIAL value only; same-route
 	// URL changes (search fired while already on /trading) are synced by the
@@ -27,8 +61,7 @@ export function useTradingData(initialSlug?: string) {
 	const [chartType, setChartType] = useState<ChartType>("candlestick");
 	const [showMultiSource, setShowMultiSource] = useState(false);
 	const [indicators, setIndicators] = useState({ sma20: true, sma50: true, bollinger: false });
-	// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-	const [signal, setSignal] = useState<any>(null);
+	const [signal, setSignal] = useState<TradingSignal | null>(null);
 	const [signalLoading, setSignalLoading] = useState(false);
 	const [bestModelId, setBestModelId] = useState<string | undefined>();
 	const [error, setError] = useState<string | null>(null);
@@ -255,8 +288,7 @@ export function useTradingData(initialSlug?: string) {
 							// Clear any stale error from a previous failed fetch now
 							// that the signal loaded successfully.
 							setError(null);
-							// biome-ignore lint/suspicious/noExplicitAny: third-party library type
-							setSignal((prev: any) => {
+							setSignal((prev) => {
 								if (prev?.direction && prev.direction !== data.data.direction) {
 									setPreviousDirection(prev.direction);
 								}
