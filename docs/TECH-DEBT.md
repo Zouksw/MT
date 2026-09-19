@@ -621,3 +621,24 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 
 **seed.ts 的 beef_carcass_us 身份停留在 round-126 之前**：~~`prisma/seed.ts:2031` 仍是 "US Beef Carcass Price (FRED)" / `unit: "USD/cwt"` + 合成日度价生成（`base: 260, volatility: 8`，180 天日更 seed 行）~~ **已对齐生产（commit `8e94a9a`，v3.3.0 批 2 / D11）**：COMMODITIES 元数据改为 Global Beef Price (IMM via FRED)/全球牛肉价格（IMF 月度）/USC/lb + metadata fred+PBEEFUSDM；合成价改 6 个月度月起点（source fred，替代 180 日行）；baseline 260→330。验收：mt_test --force 重建后与生产逐字段一致；tools.test 的 beforeAll unit hack 与 afterAll 恢复整体移除；backend 全量首跑即绿（1031+1，零回退）。原登记内容保留如下——
 ~~`prisma/seed.ts:2031` 仍是 "US Beef Carcass Price (FRED)" / `unit: "USD/cwt"` + 合成日度价生成（`base: 260, volatility: 8`，180 天日更 seed 行）~~——影响（历史）：mt_test / CI 全新种子库中该序列的元数据与节奏均与生产漂移（landing-cost 路由测试需在 beforeAll 临时把 unit 改为 USC/lb 并用未来日期 fixture 压制合成行）。
+
+## 十八、round-166 代码质量整治轮（2026-09-19，用户指令："完整整理全项目的代码，提升代码质量，拒绝屎山代码"）
+
+方法：先量化审计基线（biome/tsc/pytest 三端 + TECH-DEBT 全量复核 + TODO/any/抑制标记/console 扫描 + 超大文件盘点），再分批执行，每批 tsc + 全量测试 + live 验证 + 独立 commit。
+
+**审计结论（代码库整体健康，债集中在盲区而非散乱）**：backend src / frontend src biome 近乎全绿；TODO/FIXME/HACK 全仓 **0**；抑制标记 33 处**全部带理由注释**（纪律性使用非气味）；src 侧显式 `any` backend 0 / frontend 4 真实；console 使用规范（错误路径 + 有理由启动日志）；ruff 干净。**系统性盲区一个：`backend/scripts/` 不在 tsconfig include——5 个月无人发现 import-beef.ts 全面腐烂即其代价。**
+
+| 批 | 提交 | 内容 |
+|----|------|------|
+| 1+2 | `ee9dee8` | 删腐烂 `scripts/import-beef.ts`（引用 round-114 已删的 organizations/organization_members/organization_id_slug + Dataset 已删的 currency/unit 列 + 不存在的 StorageFormat 枚举值——纳入类型检查即暴露 8 个 TS 错误；源 /root/beef.xlsx 已不存在；目标 datasets/timeseries 簇 round-118 冻结；现行回填路径 /api/beef/import → beef_cut_prices；全仓 0 运行时引用）。**系统性修复**：tsconfig include 增 `scripts/**/*`，scripts/ 自此受 pnpm type-check 与 CI 同一门禁（其余 5 脚本纳入后 0 错） |
+| 3 | `c78606b` | biome 后端清零：backtest-monthly-series 排序比较器 `median()!` → `?? Infinity`（**顺带修真缺陷**：空 median 行原产生 NaN 比较致顺序不确定）+ useTemplate；indecComex.parse.test `jan!.`×2 → guard-narrow 抛错 |
+| 4 | `f839d10` | useTradingData `useState<any>` → `TradingSignal` 镜像类型（权威=后端 PriceForecast；原 biome-ignore 所称 "third-party library type" 不实）。**类型收紧即时暴露 2 处真实契约错位并修复**：ProfessionalChart support/resistance prop 接不住后端 round-106 起的诚实 null（渲染守卫本就 `!= null`，放宽零运行时变化）；individualForecasts 项补 currentPrice（后端必发、面板类型要求） |
+
+**基线**：backend **1169+1 skip**（114 文件）/ frontend **365**（42 套件）/ inference **64** 全绿零回退；biome backend 21→**0** 诊断、frontend 恒 0；双端 tsc 0；build + PM2 + live（/、/login 200，/trading /beef 鉴权门正常，/health 200）。
+
+**登记不执行（后续轮次候选）**：
+- **mapeTracking.ts 1538 行**（round-106 时 1027，验证环四轮扫描扩展所致）：round-117"反对按文件数拆分"决策仍有效；如拆须按内聚（expire/restore/verify/conformal 各环）单列设计轮，收益=可读性、风险=验证环行为回归，非本轮范围。
+- **3 个 700 行级页面 monolith**（dashboard/performance 713 / alerts/rules 705 / settings/data-sources 702）：可读可测可工作，拆分属观感收益，无用户可见价值，不动。
+- **dist 陈旧产物**：`tsc` 不清理输出目录，`dist/scripts/` 残留已删脚本的 .js（backfillFred.js/seed.js/import-beef.js 墓碑）。可在 build 前加 clean 步骤根治，但改变构建行为（部署面），单列决策。
+- TD-8 前端 ~29 处 GET 裸 fetch 维持开放（既有登记，低优先）。
+- swrFetcher `Promise<any>` 与 Table.tsx render `value: any` **有意保留**：前者带文档化理由（20 处 useSWR<T> 泛型推断点），后者是表格 render 契约。

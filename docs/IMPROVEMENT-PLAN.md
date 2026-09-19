@@ -780,7 +780,7 @@ B2B 撮合 / 国内现货采价网络 / 冷链硬件 SaaS / 支付/下单/交易
 
 ### 批 10 — CSV 回填验证一键化
 
-**内容**：`backend/scripts/verify-beef-import.ts`（评审 m2：遵循 backend/scripts/ + tsx 既有惯例，如 import-beef.ts；根 scripts/ 无 TS runner）。WEEKLY-DATA-IMPORT.md §五已有日期域与重复检测查询；**行数增量与工厂覆盖查询是新增**（初稿"打包自文档"表述不准），一并实现并回写 runbook 引用。
+**内容**：`backend/scripts/verify-beef-import.ts`（评审 m2：遵循 backend/scripts/ + tsx 既有惯例，如 ~~import-beef.ts~~〔round-166 注：该文件已于 round-166 因 schema 漂移腐烂删除，惯例承载者现为 weekly-track-snapshot.ts 等，且 scripts/ 已纳入 tsconfig 类型检查〕；根 scripts/ 无 TS runner）。WEEKLY-DATA-IMPORT.md §五已有日期域与重复检测查询；**行数增量与工厂覆盖查询是新增**（初稿"打包自文档"表述不准），一并实现并回写 runbook 引用。
 **验收**：对当前库 dry-run 输出与手写 SQL 一致。**依赖**：无。**规模**：XS-S。
 
 **建议执行顺序**：批 7（用户可见修复）→ 批 8（口径收口）→ 6a → **D5 定案 → 6b**（订阅开启 + 专项检查点：live 验证牛肉序列进链路且首条 verified）→ 6c → 批 9 → 批 10。检查点节奏：每批独立 commit + 全量门禁；6b 后为强制人工检查点。

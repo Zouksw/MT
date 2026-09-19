@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-19 — round-166：代码质量整治轮 — scripts 类型盲区关闭 + 腐烂脚本清除 + lint 清零 + signal 类型收紧
+
+用户指令"完整整理全项目的代码，提升代码质量，拒绝屎山代码"。方法：先量化审计（biome/tsc/pytest 三端基线 + TODO/any/抑制标记/console/超大文件全仓扫描 + TECH-DEBT 复核），再分批执行，每批 tsc + 全量测试 + live + 独立 commit。**审计结论：代码库整体健康（TODO 全仓 0、抑制标记全部带理由、src 侧 any 双端合计 4 处），债集中在一个系统性盲区而非散乱。**
+
+- **批 1+2（`ee9dee8`）——`backend/scripts/` 类型检查盲区关闭**：tsconfig include 原只含 src/config，scripts/ 5 个月不受 tsc/CI 约束——其代价即 `import-beef.ts` 的全面腐烂无人发现（引用 round-114 已删的 organizations/organization_members 模型与复合键、Dataset 已删的 currency/unit 列、不存在的 StorageFormat 枚举值；纳入检查即暴露 8 个 TS 错误；源 beef.xlsx 已不存在；目标簇 round-118 冻结；现行回填路径 /api/beef/import 不受影响；全仓 0 运行时引用 → 删除）。include 增 `scripts/**/*`，CI type-check 门禁自动传导。
+- **批 3（`c78606b`）——biome 后端清零**：21→0 诊断（16 条随腐烂文件消亡；backtest 脚本 `median()!` → `?? Infinity` 顺带修真缺陷——空 median 行 NaN 比较致排序不确定；indecComex 测试 `!` 断言改 guard-narrow）。
+- **批 4（`f839d10`）——`useTradingData` signal `any` 收紧**：`useState<any>` → `TradingSignal` 镜像类型（权威=后端 PriceForecast），移除 2 处失实 noExplicitAny 抑制；类型收紧即时暴露并修复 2 处真实契约错位（ProfessionalChart 支持/阻力位 prop 接不住后端 round-106 起的诚实 null；individualForecasts 缺 currentPrice）。swrFetcher/Table.tsx 的 any 有文档化理由，保留。
+- **登记不执行**（TECH-DEBT §十八）：mapeTracking 1538 行拆分候选（须按内聚单列设计轮）、3 个 700 行级页面 monolith（可读可测，拆分无用户价值）、dist 陈旧产物清理（改构建行为，单列决策）。
+- **基线**：backend **1169+1 skip**（114 文件）/ frontend **365**（42 套件）/ inference **64** 全绿零回退；biome 双端 **0** 诊断；双端 tsc 0；build + PM2 + live 冒烟（/、/login 200、/trading /beef 鉴权门正常、/health 200）。
+
 ### 2026-09-19 — round-165：肉交所现货源上线 — 首个部位级"现货层"自动通道（roujiaosuo_spot，CNY 挂价 × 虚拟厂隔离）
 
 用户指令"继续下一步"（承接 round-164 评估规划的排序：数据轨第二优先 = 肉交所实现轮，设计已由 round-164 批C 登记）。一批独立 commit、全门禁。
