@@ -66,6 +66,9 @@
 - 生产库实测：`beef_90cl_us` 新增两点 **2026-09-11（close 340.50）与 2026-09-18（close 341.00）**，source 均为 usda_import_beef；近 24h ingestion_logs 该源有 1 行 inserted（周度节奏正常）。round-157/158 登记的"mnreports 迁 eWAPS 致 0 行"断供**已消失**——本仓 usda_import_beef 代码零改动（git log 无相关 commit），判定为上游恢复 PDF 服务（自愈）。
 - digest 卡随之脱离"~2026-09-18 转 stale"的最坏预期；round-157 提出的三选一修复路径（eWAPS 勘察 / MARS key / DataMart）**不再必要**，登记关闭。若再断供按新事件重新登记。
 
+**2026-09-19 更新（round-169 收敛审计）——部位级现货层翻活，D1 主张收窄**：
+- **近 14 天产行源实测 7 个**（psql GROUP BY source）：cme(110 行)/inac(92)/fred(54)/exchange_rate_api(39)/drewry(3)/usda_import_beef(2) 于 commodity_prices + **roujiaosuo_spot(11) 于 beef_cut_prices**（round-165 上线，日更；round-168 厂号归属后含 2 真实厂行）。"牛肉数据源大面积失效"的主张自 2026-09-19 起收窄为：**部位级 FOB（USD）层仍冻结于 2026-04-30**（mla_nlrs/cepea，等 MLA key），部位级现货（CNY）层已有日更自动通道，月度基准（beef_carcass_us/beef_90cl_us）周月节奏正常。D1 保持开放（FOB 层与多数 key 门源未解），但"核心价值完全依赖 seed 快照"的最坏表述已不成立。
+
 **2026-09-07 更新（round-159）——inac 按新契约复活（乌拉圭通道恢复）**：
 - `inac` **复活**：勘察定案——旧域 inac.gub.uy 死亡，门户迁 www.inac.uy（Liferay），数据走 **DIAE Interactiva** 后端 `POST/GET /inac/DIAEUtils`（`cmdaction=datosiniciales` 给最新年月；`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 给"育肥牛活重月度价"CSV，含 Y 与 Y-1 双年列）。新契约落 **CommodityPrice `novillo_gordo_uy`**（月度，2019-01→2026-07 共 91 行，2026-07=3.25 USD/kg 与 API 一致），替代死的 BeefCutPrice 部位 FOB 语义（后者或经 DIAE expo 应用另行复活，未排期）。注册源 19→20（AGENTS 已同步）。
 - 解析防线（live 取证）：Jasper CSV **表头与数据行列位错位**（标签 col3/col7、当前年值 col4）——按表头索引解析会静默丢当前年数据；解析器改"数值列发现 + 左新右旧 + 列同一性"（单值行不错配年份），仅双数值列契约成立，单列拒写（drift guard）。乌拉圭拼写 Setiembre、十进制逗号、页脚 Fuente 行均已钉测试（5 个解析测试）。
@@ -166,6 +169,8 @@
 **round-71 补充（2026-08-03 live 实测）**：round-66 的 `markUnverifiablePredictions` 是**点时检查 + 不可逆**——标记时若源已死则永久 unverifiable，verifyDuePredictions 只读 `completed` 不回收。但当源**后来复活**（如 beef_carcass_us 经历 FRED 数据滞后，标记时 latest price >7d 旧，FRED 随后补发 08-01/08-02 daily 行），那些预测**现在窗口内有 actuals** 却仍困在 unverifiable。live 实测：beef_carcass_us（唯一有 fresh actuals 的商品）07-27→08-02 的 738 条 chronos 预测全被误标 unverifiable，accuracy 页 chronos 永远 0 verified。commit ad2cd4b 加 `restoreVerifiablePredictions()`（markLaggingFrozen 的对称逆操作）：扫 unverifiable 行，若商品 latest price 现已 > 最早被困预测的 predictedAt（源复活、有 post-prediction actuals）→ 标回 `completed`。幂等。接 server.ts 启动钩子（markUnverifiable 之后跑）。+3 测试（mutation-verified）。live：beef_carcass_us unverifiable 738→0，completed 48→262/variant（786 条恢复，跨 3 chronos）。这些行重入 verify 队列，下个 verify 周期产首批 beef chronos verified MAPE。
 
 **round-110 补充（2026-08-17 live 实测）**：发现第三种饿死模式——**心跳僵尸商品**。live_cattle_cme 等 5 个 CME 商品源功能上已死但偶发单行"心跳"价（live_cattle：3 个月仅 3 行 cme，最新 08-13），同时骗过两个既有守卫：verifyDuePredictions 永远跳过（10 天窗口凑不够 3 actuals）但不改状态；markUnverifiable 冻结不了（其判定需 `latestPrice <= predictedAt`，心跳行更新）。2.7 万永久跳过行占满 oldest-first take:5000 候选窗口 → 08-04 后每 6h 批次 5000/5000 全跳过，chronos 在 4 个真新鲜商品上的预测全部滞留 completed。commit 54ada15：新增 `expireWindowElapsedPredictions()`（anchor+horizon+7d 宽限已过且窗口 actuals 永远够不到 `min(horizon,3)` 门槛 → unverifiable；NOT EXISTS 守卫数窗口内 actuals 防误杀）+ `restoreVerifiablePredictions` 改窗口感知（复活判定从"有更新的价格"改为"过去窗口内有 actuals 回填"，防与清扫乒乓）。live 首跑：清扫 26,691 行，紧接验证批 verified 1,536/2,262（chronos 新队列 avg MAPE 0.68-0.70：usd_cny 0.35 / aud 0.47 / brl 0.40 / beef_carcass 1.43）。
+
+**2026-09-19 收敛注记（round-169）**：验证环自 round-110（饿死模式清扫）/round-114（expire-restore 谓词统一 + SQL 化）/round-131（月度节奏感知）三度重设计后**持续健康运行**，"断裂"表述仅存于历史快照——现行证据：verified 池持续滚动（round-167 修正时全局 verified 数万行）、牛肉家族首批 verified 落地（round-164 批0a，beef_retail_us ×7，MAPE 0.16-0.55%）、周度 track-record 快照 cron（每周一 07:30）自 round-139 起连续产出。本条按"根因属 D1 数据覆盖"的原始定性归并至 D1 跟踪；D2 自身不再是独立工作项。
 
 ---
 

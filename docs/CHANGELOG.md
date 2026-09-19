@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-19 — round-169：状态收敛轮 — 全局面板数字与状态文档对齐实测（site-stats 刷新 + D1/D2 收口）
+
+用户指令"完成后续的工作，让项目的状态收敛"。时间门控项（观察窗 09-21 / IMF 8 月点 / H=3 到期）与用户动作项（key/SMTP/域名）不可推进，本轮收敛**状态漂移面**——逐处审计面向用户与代理的数字/状态声明是否仍如实：
+
+- **收敛审计结论（已敛 vs 漂移）**：AGENTS.md（27 文件/25 注册，头部 2026-09-19）✓；AUTOMATION-STATUS 与 crontab 6 条逐条一致 ✓；PROJECT-VISION 系自我声明的历史文档（以 KNOWN-ISSUES 为准）✓ 不属漂移；KNOWN-ISSUES R1 已有解决注记 ✓。漂移两处：site-stats 数字、D1/D2 状态滞后。
+- **site-stats 刷新（全部 live 实测口径）**：beefCuts 74→**75**（round-144 BEEF_CHEEK 后未跟）；factories 21→**23**（21 seed + 2 厂号归属厂；虚拟 RJS-SPOT 池有意不计为工厂）；dataSources 20→**25**（注册爬虫，AGENTS §三 同口径）；sourceCountries 5→**6**（NZ 经 round-168 厂号归属加入）；注释块重写——**近 14 天产行源实测 7 个**（cme 110 行/inac 92/fred 54/exchange_rate_api 39/drewry 3/usda_import_beef 2 + roujiaosuo_spot 11 行于 beef_cut_prices），修正旧注释"仅 3 个产行"的过时口径。FAQ 同句硬编码 5 国清单补 New Zealand（与 sourceCountries=6 自洽；数据源清单句不动——NZ 尚无源集成，如实）。
+- **KNOWN-ISSUES D1 收窄注记**："牛肉数据源大面积失效、核心价值依赖 seed 快照"自 2026-09-19 起收窄——部位级现货（CNY）层已有日更自动通道 + 月度基准周月节奏正常，冻结面收窄为部位级 FOB（USD，等 MLA key）；D1 保持开放但最坏表述不再成立。
+- **KNOWN-ISSUES D2 收敛注记**：验证环经 round-110/114/131 三度重设计后持续健康（verified 池滚动、牛肉家族首批 verified、周快照 cron 连续产出），"断裂"仅存历史快照；按原始定性归并 D1 跟踪，D2 不再是独立工作项。
+- **门禁**：frontend tsc 0 / biome 0 / jest **365**（42 套件）/ build + PM2 重启 + live 数字落地实证（首页 "75 beef cuts"、"23 export factories" 渲染确认）；backend/inference 本轮零代码触碰（1175+1 skip / 64 基线延续）。
+
 ### 2026-09-19 — round-168：肉交所厂号挂牌归属（二阶段可执行半）+ 成交块诚实缩界
 
 用户指令"继续"，执行规划 P1 厂号批。开工侦察即发现设计前提变化：round-160 实证的详情页"最新成交"块已非 SSR（三个详情页含当年取证页静态 HTML 均无成交标记）——抓取需 JS 执行或内部端点，越出登记合规边界（仅 /sell/ 公开页）。二阶段按诚实原则拆半：可执行半落地，不可执行半停摆登记。

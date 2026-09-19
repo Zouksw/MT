@@ -14,7 +14,7 @@ interface FAQItem {
 const faqs: FAQItem[] = [
 	{
 		question: "What is MT?",
-		answer: `MT is a beef trade analytics platform. We track ${SITE_STATS.beefCuts} standardized beef cuts across ${SITE_STATS.factories} export factories in ${SITE_STATS.sourceCountries} major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina). ${SITE_STATS.aiModels} independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.`,
+		answer: `MT is a beef trade analytics platform. We track ${SITE_STATS.beefCuts} standardized beef cuts across ${SITE_STATS.factories} export factories in ${SITE_STATS.sourceCountries} major beef-producing countries (US, Brazil, Australia, Uruguay, Argentina, New Zealand). ${SITE_STATS.aiModels} independent AI models generate price forecasts with confidence intervals. Multi-factor correlation analysis ties FX rates, feed costs, and shipping to cut-level pricing.`,
 	},
 	{
 		question: "How does the AI price forecasting work?",
