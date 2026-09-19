@@ -257,6 +257,7 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
     - **牛系词汇映射（关键前置）**：标题先过"牛"系白名单再排除猪/禽（如"预煮花肠猪杂"）；俗名→cutCode 复用 BeefCutTaxonomy 四语别名表（牛霖→KNUCKLE 族），**映射未命中落 OFFAL/登记新词，宁缺勿错不猜码**。
     - **详情页字段**（实测 `/sell/show/1930363/`）：价格：/数量：（公斤）/产地：/仓库位置：（如"江苏苏州市"）+ 面包屑品类（牛产品>牛油类）；round-160 实证"最新成交"块含**带厂号件套**（牛霖411厂，元/吨级）——**单位混用风险：列表元/公斤 vs 成交元/吨，解析按单位字段归一存储，绝不跨单位换算或合并**。
     - **落库设计（两阶段）**：第一阶段只落**无厂号平台挂价**为 market 行（源 `roujiaosuo_spot`，Tier 4 日更；metadata 存 listingId/仓库/产地/单位/priceType='listing'/sourceUrl 幂等键；currency=CNY——与 USD 系 BeefCutPrice 并存时 freshness/聚合面按币种注记，绝不隐式换算）；第二阶段厂号成交价（411 厂等不在 Factory seed 21 家内，需厂号→factoryCode 映射批先行）。**挂价≠成交价**，metadata.priceType 强制区分。
+      > **round-168 进展注记（2026-09-19）**：二阶段拆半执行——①**厂号挂牌归属已落地**（前导厂号提取 + 产地→ISO2 + `{ISO2}-{厂号}` 工厂码，BR 沿用 SIF 前缀；详见 DATA-SOURCES-EVALUATION round-168 记录）；②**成交块采集诚实缩界**：round-160 实证的"最新成交"块 2026-09-19 复检已非 SSR（三详情页含当年取证页 1930363 静态 HTML 均无成交标记），抓取需 JS 执行或内部端点，越出"仅 /sell/ 公开页"合规边界——停摆登记，待 SSR 回归或 P1 名册路径。
     - **合规边界**：日 1 次低频 + 仅 /sell/ 公开列表/详情页；无登录态；不改写请求绕限制。
 - **P2 — 厂号名录三源**：foodmate GACC 镜像（免登录，最优先）；MGAP PDF 直链逆向；MPI 需浏览器级会话（playwright 引入需独立决策）。落 Factory 参照表快照（周/月）。
 - **P2 — 运价因子**：Drewry WCI 文本抽取（周四）+ FBX 综合值（日更）进 landing-cost 白名单（USD/40ft 口径标注）。

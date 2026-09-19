@@ -7,9 +7,19 @@
  * page (beef/pork/lamb/offal interleaved), each with title, supply type,
  * ORIGIN COUNTRY, price (元/公斤), quantity, warehouse city and a relative
  * update time. Beef rows whose title maps onto the canonical BeefCutTaxonomy
- * vocabulary land as BeefCutPrice rows under a VIRTUAL factory (code
- * RJS-SPOT), currency CNY — isolated from the frozen USD FOB plant series
- * by the factory dimension, never converted.
+ * vocabulary land as BeefCutPrice rows, currency CNY — isolated from the
+ * frozen USD FOB plant series by the factory dimension, never converted.
+ * Two factory lanes (round-168): titles with a LEADING 厂号 ("2543牛腩肋条")
+ * attribute to a real {ISO2}-{plant} factory (BR keeps the seed SIF prefix);
+ * everything else pools under the VIRTUAL factory RJS-SPOT.
+ *
+ * Phase-2 scope note (round-168, honest descope): the detail-page "最新成交"
+ * deal block (带厂号件套, 元/吨) is no longer server-rendered — three detail
+ * pages fetched 2026-09-19 (incl. the round-160 evidence page) carry no deal
+ * markup in static HTML. Capturing it would need JS execution or internal
+ * /api/ endpoints, outside the registered robots boundary (/sell/ pages
+ * only). Deal capture stays parked until either the block returns SSR or the
+ * GACC registry path (P1) lands.
  *
  * Honesty contract (round-164 design, all load-bearing):
  *  - priceType = "listing" (挂价, a quoted ask) — NOT a transaction price;
@@ -52,6 +62,56 @@ const PRICE_MIN_CNY = 5;
 const PRICE_MAX_CNY = 300;
 /** Processed/prepared products never map to a raw-cut series. */
 const PROCESSED_MARKERS = /黑椒|腌制|调理|预煮|即食|熟食|卤味/;
+
+/**
+ * Origin country (listing 产地 cell, exact Chinese match) → ISO2. Only the
+ * realistic beef-trade origins; anything else → no plant attribution (the
+ * row still lands under RJS-SPOT, 宁缺勿错 on country guessing).
+ */
+export const ORIGIN_ISO2: Record<string, string> = {
+	巴西: "BR",
+	中国: "CN",
+	新西兰: "NZ",
+	澳大利亚: "AU",
+	阿根廷: "AR",
+	乌拉圭: "UY",
+	美国: "US",
+	智利: "CL",
+	玻利维亚: "BO",
+	巴拉圭: "PY",
+	哥斯达黎加: "CR",
+	尼加拉瓜: "NI",
+	墨西哥: "MX",
+	加拿大: "CA",
+	爱尔兰: "IE",
+	法国: "FR",
+	荷兰: "NL",
+	白俄罗斯: "BY",
+	俄罗斯: "RU",
+	哈萨克斯坦: "KZ",
+	蒙古: "MN",
+	老挝: "LA",
+	缅甸: "MM",
+};
+
+/**
+ * Extract the plant (establishment) number from a listing title — LEADING
+ * digit runs only. The feed's plant-prefixed convention is "2543牛腩肋条"
+ * (plant 2543's product); mid-title digits are usually specs (谷饲4302 is
+ * missed on purpose, 90VL lean grades and 箱/件/吨 quantities are excluded
+ * by the lookahead) — a wrong attribution is permanent (day-key first-wins),
+ * a missed one is recoverable in the vocabulary batch. 宁缺勿错.
+ */
+export function extractLeadingPlantNumber(title: string): string | null {
+	const m = title.match(/^(\d{2,5})(?=[^0-9A-Za-z箱件吨柜])/);
+	return m ? m[1] : null;
+}
+
+/** Factory code for a plant number: Brazil keeps the seed SIF convention
+ * (BR-SIF2543), everything else is plain `{ISO2}-{n}` (NZ-30, AU-235 …). */
+export function plantFactoryCode(iso2: string, plantNumber: string): string {
+	return iso2 === "BR" ? `BR-SIF${plantNumber}` : `${iso2}-${plantNumber}`;
+}
 
 // ---------------------------------------------------------------------------
 // Vocabulary — canonical terms only, longest-first. Built once.
@@ -179,6 +239,8 @@ export interface SpotIngestReport {
 	unmappedTitles: string[];
 	/** Matched items whose (cut, day) row already existed. */
 	duplicates: number;
+	/** Rows attributed to a real plant factory via a leading 厂号 (round-168). */
+	plantAttributed: number;
 }
 
 /** UTC midnight of the listing day — the row key's date component. */
@@ -201,6 +263,7 @@ export async function ingestSpotItems(
 		rejectedPrice: 0,
 		unmappedTitles: [],
 		duplicates: 0,
+		plantAttributed: 0,
 	};
 
 	const factory = await prisma.factory.upsert({
@@ -218,6 +281,70 @@ export async function ingestSpotItems(
 			},
 		},
 	});
+
+	// Plant-factory cache for this run (round-168): 厂号-prefixed listings
+	// attribute to real {ISO2}-{plant} factories instead of the virtual pool.
+	const plantFactories = new Map<string, { id: string; attributed: boolean }>();
+
+	/**
+	 * Resolve the row factory for a listing. Returns the virtual RJS-SPOT
+	 * factory for anything we cannot attribute honestly (no leading 厂号,
+	 * unmapped/CN origin, or a code collision with a factory of another
+	 * country — the latter logs a warning, 宁缺勿错).
+	 */
+	async function resolveRowFactory(
+		title: string,
+		originCountry: string,
+	): Promise<{
+		factoryId: string;
+		plantNumber: string | null;
+		plantCode: string | null;
+		attributed: boolean;
+	}> {
+		const plantNumber = extractLeadingPlantNumber(title);
+		if (!plantNumber) {
+			return { factoryId: factory.id, plantNumber: null, plantCode: null, attributed: false };
+		}
+		const iso2 = ORIGIN_ISO2[originCountry];
+		if (!iso2 || iso2 === "CN") {
+			// CN listings are domestic quotes — a CN-{n} "plant" code would be
+			// invented structure; keep the number in metadata only.
+			return { factoryId: factory.id, plantNumber, plantCode: null, attributed: false };
+		}
+		const code = plantFactoryCode(iso2, plantNumber);
+		const cached = plantFactories.get(code);
+		if (cached) {
+			return cached.attributed
+				? { factoryId: cached.id, plantNumber, plantCode: code, attributed: true }
+				: { factoryId: factory.id, plantNumber, plantCode: null, attributed: false };
+		}
+		const existing = await prisma.factory.findUnique({ where: { code } });
+		if (existing && existing.country !== iso2) {
+			logger.warn(
+				`[RJS_SPOT] plant code ${code} already exists with country ${existing.country} ≠ ${iso2} — attribution skipped, row stays virtual`,
+			);
+			plantFactories.set(code, { id: factory.id, attributed: false });
+			return { factoryId: factory.id, plantNumber, plantCode: null, attributed: false };
+		}
+		const plant = await prisma.factory.upsert({
+			where: { code },
+			update: {},
+			create: {
+				code,
+				name: `Plant ${plantNumber} (${originCountry})`,
+				nameLocal: `${originCountry}${plantNumber}厂`,
+				country: iso2,
+				metadata: {
+					kind: "gacc-plant-unverified",
+					source: "roujiaosuo-title",
+					plantNumber,
+					note: "Establishment number read from a Roujiaosuo listing TITLE prefix; plant identity not yet verified against a GACC/MAPA registry (P1 registry batch pending).",
+				},
+			},
+		});
+		plantFactories.set(code, { id: plant.id, attributed: true });
+		return { factoryId: plant.id, plantNumber, plantCode: code, attributed: true };
+	}
 
 	const seenCuts = new Set<string>();
 	const rows: Prisma.BeefCutPriceCreateManyInput[] = [];
@@ -237,15 +364,19 @@ export async function ingestSpotItems(
 			continue;
 		}
 		const date = dayKey(parseListingTime(item.timeText, now) ?? now);
-		const dayCut = `${date.toISOString().slice(0, 10)}:${resolved.cutCode}`;
+		const target = await resolveRowFactory(item.title, item.originCountry);
+		// First-of-day wins per (factory, cut) — two different plants quoting
+		// the same cut on the same day BOTH land (per-plant series, round-168).
+		const dayCut = `${date.toISOString().slice(0, 10)}:${target.factoryId}:${resolved.cutCode}`;
 		if (seenCuts.has(dayCut)) {
 			report.duplicates++;
 			continue; // first-of-day wins within the run too
 		}
 		seenCuts.add(dayCut);
+		if (target.attributed) report.plantAttributed++;
 
 		rows.push({
-			factoryId: factory.id,
+			factoryId: target.factoryId,
 			cutCode: resolved.cutCode,
 			date,
 			price: Math.round(item.priceCnyPerKg * 100) / 100,
@@ -262,6 +393,8 @@ export async function ingestSpotItems(
 				warehouse: item.warehouse,
 				supplyType: item.supplyType,
 				sourceUrl: `https://www.roujiaosuo.com/sell/show/${item.listingId}/`,
+				...(target.plantNumber ? { plantNumber: target.plantNumber } : {}),
+				...(target.plantCode ? { plantFactoryCode: target.plantCode } : {}),
 			},
 		});
 	}
@@ -346,7 +479,7 @@ async function fetchRoujiaosuoSpot(): Promise<ScraperResult> {
 		);
 	}
 	logger.info(
-		`[RJS_SPOT] ${all.length} listings → ${report.inserted} inserted, ${report.duplicates} known-day, ${report.rejectedPrice} price-rejected`,
+		`[RJS_SPOT] ${all.length} listings → ${report.inserted} inserted, ${report.duplicates} known-day, ${report.rejectedPrice} price-rejected, ${report.plantAttributed} plant-attributed`,
 	);
 	return report.inserted === 0
 		? { inserted: 0, updated: 0, noChange: true }

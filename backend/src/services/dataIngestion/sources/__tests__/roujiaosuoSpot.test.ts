@@ -9,13 +9,48 @@ import { afterAll, describe, expect, test } from "vitest";
 import { prisma } from "@/lib";
 import {
 	BEEF_SPOT_TERMS,
+	extractLeadingPlantNumber,
 	ingestSpotItems,
 	parseListingTime,
 	parseRjsListingPage,
+	plantFactoryCode,
 	resolveBeefSpotCut,
 	SPOT_FACTORY_CODE,
 	type SpotListingItem,
 } from "../roujiaosuoSpot";
+
+// ---------------------------------------------------------------------------
+// Plant-number extraction — leading-position only (round-168, 宁缺勿错).
+// ---------------------------------------------------------------------------
+describe("extractLeadingPlantNumber", () => {
+	test("captures leading 2-5 digit plant prefixes", () => {
+		expect(extractLeadingPlantNumber("2543牛腩肋条")).toBe("2543");
+		expect(extractLeadingPlantNumber("30和牛碎肉65")).toBe("30"); // trailing 65 is a lean spec
+	});
+
+	test("mid-title numbers are honest misses (specs, not plants)", () => {
+		expect(extractLeadingPlantNumber("谷饲4302小排肥牛")).toBeNull();
+	});
+
+	test("quantity words and alphanumeric specs are excluded", () => {
+		expect(extractLeadingPlantNumber("150箱牛腩")).toBeNull();
+		expect(extractLeadingPlantNumber("80VL牛碎肉")).toBeNull();
+		expect(extractLeadingPlantNumber("5A雪花牛排")).toBeNull(); // single digit + letter
+	});
+
+	test("plain titles carry no plant number", () => {
+		expect(extractLeadingPlantNumber("全去骨牛蹄")).toBeNull();
+		expect(extractLeadingPlantNumber("巴西进口牛腩")).toBeNull();
+	});
+});
+
+describe("plantFactoryCode", () => {
+	test("Brazil keeps the seed SIF convention, others are plain ISO2-n", () => {
+		expect(plantFactoryCode("BR", "2543")).toBe("BR-SIF2543");
+		expect(plantFactoryCode("NZ", "30")).toBe("NZ-30");
+		expect(plantFactoryCode("AU", "235")).toBe("AU-235");
+	});
+});
 
 // ---------------------------------------------------------------------------
 // Vocabulary resolution — the 宁缺勿错 gate.
@@ -270,5 +305,136 @@ describe("ingestSpotItems (integration)", () => {
 			where: { factoryId: row?.factoryId, currency: "USD" },
 		});
 		expect(usdCount).toBe(0);
+	});
+});
+
+describe("plant attribution (round-168 integration)", () => {
+	const NOW = new Date("2026-09-19T04:00:00Z");
+
+	afterAll(async () => {
+		await prisma.beefCutPrice.deleteMany({
+			where: { source: "roujiaosuo_spot", sourceRef: { startsWith: "rjs-plant-" } },
+		});
+		// Test plant factories only — 99xx numbers cannot collide with the
+		// seed's real establishments.
+		await prisma.factory.deleteMany({
+			where: { code: { in: ["BR-SIF9901", "NZ-9903"] } },
+		});
+	});
+
+	test("leading 厂号 + mapped origin attributes to a real plant factory", async () => {
+		const report = await ingestSpotItems(
+			[
+				{
+					listingId: "rjs-plant-1",
+					title: "9901牛腩肋条",
+					supplyType: "现货",
+					originCountry: "巴西",
+					priceCnyPerKg: 52,
+					volumeKg: 500,
+					warehouse: "上海上海市",
+					timeText: "2小时前",
+				},
+			],
+			NOW,
+		);
+		expect(report.inserted).toBe(1);
+		expect(report.plantAttributed).toBe(1);
+
+		const plant = await prisma.factory.findUnique({ where: { code: "BR-SIF9901" } });
+		expect(plant?.country).toBe("BR");
+		expect(plant?.nameLocal).toBe("巴西9901厂");
+		expect(plant?.metadata?.kind).toBe("gacc-plant-unverified");
+
+		const row = await prisma.beefCutPrice.findFirst({
+			where: { source: "roujiaosuo_spot", sourceRef: "rjs-plant-1" },
+			include: { factory: true },
+		});
+		expect(row?.factory.code).toBe("BR-SIF9901");
+		expect(row?.metadata?.plantNumber).toBe("9901");
+		expect(row?.metadata?.plantFactoryCode).toBe("BR-SIF9901");
+		expect(row?.currency).toBe("CNY");
+	});
+
+	test("CN origin and unmapped origins stay on the virtual factory (number kept in metadata)", async () => {
+		const report = await ingestSpotItems(
+			[
+				{
+					listingId: "rjs-plant-2",
+					title: "99和牛碎肉70", // leading 99, but CN domestic
+					supplyType: "现货",
+					originCountry: "中国",
+					priceCnyPerKg: 50,
+					volumeKg: null,
+					warehouse: "北京北京市",
+					timeText: "1小时前",
+				},
+				{
+					listingId: "rjs-plant-3",
+					title: "9902牛霖", // leading number, origin not in the map
+					supplyType: "现货",
+					originCountry: "火星",
+					priceCnyPerKg: 59,
+					volumeKg: null,
+					warehouse: "上海上海市",
+					timeText: "1小时前",
+				},
+			],
+			NOW,
+		);
+		expect(report.inserted).toBe(2);
+		expect(report.plantAttributed).toBe(0);
+
+		for (const ref of ["rjs-plant-2", "rjs-plant-3"]) {
+			const row = await prisma.beefCutPrice.findFirst({
+				where: { source: "roujiaosuo_spot", sourceRef: ref },
+				include: { factory: true },
+			});
+			expect(row?.factory.code).toBe(SPOT_FACTORY_CODE);
+			expect(row?.metadata?.plantFactoryCode).toBeUndefined();
+		}
+		// The detected number is preserved for the vocabulary batch either way.
+		const cn = await prisma.beefCutPrice.findFirst({ where: { sourceRef: "rjs-plant-2" } });
+		expect(cn?.metadata?.plantNumber).toBe("99");
+	});
+
+	test("a code collision with a factory of another country skips attribution", async () => {
+		// Pre-create NZ-9903 with the WRONG country — the resolver must detect
+		// the mismatch and keep the row virtual instead of adopting/overwriting.
+		await prisma.factory.create({
+			data: {
+				code: "NZ-9903",
+				name: "collision guard fixture",
+				country: "AU",
+				metadata: { testFixture: true },
+			},
+		});
+		const report = await ingestSpotItems(
+			[
+				{
+					listingId: "rjs-plant-4",
+					title: "9903牛腩", // different cut — KNUCKLE's 09-19 virtual slot is taken above
+					supplyType: "现货",
+					originCountry: "新西兰",
+					priceCnyPerKg: 60,
+					volumeKg: null,
+					warehouse: "上海上海市",
+					timeText: "1小时前",
+				},
+			],
+			NOW,
+		);
+		expect(report.inserted).toBe(1);
+		expect(report.plantAttributed).toBe(0);
+
+		const row = await prisma.beefCutPrice.findFirst({
+			where: { source: "roujiaosuo_spot", sourceRef: "rjs-plant-4" },
+			include: { factory: true },
+		});
+		expect(row?.factory.code).toBe(SPOT_FACTORY_CODE);
+		// The fixture factory was NOT overwritten.
+		const fixture = await prisma.factory.findUnique({ where: { code: "NZ-9903" } });
+		expect(fixture?.name).toBe("collision guard fixture");
+		expect(fixture?.country).toBe("AU");
 	});
 });
