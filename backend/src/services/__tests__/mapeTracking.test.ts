@@ -16,7 +16,6 @@ import {
 	invalidatePollutedPredictions,
 	logPrediction,
 	markUnverifiablePredictions,
-	restorePostFixConflictPredictions,
 	restoreVerifiablePredictions,
 	verifyDuePredictions,
 	verifyPrediction,
@@ -568,11 +567,13 @@ describe("MAPE Tracking (real DB)", () => {
 		});
 
 		// ─── Shared helpers for the conflict-prediction tests below ────────────
-		// Both invalidatePollutedPredictions and restorePostFixConflictPredictions
-		// seed rows against the seeded brl_usd commodity (a known conflict slug)
-		// and clean them up afterward. These helpers absorb the repeated
-		// findUnique(brl_usd) + create(predictionLog) + finally-deleteMany
-		// scaffolding that the 5 tests below hand-rolled. Behaviour unchanged.
+		// invalidatePollutedPredictions seeds rows against the seeded brl_usd
+		// commodity (a known conflict slug) and cleans them up afterward. These
+		// helpers absorb the repeated findUnique(brl_usd) + create(predictionLog)
+		// + finally-deleteMany scaffolding that the tests below hand-rolled.
+		// (round-167: restorePostFixConflictPredictions retired — its describe
+		// block and the second consumer of these helpers were removed with it.)
+		// Behaviour unchanged.
 		const FIXED_AT = new Date("2026-07-27T11:26:00Z"); // round-41 authoritative-source fix timestamp
 
 		async function getBrlUsdId(): Promise<string | null> {
@@ -743,71 +744,6 @@ describe("MAPE Tracking (real DB)", () => {
 				// `expect 0` assertion. An epoch cutoff is the true no-op.)
 				const n = await invalidatePollutedPredictions(new Date("1970-01-01T00:00:00Z"));
 				expect(n).toBe(0);
-			});
-		});
-
-		describe("restorePostFixConflictPredictions — recover mis-staled post-fix rows", () => {
-			// REGRESSION (round-58): a historical run left ~531 post-fix chronos
-			// predictions for the 3 conflict commodities stuck at status='stale'
-			// even though they trained on the authoritative-source-filtered series.
-			// Once stale, verifyDuePredictions (which reads status='completed')
-			// never reclaimed them, so brl_usd / corn_cme / natural_gas_cme accuracy
-			// never populated. restorePostFixConflictPredictions is the symmetric
-			// inverse of invalidatePollutedPredictions: stale→completed ONLY for
-			// predictedAt >= fixedAt on conflict slugs.
-			it("restores post-fix stale rows to completed but leaves pre-fix stale rows stale", async () => {
-				const prisma = ctx.prisma;
-				const brlId = await getBrlUsdId();
-				if (!brlId)
-					throw new Error("Seed missing: brl_usd — reset mt_test via scripts/bootstrap-test-db.sh"); // seed absent — skip cleanly
-
-				const before = new Date("2026-07-15T00:00:00Z"); // pre-fix (genuinely polluted)
-				const after = new Date("2026-07-28T00:00:00Z"); // post-fix (mis-staled)
-
-				// Pre-fix row — was legitimately staled; must STAY stale.
-				const preFix = await seedConflictRow({
-					commodityId: brlId,
-					modelId: "test-restore-prefix",
-					status: "stale",
-					predictedAt: before,
-				});
-				// Post-fix row — mis-staled; must be restored to completed.
-				const postFix = await seedConflictRow({
-					commodityId: brlId,
-					modelId: "test-restore-postfix",
-					status: "stale",
-					predictedAt: after,
-				});
-
-				try {
-					const restored = await restorePostFixConflictPredictions(FIXED_AT);
-					// At least the postFix row should be counted.
-					expect(restored).toBeGreaterThanOrEqual(1);
-
-					const [preAfter, postAfter] = await prisma.predictionLog
-						.findMany({
-							where: { id: { in: [preFix.id, postFix.id] } },
-							select: { id: true, status: true },
-						})
-						.then((rows) => [
-							rows.find((r) => r.id === preFix.id)?.status,
-							rows.find((r) => r.id === postFix.id)?.status,
-						]);
-					// Pre-fix stays stale (genuinely polluted, unrecoverable).
-					expect(preAfter).toBe("stale");
-					// Post-fix is restored to completed so verifyDuePredictions can pick it up.
-					expect(postAfter).toBe("completed");
-				} finally {
-					await cleanupConflictRows([preFix.id, postFix.id]);
-				}
-			});
-
-			it("is idempotent — a second run restores nothing", async () => {
-				// First run restores whatever is mis-staled; second run must find
-				// nothing (rows already completed, not stale).
-				await restorePostFixConflictPredictions(FIXED_AT);
-				const second = await restorePostFixConflictPredictions(FIXED_AT);
-				expect(second).toBe(0);
 			});
 		});
 

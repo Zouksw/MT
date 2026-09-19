@@ -21,7 +21,6 @@ import {
 	expireWindowElapsedPredictions,
 	invalidatePollutedPredictions,
 	markUnverifiablePredictions,
-	restorePostFixConflictPredictions,
 	restoreVerifiablePredictions,
 	verifyDuePredictions,
 } from "@/services/mapeTracking";
@@ -285,23 +284,17 @@ function backgroundJobs(): ScheduledJob[] {
 		// as `stale` so they don't inject bogus ~96% MAPE into the accuracy
 		// averages. See invalidatePollutedPredictions docs for the
 		// unrecoverable-data reasoning.
+		// The symmetric restorePostFixConflictPredictions call that used to run
+		// here was retired in round-167: its one-time rescue mission completed
+		// in the round-41 era (live check 2026-09-19: 0 rows to restore), and
+		// per-boot it would have resurrected round-167's unit-pollution stale
+		// rows for corn_cme on every restart.
 		{
 			name: "pollution-invalidation",
 			firstRunDelayMs: 20000,
 			run: async () => {
 				const n = await invalidatePollutedPredictions(ROUND41_FIX_TS);
 				if (n > 0) logger.info(`📊 Marked ${n} polluted predictions as stale (pre-fix data)`);
-				// Symmetric restore: a prior run left post-fix conflict-commodity
-				// predictions stuck at `stale` (they trained on the
-				// authoritative-source-filtered series and are legitimate, but
-				// verifyDuePredictions only reads `completed`, so they were trapped).
-				// Restored rows re-enter the verification queue so brl_usd /
-				// corn_cme / natural_gas_cme accuracy can populate. Idempotent.
-				const restored = await restorePostFixConflictPredictions(ROUND41_FIX_TS);
-				if (restored > 0)
-					logger.info(
-						`📊 Restored ${restored} post-fix conflict-commodity predictions stale→completed`,
-					);
 			},
 		},
 

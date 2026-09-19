@@ -295,47 +295,14 @@ export async function invalidatePollutedPredictions(fixedAt: Date): Promise<numb
 	return result.count;
 }
 
-/**
- * Restore post-fix conflict-commodity predictions that were incorrectly marked
- * `stale` back to `completed`, so the verification loop can process them.
- *
- * Context: `invalidatePollutedPredictions` is the only writer of `status='stale'`
- * in the codebase, and its boundary is `predictedAt < fixedAt` — strictly the
- * polluted pre-fix rows. But a historical run (before the boundary was pinned
- * down, or with a mis-resolved timestamp) left ~531 post-fix chronos predictions
- * for the 3 conflict commodities stuck at `stale` even though they trained on
- * the authoritative-source-filtered series and are legitimate. Once `stale`,
- * `verifyDuePredictions` (which only reads `status='completed'`) never reclaims
- * them, so brl_usd / corn_cme / natural_gas_cme accuracy never populates.
- *
- * This is the symmetric inverse of invalidatePollutedPredictions: it touches
- * ONLY `predictedAt >= fixedAt` rows on the conflict slugs, restoring them to
- * `completed` so they re-enter the verification queue. Idempotent — a second
- * run finds nothing (the rows are already `completed`).
- *
- * @returns number of predictions restored to `completed`
- */
-export async function restorePostFixConflictPredictions(fixedAt: Date): Promise<number> {
-	const conflictSlugs = ["brl_usd", "corn_cme", "natural_gas_cme"];
-	const commodities = await prisma.commodity.findMany({
-		where: { slug: { in: conflictSlugs } },
-		select: { id: true, slug: true },
-	});
-	if (commodities.length === 0) return 0;
-
-	const result = await prisma.predictionLog.updateMany({
-		where: {
-			commodityId: { in: commodities.map((c) => c.id) },
-			status: PS.STALE,
-			// Inverse boundary: only post-fix rows. The pre-fix ones stay stale
-			// (they really were trained on conflicting-source data and are
-			// unrecoverable — see invalidatePollutedPredictions docs).
-			predictedAt: { gte: fixedAt },
-		},
-		data: { status: PS.COMPLETED },
-	});
-	return result.count;
-}
+// NOTE (round-167): restorePostFixConflictPredictions — the symmetric
+// stale→completed rescue for post-fix conflict-commodity rows — was RETIRED.
+// Its one-time mission (recovering ~531 chronos rows mis-staled in the
+// round-41 era) completed long ago; a live-boundary check on 2026-09-19
+// showed it resurrecting 0 rows. Keeping it wired at boot became a footgun:
+// it would have resurrected round-167's unit-pollution stale rows for
+// corn_cme (a conflict slug) on every restart. invalidatePollutedPredictions
+// above remains — it is idempotent and still guards the round-41 boundary.
 
 /** Freeze-mark only the ACTIONABLE monthly rows of a frozen source — those
  * whose verification window AND backfill grace have fully elapsed
