@@ -9887,11 +9887,13 @@ describe("parseComexRows (round-163)", () => {
 		const boneless = rows.filter((r) => r.code === "02023000");
 		expect(boneless).toHaveLength(7); // Jan..Jul
 		const jan = boneless.find((r) => r.period === "2026-01");
-		expect(jan).toBeDefined();
-		expect(jan?.valueUsd).toBeCloseTo(91_212_893, 0);
-		expect(jan?.quantityKg).toBeCloseTo(17_478_069, 0);
+		if (!jan || jan.valueUsd == null || jan.quantityKg == null) {
+			throw new Error(`2026-01 row missing or incomplete: ${JSON.stringify(jan)}`);
+		}
+		expect(jan.valueUsd).toBeCloseTo(91_212_893, 0);
+		expect(jan.quantityKg).toBeCloseTo(17_478_069, 0);
 		// 91,212,892.98 / 17,478.06881 t ≈ 5,219 USD/t (the upsert rounds at 6dp).
-		expect(Math.round((jan!.valueUsd / jan!.quantityKg) * 1000)).toBe(5219);
+		expect(Math.round((jan.valueUsd / jan.quantityKg) * 1000)).toBe(5219);
 
 		// The HS6 aggregate layer mirrors the (single) NCM child exactly.
 		const hs6 = rows.find((r) => r.code === "020230" && r.period === "2026-01");

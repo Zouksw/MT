@@ -252,7 +252,9 @@ async function main(): Promise<number> {
 	for (const H of HORIZONS) {
 		const rows = [...aggs.values()]
 			.filter((a) => a.horizon === H)
-			.sort((a, b) => median(a.mapes)! - median(b.mapes)!);
+			// Empty-median rows (all steps errored) sort last instead of
+			// producing NaN comparisons with arbitrary order.
+			.sort((a, b) => (median(a.mapes) ?? Infinity) - (median(b.mapes) ?? Infinity));
 		lines.push(`## H = ${H} ${H === 1 ? "个月" : "个月（下季度）"}`);
 		lines.push("");
 		lines.push("| 模型 | MAPE 均值 | MAPE 中位 | 方向命中 | 覆盖率(90%) | 样本 | 错误 |");
@@ -308,7 +310,7 @@ async function main(): Promise<number> {
 	lines.push("");
 
 	mkdirSync(dirname(OUT_MD), { recursive: true });
-	writeFileSync(OUT_MD, lines.join("\n") + "\n");
+	writeFileSync(OUT_MD, `${lines.join("\n")}\n`);
 	console.log(`report → ${OUT_MD}`);
 
 	// Console summary (same table, compact).
