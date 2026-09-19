@@ -16,7 +16,7 @@
     },
     "types": ["node"]
   },
-  "include": ["src/**/*", "config/**/*"],
+  "include": ["src/**/*", "config/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**"],
   "ts-node": {
     "compilerOptions": {
