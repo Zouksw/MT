@@ -36,8 +36,8 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **27 文件 / 25 注册** | `sources/*.ts`（排除 index/test）；2026-09-19 复核（round-165）：roujiaosuo_spot（肉交所现货挂价，CNY/kg、虚拟厂 RJS-SPOT 隔离）上线后注册 25；indec_comex 上线于 round-163、inac_expo 于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
-| Prisma 模型 | **25** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-08-30 复核；round-140 D2+D3 删 SecurityAuditLog/ForecastingModel/Forecast/Portfolio/GroupMember 5 个休眠模型后为 25） |
+| 数据源爬虫 | **28 文件 / 26 注册** | `sources/*.ts`（排除 index/test）；2026-09-19 复核（round-170）：gacc_registry（GACC 境外肉类企业名录周快照，foodmate jwqyp 镜像 → FactoryRegistryEntry 参照表 + 厂号归属转正）上线后注册 26；roujiaosuo_spot 上线于 round-165、indec_comex 于 round-163、inac_expo 于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
+| Prisma 模型 | **26** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-09-19 复核 round-170：+FactoryRegistryEntry 名录快照表后为 26；round-140 删 5 个休眠模型后曾为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |
 | 推理模型 id | **9** | `inference_engine.py` 的 `MODEL_IDS`（6 统计 + 3 Chronos 变体） |

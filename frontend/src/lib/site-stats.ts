@@ -17,15 +17,20 @@
  *  - 75 beef cut taxonomies (BeefCutTaxonomy DB count; BEEF_CHEEK was added
  *    in round-144 after the old 74 was written down).
  *  - 23 tracked plants = 21 seed establishments + 2 Roujiaosuo title-attributed
- *    plants (BR-SIF2543, NZ-30; round-168, gacc-plant-unverified). The virtual
- *    RJS-SPOT listing pool is deliberately NOT counted as a factory.
- *  - 25 registered scrapers (AGENTS §三, 2026-09-19) + the CSV beef import
- *    channel (/api/beef/import). Of these, 7 produced rows in the last 14
- *    days (live psql GROUP BY source, 2026-09-19): cmeFutures, inac, fred,
- *    exchange_rate_api, drewry_wci, usda_import_beef, roujiaosuo_spot —
- *    the rest are gated on API keys / network egress (KNOWN-ISSUES D1).
- *    The marketing number counts built integrations, the same way the
- *    /settings/data-sources board counts them.
+ *    plants (BR-SIF2543 — now GACC-registry-verified as MARFRIG GLOBAL FOODS,
+ *    NZ-30 — registry has no ME30, honestly still unverified; round-168/170).
+ *    The virtual RJS-SPOT listing pool is deliberately NOT counted as a
+ *    factory. The 578 numeric-code registry entries (of 1346 scanned) are a
+ *    REFERENCE table (FactoryRegistryEntry), not factories.
+ *  - 26 registered scrapers (AGENTS §三, 2026-09-19 round-170) + the CSV beef
+ *    import channel (/api/beef/import). Of these, 7 produced PRICE rows in
+ *    the last 14 days (live psql GROUP BY source on price tables,
+ *    2026-09-19): cmeFutures, inac, fred, exchange_rate_api, drewry_wci,
+ *    usda_import_beef, roujiaosuo_spot — gacc_registry produces no price
+ *    rows; it maintains the 1346-entry GACC registry reference table
+ *    (weekly). The rest are gated on API keys / network egress
+ *    (KNOWN-ISSUES D1). The marketing number counts built integrations, the
+ *    same way the /settings/data-sources board counts them.
  *  - 6 import source countries (AR, AU, BR, NZ, US, UY — NZ joined via the
  *    round-168 plant attribution).
  *  - 2 live news RSS feeds (Beef Central, USDA Federal Register) since
@@ -40,7 +45,7 @@ export const SITE_STATS = {
 	/** Tracked plants (seed + attributed; virtual listing pool excluded). */
 	factories: 23,
 	/** Data source integrations shipped (see header comment for producing split). */
-	dataSources: 25,
+	dataSources: 26,
 	/** Import source countries. */
 	sourceCountries: 6,
 } as const;

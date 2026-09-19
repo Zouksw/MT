@@ -639,6 +639,6 @@ round-107 用真实浏览器逐页扫描全部 44 条路由（`scripts/e2e-page-
 **登记不执行（后续轮次候选）**：
 - **mapeTracking.ts 1538 行**（round-106 时 1027，验证环四轮扫描扩展所致）：round-117"反对按文件数拆分"决策仍有效；如拆须按内聚（expire/restore/verify/conformal 各环）单列设计轮，收益=可读性、风险=验证环行为回归，非本轮范围。
 - **3 个 700 行级页面 monolith**（dashboard/performance 713 / alerts/rules 705 / settings/data-sources 702）：可读可测可工作，拆分属观感收益，无用户可见价值，不动。
-- **dist 陈旧产物**：`tsc` 不清理输出目录，`dist/scripts/` 残留已删脚本的 .js（backfillFred.js/seed.js/import-beef.js 墓碑）。可在 build 前加 clean 步骤根治，但改变构建行为（部署面），单列决策。
+- **dist 陈旧产物**：~~`tsc` 不清理输出目录，`dist/scripts/` 残留已删脚本的 .js（backfillFred.js/seed.js/import-beef.js 墓碑）。可在 build 前加 clean 步骤根治，但改变构建行为（部署面），单列决策。~~ **已根治（round-170 批0，2026-09-19）**：根因比"不清理"严重——round-166 扩 tsconfig include（+config/+scripts）后 tsc 公共根变为项目根，产物布局静默错位到 `dist/src/…`，而 PM2 固定跑 `dist/server.js`（旧布局）——**round-166 之后至 round-170 之间的 backend 改动从未真正部署过**（round-168 的两行归属是手工回迁入库，非采集器行为；其余改动恰好行为中性未暴露）。修复：tsconfig 显式 `rootDir: "./src"` 回归原 emit 布局 + `rm -rf dist` 全量重建；scripts/config 盲区改由 `tsconfig.scripts.json`（noEmit）+ `type-check` 双门禁覆盖，round-166 的初衷（类型门禁覆盖 scripts）不回退。clean 步骤未加（rootDir 固定后错位不再可能，墓碑随全量重建消失）。
 - TD-8 前端 ~29 处 GET 裸 fetch 维持开放（既有登记，低优先）。
 - swrFetcher `Promise<any>` 与 Table.tsx render `value: any` **有意保留**：前者带文档化理由（20 处 useSWR<T> 泛型推断点），后者是表格 render 契约。

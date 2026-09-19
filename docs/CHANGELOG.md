@@ -42,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-19 — round-170：GACC 厂号名录快照源（gacc_registry）+ 归属转正 + dist 部署断裂 P0 修复
+
+用户指令"开始"，执行方向分析选定的最高价值主线：把 CNY 现货层做深——GACC 名录批落地，round-168 的未验证厂号归属获得名册核验通道。开工侦察三度复检确认成交块仍非 SSR（5 详情页 0 成交标记），成交价解析器按 round-168 缩界不建。
+
+- **批0（P0 意外修复）**：live 触发 404 顺藤摸瓜发现 **round-166 扩 tsconfig include 后产物静默错位 `dist/src/`**——tsc 公共根变为项目根，PM2 固定跑旧布局 `dist/server.js`，round-166 起 backend 改动从未真正部署（round-168 两行归属系手工回迁故未暴露）。修复：显式 `rootDir: "./src"` + `rm -rf dist` 全量重建；scripts/config 类型盲区移交 `tsconfig.scripts.json`（noEmit）+ `type-check` 双门禁，round-166 初衷不回退。TECH-DEBT §十八 dist 项根因坐实并关闭。
+- **`gacc_registry` 源上线**（foodmate jwqyp 镜像，robots 全放行，周快照挂 DAILY 调度 + 源内 7 天新鲜度门）：POST getlist 分页扫 6 源国 × 肉类 **1346 家**（US 950/BR 103/AR 95/NZ 95/AU 75/UY 28；接口 count 封顶 100，以 data.length 为准）→ 新 `FactoryRegistryEntry` 参照表（Prisma 26 号模型，迁移双库应用）。
+- **诚实约束**：物种不可知（肉类大类，条目≠牛肉专属）；approvalNo→factoryCode 格式观测归一——BR SIF 前缀（含 "SIF 1184" 空格变体）/NZ ME 前缀剥离映射，US 字母后缀（244C≠244）·P/V 前缀与 NZ S/PH/CS 系列保持 null（独立编号空间，768/1346 未映射是正确行为）；快照 all-or-nothing（单国失败整体不落防半册盲周门）+ unchanged 行 touch-only。
+- **归属转正**：**BR-SIF2543 → MARFRIG GLOBAL FOODS S.A.**（gacc-plant-verified）；**NZ-30 名册无 ME30——如实停留未验证**；roujiaosuoSpot 归属路径接线名册即时核验（命中即 verified + 企业名替换泛称厂名）。
+- **工程侦察**：镜像 PHP 栈对 `Accept-Language: *` 返回 500（undici fetch 默认必发、curl 不发）——本地 echo 服务抓报文二分定位，显式发 `zh-CN,zh;q=0.9,en;q=0.8` 解决，根因注释入源码。
+- **批3 数字对齐**：site-stats dataSources 25→**26**（26 注册源 + CSV 通道；注释如实分列 gacc_registry 产参照表不产价格行）；AGENTS 规模事实 28 文件/26 注册 + Prisma 26（全 live 复测）。
+- **基线**：backend **1186+1 skip**（115 文件，+11：gaccRegistry 10 + roujiaosuo 名册核验 1）；frontend tsc/jest/build + PM2 + live "26" 渲染验证；tsc 双门禁 0；migration mt_db+mt_test 双应用。一次 concurrent-operations 计时敏感套件偶发失败复跑 2 次全绿（如实登记）。
+
 ### 2026-09-19 — round-169：状态收敛轮 — 全局面板数字与状态文档对齐实测（site-stats 刷新 + D1/D2 收口）
 
 用户指令"完成后续的工作，让项目的状态收敛"。时间门控项（观察窗 09-21 / IMF 8 月点 / H=3 到期）与用户动作项（key/SMTP/域名）不可推进，本轮收敛**状态漂移面**——逐处审计面向用户与代理的数字/状态声明是否仍如实：
