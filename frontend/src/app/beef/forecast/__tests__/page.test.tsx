@@ -51,6 +51,13 @@ function makeConsensus(overrides: Partial<NonNullable<HookReturn["consensus"]>> 
 		availableModels: 7,
 		rangeLower: 322.1,
 		rangeUpper: 334.9,
+		calibratedInterval: {
+			lower: 322.63,
+			upper: 349.7,
+			level: 0.9,
+			sampleSize: 36,
+			source: "docs/backtests/beef-monthly-consensus-calibration-2026-09.md",
+		},
 		horizon: 1,
 		horizonUnit: "month" as const,
 		timestamp: "2026-08-30T08:00:00Z",
@@ -80,6 +87,30 @@ describe("BeefForecastPage (round-138 批5)", () => {
 		expect(screen.getByText("4/7")).toBeInTheDocument();
 		// H is displayed in MONTHS on the monthly benchmark.
 		expect(screen.getByText(/H = 1 个月/)).toBeInTheDocument();
+	});
+
+	it("renders the calibrated 90% band with its backtest provenance (round-164 批0b)", async () => {
+		mockReturn = { consensus: makeConsensus(), loading: false, error: null, retry: jest.fn() };
+		render(<BeefForecastPage />);
+		expect(await screen.findByText("校准 90% 区间")).toBeInTheDocument();
+		expect(screen.getByText("322.63 – 349.70")).toBeInTheDocument();
+		// Sample size caption ties the band to the 36-origin backtest.
+		expect(screen.getByText(/回测 36 起点残差分位/)).toBeInTheDocument();
+		// The disagreement spread stays visible as a distinct, secondary stat.
+		expect(screen.getByText("模型分歧区间")).toBeInTheDocument();
+	});
+
+	it("falls back to the honest uncalibrated footnote when the band is absent", async () => {
+		mockReturn = {
+			consensus: makeConsensus({ calibratedInterval: null }),
+			loading: false,
+			error: null,
+			retry: jest.fn(),
+		};
+		render(<BeefForecastPage />);
+		expect(await screen.findByText("−1.2%")).toBeInTheDocument();
+		expect(screen.queryByText("校准 90% 区间")).not.toBeInTheDocument();
+		expect(screen.getByText(/待回测证据覆盖本视界后接入/)).toBeInTheDocument();
 	});
 
 	it("shows the honest empty state instead of a fabricated consensus", () => {

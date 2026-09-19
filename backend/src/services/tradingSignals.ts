@@ -22,6 +22,7 @@
  */
 
 import { logger, prisma } from "../lib";
+import { type BeefCalibratedInterval, calibratedBeefInterval } from "./beefCalibration";
 import { cutSeriesKey, getBeefCutSeries, STALE_WINDOW_DAYS } from "./beefQueries";
 import { accuracyWindowDays, horizonUnitOf } from "./cadence";
 import { resolveModelWeights, weightedDirectionVote, weightedMedian } from "./modelQuality";
@@ -86,6 +87,13 @@ export interface PriceForecast {
 	distribution: { up: number; down: number; flat: number };
 	/** Model id with the highest confidence among available models, if any. */
 	bestModel?: string;
+	/**
+	 * Backtest-calibrated 90% band around predictedPrice (round-164 batch 0b).
+	 * Present ONLY for the calibrated beef monthly benchmark (slug
+	 * beef_carcass_us, monthly cadence, horizon 1 or 3) — absent everywhere
+	 * else; `range` above remains the model-disagreement spread.
+	 */
+	calibratedInterval?: BeefCalibratedInterval;
 	timestamp: string;
 }
 
@@ -94,6 +102,12 @@ export interface ForecastRequest {
 	horizon: number;
 	currentPrice: number;
 	models?: string[];
+	/**
+	 * Commodity slug, when the forecast addresses a registered commodity
+	 * (NOT the virtual cut: keys). Gates the calibrated beef interval —
+	 * callers that omit it simply never get one.
+	 */
+	commoditySlug?: string;
 }
 
 /** Direction band: |change| at or below this is "flat", in percent. */
@@ -368,6 +382,16 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		}
 	}
 
+	// Calibrated 90% band (round-164 batch 0b) — gated to the beef monthly
+	// benchmark by slug/cadence/horizon inside the helper; every other series
+	// keeps the disagreement-range-only shape.
+	const calibrated = calibratedBeefInterval(
+		req.commoditySlug,
+		seriesInterval,
+		horizon,
+		consensusPrice,
+	);
+
 	return {
 		direction: consensusDirection,
 		confidence: Math.round(consensusConfidence * 100) / 100,
@@ -388,6 +412,7 @@ export async function generateForecast(req: ForecastRequest): Promise<PriceForec
 		individualForecasts,
 		distribution: { up: upCount, down: downCount, flat: flatCount },
 		bestModel,
+		...(calibrated ? { calibratedInterval: calibrated } : {}),
 		timestamp: new Date().toISOString(),
 	};
 }

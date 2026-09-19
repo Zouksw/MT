@@ -363,6 +363,7 @@ router.post(
 					commodityId: commodity.id,
 					horizon,
 					currentPrice,
+					commoditySlug: slug,
 				});
 				return { slug, ok: true as const, forecast };
 			}),
@@ -443,6 +444,7 @@ router.get(
 			horizon: params.horizon,
 			currentPrice,
 			models,
+			commoditySlug: commodity.slug,
 		});
 
 		// Check for forecast-direction changes and send notifications (non-blocking)

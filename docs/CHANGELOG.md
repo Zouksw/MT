@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-19 — round-164：值守兑现轮 — 批0a 首批牛肉 verified 三面核查 + 公开战绩页牛系槽位 + 批0b 共识卡校准 90% 区间
+
+用户指令"review开发计划，确认后进行后续的开发"（承接当日项目评估轮的规划：第一优先=值守窗兑现）。两批独立 commit、全门禁（tsc/biome/全量测试零回退/build/PM2/live）。
+
+- **批0a 值守窗兑现（SQL 三查 + 三面核查）**：首批牛肉家族 verified 已于 **2026-09-12** 落地——`beef_retail_us`（FRED 美国零售牛肉月度）×7 模型 H=1，MAPE **0.16%（chronos_mini）–0.55%（naive/exp）**，预测锚 08-30、实际值 2026-08-01 点到货后自动验证。V5 规划的"2026-09 中下旬值守窗"事件如期兑现。三面核查发现真问题：**公开战绩页样本仍零牛系**——根因坐实为样本选取的 newest-400 over-fetch 淹没（验证循环每 6h 批量落数千条宏观行，月度牛系行沉底出窗），round-160 登记的"端点窗口过滤把牛系行排除"猜想收窄定案。修复：`publicTrackRecord` 增 `BEEF_SAMPLE_SLOTS=10` 牛系保留槽位（牛系独立查询优先入列 + 通用池补足 + 按 log id 去重；methodology 注记同步），live 验证 7 条 beef_retail_us 行进入公开样本并置顶。`/beef/forecast` 共识面与 `/ai/accuracy` 聚合面核查通过（后者 verifiedCount 本就含牛系行）。
+- **批0a 附带收口**：① `usda_import_beef` 90CL 断供**自愈关闭**（生产库实测 09-11/09-18 两新点入库，本仓代码零改动，判定上游恢复 mnreports PDF；KNOWN-ISSUES D1 登记关闭，三选一修复路径不再必要）；② 周快照脚本增"牛肉家族 verified — 30d 窗"段 + 校准证据指针（首份含牛系行的快照 track-record-2026-09-19.md 入库）；③ KNOWN-ISSUES round-160 零牛系样本条目标已解决。
+- **批0b 校准共识区间（V5 样本门开启后承接）**：`backtest-monthly-series.ts` 扩展（逐起点 predLast/actualLast/anchor 转储 + "共识残差"报告段）后重跑——**确定性复验 6/7 模型与冻结基线逐位一致**（holtwinters 差异系其后 round-153 `1614766` 月度去季节改动，H=3 方向命中 58.8%→85.3%，属代码演进非复现失败）。共识残差经验分位（7 模型末步中位，R-7 插值）：**H=1 p5=−2.76%/p95=+5.40%（n=36）、H=3 p5=−2.89%/p95=+13.07%（n=34）**，独立复算核对逐位一致。新证据文档 `docs/backtests/beef-monthly-consensus-calibration-2026-09.md`（冻结 2026-08 版保留不动）。实现：`beefCalibration.ts`（fail-closed 门控：仅 beef_carcass_us + monthly + H∈{1,3}，残差分位/样本量/溯源文档随载荷）→ `generateForecast` 增可选 `commoditySlug` + `calibratedInterval`（单/批两路由传 slug）→ 前端共识卡"校准 90% 区间"主展示（带宽 + 回测起点数 + 溯源 + live 首验落带内注记；模型分歧区间保留为次级并明示"极差非覆盖率"），null 时诚实回退旧文案。**live 三验证**：共识端点带 [322.63, 349.70]（n=36）挂载、负对照 usd_cny 无带、公开样本牛系置顶。校准带上线背景：全局淘汰线使牛肉共识当前退化为 naive+exp 双平坦投票（分歧区间塌缩 331.78–331.78），校准带成为唯一传达真实不确定性的区间（此为 per-series 权重 ~2026-11 激活前的诚实过渡态）。
+- **基线**：backend vitest **1152 pass + 1 skip**（113 文件，+12 全为新测：beefCalibration 门控/常量钉 8 + publicTrackRecord 牛系槽位 2 + 常量整理）；frontend jest **362**（42 套件，+2：校准带渲染 + null 回退）；inference 61 未动。biome：本批文件零 findings（src/ 存量 2 条 round-163 indecComex 测试遗留警告非本批引入，未动）。
+- **登记**：beef_carcass_us（IMF 基准）首验仍等 IMF 8 月点（T+2 月节奏）；H=3 共 21 行 2026-10-31 到期；per-series 权重激活评估 ~2026-11（≥20 verified 门）。
+
 ### 2026-09-07 — round-163：开发轮 — 阿根廷官方月度通道打通（INDEC COMEX NCM8×目的地 + Comext 杂碎 CN8）
 
 用户目标"探索更加细粒度、更加深入的牛肉贸易数据挖掘"（续 round-162）。两批独立 commit、全门禁。

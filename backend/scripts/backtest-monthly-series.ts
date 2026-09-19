@@ -78,6 +78,12 @@ interface OriginResult {
 	directionHit: boolean | null; // null = flat prediction or flat actual (undecidable)
 	coveredSteps: number;
 	steps: number;
+	// End-of-horizon values for consensus-residual calibration (round-164
+	// batch 0b): the predicted last step, the actual last step, and the
+	// anchor (last training point). Undefined only when the call errored.
+	predLast?: number;
+	actualLast?: number;
+	anchor?: number;
 	error?: string;
 }
 
@@ -86,6 +92,17 @@ function median(xs: number[]): number | null {
 	const s = [...xs].sort((a, b) => a - b);
 	const mid = Math.floor(s.length / 2);
 	return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function quantile(xs: number[], q: number): number | null {
+	if (xs.length === 0) return null;
+	const s = [...xs].sort((a, b) => a - b);
+	// Linear interpolation (R-7, the NumPy/pandas default) — stable and
+	// convention-compatible for the small n of a rolling backtest.
+	const pos = (s.length - 1) * q;
+	const lo = Math.floor(pos);
+	const hi = Math.ceil(pos);
+	return lo === hi ? s[lo] : s[lo] + (pos - lo) * (s[hi] - s[lo]);
 }
 
 function round(v: number | null, d = 2): string {
@@ -163,6 +180,9 @@ async function main(): Promise<number> {
 					const predSign = Math.sign(pred.values[H - 1] - anchor);
 					const actualSign = Math.sign(actual[H - 1] - anchor);
 					base.directionHit = predSign === 0 || actualSign === 0 ? null : predSign === actualSign;
+					base.predLast = pred.values[H - 1];
+					base.actualLast = actual[H - 1];
+					base.anchor = anchor;
 					results.push(base);
 				} catch (error) {
 					base.error = error instanceof Error ? error.message : String(error);
@@ -249,6 +269,43 @@ async function main(): Promise<number> {
 		lines.push(`> ⚠️ ${errCount} 个 (origin, model) 调用失败——见原始 JSON 的 error 字段。`);
 		lines.push("");
 	}
+
+	// ---- Consensus-residual calibration section (round-164 batch 0b) ----
+	// Per (horizon, origin): consensus = MEDIAN of the pool's end-of-horizon
+	// predictions (the equal-weight shape of the production weighted median),
+	// residual = (actual - consensus) / consensus. The empirical p5/p95 of
+	// these signed residuals is the calibrated 90% band attached to the
+	// consensus card (docs/backtests calibration evidence).
+	lines.push("## 共识残差（7 模型末步中位，校准带依据）");
+	lines.push("");
+	lines.push(
+		"- 口径：每起点取全部池内模型末步预测的中位为共识；残差 =（实际 − 共识）/ 共识 × 100。p5/p95 为经验分位（R-7 线性插值），即回放中覆盖 90% 起点的双侧带。",
+	);
+	lines.push("");
+	lines.push("| H | 样本 | 残差 p5 | 残差 p50 | 残差 p95 | |残差| 均值 | |残差| 中位 |");
+	lines.push("|---|-----:|-------:|---------:|---------:|----------:|----------:|");
+	for (const H of HORIZONS) {
+		const byOrigin = new Map<string, { pred: number[]; actual: number | null }>();
+		for (const r of results) {
+			if (r.horizon !== H || r.predLast == null || r.actualLast == null) continue;
+			const slot = byOrigin.get(r.originDate) ?? { pred: [], actual: null };
+			slot.pred.push(r.predLast);
+			slot.actual = r.actualLast;
+			byOrigin.set(r.originDate, slot);
+		}
+		const residuals: number[] = [];
+		for (const slot of byOrigin.values()) {
+			const cons = median(slot.pred);
+			if (cons != null && cons !== 0 && slot.actual != null) {
+				residuals.push(((slot.actual - cons) / cons) * 100);
+			}
+		}
+		const abs = residuals.map(Math.abs);
+		lines.push(
+			`| ${H} | ${residuals.length} | ${round(quantile(residuals, 0.05), 2)}% | ${round(quantile(residuals, 0.5), 2)}% | ${round(quantile(residuals, 0.95), 2)}% | ${round(abs.length ? abs.reduce((s, x) => s + x, 0) / abs.length : null, 2)}% | ${round(median(abs), 2)}% |`,
+		);
+	}
+	lines.push("");
 
 	mkdirSync(dirname(OUT_MD), { recursive: true });
 	writeFileSync(OUT_MD, lines.join("\n") + "\n");

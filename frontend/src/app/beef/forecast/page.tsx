@@ -143,6 +143,18 @@ function ConsensusCard({
 					</span>
 				</div>
 				<div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+					{consensus.calibratedInterval && (
+						<div>
+							校准 90% 区间
+							<div className="text-sm text-foreground tabular-nums">
+								{consensus.calibratedInterval.lower.toFixed(2)} –{" "}
+								{consensus.calibratedInterval.upper.toFixed(2)}
+							</div>
+							<div className="text-[10px]">
+								回测 {consensus.calibratedInterval.sampleSize} 起点残差分位
+							</div>
+						</div>
+					)}
 					<div>
 						模型分歧区间
 						<div className="text-sm text-foreground tabular-nums">
@@ -163,8 +175,19 @@ function ConsensusCard({
 					</div>
 				</div>
 				<p className="mt-3 text-xs text-muted-foreground">
-					质量加权共识（7 模型，naive 淘汰线 + 按序列路由）。校准 90% 区间待首批滚动验证（2026-09
-					起）成熟后接入——在此之前不显示未经校准的区间数字。
+					质量加权共识（7 模型，naive 淘汰线 + 按序列路由）。校准 90%{" "}
+					{consensus.calibratedInterval ? (
+						<>
+							区间来自 36/34 起点滚动回测的共识残差经验分位 （
+							<code className="text-[10px]">{consensus.calibratedInterval.source}</code>
+							），首批 live 验证（MAPE
+							0.16–0.55%，2026-09-12）落在带内；模型分歧区间是投票模型的极差，不是覆盖率陈述。
+						</>
+					) : (
+						<>
+							区间待回测证据覆盖本视界后接入——在此之前不显示未经校准的区间数字。模型分歧区间是投票模型的极差，不是覆盖率陈述。
+						</>
+					)}
 				</p>
 			</CardBody>
 		</Card>
