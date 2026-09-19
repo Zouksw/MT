@@ -18,8 +18,9 @@
  * pages fetched 2026-09-19 (incl. the round-160 evidence page) carry no deal
  * markup in static HTML. Capturing it would need JS execution or internal
  * /api/ endpoints, outside the registered robots boundary (/sell/ pages
- * only). Deal capture stays parked until either the block returns SSR or the
- * GACC registry path (P1) lands.
+ * only). Deal capture stays parked until the block returns SSR (round-170
+ * note: the GACC registry path landed — it verifies plant ATTRIBUTION, it
+ * does not unlock deal capture).
  *
  * Honesty contract (round-164 design, all load-bearing):
  *  - priceType = "listing" (挂价, a quoted ask) — NOT a transaction price;
@@ -326,20 +327,37 @@ export async function ingestSpotItems(
 			plantFactories.set(code, { id: factory.id, attributed: false });
 			return { factoryId: factory.id, plantNumber, plantCode: null, attributed: false };
 		}
+		// round-170: consult the GACC registry snapshot — a matching entry
+		// upgrades the attribution evidence from "listing title" to
+		// "registry-confirmed" (species-agnostic: registered meat plant).
+		// Between weekly registry scans new plants still land unverified and
+		// the next gacc_registry run promotes them.
+		const registryHit = await prisma.factoryRegistryEntry.findFirst({
+			where: { factoryCode: code },
+			select: { name: true },
+		});
 		const plant = await prisma.factory.upsert({
 			where: { code },
 			update: {},
 			create: {
 				code,
-				name: `Plant ${plantNumber} (${originCountry})`,
+				name: registryHit?.name ?? `Plant ${plantNumber} (${originCountry})`,
 				nameLocal: `${originCountry}${plantNumber}厂`,
 				country: iso2,
-				metadata: {
-					kind: "gacc-plant-unverified",
-					source: "roujiaosuo-title",
-					plantNumber,
-					note: "Establishment number read from a Roujiaosuo listing TITLE prefix; plant identity not yet verified against a GACC/MAPA registry (P1 registry batch pending).",
-				},
+				metadata: registryHit
+					? {
+							kind: "gacc-plant-verified",
+							source: "roujiaosuo-title+gacc-mirror",
+							plantNumber,
+							registryName: registryHit.name,
+							note: "Establishment number from the listing TITLE prefix; identity confirmed by the GACC foreign-establishment registry mirror (foodmate jwqyp). Registry entry is species-agnostic (registered meat establishment).",
+						}
+					: {
+							kind: "gacc-plant-unverified",
+							source: "roujiaosuo-title",
+							plantNumber,
+							note: "Establishment number read from a Roujiaosuo listing TITLE prefix; plant identity not yet verified against the GACC registry (the weekly gacc_registry scan promotes matches).",
+						},
 			},
 		});
 		plantFactories.set(code, { id: plant.id, attributed: true });

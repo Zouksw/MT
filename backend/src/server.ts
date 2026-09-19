@@ -174,6 +174,10 @@ function backgroundJobs(): ScheduledJob[] {
 		// same listings no-op via the (factory, cut, day, source) unique key
 		// (noChange contract; round-165).
 		"roujiaosuo_spot",
+		// GACC foreign meat-establishment registry on the daily cycle: the
+		// scan itself is weekly — an in-source freshness gate (max lastSeenAt
+		// < 7d) returns noChange on the other six days (round-170).
+		"gacc_registry",
 	];
 
 	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for

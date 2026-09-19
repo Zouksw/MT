@@ -493,6 +493,36 @@ model Factory {
   @@map("factories")
 }
 
+/// GACC (China Customs) registered foreign MEAT establishments — weekly
+/// snapshot via the foodmate jwqyp mirror (round-170). Species-agnostic by
+/// upstream shape: the mirror exposes the registry's 肉类 category only, so
+/// an entry certifies "a registered meat plant in <country>", never
+/// beef-specific approval. Loose-coupled to Factory by the factoryCode
+/// string (BR keeps the SIF prefix, NZ strips ME — the round-168 title
+/// attribution convention, now registry-verifiable).
+model FactoryRegistryEntry {
+  id          String   @id @default(cuid())
+  country     String
+  approvalNo  String
+  factoryCode String?
+  name        String?
+  activities  String?
+  address     String?
+  sourceUrl   String?
+  /// Registry change type as published ("Update", …).
+  entryType   String?
+  /// Mirror row id (jwqyp.foodmate.net) — audit trail back to the page.
+  registryId  Int?
+  status      Int      @default(1)
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime @updatedAt @map("last_seen_at")
+  metadata    Json?
+
+  @@unique([country, approvalNo])
+  @@index([factoryCode])
+  @@map("factory_registry_entries")
+}
+
 model BeefCutTaxonomy {
   id        String   @id @default(cuid())
   cutCode   String   @unique

@@ -344,7 +344,7 @@ describe("plant attribution (round-168 integration)", () => {
 		const plant = await prisma.factory.findUnique({ where: { code: "BR-SIF9901" } });
 		expect(plant?.country).toBe("BR");
 		expect(plant?.nameLocal).toBe("巴西9901厂");
-		expect(plant?.metadata?.kind).toBe("gacc-plant-unverified");
+		expect(plant?.metadata?.kind).toBe("gacc-plant-unverified"); // no registry row for 9901
 
 		const row = await prisma.beefCutPrice.findFirst({
 			where: { source: "roujiaosuo_spot", sourceRef: "rjs-plant-1" },
@@ -354,6 +354,52 @@ describe("plant attribution (round-168 integration)", () => {
 		expect(row?.metadata?.plantNumber).toBe("9901");
 		expect(row?.metadata?.plantFactoryCode).toBe("BR-SIF9901");
 		expect(row?.currency).toBe("CNY");
+	});
+
+	test("a registry-matched 厂号 lands verified with the registry name (round-170)", async () => {
+		await prisma.factoryRegistryEntry.create({
+			data: {
+				country: "UY",
+				approvalNo: "9904",
+				factoryCode: "UY-9904",
+				name: "Frigorífico Test 9904",
+				status: 1,
+				lastSeenAt: new Date(),
+			},
+		});
+		try {
+			const report = await ingestSpotItems(
+				[
+					{
+						listingId: "rjs-plant-5",
+						title: "9904牛霖",
+						supplyType: "现货",
+						originCountry: "乌拉圭",
+						priceCnyPerKg: 45,
+						volumeKg: null,
+						warehouse: "上海上海市",
+						timeText: "1小时前",
+					},
+				],
+				NOW,
+			);
+			expect(report.inserted).toBe(1);
+			expect(report.plantAttributed).toBe(1);
+
+			const plant = await prisma.factory.findUniqueOrThrow({ where: { code: "UY-9904" } });
+			const meta = plant.metadata as Record<string, unknown>;
+			expect(meta.kind).toBe("gacc-plant-verified");
+			expect(meta.registryName).toBe("Frigorífico Test 9904");
+			expect(meta.plantNumber).toBe("9904");
+			// The registry's enterprise name replaces the generic label.
+			expect(plant.name).toBe("Frigorífico Test 9904");
+		} finally {
+			await prisma.beefCutPrice.deleteMany({ where: { sourceRef: "rjs-plant-5" } });
+			await prisma.factory.deleteMany({ where: { code: "UY-9904" } });
+			await prisma.factoryRegistryEntry.deleteMany({
+				where: { country: "UY", approvalNo: "9904" },
+			});
+		}
 	});
 
 	test("CN origin and unmapped origins stay on the virtual factory (number kept in metadata)", async () => {

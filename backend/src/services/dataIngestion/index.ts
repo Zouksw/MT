@@ -18,6 +18,7 @@ import { dceFuturesScraper } from "./sources/dceFutures";
 import { drewryWciScraper } from "./sources/drewryWci";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
+import { gaccRegistryScraper } from "./sources/gaccRegistry";
 import { ibgeSidraScraper } from "./sources/ibgeSidra";
 import { inacScraper } from "./sources/inacData";
 import { inacExpoScraper } from "./sources/inacExpo";
@@ -81,6 +82,11 @@ export function registerAllScrapers(): void {
 	// the virtual RJS-SPOT factory — listing≠transaction, canonical-term
 	// mapping only, 5-300 CNY/kg plausibility band; round-165).
 	scraperManager.registerSource("roujiaosuo_spot", roujiaosuoSpotScraper);
+	// GACC foreign meat-establishment registry snapshot (foodmate jwqyp
+	// mirror, keyless, robots-open) — weekly on the daily cycle via an
+	// in-source freshness gate; also promotes gacc-plant-unverified factories
+	// to verified after each scan (round-170).
+	scraperManager.registerSource("gacc_registry", gaccRegistryScraper);
 
 	// Tier 3 — China import data
 	// "china_customs_stats" decommissioned 2026-08-31 (V8 批0, D23): its
