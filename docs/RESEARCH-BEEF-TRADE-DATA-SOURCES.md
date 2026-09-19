@@ -251,6 +251,13 @@ GET https://comtradeapi.un.org/public/v1/preview/C/{freq}/{type}/HS
 
 - **P1a — Comext 欧盟月度镜像**：`DS-045409` 逐产品逐指标查询（避免 413），reporter=IE/NL/FR/PL × product=0201/0202/020230/020220/0206 族 × partner=CN × flow=2，月度节奏；落 MarketFactor（type=`export_to_cn_{hs}` 复用现有命名，region=`IE→CN` 等，**EUR→USD 口径换算或双币并存的口径注记必须先行设计**，与 Comtrade USD 镜像互校不合并）。署名条款遵守（Eurostat source 标注）。
 - **P1b — 国内现货免费层（肉交所 + Mysteel）**：肉交所部位挂价表 + 带厂号件套成交价（**这是 MT 首个"现货层"自动源**——落 BeefCutPrice 需先解决词汇映射与仓储/物流点语义）；Mysteel 国产热鲜批发 + 进口牛副（落 BeefCutPrice 国产线需先复核 PRODUCT-SPEC 国产维度删除边界——round-155 已删国产维度，**Mysteel 牛副/冷冻分割品若做需产品决策先行**）。两者 ToS 复核先行、日 1 次低频。
+  - **实现设计登记（round-164 批C 勘察，2026-09-19 live 复核）**：
+    - **入口/翻页**：`GET https://www.roujiaosuo.com/sell/index-htm-page-{N}.html`（N=0 最新页；全站 ~16,979 页**只翻新页**，命中已入库 listing id 即停——增量幂等）。robots 允许 `/sell/`，**禁 `/*search*` 与 `/member/`/`/api/`——品类搜索端点不可用，牛肉过滤必须客户端做**（列表为全品类混排：牛/猪/禽/水产同页，实测首页 40 项中牛系仅少数）。
+    - **列表解析**：40 项/页，anchor `sell/show/{listingId}/` + 标题（中文俗名品名）+ 价格标记 `X.XX 元/公斤`（实测 20 处/页）。
+    - **牛系词汇映射（关键前置）**：标题先过"牛"系白名单再排除猪/禽（如"预煮花肠猪杂"）；俗名→cutCode 复用 BeefCutTaxonomy 四语别名表（牛霖→KNUCKLE 族），**映射未命中落 OFFAL/登记新词，宁缺勿错不猜码**。
+    - **详情页字段**（实测 `/sell/show/1930363/`）：价格：/数量：（公斤）/产地：/仓库位置：（如"江苏苏州市"）+ 面包屑品类（牛产品>牛油类）；round-160 实证"最新成交"块含**带厂号件套**（牛霖411厂，元/吨级）——**单位混用风险：列表元/公斤 vs 成交元/吨，解析按单位字段归一存储，绝不跨单位换算或合并**。
+    - **落库设计（两阶段）**：第一阶段只落**无厂号平台挂价**为 market 行（源 `roujiaosuo_spot`，Tier 4 日更；metadata 存 listingId/仓库/产地/单位/priceType='listing'/sourceUrl 幂等键；currency=CNY——与 USD 系 BeefCutPrice 并存时 freshness/聚合面按币种注记，绝不隐式换算）；第二阶段厂号成交价（411 厂等不在 Factory seed 21 家内，需厂号→factoryCode 映射批先行）。**挂价≠成交价**，metadata.priceType 强制区分。
+    - **合规边界**：日 1 次低频 + 仅 /sell/ 公开列表/详情页；无登录态；不改写请求绕限制。
 - **P2 — 厂号名录三源**：foodmate GACC 镜像（免登录，最优先）；MGAP PDF 直链逆向；MPI 需浏览器级会话（playwright 引入需独立决策）。落 Factory 参照表快照（周/月）。
 - **P2 — 运价因子**：Drewry WCI 文本抽取（周四）+ FBX 综合值（日更）进 landing-cost 白名单（USD/40ft 口径标注）。
 - **P2 — OECD-FAO 基线**：年度 CSV 本地过滤入 MarketFactor（供需平衡表关键序列），服务预测叙事。
