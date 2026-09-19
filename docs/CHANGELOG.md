@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-19 — round-167：CME 六系列单位混写污染修正 — chronos 尺度错位根因根治（数据侧，非推断链）
+
+用户确认 round-166 后规划并指示"开始"，执行 P0-1（cotton 修正批，随取证扩大到全族）。方法：先只读取证（行级 dump + 全库 ratio>20× 扫描 + 训练窗口/翻案风险核查），后事务修正，全程备份可回滚。
+
+- **根因坐实**：round-160 登记的 "cotton #2 chronos 尺度错位"（预测 18.94 vs 实际 0.82）根因是**数据侧 ¢/$ 混写**——stooq 旧写入（2026-05-18~20）按 ¢/lb|bu、Yahoo 新写入（08-13 起）按 $/lb|bu，与 round-115 wheat_cme 同族。全库扫描扩大战果：**6 个 CME 系列同款污染**（cotton2/soybean_oil/soybeans/corn/coffee/sugar11，共 10 行 stooq 行，ratio 90-112×）；另 7 个带 stooq 行的系列（crude/gold/3 牛系/gas/豆粕）取证为同尺度写入（stooq 值落 Yahoo 波段 ±10% 内）非污染；两个 gas 序列 ratio 26-29× 为 2022 能源危机合法历史波动（极值日期取证）。
+- **批 B0（`2bce656`）——退役翻案脚枪**：`restorePostFixConflictPredictions`（round-41 救援函数）在每次启动会把 predictedAt ≥ ROUND41_FIX_TS 的 conflict stale 行复活回 completed——corn_cme 同为 conflict slug，数据修正会被下次重启翻案。live 实测精确边界下其今日可复活行数 = 0（救援使命早已完成），退役行为中性。函数 + 装配 + 2 条自测移除。
+- **批 B1——数据修正（备份 `backups/round167/`）**：单事务内 ① 10 行 ÷100 归一（OHLC 全列，metadata `unitNormalized` 标记，归一后全部落回 Yahoo 波段）；② 55,598 条污染预测（6 系列 completed+verified，训练窗口 200 点全覆盖污染行）转 stale（round-41 语义）；③ Redis 8 个预测缓存键失效（corn/soybeans 各 4）。
+- **live 复验**：① 复扫 ratio>20× 榜单只剩 2 个 gas（合法）；② 6 系列 verified/completed 清零全 stale，cotton2 准确率池诚实清空（verifiedCount 0）；③ **chronos_tiny/mini/base 在净数据上预测 0.79/0.80/0.80（修复前 18.94，23× 错位）**，7/7 模型可用；④ 全局 accuracy chronos 中位 MAPE 1.83-1.86%，无一 >100% 行。前端 "尺度?" 琥珀标记保留为通用防御，触发源（mape>200 verified 样本）已随 stale 排除自然消退。
+- **登记**：新预测自本轮起在净窗口训练，6 系列 chronos verified 样本将按日度节奏重新积累（观察项，~2 周后看模型质量权重自然恢复）；mapeTracking "唯一 stale 写者" 注释语义随批 B0 更新。
+- **基线**：backend **1167+1 skip**（114 文件，-2 = 退役函数自测随功能走）/ frontend 365 不变（未触碰）/ tsc 0 / biome 0 / build + PM2 重启 + /health 200。
+
 ### 2026-09-19 — round-166：代码质量整治轮 — scripts 类型盲区关闭 + 腐烂脚本清除 + lint 清零 + signal 类型收紧
 
 用户指令"完整整理全项目的代码，提升代码质量，拒绝屎山代码"。方法：先量化审计（biome/tsc/pytest 三端基线 + TODO/any/抑制标记/console/超大文件全仓扫描 + TECH-DEBT 复核），再分批执行，每批 tsc + 全量测试 + live + 独立 commit。**审计结论：代码库整体健康（TODO 全仓 0、抑制标记全部带理由、src 侧 any 双端合计 4 处），债集中在一个系统性盲区而非散乱。**

@@ -37,7 +37,7 @@
 
 **2026-09-07 更新（round-160 前端设计巡查轮）——三条数据侧显影登记（前端侧已做诚实呈现）**：
 - **track-record 公开端点零牛系样本**：/ai/track-record "Recent verified predictions" 表当前 25 行全部是宏观序列（Natural Gas/Crude/EUR-USD/Cotton），无任何牛肉行——样本来自公开已验证预测池，牛系（月度基准）实际值按月度节奏落地晚，近窗内无牛系样本进入池中。前端已把牛系排序置顶（有即优先显示）并把脚注改为如实说明；根治需后端在样本选取上为牛系保留槽位或放宽窗口（owner 决策，未动）。
-- **cotton #2 chronos 预测尺度错位**：chronos_base 预测 18.94 vs 实际 0.82（MAPE 1117%）、chronos_mini 10.77 vs 0.82（404%）——同序列统计模型均 ~1-5%，量级差 ~23× 提示 chronos 推理链在 cotton 序列上单位/缩放错位（美分/磅 vs 美元/磅嫌疑）。前端已加 "尺度?" 琥珀标记；根因在推断/数据侧（R5 邻接项，owner）。
+- **cotton #2 chronos 预测尺度错位**：~~chronos_base 预测 18.94 vs 实际 0.82（MAPE 1117%）、chronos_mini 10.77 vs 0.82（404%）——同序列统计模型均 ~1-5%，量级差 ~23× 提示 chronos 推理链在 cotton 序列上单位/缩放错位（美分/磅 vs 美元/磅嫌疑）。前端已加 "尺度?" 琥珀标记；根因在推断/数据侧（R5 邻接项，owner）。~~ **已解决（2026-09-19，round-167）**：根因坐实为**数据侧单位混写**（非推断链）——`cotton2_cme` 序列内 stooq 旧写入 2 行按 ¢/lb（81.97/80.90）、Yahoo 新写入按 $/lb（0.77-0.87），与 round-115 wheat_cme 同族，且扩大到 **6 个 CME 系列**（cotton2/soybean_oil/soybeans/corn/coffee/sugar11，stooq 2026-05-18~20 共 10 行）。修正：10 行 ÷100 归一（metadata unitNormalized）+ 55,598 条污染预测（completed+verified）转 stale + Redis 预测缓存失效 + 退役会翻案的 boot restore（见 round-167）。live 复验：chronos_tiny/mini/base 预测 0.79-0.80（修复前 18.94），全局 chronos 中位 MAPE 1.83-1.86%，无一 >100% 行。琥珀标记保留为通用防御（触发条件 mape>200 的 verified 样本已随 stale 排除自然消退）。
 - **timeseries/anomalies 子产品休眠**：time_series 表 0 行注册，anomalies 页无可用默认序列（dev 默认 root.test2 已移除，空表已加行内创建 CTA）。该子面是否继续投入属产品决策（PRODUCT-SPEC 未列核心链），当前为诚实空态而非功能缺口。
 - 界面验证基线：25 张全页截图 + console 无错误（仅登录前 auth/verify 401 属正常）；judge 视检三轮，其中 "Bit Categories"/"live-hog"/"24 models" 三条引述经对码证伪为视觉误读，未据改码。
 
@@ -75,6 +75,7 @@
 - **track-record 公开端点零牛系已验证样本**：`/ai/track-record` "Recent verified predictions" 表 25 行全为宏观序列（天然气/原油/欧元/棉花），牛系样本为 0（前端已按 `/beef/i` 牛系优先排序 + 脚注如实化"月度实际值落地后进入此表"，排序后仍无牛系行证明 payload 本身无）。根因待后端复核：预测验证管道对 beef 月度基准的 actual 回填滞后（IMF 月度点 T+2 月）或端点窗口过滤把牛系行排除。UI 侧无修复空间，留后端数据项。
   - **已解决（2026-09-19，round-164 批0a）**：首批牛肉家族 verified 已于 2026-09-12 落地（`beef_retail_us` ×7 模型 H=1，MAPE 0.16–0.55%，实际值 2026-08-01 点到货后验证）——但公开样本仍零牛系，根因坐实为**样本选取的 newest-400 over-fetch 淹没**（验证循环每 6h 批量落数千条宏观行，月度牛系行沉底出窗）。修复：`publicTrackRecord` 增 `BEEF_SAMPLE_SLOTS=10` 牛系保留槽位（牛系独立查询优先入列，其余从通用池补足，去重），live 验证 beef_retail_us 7 行进入公开样本。周快照"牛肉专段"同步增"牛肉家族 verified 30d 窗"小节留档。
 - **cotton #2 chronos 预测尺度错位**：同序列同时刻 chronos_base PREDICTED 18.94 / chronos_mini 10.77 vs ACTUAL 0.82 USD/lb（MAPE 1117%/404%），而 chronos_tiny/arima/naive 预测 0.86-0.89 正常——疑似部分模型链路把磅/美分单位搞混（推断或特征装配侧）。前端已加 "尺度?" 琥珀离群标记（MAPE>200% 显示，title 注明"疑似预测尺度错位"）；指标本身不动（R5 同款纪律：不因展示层需求改指标）。
+  - **已解决（2026-09-19，round-167，见上方 D1 节同名条目）**：根因是数据侧 ¢/$ 混写（stooq 旧行 vs Yahoo 新行，6 个 CME 系列同族），非推断链；数据归一 + 污染池转 stale 后 chronos 预测回归 0.79-0.80 正常尺度。
 - **相关矩阵 30 天窗零重叠对**：`/dashboard/analysis` 20×20 矩阵非对角全部 null（judge 视检 P0 证据），根因 = 窗口内无两序列共享观测日期（数据冻结期 + 发布节奏错位的现实）。前端已改诚实空态（"暂无可计算的相关性"+原因句）；数据恢复后矩阵自动填充，无需后端改动。
 - **外观残留（未修）**：ProfessionalChart 右轴孤儿红色 "10.00" 标签（疑为某隐藏副序列的最后值标签，130-140 主序列上纯视觉噪音）；深度 EN 余量清单（QuickActions 瓷砖、accuracy 卡头、alerts tabs、trading 图表工具词汇）见 CHANGELOG round-160 余量登记，留后续语言批。
 
