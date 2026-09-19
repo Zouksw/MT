@@ -27,6 +27,15 @@ import { PredictionStatus as PS } from "./predictionLifecycle";
 export const RECENT_SAMPLE_LIMIT = 50;
 /** Over-fetch before whitelist filtering so filtering can't starve the cap. */
 const SAMPLE_FETCH_LIMIT = 400;
+/**
+ * Reserved sample slots for beef-family slugs (round-164 批0a). The verify
+ * loop lands thousands of daily-macro rows per day, so a pure "newest 400"
+ * over-fetch can bury the monthly beef series entirely — the platform's
+ * core commodity went invisible exactly when its first verified rows
+ * landed (2026-09-12, KNOWN-ISSUES round-160 finding). Reserved slots keep
+ * the beef evidence on the public page regardless of macro volume.
+ */
+export const BEEF_SAMPLE_SLOTS = 10;
 
 export interface TrackRecordSample {
 	/** Stable series identity: commodity slug or cut:{factoryId}:{cutCode}. */
@@ -88,40 +97,55 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 	});
 	const macroById = new Map(macroCommodities.map((c) => [c.id, c]));
 
+	const logSelect = {
+		id: true,
+		commodityId: true,
+		modelId: true,
+		horizon: true,
+		predictedAt: true,
+		verifiedAt: true,
+		mape: true,
+		predictedValues: true,
+		actualValues: true,
+	} as const;
+	const logWhere = {
+		status: PS.VERIFIED,
+		// Same test-artifact exclusion the accuracy page applies.
+		NOT: [{ commodityId: { contains: "test", mode: "insensitive" as const } }],
+	};
+
+	// Reserved beef slots (see BEEF_SAMPLE_SLOTS) — newest beef-family rows
+	// first, independent of the macro verification volume.
+	const beefIds = macroCommodities.filter((c) => c.slug.startsWith("beef")).map((c) => c.id);
+	const beefRows = beefIds.length
+		? await prisma.predictionLog.findMany({
+				where: { ...logWhere, commodityId: { in: beefIds } },
+				orderBy: { verifiedAt: "desc" },
+				take: BEEF_SAMPLE_SLOTS,
+				select: logSelect,
+			})
+		: [];
+
 	const rows = await prisma.predictionLog.findMany({
-		where: {
-			status: PS.VERIFIED,
-			// Same test-artifact exclusion the accuracy page applies.
-			NOT: [{ commodityId: { contains: "test", mode: "insensitive" } }],
-		},
+		where: logWhere,
 		orderBy: { verifiedAt: "desc" },
 		take: SAMPLE_FETCH_LIMIT,
-		select: {
-			commodityId: true,
-			modelId: true,
-			horizon: true,
-			predictedAt: true,
-			verifiedAt: true,
-			mape: true,
-			predictedValues: true,
-			actualValues: true,
-		},
+		select: logSelect,
 	});
 
 	const samples: TrackRecordSample[] = [];
-	for (const row of rows) {
-		if (samples.length >= RECENT_SAMPLE_LIMIT) break;
-
+	const seenLogIds = new Set<string>();
+	const toSample = (row: (typeof rows)[number]): TrackRecordSample | null => {
 		// POSITIVE whitelist: macro commodity, or a beef-cut virtual key.
 		// Anything else (user datasets, unknown ids) fails closed.
 		const isCut = row.commodityId.startsWith("cut:");
 		const macro = macroById.get(row.commodityId);
-		if (!isCut && !macro) continue;
+		if (!isCut && !macro) return null;
 
 		const cutParts = isCut ? row.commodityId.split(":") : null;
-		if (isCut && cutParts?.length !== 3) continue; // malformed cut key — skip
+		if (isCut && cutParts?.length !== 3) return null; // malformed cut key — skip
 
-		samples.push({
+		return {
 			seriesKey: isCut ? row.commodityId : (macro?.slug as string),
 			seriesLabel: isCut
 				? `Beef cut ${cutParts?.[2]} (plant ${cutParts?.[1]})`
@@ -133,7 +157,15 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 			actual: lastJsonNumber(row.actualValues),
 			mape: row.mape == null ? null : Number(row.mape),
 			verifiedAt: row.verifiedAt?.toISOString() ?? row.predictedAt.toISOString(),
-		});
+		};
+	};
+	for (const row of [...beefRows, ...rows]) {
+		if (samples.length >= RECENT_SAMPLE_LIMIT) break;
+		if (seenLogIds.has(row.id)) continue; // beef rows double-fetched by both queries
+		const sample = toSample(row);
+		if (!sample) continue;
+		seenLogIds.add(row.id);
+		samples.push(sample);
 	}
 
 	return {
@@ -153,7 +185,7 @@ export async function getPublicTrackRecord(days = 30): Promise<PublicTrackRecord
 		methodology: {
 			verification:
 				"Every forecast is logged when made (predicted_at) and automatically re-scored when actual prices arrive; MAPE is computed against the aligned actuals window.",
-			window: `Leaderboard and freshness use a rolling ${days}-day verification window; samples are the most recent verified predictions.`,
+			window: `Leaderboard and freshness use a rolling ${days}-day verification window; samples are the most recent verified predictions, with reserved slots for beef-family series so the monthly-cadence core commodity stays visible against the higher-volume daily macro pool.`,
 			metric:
 				"MAPE = mean absolute percentage error between predicted values and actuals over the horizon. Median is the headline stat (robust to outliers); mean is kept for risk context. Scoring uses ONLY predictions whose verification succeeded (status=verified) — rows invalidated or marked stale/unverifiable never enter medianMape/avgMape/verifiedCount, but they DO remain in predictionCount, which counts every logged prediction in the window: the two fields use different denominators by design.",
 			direction:

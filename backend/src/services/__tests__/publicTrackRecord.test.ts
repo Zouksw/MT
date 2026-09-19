@@ -11,7 +11,11 @@ import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { prisma } from "@/lib";
-import { getPublicTrackRecord, RECENT_SAMPLE_LIMIT } from "@/services/publicTrackRecord";
+import {
+	BEEF_SAMPLE_SLOTS,
+	getPublicTrackRecord,
+	RECENT_SAMPLE_LIMIT,
+} from "@/services/publicTrackRecord";
 import { BASELINE_MODELS, getAllModels } from "@/services/tradingSignals";
 import { createTestApp, requireDb } from "@/test/helpers/testApp";
 
@@ -105,6 +109,78 @@ describe("getPublicTrackRecord — privacy whitelist (fails closed)", () => {
 	test("sample cap holds", async () => {
 		const record = await getPublicTrackRecord();
 		expect(record.samples.length).toBeLessThanOrEqual(RECENT_SAMPLE_LIMIT);
+	});
+});
+
+describe("beef reserved slots (round-164 批0a) — buried beef evidence stays visible", () => {
+	// Production shape (2026-09 finding): the verify loop lands thousands of
+	// daily-macro rows, so beef rows verified on the monthly cadence sink past
+	// the newest-400 over-fetch and never reach the 50-sample cap. Reserved
+	// slots must surface beef regardless of macro volume.
+	const BULK = 410; // > SAMPLE_FETCH_LIMIT (400) so the beef row is provably outside the general pool
+	const beefProbe = `${PROBE}-beef`;
+	const bulkProbe = `${PROBE}-bulk`;
+
+	test("a beef verified row older than 400 newer macro rows still appears", async () => {
+		const beef = await prisma.commodity.findFirst({
+			where: { slug: { startsWith: "beef" } },
+			select: { id: true, slug: true },
+		});
+		if (!beef) throw new Error("publicTrackRecord: test DB has no beef-family commodity");
+		const macro = await prisma.commodity.findFirst({
+			where: { NOT: [{ slug: { startsWith: "beef" } }] },
+			select: { id: true },
+		});
+		if (!macro) throw new Error("publicTrackRecord: test DB has no non-beef commodity");
+
+		const now = Date.now();
+		const beefRow = {
+			status: "verified",
+			mape: 0.55,
+			horizon: 1,
+			predictedValues: [820, 825],
+			actualValues: [820, 826],
+			verifiedAt: new Date(now - 15 * 86_400_000), // 15d old — buried
+			predictedAt: new Date(now - 20 * 86_400_000),
+			commodityId: beef.id,
+			modelId: beefProbe,
+		};
+		const bulkRows = Array.from({ length: BULK }, (_, i) => ({
+			...beefRow,
+			mape: 1.5,
+			// Newer than the beef row, staggered so they fill the whole
+			// newest-first over-fetch window ahead of it.
+			verifiedAt: new Date(now - (i + 1) * 60_000),
+			predictedAt: new Date(now - (i + 1) * 61_000),
+			commodityId: macro.id,
+			modelId: bulkProbe,
+		}));
+		await prisma.predictionLog.createMany({ data: [beefRow, ...bulkRows] });
+
+		try {
+			const record = await getPublicTrackRecord();
+			const beefSamples = record.samples.filter((s) => s.modelId === beefProbe);
+			expect(beefSamples.length).toBe(1);
+			expect(beefSamples[0].seriesKey).toBe(beef.slug);
+			expect(beefSamples[0].mape).toBe(0.55);
+			// The reserved slots cannot break the published cap.
+			expect(record.samples.length).toBeLessThanOrEqual(RECENT_SAMPLE_LIMIT);
+			// Beef rows lead the sample list (reserved slots first).
+			expect(record.samples.findIndex((s) => s.modelId === beefProbe)).toBeLessThan(
+				record.samples.findIndex((s) => s.modelId === bulkProbe),
+			);
+		} finally {
+			await prisma.predictionLog.deleteMany({
+				where: { modelId: { in: [beefProbe, bulkProbe] } },
+			});
+		}
+	});
+
+	test("beef slots are capped so a beef-heavy DB cannot monopolize the digest", async () => {
+		// Structural pin: the reserved query's take is BEEF_SAMPLE_SLOTS, well
+		// under the 50-row cap — the general pool always keeps the majority.
+		expect(BEEF_SAMPLE_SLOTS).toBeLessThanOrEqual(10);
+		expect(BEEF_SAMPLE_SLOTS).toBeLessThan(RECENT_SAMPLE_LIMIT / 2);
 	});
 });
 

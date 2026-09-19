@@ -62,6 +62,10 @@
 - **FX H.10 周批误报修复**（批C）：`usd_cny`/`brl_usd`/`eur_usd` 的 fred 行为逐营业日点位（库内实测连续工作日序列）但**上游按周一批次发布**——健康周期下最新点可龄 9-10 天，撞 7 天日度窗每周五至周日误报 stale（09-06 实况）。修复：cadence.ts 增 publication-rhythm 覆盖（该三元组 14 天窗，"一个发布节奏容忍"同月度 90 天口径），仅新鲜度面启用（预测/调度门保持原窗）。live 铁证：修复后 `eur_usd` 10 天龄 daily 点 → stale:false。
 - 顺带观察（不动刀）：boot `runAll`（并行全源）不写 ingestion_logs（定时/手动路径写）——既有行为，故 ibge_sidra 首灌 16 行在板上只显手动 0/0 触发记录。留尾登记，本批不扩范围。
 
+**2026-09-19 更新（round-164 批A）——usda_import_beef 90CL 断供关闭（上游自愈）**：
+- 生产库实测：`beef_90cl_us` 新增两点 **2026-09-11（close 340.50）与 2026-09-18（close 341.00）**，source 均为 usda_import_beef；近 24h ingestion_logs 该源有 1 行 inserted（周度节奏正常）。round-157/158 登记的"mnreports 迁 eWAPS 致 0 行"断供**已消失**——本仓 usda_import_beef 代码零改动（git log 无相关 commit），判定为上游恢复 PDF 服务（自愈）。
+- digest 卡随之脱离"~2026-09-18 转 stale"的最坏预期；round-157 提出的三选一修复路径（eWAPS 勘察 / MARS key / DataMart）**不再必要**，登记关闭。若再断供按新事件重新登记。
+
 **2026-09-07 更新（round-159）——inac 按新契约复活（乌拉圭通道恢复）**：
 - `inac` **复活**：勘察定案——旧域 inac.gub.uy 死亡，门户迁 www.inac.uy（Liferay），数据走 **DIAE Interactiva** 后端 `POST/GET /inac/DIAEUtils`（`cmdaction=datosiniciales` 给最新年月；`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 给"育肥牛活重月度价"CSV，含 Y 与 Y-1 双年列）。新契约落 **CommodityPrice `novillo_gordo_uy`**（月度，2019-01→2026-07 共 91 行，2026-07=3.25 USD/kg 与 API 一致），替代死的 BeefCutPrice 部位 FOB 语义（后者或经 DIAE expo 应用另行复活，未排期）。注册源 19→20（AGENTS 已同步）。
 - 解析防线（live 取证）：Jasper CSV **表头与数据行列位错位**（标签 col3/col7、当前年值 col4）——按表头索引解析会静默丢当前年数据；解析器改"数值列发现 + 左新右旧 + 列同一性"（单值行不错配年份），仅双数值列契约成立，单列拒写（drift guard）。乌拉圭拼写 Setiembre、十进制逗号、页脚 Fuente 行均已钉测试（5 个解析测试）。
@@ -69,6 +73,7 @@
 
 **2026-09-07 更新（round-160 前端设计巡查）——UI 视检暴露的数据侧三项 + 一项外观残留**：
 - **track-record 公开端点零牛系已验证样本**：`/ai/track-record` "Recent verified predictions" 表 25 行全为宏观序列（天然气/原油/欧元/棉花），牛系样本为 0（前端已按 `/beef/i` 牛系优先排序 + 脚注如实化"月度实际值落地后进入此表"，排序后仍无牛系行证明 payload 本身无）。根因待后端复核：预测验证管道对 beef 月度基准的 actual 回填滞后（IMF 月度点 T+2 月）或端点窗口过滤把牛系行排除。UI 侧无修复空间，留后端数据项。
+  - **已解决（2026-09-19，round-164 批0a）**：首批牛肉家族 verified 已于 2026-09-12 落地（`beef_retail_us` ×7 模型 H=1，MAPE 0.16–0.55%，实际值 2026-08-01 点到货后验证）——但公开样本仍零牛系，根因坐实为**样本选取的 newest-400 over-fetch 淹没**（验证循环每 6h 批量落数千条宏观行，月度牛系行沉底出窗）。修复：`publicTrackRecord` 增 `BEEF_SAMPLE_SLOTS=10` 牛系保留槽位（牛系独立查询优先入列，其余从通用池补足，去重），live 验证 beef_retail_us 7 行进入公开样本。周快照"牛肉专段"同步增"牛肉家族 verified 30d 窗"小节留档。
 - **cotton #2 chronos 预测尺度错位**：同序列同时刻 chronos_base PREDICTED 18.94 / chronos_mini 10.77 vs ACTUAL 0.82 USD/lb（MAPE 1117%/404%），而 chronos_tiny/arima/naive 预测 0.86-0.89 正常——疑似部分模型链路把磅/美分单位搞混（推断或特征装配侧）。前端已加 "尺度?" 琥珀离群标记（MAPE>200% 显示，title 注明"疑似预测尺度错位"）；指标本身不动（R5 同款纪律：不因展示层需求改指标）。
 - **相关矩阵 30 天窗零重叠对**：`/dashboard/analysis` 20×20 矩阵非对角全部 null（judge 视检 P0 证据），根因 = 窗口内无两序列共享观测日期（数据冻结期 + 发布节奏错位的现实）。前端已改诚实空态（"暂无可计算的相关性"+原因句）；数据恢复后矩阵自动填充，无需后端改动。
 - **外观残留（未修）**：ProfessionalChart 右轴孤儿红色 "10.00" 标签（疑为某隐藏副序列的最后值标签，130-140 主序列上纯视觉噪音）；深度 EN 余量清单（QuickActions 瓷砖、accuracy 卡头、alerts tabs、trading 图表工具词汇）见 CHANGELOG round-160 余量登记，留后续语言批。

@@ -25,7 +25,7 @@ async function main() {
 
 	const accuracy = await getAllModelAccuracy(undefined, 30);
 
-	const [beefRows, beefNextDue, beefLatestPoint] = await Promise.all([
+	const [beefRows, beefNextDue, beefLatestPoint, familyVerified] = await Promise.all([
 		prisma.$queryRaw<Array<{ status: string; horizon: number; n: bigint }>>`
 			SELECT status, horizon, count(*) AS n
 			FROM prediction_logs
@@ -40,6 +40,23 @@ async function main() {
 			orderBy: { date: "desc" },
 			select: { date: true, close: true },
 		}),
+		// Beef-FAMILY verified overview (round-164 批0a): the first live beef
+		// verifications (beef_retail_us, 2026-09-12) must appear here, not
+		// only the benchmark's still-pending state.
+		prisma.$queryRaw<
+			Array<{
+				slug: string;
+				n: bigint;
+				min_mape: number | null;
+				max_mape: number | null;
+				last: Date | null;
+			}>
+		>`
+			SELECT c.slug, count(*) AS n, min(pl.mape) AS min_mape, max(pl.mape) AS max_mape, max(pl.verified_at) AS last
+			FROM prediction_logs pl JOIN commodities c ON c.id = pl.commodity_id
+			WHERE c.slug LIKE 'beef%' AND pl.status = 'verified'
+			  AND pl.verified_at > now() - interval '30 days'
+			GROUP BY c.slug ORDER BY c.slug`,
 	]);
 
 	const backtestPath = new URL(
@@ -90,6 +107,25 @@ async function main() {
 		"- 回测证据（冻结）：docs/backtests/beef-monthly-2026-08.md" +
 			(backtestMd5 ? `（md5 ${backtestMd5}）` : "（文件缺失）"),
 	);
+	lines.push(
+		"- 校准证据（round-164 批0b）：docs/backtests/beef-monthly-consensus-calibration-2026-09.md（共识残差分位 → 共识卡校准 90% 区间）",
+	);
+	lines.push("");
+	lines.push("### 牛肉家族 verified — 30d 窗");
+	lines.push("");
+	if (familyVerified.length === 0) {
+		lines.push("- 尚无牛肉家族 verified 行（月度实际值落地后进入此段）。");
+	} else {
+		for (const r of familyVerified) {
+			const mape =
+				r.min_mape == null || r.max_mape == null
+					? "—"
+					: `${Number(r.min_mape).toFixed(2)}–${Number(r.max_mape).toFixed(2)}%`;
+			lines.push(
+				`- ${r.slug}: ${r.n} 行，MAPE ${mape}，最新验证 ${r.last ? new Date(r.last).toISOString().slice(0, 10) : "—"}`,
+			);
+		}
+	}
 	lines.push("");
 
 	const outPath = new URL(
