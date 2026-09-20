@@ -6,7 +6,8 @@ import { StaggerChild, StaggerContainer } from "@/components/ui/MotionReveal";
 import { SITE_STATS } from "@/lib/site-stats";
 
 function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: string }) {
-	const [value, setValue] = useState(0);
+	// SSR 与 hydration 首帧直出 target（禁 JS/爬虫可见真实值，无 mismatch）；useEffect 动画行为不变
+	const [value, setValue] = useState(target);
 	const ref = useRef<HTMLSpanElement>(null);
 	const hasAnimated = useRef(false);
 
