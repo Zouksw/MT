@@ -182,6 +182,10 @@ function backgroundJobs(): ScheduledJob[] {
 		// 3-month tail re-upsert — non-release days no-op via samePrice
 		// (noChange contract; round-171 批1).
 		"fao_index",
+		// OECD-FAO Outlook on the daily cycle: the scan itself is gated to
+		// every 7 days in-source (last success log) — the other six days
+		// return noChange instantly, so no 237MB download per day.
+		"oecd_outlook",
 	];
 
 	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for

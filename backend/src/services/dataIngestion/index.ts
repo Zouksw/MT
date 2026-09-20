@@ -25,6 +25,7 @@ import { inacScraper } from "./sources/inacData";
 import { inacExpoScraper } from "./sources/inacExpo";
 import { indecComexScraper } from "./sources/indecComex";
 import { mlaNlrsScraper } from "./sources/mlaNlrs";
+import { oecdOutlookScraper } from "./sources/oecdOutlook";
 import { roujiaosuoSpotScraper } from "./sources/roujiaosuoSpot";
 import { secexScraper } from "./sources/secexData";
 import { shippingIndexScraper } from "./sources/shippingIndex";
@@ -46,6 +47,12 @@ export function registerAllScrapers(): void {
 	// as CommodityPrice monthly series; enters the monthly prediction gate
 	// automatically (round-171 批1).
 	scraperManager.registerSource("fao_index", faoIndexScraper);
+	// OECD-FAO Agricultural Outlook — bovine meat annual balance sheet
+	// (production/consumption/imports/exports per country, kt) 1990→2035
+	// including the 10-year PROJECTIONS, into MarketFactor. Full CSV
+	// streamed + locally filtered (server-side commodity filter 404s);
+	// 7-day in-source gate on its own last success log (round-171 批2).
+	scraperManager.registerSource("oecd_outlook", oecdOutlookScraper);
 
 	// Tier 2 — Beef supply chain (country-level trade & production)
 	scraperManager.registerSource("cepea", cepeaScraper);
