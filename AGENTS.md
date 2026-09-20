@@ -1,7 +1,7 @@
 # AGENTS.md
 
 > 本文件是 AI 代理（含 ZCode / Claude / Codex 等）在本仓库工作的**首要入口**。
-> 所有事实均经只读命令核实（2026-09-19）。改动数字类陈述前请重新核实。
+> 所有事实均经只读命令核实（2026-09-20）。改动数字类陈述前请重新核实。
 
 ---
 
@@ -68,9 +68,9 @@
 ```
 backend/            Express + TS + Prisma
   src/routes/       API 路由（18 个）
-  src/services/     业务服务（含 dataIngestion/sources/ 25 注册爬虫）
+  src/services/     业务服务（含 dataIngestion/sources/ 29 注册爬虫）
   src/middleware/   认证、限流、安全、日志
-  prisma/           schema.prisma（25 模型）+ migrations
+  prisma/           schema.prisma（26 模型）+ migrations
 frontend/           Next.js 15 App Router（44 页）
   src/app/          页面
   src/components/   组件库
