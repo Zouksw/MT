@@ -147,7 +147,7 @@ export default function TrackRecordPage() {
 										<tr>
 											<th className="px-4 py-3">Model</th>
 											<th className="px-4 py-3">Median MAPE</th>
-											<th className="px-4 py-3">Mean MAPE</th>
+											<th className="px-4 py-3">Mean MAPE (1% trimmed)</th>
 											<th className="px-4 py-3">Direction</th>
 											<th className="px-4 py-3">Verified</th>
 											<th className="px-4 py-3">Last verified</th>

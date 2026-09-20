@@ -396,6 +396,8 @@
 
 **2026-09-20 复测（round-172）**：live leaderboard（`/api/signals/models/accuracy/public`，/ai/track-record 消费）holtwinters medianMape 2.07 vs avgMape 19.62；chronos_base 1.83 vs 15.15——均值仍被小分母长尾拉高约一个数量级，三选一稳健口径决策仍未决（owner）。
 
+**已解决（2026-09-20，round-175）**：owner 于当日会话授权 AI 自主决策开发方向，三选一落 **选项 B（对称 1% 截尾均值）**——`mapeTracking.ts getModelAccuracy` 的 raw SQL 改 CTE 结构（主窗口内 PERCENTILE_CONT 1%/99% 定界 + 界内 AVG），`avgMape` 字段名不变、语义升级为截尾均值（API/前端零破坏），`verifiedCount` 刻意保持未截尾计数；round-115 的"均值保持中毒"回归测试同步改契约为截尾版（三行 fixture 中 959900% 离群行落 p99 界外被剔）。方法论注记（publicTrackRecord.metric）与前端表头（"Mean MAPE (1% trimmed)"）同步。live 验证（2026-09-20 23:00）：holtwinters avg 19.62→**4.33**（median 2.07）、chronos_base 15.15→**3.23**（median 1.81）——长尾支配消除，均值回归约 2× 中位数的风险语境。未选 A（median 已在屏，sMAPE 属第二口径冗余）与 C（改样本语义、阈值武断、丢合法样本）。
+
 ---
 
 ## 三、潜伏 bug（重构副产物，已修，留作记录）

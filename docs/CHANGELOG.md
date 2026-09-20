@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-20 — round-175：R5 稳健口径三选一落地——avgMape 升级为对称 1% 截尾均值
+
+预测可信度线轮：round-160 视检发现、round-172 复测确认的"公开 leaderboard 均值被小分母长尾拉高一个数量级"（holtwinters avg 19.62 vs median 2.07）由 owner 授权自主决策后按选项 B 根治。
+
+- **口径决策（R5 A/B/C 三选一 → B）**：A 加 sMAPE/MdPE 列（median 已在屏，冗余）、C 排除小分母样本（改样本语义、阈值武断）均落选；B 保持"均值"直觉、不删样本（verifiedCount 未截尾）、方法论一句话可解释。
+- **实现（`mapeTracking.ts getModelAccuracy`）**：raw SQL 改 CTE——`v`（该模型全部 verified 行）+ `b`（主窗口内 mape 的 1%/99% 分位界）+ 界内 `AVG` 作 avgMape；`avgMape` 字段名不变（API/前端零破坏），`computeAllModelAccuracy`/公开 track-record/`/ai/accuracy` 三消费面自动继承。方法论注记与前端表头（"Mean MAPE (1% trimmed)"）同步。
+- **测试契约更新**：round-115 "均值保持中毒"回归测试改为截尾版（959900% 离群行落 p99 界外被剔，avg<10、count 仍含它）；mapeTracking 34/34。
+- **验证**：tsc/biome 双绿 → backend 全量 **1208+1 skipped**、frontend **365**（双双零回退）→ 双端 build+重启 → live：holtwinters avg **19.62→4.33**（median 2.07）、chronos_base **15.15→3.23**（median 1.81）、全模型 avg≈1.1-2.1× median。
+
 ### 2026-09-20 — round-174：roujiaosuo 观察窗闭环 + 定向扩词（牛前/牛后 → 四分体）
 
 数据资产线轮：round-165 上线的 CNY 现货通道观察窗到期（~09-21），本轮出证据化闭环报告并执行最小安全扩词。

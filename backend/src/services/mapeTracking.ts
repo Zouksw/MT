@@ -1090,16 +1090,20 @@ export async function getModelAccuracy(
 		},
 	});
 
-	// SQL-side aggregation (round-104 → round-115): one $queryRaw computes the
-	// mean AND the median per window instead of pulling rows into Node (the
-	// round-104 fix) or trusting the mean alone. The mean stays for API
-	// compatibility, but the MEDIAN is the honest headline stat: a single
-	// unit-mismatched series (wheat_cme mixed $/bu closes ~6.8 with ¢/bu ~667;
-	// 20 verified rows at MAPE≈9500) dragged chronos means from ~1-5% to
-	// 46-59% on /ai/accuracy while every per-commodity median stayed sane.
-	// last7d/last30d are medians too (they feed the trend chart). NULL mapes
-	// are ignored by both AVG and PERCENTILE_CONT; the row count does not
-	// filter on mape, matching the previous _count._all semantics.
+	// SQL-side aggregation (round-104 → round-115 → round-175): one $queryRaw
+	// computes the mean AND the median per window instead of pulling rows into
+	// Node (the round-104 fix). The MEDIAN remains the headline stat; round-175
+	// (R5 option B, owner-delegated 2026-09-20) makes avgMape a SYMMETRICALLY
+	// 1%-TRIMMED mean over the same main window: classic MAPE rows with
+	// near-zero actuals produce thousands-of-percent single errors that an
+	// untrimmed arithmetic mean lets dominate (holtwinters avg 273.66% vs
+	// median 0.31%, 2026-08-31; still ~10× apart at 2026-09-20 复测). Trim
+	// bounds are percentiles of the same filtered set — the field stays a mean
+	// of real verified samples, nothing is deleted, and verifiedCount keeps
+	// counting every verified row (untrimmed, by design). last7d/last30d are
+	// medians too (they feed the trend chart). NULL mapes are ignored by AVG
+	// and PERCENTILE_CONT (and by the >=/<= bound comparisons); the row count
+	// does not filter on mape, matching the previous _count._all semantics.
 	// NOT ILIKE '%test%' mirrors EXCLUDE_TEST_ARTIFACTS for raw SQL (same
 	// translation precedent as intervalCalibration, round-114).
 	const last7d = new Date(Date.now() - 7 * 86400000);
@@ -1116,20 +1120,32 @@ export async function getModelAccuracy(
 				med_30d: number | null;
 			}>
 		>(Prisma.sql`
+			WITH v AS (
+				SELECT pl.mape::float8 AS m, pl.verified_at AS vat
+				FROM prediction_logs AS pl
+				WHERE pl.model_id = ${modelId}
+					AND pl.status = 'verified'
+					AND pl.commodity_id NOT ILIKE '%test%'
+					${commodityId ? Prisma.sql`AND pl.commodity_id = ${commodityId}` : Prisma.empty}
+			), b AS (
+				SELECT
+					PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY v.m) AS lo,
+					PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY v.m) AS hi
+				FROM v
+				WHERE v.vat >= ${since}
+			)
 			SELECT
-				COUNT(*) FILTER (WHERE pl.verified_at >= ${since})::int AS n_main,
-				AVG(pl.mape) FILTER (WHERE pl.verified_at >= ${since})::float8 AS avg_main,
-				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pl.mape::float8)
-					FILTER (WHERE pl.verified_at >= ${since}) AS med_main,
-				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pl.mape::float8)
-					FILTER (WHERE pl.verified_at >= ${last7d}) AS med_7d,
-				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pl.mape::float8)
-					FILTER (WHERE pl.verified_at >= ${last30d}) AS med_30d
-			FROM prediction_logs AS pl
-			WHERE pl.model_id = ${modelId}
-				AND pl.status = 'verified'
-				AND pl.commodity_id NOT ILIKE '%test%'
-				${commodityId ? Prisma.sql`AND pl.commodity_id = ${commodityId}` : Prisma.empty}
+				COUNT(*) FILTER (WHERE v.vat >= ${since})::int AS n_main,
+				AVG(v.m) FILTER (
+					WHERE v.vat >= ${since} AND v.m >= b.lo AND v.m <= b.hi
+				)::float8 AS avg_main,
+				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY v.m)
+					FILTER (WHERE v.vat >= ${since}) AS med_main,
+				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY v.m)
+					FILTER (WHERE v.vat >= ${last7d}) AS med_7d,
+				PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY v.m)
+					FILTER (WHERE v.vat >= ${last30d}) AS med_30d
+			FROM v CROSS JOIN b
 		`),
 		prisma.predictionLog.findFirst({
 			where: verifiedWhere(new Date(0)),

@@ -220,12 +220,16 @@ describe("MAPE Tracking (real DB)", () => {
 			expect(accuracy).toHaveProperty("verifiedCount");
 		});
 
-		// REGRESSION (round-115): wheat_cme mixed $/bu with ¢/bu closes and 20
-		// verified rows at MAPE≈9500 dragged chronos MEANS to 46-59% on
-		// /ai/accuracy while every per-commodity median stayed sane. The
-		// median must resist that outlier class; the mean stays honest about
-		// being poisoned (compat field, kept for anyone comparing stats).
-		it("medianMape resists unit-mismatch outliers that poison avgMape", async () => {
+		// REGRESSION (round-115 → round-175 re-contract): wheat_cme mixed $/bu
+		// with ¢/bu closes and 20 verified rows at MAPE≈9500 dragged chronos
+		// MEANS to 46-59% on /ai/accuracy while every per-commodity median
+		// stayed sane. The median must resist that outlier class — and since
+		// round-175 (R5 option B, owner-delegated) avgMape is a symmetrically
+		// 1%-trimmed mean, the mean must resist it too: with this 3-row
+		// fixture the 959900% row lands beyond the interpolated p99 bound and
+		// drops out of avgMape (≈1.5%), while verifiedCount still counts it
+		// (the count is untrimmed by design).
+		it("medianMape AND trimmed avgMape resist unit-mismatch outliers", async () => {
 			const { model, commodity } = fx();
 			const cases = [
 				{ predicted: [100], actual: [101] }, // ≈1%
@@ -247,7 +251,11 @@ describe("MAPE Tracking (real DB)", () => {
 			expect(accuracy.verifiedCount).toBeGreaterThanOrEqual(3);
 			expect(accuracy.medianMape).not.toBeNull();
 			expect((accuracy.medianMape as number) < 5).toBe(true);
-			expect((accuracy.avgMape as number) > 3000).toBe(true);
+			// Trimmed mean: the extreme row is beyond p99 → excluded. With the
+			// two sane rows ≈0.99%/2.04% the trimmed avg must sit well under
+			// double digits (the pre-round-175 plain mean was >3000).
+			expect(accuracy.avgMape).not.toBeNull();
+			expect((accuracy.avgMape as number) < 10).toBe(true);
 		});
 
 		// REGRESSION: lastVerifiedAt is the freshness signal the accuracy
