@@ -378,6 +378,13 @@ router.get(
 				tier: "1",
 				beefRelevance: "macro",
 			},
+			fao_index: {
+				label: "FAO Food Price Index",
+				description:
+					"FAO World Food Situation 免费 CSV — 官方月度指数族（Food/Meat/Dairy/Cereals/Oils/Sugar，2014-16=100，1990→t-1）→ CommodityPrice 月度基准序列（round-171 批1）",
+				tier: "1",
+				beefRelevance: "macro",
+			},
 			world_bank: {
 				label: "World Bank Pink Sheet",
 				description:
@@ -389,6 +396,13 @@ router.get(
 				label: "USDA FAS PSD",
 				description:
 					"USDA Foreign Agricultural Service — global production, supply, and distribution data",
+				tier: "1",
+				beefRelevance: "adjacent",
+			},
+			oecd_outlook: {
+				label: "OECD-FAO Outlook",
+				description:
+					"OECD-FAO Agricultural Outlook（SDMX CSV）— 牛肉年度供需平衡表（产量/消费/进出口 × 主要国，kt）1990→2035，含 10 年官方预测（metadata.projection 标记，round-171 批2）",
 				tier: "1",
 				beefRelevance: "adjacent",
 			},
@@ -412,13 +426,10 @@ router.get(
 				tier: "2",
 				beefRelevance: "adjacent",
 			},
-			china_wholesale: {
-				label: "China MARA",
-				description:
-					"中国农业农村部批发市场价格 — daily wholesale prices for meat, vegetables, fruits",
-				tier: "2",
-				beefRelevance: "adjacent",
-			},
+			// "china_wholesale" entry removed (round-172 批3): the source was
+			// decommissioned 2026-09-06 (round-155, sources/index.ts:119 — do NOT
+			// re-register) and never writes health, so a board row could only
+			// ever show "pending" — misleading, not informative.
 			comtrade_mirror: {
 				label: "UN Comtrade Mirror",
 				description:
@@ -432,6 +443,13 @@ router.get(
 					"Eurostat Comext DS-045409 — 欧盟输华批准国（IE/NL/FR/PL）月度 CN8 级对华量价（FOB-EUR 口径，与美元镜像并列不合并）",
 				tier: "3",
 				beefRelevance: "adjacent",
+			},
+			hmrc_ots: {
+				label: "HMRC UK OTS",
+				description:
+					"api.uktradeinfo.com OData（OGL 3.0，keyless）— 英国官方月度对华牛产品出口派生单价（0201/0202 章 GBP/ton；脱欧后独立于 Comext/Comtrade 的 UK 航道，round-171 批3）",
+				tier: "2",
+				beefRelevance: "direct",
 			},
 			cepea: {
 				label: "CEPEA/B3",
@@ -485,6 +503,27 @@ router.get(
 				label: "SECEX Brazil",
 				description:
 					"Secretaria de Comércio Exterior — Brazilian beef export statistics by HS code",
+				tier: "2",
+				beefRelevance: "adjacent",
+			},
+			ibge_sidra: {
+				label: "IBGE SIDRA",
+				description:
+					"IBGE SIDRA t/1092（keyless）— 巴西官方季度牛屠宰量（头数 + 胴体重量）→ MarketFactor 分析面（slaughter_bovines，非预测序列，round-158 批B）",
+				tier: "2",
+				beefRelevance: "direct",
+			},
+			roujiaosuo_spot: {
+				label: "Roujiaosuo Spot",
+				description:
+					"肉交所 roujiaosuo.com /sell/ 挂牌 — 国内现货牛肉部位 CNY/kg 列表价（listing≠成交，虚拟厂 RJS-SPOT 隔离，BeefCutPrice 面，round-165）",
+				tier: "2",
+				beefRelevance: "direct",
+			},
+			gacc_registry: {
+				label: "GACC Registry",
+				description:
+					"海关总署进口食品境外生产企业注册（foodmate 镜像）— 6 源国肉类工厂名录周快照（FactoryRegistryEntry，物种无关认证，周维护不产价格行，round-170）",
 				tier: "2",
 				beefRelevance: "adjacent",
 			},
