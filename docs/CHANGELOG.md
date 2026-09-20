@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **工程教训**：HMRC WAF 拦 OData `in (...)` 谓词（in-1 即 403，or 链 200，报文级二分定位）——与 round-170 jwqyp Accept-Language 500 同类隐式契约问题。
 - **死路登记**：Comtrade 伙伴国扩容（PY 仅 World 总额、EU 成员仅年度已被 Comext 覆盖）；RSS 扩源（Beef Central/Federal Register 外候选全灭：停更/403/301/无 RSS）；FBX 维持登记未动。
 - 数据源注册 26→29（文件 28→31）；backend 测试 1207+1 skip（117 文件，+21）零回退；live 实证三源首灌 + 复触 noChange（670ms / 门 4.1s / 348ms）。
+- **轮内自发里程碑（非本轮开发，数据到位自然解锁）**：①现货 CNY 层第 2 个观测日（09-20 日更 14 行）落地后，**部位级预测面首次出数**——`/api/beef/forecasts` 从 0 → 4 个可预测部位（HEART/RIB_ROAST/LEAN_TRIM_80/…，2 点诚实 flat 预测，[PREDICT-CUT] 订阅 12 序列），补上了完善度评估登记的"部位级预测零输出"缺口；②fao_index 六序列在首个 30 分钟刷新（11:39）自动生成 **84 条月度预测行**（6 序列 × 7 模型 × [1,3] 视界，completed），数据→订阅→调度推理→验证环全链闭合。
 
 ### 2026-09-19 — round-170：GACC 厂号名录快照源（gacc_registry）+ 归属转正 + dist 部署断裂 P0 修复
 
