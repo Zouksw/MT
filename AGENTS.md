@@ -36,7 +36,7 @@
 
 | 项 | 数 | 计数方式 |
 |---|---|---|
-| 数据源爬虫 | **28 文件 / 26 注册** | `sources/*.ts`（排除 index/test）；2026-09-19 复核（round-170）：gacc_registry（GACC 境外肉类企业名录周快照，foodmate jwqyp 镜像 → FactoryRegistryEntry 参照表 + 厂号归属转正）上线后注册 26；roujiaosuo_spot 上线于 round-165、indec_comex 于 round-163、inac_expo 于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
+| 数据源爬虫 | **31 文件 / 29 注册** | `sources/*.ts`（排除 index/test）；2026-09-20 复核（round-171 外部信息扩容）：fao_index（FAO 六指数月度族→CommodityPrice 预测面）、oecd_outlook（OECD-FAO 牛因子年度供需平衡+10 年预测→MarketFactor）、hmrc_ots（UK 官方 GB→CN 月度 GBP/ton）上线后注册 29；gacc_registry 上线于 round-170、roujiaosuo_spot 于 round-165、indec_comex 于 round-163、inac_expo 于 round-162、inac 复活于 round-159、comext_eu/drewry_wci 于 round-161；chinaCustomsStats/chinaWholesale 为退役保留文件 |
 | Prisma 模型 | **26** | `grep -c '^model ' backend/prisma/schema.prisma`（2026-09-19 复核 round-170：+FactoryRegistryEntry 名录快照表后为 26；round-140 删 5 个休眠模型后曾为 25） |
 | 后端路由 | **18** | `backend/src/routes/*.ts`（排除 `*.test.ts`；2026-08-31 复核，round-146 批 1 增 /api/search 后为 18） |
 | 前端页面 | **44** | `frontend/src/app/**/page.tsx`（2026-08-31 复核；round-146 批 1 模型页收敛删 4 页（/ai、/ai/models、/ai/backtest、/dashboard/models → 308 /ai/accuracy）后为 44） |

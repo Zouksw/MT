@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-20 — round-171：外部信息扩容三源（fao_index / oecd_outlook / hmrc_ots）
+
+用户指令"引入更加大量的外部相关信息"。先完成只读完善度评估（PROJECT-ASSESSMENT §十：26 源运营分布、按价格层成熟度、预测机制 vs 牛肉证据差距），锁定信息缺口后 live 探测落地三个免 key 源：
+
+- **fao_index** — FAO 六指数族月度基准（Food/Meat/Dairy/Cereals/Oils/Sugar，2014-16=100）1990-01→t-1，共 2640 行入 CommodityPrice 月度；fao_meat_index 自动进入月度预测门（实测 chronos 3 步预测通）；增量 3 月尾窗 + noChange 契约；牛因子子指数不在免费文件，如实不造。
+- **oecd_outlook** — OECD-FAO 展望牛因子年度供需平衡表（产量/消费/进口/出口 × CHN/BRA/ARG/AUS/NZL/USA/PRY/OECD × 1990→2035，千吨口径 live 校准）共 1467 行入 MarketFactor；**2027-2035 九个预测年 metadata.projection=true**——平台首个官方预测数据类别；237MB/773,719 行 Response.body 流式解析 + quote-aware CSV 切分（标签列含逗号会错位）；服务端过滤已失效（commodity 404）；7 天门读自身 success 日志；PP 本币价/WP 零散世界价因量纲不可靠不落。
+- **hmrc_ots** — UK HMRC OTS OData（OGL 3.0）：GB→CN 月度牛肉 GBP/ton 派生单价入贸易镜像家族（export_uk_to_cn_0201/0202）；UK 脱欧后唯一月度程序化通道（Comtrade 无 UK 伙伴明细，实测 0 行）；量级小，覆盖性通道；抑制月份诚实跳过。
+- **工程教训**：HMRC WAF 拦 OData `in (...)` 谓词（in-1 即 403，or 链 200，报文级二分定位）——与 round-170 jwqyp Accept-Language 500 同类隐式契约问题。
+- **死路登记**：Comtrade 伙伴国扩容（PY 仅 World 总额、EU 成员仅年度已被 Comext 覆盖）；RSS 扩源（Beef Central/Federal Register 外候选全灭：停更/403/301/无 RSS）；FBX 维持登记未动。
+- 数据源注册 26→29（文件 28→31）；backend 测试 1207+1 skip（117 文件，+21）零回退；live 实证三源首灌 + 复触 noChange（670ms / 门 4.1s / 348ms）。
+
 ### 2026-09-19 — round-170：GACC 厂号名录快照源（gacc_registry）+ 归属转正 + dist 部署断裂 P0 修复
 
 用户指令"开始"，执行方向分析选定的最高价值主线：把 CNY 现货层做深——GACC 名录批落地，round-168 的未验证厂号归属获得名册核验通道。开工侦察三度复检确认成交块仍非 SSR（5 详情页 0 成交标记），成交价解析器按 round-168 缩界不建。

@@ -22,15 +22,17 @@
  *    The virtual RJS-SPOT listing pool is deliberately NOT counted as a
  *    factory. The 578 numeric-code registry entries (of 1346 scanned) are a
  *    REFERENCE table (FactoryRegistryEntry), not factories.
- *  - 26 registered scrapers (AGENTS §三, 2026-09-19 round-170) + the CSV beef
- *    import channel (/api/beef/import). Of these, 7 produced PRICE rows in
- *    the last 14 days (live psql GROUP BY source on price tables,
- *    2026-09-19): cmeFutures, inac, fred, exchange_rate_api, drewry_wci,
- *    usda_import_beef, roujiaosuo_spot — gacc_registry produces no price
- *    rows; it maintains the 1346-entry GACC registry reference table
- *    (weekly). The rest are gated on API keys / network egress
- *    (KNOWN-ISSUES D1). The marketing number counts built integrations, the
- *    same way the /settings/data-sources board counts them.
+ *  - 29 registered scrapers (AGENTS §三, 2026-09-20 round-171: +fao_index,
+ *    +oecd_outlook, +hmrc_ots) + the CSV beef import channel (/api/beef/
+ *    import). Of these, 9 produced PRICE/FACTOR rows in the last 14 days
+ *    (live psql GROUP BY source, 2026-09-20): cme, fred, exchange_rate_api,
+ *    drewry, usda_import_beef, roujiaosuo_spot (price tables) +
+ *    fao_index (2640 index rows) + oecd_outlook (1467 balance-sheet rows
+ *    incl. 10-year projections) + hmrc_ots (UK official lane) — gacc_registry
+ *    produces no price rows; it maintains the 1346-entry GACC registry
+ *    reference table (weekly). The rest are gated on API keys / network
+ *    egress (KNOWN-ISSUES D1). The marketing number counts built
+ *    integrations, the same way the /settings/data-sources board counts them.
  *  - 6 import source countries (AR, AU, BR, NZ, US, UY — NZ joined via the
  *    round-168 plant attribution).
  *  - 2 live news RSS feeds (Beef Central, USDA Federal Register) since
@@ -45,7 +47,7 @@ export const SITE_STATS = {
 	/** Tracked plants (seed + attributed; virtual listing pool excluded). */
 	factories: 23,
 	/** Data source integrations shipped (see header comment for producing split). */
-	dataSources: 26,
+	dataSources: 29,
 	/** Import source countries. */
 	sourceCountries: 6,
 } as const;
