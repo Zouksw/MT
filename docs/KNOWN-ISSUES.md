@@ -69,6 +69,11 @@
 **2026-09-19 更新（round-169 收敛审计）——部位级现货层翻活，D1 主张收窄**：
 - **近 14 天产行源实测 7 个**（psql GROUP BY source）：cme(110 行)/inac(92)/fred(54)/exchange_rate_api(39)/drewry(3)/usda_import_beef(2) 于 commodity_prices + **roujiaosuo_spot(11) 于 beef_cut_prices**（round-165 上线，日更；round-168 厂号归属后含 2 真实厂行）。"牛肉数据源大面积失效"的主张自 2026-09-19 起收窄为：**部位级 FOB（USD）层仍冻结于 2026-04-30**（mla_nlrs/cepea，等 MLA key），部位级现货（CNY）层已有日更自动通道，月度基准（beef_carcass_us/beef_90cl_us）周月节奏正常。D1 保持开放（FOB 层与多数 key 门源未解），但"核心价值完全依赖 seed 快照"的最坏表述已不成立。
 
+**2026-09-20 更新（round-172 交付差距审计）——FOB 冻结面与牛肉预测占比量化**：
+- **牛肉本体只剩三条腿（近 14 天实测）**：CNY 现货 2 天新苗（19 部位 33 行，全部落在 2026-09-19/20；13 部位 2 点、6 部位 1 点——2-3 点训练部位级预测统计上无意义，需 8-12 周日更累积）；90CL 周度 3 点；月度基准滞后 1.5-2.5 月。进口部位美元 FOB 层冻结近 5 个月不变：mla_nlrs 1440 行、cepea_export 960 行止 2026-04-30，usda_ams 三条日线止 2026-04-29（BeefCutPrice 近 14 天唯一活源 roujiaosuo_spot 33 行；ingestion_logs 2026-09-20 mla_nlrs/usda_ams 各 10 条 error，key 门）。`backend/.env:27-28` MLA_API_KEY/USDA_MARS_API_KEY 值长 0，scraper 代码端到端就绪——**等待物不变：两把 key（或替代源决策）**。
+- **直接后果量化（prediction_logs，2026-09-20 psql 只读）**：completed 总 45,233 中牛肉相关仅 beef_carcass_us 21、beef_retail_us 21+7、novillo_gordo_uy 28+7（completed/verified 计数），aus_cube_roll_m9/aus_sirloin_m9/beef_australia 全部仅 unverifiable，beef_90cl_us 0 条（3 点不过预测门）——**牛肉占 completed 约 0.15%**，平台预测量 99.8% 跑在汇率/金属/谷物等非牛肉序列；产地对比 GET /api/beef/by-country 仅 CN 有数据（cutCount 14），BR/AU/AR/UY/US 全空（FOB 源恢复即自动回填，D4 同根因一并解除）。
+- **泛商品面健康（对照）**：CommodityPrice 56 条序列 <6 点仅 2 条（3.6%）、<3 点 0 条——缺口高度集中在牛肉本体而非泛商品。距"可用"最短路径 = 解 FOB key 门 + CNY 现货按日累积，而非新增源。
+
 **2026-09-07 更新（round-159）——inac 按新契约复活（乌拉圭通道恢复）**：
 - `inac` **复活**：勘察定案——旧域 inac.gub.uy 死亡，门户迁 www.inac.uy（Liferay），数据走 **DIAE Interactiva** 后端 `POST/GET /inac/DIAEUtils`（`cmdaction=datosiniciales` 给最新年月；`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 给"育肥牛活重月度价"CSV，含 Y 与 Y-1 双年列）。新契约落 **CommodityPrice `novillo_gordo_uy`**（月度，2019-01→2026-07 共 91 行，2026-07=3.25 USD/kg 与 API 一致），替代死的 BeefCutPrice 部位 FOB 语义（后者或经 DIAE expo 应用另行复活，未排期）。注册源 19→20（AGENTS 已同步）。
 - 解析防线（live 取证）：Jasper CSV **表头与数据行列位错位**（标签 col3/col7、当前年值 col4）——按表头索引解析会静默丢当前年数据；解析器改"数值列发现 + 左新右旧 + 列同一性"（单值行不错配年份），仅双数值列契约成立，单列拒写（drift guard）。乌拉圭拼写 Setiembre、十进制逗号、页脚 Fuente 行均已钉测试（5 个解析测试）。
@@ -213,6 +218,36 @@
 
 ---
 
+### D6 — 供给面与贸易流上游停更：weekly-kill 空数组 / cold-storage 停 2026-04-30 / 南美镜像死（round-172 登记）
+
+**来源**：round-172 交付差距审计（数据价值路），2026-09-20 live 实测（curl + psql）
+**现状（截至 2026-09-20）**：
+- `GET /api/beef/weekly-kill` → 200 但 `{"kills":[],"count":0}`——weekly_kills 表最新 weekEnding=2026-05-08（屠宰量空数组）。
+- `GET /api/beef/cold-storage` → 38 行最新 2026-04-30，首行 metadata.estimated:true（冷库库存停在 4 月底）。
+- 对华贸易流镜像滞后约 2.5 个月：comtrade_mirror AU/BR/NZ→CN 各 37 点至 2026-07-01，**AR→CN 仅 2 点（2024）、UY→CN 1 点（2024）——南美镜像序列已死**；hmrc_ots 全表 2 行；替代源 indec_comex/inac_expo 至 2026-08-01 节奏正常（官方 AR/UY 源单腿在撑）。
+**影响（medium）**：进口商看不到主要产地供给收缩/扩张信号、五大国对华月度出口量价谱不全——与价格预测互证的分析面缺供给腿。
+**等待**：USDA/INAC 上游报告恢复或选定替代源（weekly-kill / cold-storage，见 beef.ts:150-201 与 weekly_kills/cold_storage 表）；Comtrade AR/UY 镜像数据恢复（market_factors）。非代码可修。
+
+---
+
+### D7 — 公开摘要仅 6 条序列且头牌牛肉 2.5 月龄，/market/digest 宣称"每日更新"（round-172 登记）
+
+**来源**：round-172 交付差距审计（数据价值 + 前端体验两路同发现），2026-09-20 live 实测
+**现状（截至 2026-09-20）**：`GET /api/market/public/digest` → 200 仅 6 条序列：beef_carcass_us latest 2026-07-01（2.5 月龄）、beef_90cl_us 3 点、usd_cny 09-11（exchange_rate_api 已有 09-19 未入摘要）；highlights 仅 1 条。`/market/digest` 页面文案宣称"每日更新"。middleware PUBLIC_PATHS 仅 9 条路径，牛肉页/预测页全在登录墙后。
+**影响（medium）**：访客首屏看到的"每日更新"与实际序列新鲜度不符（头牌序列 2.5 月龄），登录转化前提（先见到活的牛肉数据）不成立。
+**等待**：公开哪些序列、是否放开匿名预览属产品决策；"每日更新"表述修正可随后一并做（frontend/src/middleware.ts:6-21）。
+
+---
+
+### D8 — oecd_outlook dataflow id 钉死 2026_2035 版，OECD 发布下一版后需人工换 id（round-172 登记，年度提醒）
+
+**来源**：round-172 登记债务整合路，2026-09-20 源码核实
+**现状**：`backend/src/services/dataIngestion/sources/oecdOutlook.ts:47` 硬编码 `OECD.TAD.ATM,DSD_AGR@DF_OUTLOOK_2026_2035,1.1`（RESEARCH §十 round-171 明文版本钉死）。OECD 发布下一版展望后不换 id 会静默停留旧版次。
+**影响（low）**：年度供需基线与 10 年预测（平台首个官方预测数据类别，1467 行）落后一个版次。
+**等待**：OECD 发布下一版展望后人工换 dataflow id（本条即年度提醒挂账）。
+
+---
+
 ## 二、推理服务
 
 ### R1 — Chronos 接入后端共识 + 网络可用性
@@ -354,6 +389,8 @@
 **对核心价值链的影响**：公开"可核查"页面（信任面）展示 273.66% 的均值会削弱可信叙事，但中位数列同屏可见，信息未失真。
 **处置决策（遵循 §十.5）**：前端不改（忠实渲染）；登记待后端决策——选项 A 同时展示 sMAPE/MdAPE 等稳健口径；选项 B 对均值加截尾（如 trim 1%）；选项 C 排除 |actual| 低于阈值 的样本并在方法论注记说明。**需要 owner 决策，AI 不自主改口径**。
 
+**2026-09-20 复测（round-172）**：live leaderboard（`/api/signals/models/accuracy/public`，/ai/track-record 消费）holtwinters medianMape 2.07 vs avgMape 19.62；chronos_base 1.83 vs 15.15——均值仍被小分母长尾拉高约一个数量级，三选一稳健口径决策仍未决（owner）。
+
 ---
 
 ## 三、潜伏 bug（重构副产物，已修，留作记录）
@@ -420,6 +457,64 @@
 - **backend 全量套件偶发 1 挂**：~~"mapeTracking.monthly 月末日期敏感 flaky"~~ **round-153 重新定性：并行负载型 flaky，非日期算术**。证据（2026-08-31）：① 08-30 全量 3 跑 1 挂于 mapeTracking.monthly "批0b restore" 用例，隔离复跑 9/9 过；② 08-31 19:01 全量 1 挂于**另一个用例** signals.test.ts "should generate a real signal"（30s 超时；隔离复跑 19/19 仅 1.5s——20× 争用放大）；③ 同日 19:21/19:32 两次全量全绿（1097+1 / 1099+1 skip）；④ restore SQL 窗口算术全部锚定月首（day-1），静态复核无 day-of-month 溢出路径。机制：vitest 多 worker 并行共享 mt_test DB + 同机并发会话负载 → 连接池/CPU 争用超时，挂点随负载漂移。
 - **门禁卫生（round-153 实录）**：`npx vitest run | tail` 管道使 tail 的 exit 0 掩盖测试失败——19:01 的失败最初以 exit 0 呈现。门禁命令须 `echo EXIT:${PIPESTATUS[0]}` 或免管道直读输出。
 **动作**：T3a（tsc 两错）待独立小轮次处理；T3b 维持 round-152 的门禁口径（复跑通过 + 失败项与本批无关（隔离绿）即放行），仅当复发且带完整失败输出时再议 timeout 上调/套件序列化（投机修复会掩盖共识链路的真实性能回归，暂不采纳）。
+
+---
+
+## 六、安全与交付面（round-172 交付差距审计登记，2026-09-20）
+
+> 本节全部为开放项、等待用户资源或决策（口令 / 域名 / 密钥 / 变更窗口），代码侧无可自主推进项。10810 端口无认证全网卡暴露已于 round-172 行动项收敛至 127.0.0.1（commit de82d6b，`pm2 save` 固化 dump）；两个 .env 文件权限已收紧 644→600（同轮运维动作，无 commit）。
+
+### S1 — 生产管理员弱口令公开提交于仓库（high）
+
+**来源**：round-172 交付运维审计，2026-09-20 实测（psql 只读 + 仓库 grep；未尝试登录——审计限 GET/SELECT）
+**现状**：生产库 users 表存在 admin@trademind.com/ADMIN；`backend/src/services/__tests__/correlationAnalysis.test.ts:23-24` 硬编码 `ADMIN_PASSWORD="Admin123!"`（AUTOMATION-STATUS.md:179 记载该套件 2026-08-31 实测通过）；`seed.ts:33` 自述弱口令故意提交；后端 8000 绑 0.0.0.0 且无防火墙（见 S3）——构成"已知口令 + 端口可达"完整可利用入侵链。
+**等待**：用户设定新管理员口令；测试内硬编码口令如何替换（环境变量注入 vs 专用测试账号）需用户决策。
+**价值**：堵死最短接管路径，管理员账号真正归属用户。
+
+### S2 — 无生产域名 / HTTPS / 反向代理；SEO 绝对 URL 全指向 localhost
+
+**来源**：round-172 交付运维 + 前端体验审计，2026-09-20 实测
+**现状**：`systemctl is-active nginx` → inactive；ss 无 :443；`curl -sk https://localhost` → 000；frontend/.env.local 无 NEXT_PUBLIC_APP_URL；线上 /sitemap.xml 实测 6 个 `<loc>` 全为 `http://localhost:3000/...`（robots.txt Sitemap 行同；回退逻辑在 `frontend/src/lib/site-url.ts:11-13`）；`frontend/.env.production:17,20` 仍为 `https://your-domain.com` / `wss://api.your-domain.com` 占位（会烘进构建产物）。
+**等待**：用户域名与证书；配置 NEXT_PUBLIC_APP_URL 并 rebuild（域名、SEO 绝对 URL、生产 env 占位三者同批解锁）。
+**价值**：用户获得 https 域名入口（登录口令与会话不再明文过网），搜索引擎收录的 sitemap/canonical 指向真实站点。
+
+### S3 — 主机防火墙完全未配置：3000/8000 全网卡暴露
+
+**来源**：round-172 交付运维审计，2026-09-20 实测
+**现状**：ufw inactive；iptables INPUT policy ACCEPT 无规则；ss 实测 `*:3000`、`*:8000`（10810 已由 round-172 收敛到 127.0.0.1，本条为剩余完整防火墙部分）。外网实际可达性取决于云安全组（审计标注待确认）。
+**等待**：确认云安全组外网可达性与用户当前访问方式——若用户正靠 IP:3000 直连，贸然 enable ufw 会切断访问；须先 allow SSH/3000 或先落 nginx 入口。目标与 SECURITY.md 端口表对齐，暴露面只剩有意公开的入口。
+
+### S4 — 数据库与 Redis 凭证弱值
+
+**来源**：round-172 交付运维审计，2026-09-20 实测
+**现状**：`PGPASSWORD=mt_password` 实测可连通 mt_db；`redis-cli CONFIG GET requirepass` → 空串；两者监听 127.0.0.1 缓解外网暴露，但本机任意进程沦陷时 DB 与缓存是免认证/弱认证目标。
+**等待**：用户协调变更窗口（改 PG 密码需同步 backend/.env DATABASE_URL 并重启后端；Redis 加 requirepass 需同步各连接方）。
+
+### S5 — CI 自动部署从未激活：repo secrets 为 0
+
+**来源**：round-172 交付运维审计，2026-09-20 实测
+**现状**：git credential token 实测 `GET repos/Zouksw/MT/actions/secrets` → `{"total_count": 0}`；AUTOMATION-STATUS.md:43 所列 DEPLOY_* 全未配置，部署仍是人工 SSH 跑脚本。
+**等待**：用户在 GitHub 配置 DEPLOY_HOST/DEPLOY_USER/DEPLOY_SSH_KEY 等 secrets。
+**价值**：push main 即自动部署 + 健康失败自动回滚，杜绝部署断层。
+
+### S6 — 健康检查与告警只写本地日志，无外送通道；SMTP 全空
+
+**来源**：round-172 交付运维审计 + 登记债务整合路，2026-09-20 实测
+**现状**：healthcheck.log 只进本地文件；backend/src/lib/sentry.ts 不存在（ls 实测）；.env 无 SENTRY_DSN；repo secrets 0 → SLACK_WEBHOOK 亦无；backend/.env:31-34 SMTP_*/OPS_ALERT_EMAIL 值长 0（告警邮件外发与运维日报 no-op）。cron 探针本身活跃（crontab 6 条在册）。
+**等待**：用户提供告警通道凭据（SMTP 或 Slack webhook；SMTP 部分与 R7 同批、域名类与 S2 同批）。
+**价值**：服务宕机/数据停滞在夜间也能推送到人。
+
+### S7 — 上线检查清单停留 2026-03-26，与现状严重失真（low）
+
+**来源**：round-172 交付运维审计，2026-09-20 核实
+**现状**：docs/deployment/DEPLOYMENT-CHECKLIST.md 头部最后更新 2026-03-26；仍列 IoTDB 为 CRITICAL（:39-63，实际 2026-08 已移除）、"1 个测试失败"（:33，当前全绿）、紧急联系三行"[填写]"（:531-533）。
+**等待**：可自动完成但优先级最低——建议在域名/HTTPS（S2）推进前更新，交付前有一份与实测一致的 go/no-go 清单，新人可照单验收。
+
+### S8 — 约 36 页无独立标题 + html lang="en" 覆盖中文产品页（low，需设计决策）
+
+**来源**：round-172 前端体验审计，2026-09-20 源码级核实（grep "export const metadata" app/ 实测仅 8 文件；layout.tsx:82 lang="en"）
+**现状**：44 页仅 7 页有自定义 metadata，约 36 页共享英文默认标题；根 `<html lang>` 同时覆盖中文产品页与英文营销页（landing/about/pricing）——单向改 zh-CN 会让英文营销页语言声明失真。产品页（/beef 等）线上渲染因登录墙 + 审计仅限 GET 无法匿名验证，语言结论来自源码级审计。
+**等待**：lang 与营销页语言策略的设计决策；metadata 补全建议排在无文件冲突的独立批次（与展示面改动串行同日冲突风险高）。
 
 ---
 

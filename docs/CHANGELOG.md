@@ -42,6 +42,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-20 — round-172：交付差距审计 + 可自动化整改（四路审计 → 5 项落地 + 延后登记）
+
+交付视角专项轮：四路独立审计（数据价值 / 前端体验 / 交付运维 / 登记债务整合）先量化"距可交付的差距"，每条行动项先经独立评审员读代码核实前提，再由独立修复师落地并逐项独立 commit。开工基线（实测）：backend/frontend type-check 双绿、git 工作区干净。
+
+- **审计总貌**：核心链路保活基础扎实（pm2 三服务 online、每日 2AM 备份产物实测在（KEEP_COUNT=7，2026-08-15 有真实恢复战例）、6 条 cron + 5 分钟健康探针活跃、公开获客面内容真实且数字与 site-stats 一致（线上实测 29/6/75/9））；差距集中在三块——① 牛肉本体数据只剩三条腿（CNY 现货 2 天新苗 19 部位 33 行、90CL 周度 3 点、月度基准滞后 1.5-2.5 月），进口部位美元 FOB 层冻结近 5 个月（等 MLA/USDA key；completed 预测中牛肉仅占 0.15%、产地对比只剩中国、周屠宰/冷库一空一陈）；② 安全与发布面（弱口令管理员、全网卡暴露、无域名/HTTPS、CI secrets 0、告警无外送）；③ 展示面卫生（新鲜度板 24 vs 注册 29、landing 首屏 SSR 四个 0、CTA 文案与事实矛盾）。CommodityPrice 56 条序列整体成熟度尚可（<6 点仅 2 条 3.6%）——缺口高度集中在牛肉本体而非泛商品，距"可用"最短路径是解 FOB key 门 + CNY 现货按日累积 8-12 周，而非新增源。
+- **O4（纯运维，零 git 改动）**：`backend/.env` / `frontend/.env.local` 权限 644→**600**（DB 密码/JWT_SECRET 不再同机可读；三 pm2 进程均以 root 运行，600 不影响读取——重启后 /health/ready success:true 实证）；SECRETS-MANAGEMENT.md 既有"已 chmod 600"陈述自动与现实一致（未改该文档）。
+- **O3（`de82d6b`）**：推理服务收敛 **127.0.0.1**——ecosystem mt-inference uvicorn `--host` 与 `env_production.INFERENCE_HOST` 由 0.0.0.0 改 127.0.0.1（唯一调用方 backend config.ts:65 默认 localhost，仓库内无 frontend 引用 10810），`pm2 delete + start --env production + pm2 save` 三步固化（不 save 则机器重启 resurrect /root/.pm2/dump.pm2 回退 0.0.0.0）。live 验收：ss 仅 127.0.0.1:10810、外网口 172.31.45.180:10810 连接失败（暴露消除反证）、/health 200、/health/ready inference alive:true、dump args 含 `--host 127.0.0.1`。
+- **R2（`59ba203`）**：数据源新鲜度板对齐真实注册面 **24→29**——sourceLabels 补 6 键（fao_index/oecd_outlook/hmrc_ots/ibge_sidra/roujiaosuo_spot/gacc_registry，label/description/tier/beefRelevance 逐源按 sources/*.ts 头注释与 index.ts 注册段注释如实填写）+ 删退役 china_wholesale 条目（round-155 退役且 index.ts:119 明示 do NOT re-register，板上永远 pending 是误导显示——修错误显示非删死代码，原位留注释说明）。
+- **F2（`c338500`）**：landing 注册 CTA 诚实化——'from 5 markets' 改插值 `SITE_STATS.sourceCountries`（=6，单一事实源，同页 hero/socialProof）；删 'Upgrade for AI forecasts.'（与 settings/billing:52 事实冲突：AI forecasting 对所有注册用户开放、档位仅展示），替换为 'AI forecasts are open to every registered account.'。
+- **F1（`e8381a4`）**：landing 首屏四大指标 SSR 直出真实值——AnimatedNumber `useState(0)`→`useState(target)`（75/9/23/6 来自 SITE_STATS），禁 JS/爬虫不再看到四个 0，hydration 首帧同为 target 无 mismatch；useEffect 动画逻辑与样式不动。
+- **评审**：剔除 0 项；遗留关注 1 条已采纳——O3 验收(4) 的 python 取值路径（`p['pm2_env'].get('args')`）在 dump.pm2 真实结构（扁平 entry、无 pm2_env 嵌套）上必 KeyError，修正为 `p.get('args')`（复跑顺带实证现存 dump 确含 `--host 0.0.0.0`，"不 pm2 save 则重启回退"论据为真；同时暴露 planNotes"每条验收断言都先实跑过基线"的陈述与此条实况不符，如实留档）。
+- **登记延后（KNOWN-ISSUES）**：D1 补 round-172 量化注记（FOB 冻结近 5 个月、牛肉占 completed 约 0.15%、CNY 现货 33 行 2 天）；新增 D6（供给面与贸易流上游停更）、D7（公开摘要头牌陈旧与"每日更新"表述）、D8（oecd dataflow id 年度提醒）与**第六节"安全与交付面"**（S1 弱口令管理员 high / S2 域名-HTTPS-SEO localhost / S3 防火墙 3000-8000 / S4 PG-Redis 凭证 / S5 CI secrets 0 / S6 告警无外送-SMTP 空 / S7 上线清单失真 / S8 前端 metadata 与 lang 设计决策）——全部等待用户资源或决策；R5（均值口径）补 2026-09-20 live 复测数据点。
+- **基线**：backend vitest **1207**（基线 1207）/ frontend jest **365**（基线 365）零回退；双端 tsc + biome lint 0；backend build（tsc + tsc-alias）/ frontend build（next build）0；mt-backend + mt-frontend 重启部署；live 巡检 /health=200、/health/ready=200、前端首页=200、推理 /health=200、/api/beef/forecasts=401（鉴权门正常）。四个代码修复各自独立 commit、未 push（O4 无 commit）。
+
 ### 2026-09-20 — round-171：外部信息扩容三源（fao_index / oecd_outlook / hmrc_ots）
 
 用户指令"引入更加大量的外部相关信息"。先完成只读完善度评估（PROJECT-ASSESSMENT §十：26 源运营分布、按价格层成熟度、预测机制 vs 牛肉证据差距），锁定信息缺口后 live 探测落地三个免 key 源：
