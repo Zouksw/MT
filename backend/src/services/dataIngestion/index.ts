@@ -16,6 +16,7 @@ import { commodityPriceScraper } from "./sources/commodityPrices";
 import { comtradeMirrorScraper } from "./sources/comtradeMirror";
 import { dceFuturesScraper } from "./sources/dceFutures";
 import { drewryWciScraper } from "./sources/drewryWci";
+import { faoIndexScraper } from "./sources/faoIndex";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
 import { gaccRegistryScraper } from "./sources/gaccRegistry";
@@ -40,6 +41,11 @@ export function registerAllScrapers(): void {
 	scraperManager.registerSource("dce_futures", dceFuturesScraper);
 	scraperManager.registerSource("fred", fredScraper);
 	scraperManager.registerSource("fao_prices", faoPriceScraper);
+	// FAO Food Price Index family — the official monthly global benchmark
+	// indices (Food/Meat/Dairy/Cereals/Oils/Sugar, 2014-16=100, 1990→t-1)
+	// as CommodityPrice monthly series; enters the monthly prediction gate
+	// automatically (round-171 批1).
+	scraperManager.registerSource("fao_index", faoIndexScraper);
 
 	// Tier 2 — Beef supply chain (country-level trade & production)
 	scraperManager.registerSource("cepea", cepeaScraper);

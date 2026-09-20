@@ -178,6 +178,10 @@ function backgroundJobs(): ScheduledJob[] {
 		// scan itself is weekly — an in-source freshness gate (max lastSeenAt
 		// < 7d) returns noChange on the other six days (round-170).
 		"gacc_registry",
+		// FAO index family on the daily cycle: monthly data with an incremental
+		// 3-month tail re-upsert — non-release days no-op via samePrice
+		// (noChange contract; round-171 批1).
+		"fao_index",
 	];
 
 	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for
