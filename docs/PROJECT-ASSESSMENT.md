@@ -1,6 +1,6 @@
 # MT 项目整体规划与实现状态评估
 
-> **评估日期**：2026-08-08（round-79）｜**2026-08-12 复核**（rounds 80-99：§〇 Executive Summary / §3.3 测试覆盖 / §3.4 循环依赖 已同步当前实现）｜**2026-08-21 复核**（rounds 100-115 → §九 完整性复核 + 技术路线评估）
+> **评估日期**：2026-08-08（round-79）｜**2026-08-12 复核**（rounds 80-99：§〇 Executive Summary / §3.3 测试覆盖 / §3.4 循环依赖 已同步当前实现）｜**2026-08-21 复核**（rounds 100-115 → §九 完整性复核 + 技术路线评估）｜**2026-09-20 专项评估**（round-170 后 → §十 采集与预测完善度盘点，只读）
 > **方法论**：ops-check + zoom-out + improve-codebase-architecture + grill-with-docs 四技能交叉验证，3 Explore agent 并行全量扫描，所有数字 live 实测
 > **评估范围**：运维健康 / 价值链实现 / 架构深度 / 规划对齐 / 文档一致性
 
@@ -379,3 +379,66 @@ restarts 计数（4-6）是本会话多轮重启的正常累积，非 crash-loop
 ### 9.8 技能应用记录
 
 improve-codebase-architecture（Explore×2 并行勘察 → HTML 报告）；ops-check 手法内化于 §9.1（pm2/systemd/crontab/curl 全实测）；数字纪律全程执行（每条数字附来源命令，两个 agent 的 3 处误报已仲裁修正）。
+
+---
+
+## 十、采集与预测完善度评估（2026-09-20，只读评估轮）
+
+> 应用户要求暂停功能开发，对「收集信息」与「预测信息」两条链做完整完善度盘点。全部数字为当日 live 实测（psql mt_db、live curl `/api/market/sources` `/api/signals/*` `/api/beef/forecasts`、`inference_engine.py` / `modelRegistry.ts` / `predictionCache.ts` 读码），不沿用历史文档数字。
+
+### 10.1 采集面：按价格层度量，不按源数
+
+**运营分布（26 注册源，live board + ingestion_logs 近 7d 实测）**：
+
+- **稳定运行 13**：hourly/6h 档 `commodity_prices`（汇率聚合，source=exchange_rate_api）、`cme_futures`、`fred`；daily 档 `inac`、`inac_expo`、`indec_comex`、`comtrade_mirror`、`comext_eu`、`drewry_wci`、`usda_import_beef`、`world_bank`、`gacc_registry`、`roujiaosuo_spot`。其中近 14 天落了新价格行的 6 个（fred/cme/exchange_rate_api/usda_import_beef/drewry/roujiaosuo_spot），其余按月/周发布节奏自然间隔。
+- **间歇 1**：`argentina_exports`（近 7d 11 ok / 1 err，最新一轮 `fetch failed`——瞬态，待下轮日更自愈，若连续报错转 KNOWN-ISSUES 登记）。
+- **空转 8**（原因均已在 KNOWN-ISSUES 登记，非本轮新发现）：`cepea`（Cloudflare 挑战）、`secex`（403 地域封锁）、`abares`（PDF 报告非 HTML）、`usda_psd`、`fao_prices`（FAO origin down）、`baltic_dry`、`shipping_index`、`dce_futures`。
+- **key 门控休眠 3**：`mla_nlrs`（MLA_API_KEY）、`usda_ams`（USDA_MARS_API_KEY）、`weather`（OPENWEATHER_API_KEY）。
+- **卫生项（本轮新登记）**：freshness board 静态目录 24 项 < 注册 26（`gacc_registry`/`roujiaosuo_spot` 未上图）；已退役 `china_wholesale` 仍占位 `pending`；7 月死源 `argentina` 残留日志行。
+
+**按价格层的成熟度（采集完善度的真实形状）**：
+
+| 价格层 | live 序列 | 数据端点（实测） | 成熟度判定 |
+|---|---|---|---|
+| 汇率 / 宏观 / 期货 | 4 外汇对 + 16 CME 系 | fred 63,531 行（日度至 09-15/18）、cme 331 行 | **成熟**：日更，滞后 ≤2 交易日 |
+| 牛肉月度基准 | beef_carcass_us（IMF）、novillo_gordo_uy（INAC）、beef_retail_us | 195 / 92 / 127 点，最新 2026-07 / 08 / 08（fred CSV + inac 通道） | **健康**：滞后=发布节奏，IMF 8 月点待出 |
+| 贸易流镜像 | comtrade 6×CN8 伙伴国 + comext_eu + indec NCM8 | market_factors ~500 月行，最新 2026-07/08 | **健康**：BR/EU/AR→CN 三镜像闭环；口径 value/volume，单位价未派生 |
+| 部位级 FOB USD | mla_nlrs 16 cuts × 3 厂 + cepea 16 × 2 | beef_cut_prices 2,400 行 | **冻结于 2026-04-30**（MLA key / Cloudflare）——KNOWN-ISSUES D1 |
+| 部位级现货 CNY | roujiaosuo 18 cuts × 3 厂（含 2 真实厂） | 19 行（2026-09-19 day-1） | **新生**：日更通道已验，观察窗 09-21 |
+| 周度供给指标 | weekly_kills 190 / cold_storage 38 | 止于 2026-05-08 / 04-30 | **全 seed，无 live 源**（abares/USDA 通道空转） |
+| 名录参照 | GACC 1346 条（578 mapped，1 厂转正） | weekly 快照 + 厂号转正 | **新上线**（round-170） |
+| 资讯 | market_news 292 条 | 至 09-18 | 健康（非价格层） |
+
+**采集面诚实机制**（完善度的组成部分，均已 live）：noChange 确认不变契约、empty/warning/error 三态分类、全量或弃单快照（gacc_registry）、format-observed 码归一（宁 null 勿造等价）、`insufficientData` 诚实降级。
+
+### 10.2 预测面：机制完备，牛肉专属证据刚起步
+
+**机制面（全部 live 实测通过）**：
+
+- 共识池 7 模型（3 Chronos + 4 统计；stl/sarimax 有意不排产，modelRegistry.ts 注释成文）× 30min 刷新 + 6h 重订阅 + 每日基线批 + 6h MAPE 验证环；部位级预测订阅门槛 ≥2 真实非 bridge 点（predictionCache.ts `scheduleBeefCutPredictions`）。
+- prediction_logs 313,322 行 / 102,409 verified / 62 序列曾被预测；活跃预测集 20 序列（18 金融日度 + 2 月度）× 7 模型。
+- 公开 track record（30d 窗口，live）：chronos median MAPE 1.83–1.87 vs naive 1.72，方向命中 ~59%，verified 1.3 万+/模型。
+- 信号端点 live 验证：`live_cattle_cme`（7 模型共识 up）、`beef_carcass_us`（月度 flat，含区间/支撑阻力）、`novillo_gordo_uy`（月度）；arg_* 无数据序列诚实返回 `insufficientData`。
+
+**证据面分层（完善度差距所在）**：
+
+| 层 | verified 证据（实测） | 判定 |
+|---|---|---|
+| 金融序列（4 外汇 + 8 CME 老系） | 每序列 7,062–13,919 verified | 供给过剩（相对产品定位而言） |
+| 牛肉代理（CME 牛系期货） | live_cattle 7,365、feeder 7,342（avg MAPE 2.5 / 3.6） | 成熟，但是「代理」非「牛肉价」 |
+| 牛肉真序列 | novillo 7（09-18 首验）、beef_retail_us 7、beef_carcass_us 0（等 IMF 8 月点）、90CL 0（仅 3 观测）、6 CME 新系 0（round-167 重积累中） | **刚起步**：月度节奏，证据按月累积 |
+| 部位级预测 | `/api/beef/forecasts` 返回 0（≥2 真实点门槛未过） | **零输出但非死路**：现货层第 2 观测落地（09-20 日更后）自动订阅出数 |
+| 历史死重 | ~120k unverifiable/stale（seed 冻结序列遗留）+ sundial/timer_xl 遗迹（7 月止） | 记账诚实，无产品影响 |
+
+**已登记的时序门**（PREDICTION-STRATEGY.md，维持有效）：IMF 8 月点 → beef_carcass_us 首验（~10–11 月）；2026-10-31 H=3 到期批；~11 月 per-series 权重激活（≥20 verified）；track-record 牛系样本零（KNOWN-ISSUES round-160 UI 视检项）。
+
+### 10.3 总判定与缺口（按解锁价值排序）
+
+**一句话**：采集与预测的「机器」完备且诚实（26 源三档调度、13 稳定运行、7 模型共识 + 验证环 + 淘汰制 + 信号全 live）；完善度的瓶颈不在机制，在**牛肉专属价格数据的供给**——FOB USD 部位层冻在 4 月、现货 CNY 层 09-19 才出生、牛肉真序列 verified 证据合计 14 条。
+
+1. **MLA key**（用户动作）：解冻部位级 FOB USD 层（2,400 行停在 04-30）——最大单项解锁，无代码可做。
+2. **现货 CNY 观察窗**（09-21，已在日程）：源稳定性 + 词汇命中率 → 扩词表决策；第 2 观测落地即自动解锁部位级预测面首次出数。
+3. **IMF 8 月点**（~10–11 月）：beef_carcass_us 首验——月度层证据累积的下一站。
+4. **镜像层单位价派生**：comtrade/comext/indec 的 value+volume → USD/kg 单位价进预测循环——北极星登记项维持（待 CNY 现货序列成熟 ~60+ 观测后一并评估）。
+5. **采集面卫生**（小工时，可并入下个开发轮）：board 目录 24→26、china_wholesale pending 下架、weekly_kills/cold_storage 全 seed 的前端标注。
+6. **遗迹清理**（低优先）：sundial/timer_xl 10 行级证据、~120k unverifiable 存量的展示层排除。
