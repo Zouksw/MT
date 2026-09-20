@@ -70,9 +70,9 @@
 - **近 14 天产行源实测 7 个**（psql GROUP BY source）：cme(110 行)/inac(92)/fred(54)/exchange_rate_api(39)/drewry(3)/usda_import_beef(2) 于 commodity_prices + **roujiaosuo_spot(11) 于 beef_cut_prices**（round-165 上线，日更；round-168 厂号归属后含 2 真实厂行）。"牛肉数据源大面积失效"的主张自 2026-09-19 起收窄为：**部位级 FOB（USD）层仍冻结于 2026-04-30**（mla_nlrs/cepea，等 MLA key），部位级现货（CNY）层已有日更自动通道，月度基准（beef_carcass_us/beef_90cl_us）周月节奏正常。D1 保持开放（FOB 层与多数 key 门源未解），但"核心价值完全依赖 seed 快照"的最坏表述已不成立。
 
 **2026-09-20 更新（round-172 交付差距审计）——FOB 冻结面与牛肉预测占比量化**：
-- **牛肉本体只剩三条腿（近 14 天实测）**：CNY 现货 2 天新苗（19 部位 33 行，全部落在 2026-09-19/20；13 部位 2 点、6 部位 1 点——2-3 点训练部位级预测统计上无意义，需 8-12 周日更累积）；90CL 周度 3 点；月度基准滞后 1.5-2.5 月。进口部位美元 FOB 层冻结近 5 个月不变：mla_nlrs 1440 行、cepea_export 960 行止 2026-04-30，usda_ams 三条日线止 2026-04-29（BeefCutPrice 近 14 天唯一活源 roujiaosuo_spot 33 行；ingestion_logs 2026-09-20 mla_nlrs/usda_ams 各 10 条 error，key 门）。`backend/.env:27-28` MLA_API_KEY/USDA_MARS_API_KEY 值长 0，scraper 代码端到端就绪——**等待物不变：两把 key（或替代源决策）**。
-- **直接后果量化（prediction_logs，2026-09-20 psql 只读）**：completed 总 45,233 中牛肉相关仅 beef_carcass_us 21、beef_retail_us 21+7、novillo_gordo_uy 28+7（completed/verified 计数），aus_cube_roll_m9/aus_sirloin_m9/beef_australia 全部仅 unverifiable，beef_90cl_us 0 条（3 点不过预测门）——**牛肉占 completed 约 0.15%**，平台预测量 99.8% 跑在汇率/金属/谷物等非牛肉序列；产地对比 GET /api/beef/by-country 仅 CN 有数据（cutCount 14），BR/AU/AR/UY/US 全空（FOB 源恢复即自动回填，D4 同根因一并解除）。
-- **泛商品面健康（对照）**：CommodityPrice 56 条序列 <6 点仅 2 条（3.6%）、<3 点 0 条——缺口高度集中在牛肉本体而非泛商品。距"可用"最短路径 = 解 FOB key 门 + CNY 现货按日累积，而非新增源。
+- **牛肉本体只剩三条腿（近 14 天实测）**：CNY 现货 2 天新苗——审计快照「19 部位 33 行 / 13 个 2 点、6 个 1 点」内部不自洽（13×2+6×1=32≠33；若含 3 点部位则应 20 部位），同日晚间 psql 复测为 **22 部位 38 行**（LEAN_TRIM_80 3 点、14 部位 2 点、7 部位 1 点——3+14×2+7×1=38、1+14+7=22，自洽），全部落在 2026-09-19/20，序列随日更继续增长（点数为移动目标）；90CL 周度 3 点；月度基准滞后 1.5-2.5 月。进口部位美元 FOB 层冻结近 5 个月不变：mla_nlrs 1440 行、cepea_export 960 行止 2026-04-30，usda_ams 三条日线止 2026-04-29（BeefCutPrice 近 14 天唯一活源 roujiaosuo_spot；ingestion_logs 2026-09-20 mla_nlrs/usda_ams 各 10 条 error，key 门）。`backend/.env:27-28` MLA_API_KEY/USDA_MARS_API_KEY 值长 0，scraper 代码端到端就绪——**等待物不变：两把 key（或替代源决策）**。
+- **直接后果量化（prediction_logs psql 只读；数字为移动目标——审计快照 completed 45,233 / verified 103,389，同日晚间复测 45,360 / 103,669，预测环持续写入）**：牛肉序列 completed 仅 **70 条**（beef_carcass_us 21【另有 stale 7】+ beef_retail_us 21 + novillo_gordo_uy 28），**占 completed 约 0.15%**；verified 仅 **14 条**（beef_retail_us 7 + novillo_gordo_uy 7）。「牛肉序列 0 条 completed/verified」的准确口径是**部位级序列**：aus_cube_roll_m9 4806 / aus_sirloin_m9 4773 / beef_australia 4136 全部仅 unverifiable，beef_90cl_us 0 行（3 点不过预测门）——平台预测量 99.8% 跑在汇率/金属/谷物等非牛肉序列；产地对比 GET /api/beef/by-country 仅 CN 有数据（cutCount 14），BR/AU/AR/UY/US 全空（FOB 源恢复即自动回填，D4 同根因一并解除）。
+- **泛商品面健康（对照）**：CommodityPrice 56 条序列 <6 点仅 2 条（3.6%）、<3 点 0 条——缺口高度集中在牛肉本体而非泛商品。距"可用"最短路径 = 解 FOB key 门 + CNY 现货按日累积，而非新增源。（注：审计总貌"三大表近 14 天有产源 16 个"未能按自然口径复现——2026-09-20 晚复测：commodity_prices/beef_cut_prices/market_factors 三表 14 天内**实际写行**的去重源 7 个（cme 110/exchange_rate_api/fred/usda_import_beef/drewry/roujiaosuo_spot 38/oecd_outlook 288），ingestion_logs 14 天 status=success 的去重源 18 个（含 0 行 noChange 成功）；"16"最接近后一口径的审计时刻值，属口径歧义非数据错误。）
 
 **2026-09-07 更新（round-159）——inac 按新契约复活（乌拉圭通道恢复）**：
 - `inac` **复活**：勘察定案——旧域 inac.gub.uy 死亡，门户迁 www.inac.uy（Liferay），数据走 **DIAE Interactiva** 后端 `POST/GET /inac/DIAEUtils`（`cmdaction=datosiniciales` 给最新年月；`?cmdaction=precios&format=CSV&ano=Y&categoria=1&tipoprecio=1` 给"育肥牛活重月度价"CSV，含 Y 与 Y-1 双年列）。新契约落 **CommodityPrice `novillo_gordo_uy`**（月度，2019-01→2026-07 共 91 行，2026-07=3.25 USD/kg 与 API 一致），替代死的 BeefCutPrice 部位 FOB 语义（后者或经 DIAE expo 应用另行复活，未排期）。注册源 19→20（AGENTS 已同步）。
@@ -222,8 +222,8 @@
 
 **来源**：round-172 交付差距审计（数据价值路），2026-09-20 live 实测（curl + psql）
 **现状（截至 2026-09-20）**：
-- `GET /api/beef/weekly-kill` → 200 但 `{"kills":[],"count":0}`——weekly_kills 表最新 weekEnding=2026-05-08（屠宰量空数组）。
-- `GET /api/beef/cold-storage` → 38 行最新 2026-04-30，首行 metadata.estimated:true（冷库库存停在 4 月底）。
+- `GET /api/beef/weekly-kill` → 200 但 `{"kills":[],"count":0}`——**根因（2026-09-20 复核定案）**：handler 默认 `weeks=12` 时间窗过滤（beef.ts:154-162 计算 since 过滤 weekEnding），weekly_kills 表 190 行（2026-02-12→2026-05-08）最新已出窗；`?weeks=52` 实测可取回行（AU 2026-05-08，source mla_nlrs）。空数组是诚实的过滤行为非 bug；缺口在上游 130+ 天无新报告。
+- `GET /api/beef/cold-storage` → 38 行最新 2026-04-30，首行 metadata.estimated:true（冷库库存停在 4 月底；该 handler 同为 12 个月默认窗，尚在窗内故有行返回）。
 - 对华贸易流镜像滞后约 2.5 个月：comtrade_mirror AU/BR/NZ→CN 各 37 点至 2026-07-01，**AR→CN 仅 2 点（2024）、UY→CN 1 点（2024）——南美镜像序列已死**；hmrc_ots 全表 2 行；替代源 indec_comex/inac_expo 至 2026-08-01 节奏正常（官方 AR/UY 源单腿在撑）。
 **影响（medium）**：进口商看不到主要产地供给收缩/扩张信号、五大国对华月度出口量价谱不全——与价格预测互证的分析面缺供给腿。
 **等待**：USDA/INAC 上游报告恢复或选定替代源（weekly-kill / cold-storage，见 beef.ts:150-201 与 weekly_kills/cold_storage 表）；Comtrade AR/UY 镜像数据恢复（market_factors）。非代码可修。
@@ -467,7 +467,7 @@
 ### S1 — 生产管理员弱口令公开提交于仓库（high）
 
 **来源**：round-172 交付运维审计，2026-09-20 实测（psql 只读 + 仓库 grep；未尝试登录——审计限 GET/SELECT）
-**现状**：生产库 users 表存在 admin@trademind.com/ADMIN；`backend/src/services/__tests__/correlationAnalysis.test.ts:23-24` 硬编码 `ADMIN_PASSWORD="Admin123!"`（AUTOMATION-STATUS.md:179 记载该套件 2026-08-31 实测通过）；`seed.ts:33` 自述弱口令故意提交；后端 8000 绑 0.0.0.0 且无防火墙（见 S3）——构成"已知口令 + 端口可达"完整可利用入侵链。
+**现状**：生产库 users 表存在 admin@trademind.com/ADMIN；`backend/src/services/__tests__/correlationAnalysis.test.ts:23-24` 硬编码 `ADMIN_PASSWORD="Admin123!"`（AUTOMATION-STATUS.md:179 记载该套件 2026-08-31 实测通过）；`seed.ts:33` 自述弱口令故意提交；后端 8000 绑 0.0.0.0 且无防火墙（见 S3）——构成"已知口令 + 端口可达"完整可利用入侵链。**定级说明（2026-09-20 报告修订补注）**："端口可达"以公网 exposure 为前提，而公网可达性未确认（云安全组待确认，见 S3；round-172 O3 反证所用 172.31.45.180 为 RFC1918 私网地址，仅证明本机非回环接口不再监听 10810，不构成公网验证）——按最坏情况（口令公开 + 0.0.0.0 绑定 + 主机无防火墙，可达性完全由云安全组决定）防御性定级 high。另注：口令已入 git 历史，根治手段是**更换生产口令**使泄露失效；是否清理远端历史属独立决策。
 **等待**：用户设定新管理员口令；测试内硬编码口令如何替换（环境变量注入 vs 专用测试账号）需用户决策。
 **价值**：堵死最短接管路径，管理员账号真正归属用户。
 
@@ -515,6 +515,16 @@
 **来源**：round-172 前端体验审计，2026-09-20 源码级核实（grep "export const metadata" app/ 实测仅 8 文件；layout.tsx:82 lang="en"）
 **现状**：44 页仅 7 页有自定义 metadata，约 36 页共享英文默认标题；根 `<html lang>` 同时覆盖中文产品页与英文营销页（landing/about/pricing）——单向改 zh-CN 会让英文营销页语言声明失真。产品页（/beef 等）线上渲染因登录墙 + 审计仅限 GET 无法匿名验证，语言结论来自源码级审计。
 **等待**：lang 与营销页语言策略的设计决策；metadata 补全建议排在无文件冲突的独立批次（与展示面改动串行同日冲突风险高）。
+
+### S9 — round-172 审计发现、未入行动清单的展示面四项（追踪载体，待复核）
+
+**来源**：round-172 前端体验审计（三项，源码级结论）+ 登记债务整合路（seed 供给卡，未给文件:行）；2026-09-20 报告修订时已定位/证实其中两项
+**现状**：
+- **seed 供给卡无标注**（修订时定位）：`frontend/src/app/beef/page.tsx:246-250` Weekly Slaughter 卡取 `/api/beef/weekly-kill?weeks=52`（:35），最新 weekEnding 2026-05-08 属 seed/mla 旧数据——卡上仅 "As of" 日期脚注（:250），无 seed/快照来源徽章（同页价格区有 SnapshotBanner/BeefFreshnessBadge 标注机制，供给卡未接入同等标注）。
+- **根路径 JS 白屏跳板**（修订时源码证实）：`frontend/src/app/page.tsx` 为 "use client" 且 `return null`，服务端不渲染内容、导航全靠客户端 useEffect router.push（curl / → 200 空壳、无服务端 redirect）——禁 JS 访客在根路径看到空白页。
+- **产品页中英文混杂（违反规则 10）**：源码级审计结论；线上因登录墙 + 审计仅限 GET 未匿名验证，待复核。
+- **登录墙后坏链不可核验**：墙后路由无匿名核验通道（公开面静态 href 与 router.push 无死链已核实）——属覆盖限制，非已证实缺陷。
+**等待**：独立展示面批次（与 S8 metadata 批次可同排期，注意文件冲突）；中英文混杂与墙后坏链需先匿名复核再定级。
 
 ---
 
