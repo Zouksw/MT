@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { MotionReveal } from "@/components/ui/MotionReveal";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const Hero = dynamic(() => import("@/components/landing/Hero"), {
 	loading: () => (
@@ -184,7 +185,8 @@ export default function LandingPage() {
 							</a>
 						</div>
 						<p className="text-sm text-muted-foreground mt-5">
-							Free tier includes beef cut pricing from 5 markets. Upgrade for AI forecasts.
+							Free tier includes beef cut pricing from {SITE_STATS.sourceCountries} markets. AI
+							forecasts are open to every registered account.
 						</p>
 					</MotionReveal>
 				</div>
