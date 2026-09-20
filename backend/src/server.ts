@@ -186,6 +186,9 @@ function backgroundJobs(): ScheduledJob[] {
 		// every 7 days in-source (last success log) — the other six days
 		// return noChange instantly, so no 237MB download per day.
 		"oecd_outlook",
+		// HMRC UK OTS on the daily cycle: 6-month rolling window re-scan,
+		// non-release days no-op via sameFactor (noChange contract).
+		"hmrc_ots",
 	];
 
 	// ROUND41_FIX_TS = the commit-41 timestamp; predictions older than this for

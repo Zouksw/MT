@@ -20,6 +20,7 @@ import { faoIndexScraper } from "./sources/faoIndex";
 import { faoPriceScraper } from "./sources/faoPrices";
 import { fredScraper } from "./sources/fredData";
 import { gaccRegistryScraper } from "./sources/gaccRegistry";
+import { hmrcOtsScraper } from "./sources/hmrcOts";
 import { ibgeSidraScraper } from "./sources/ibgeSidra";
 import { inacScraper } from "./sources/inacData";
 import { inacExpoScraper } from "./sources/inacExpo";
@@ -53,6 +54,12 @@ export function registerAllScrapers(): void {
 	// streamed + locally filtered (server-side commodity filter 404s);
 	// 7-day in-source gate on its own last success log (round-171 批2).
 	scraperManager.registerSource("oecd_outlook", oecdOutlookScraper);
+	// HMRC UK Overseas Trade Statistics — official GB→CN monthly bovine unit
+	// prices (GBP/ton, chapter 0201/0202) via the keyless OData API, OGL 3.0.
+	// The only monthly path for the UK lane (post-Brexit: outside Comext, no
+	// partner detail in Comtrade). Volumes tiny — a coverage lane
+	// (round-171 批3).
+	scraperManager.registerSource("hmrc_ots", hmrcOtsScraper);
 
 	// Tier 2 — Beef supply chain (country-level trade & production)
 	scraperManager.registerSource("cepea", cepeaScraper);
