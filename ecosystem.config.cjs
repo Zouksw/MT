@@ -83,7 +83,9 @@ module.exports = {
       // Python FastAPI inference service — torch/sktime/statsmodels/chronos models
       // for predictions + anomaly detection. Heavy imports; expect ~10s cold start.
       script: path.join(ROOT, 'inference-service/venv/bin/python'),
-      args: '-m uvicorn main:app --host 0.0.0.0 --port 10810',
+      // Loopback-only bind: this port has no auth, and the sole caller (backend,
+      // src/lib/config.ts defaults to http://localhost:10810) is same-host.
+      args: '-m uvicorn main:app --host 127.0.0.1 --port 10810',
       cwd: path.join(ROOT, 'inference-service'),
       instances: 1,
       exec_mode: 'fork',
@@ -99,7 +101,7 @@ module.exports = {
       // PM2's size regex rejects decimals — use integer M values.
       max_memory_restart: '4096M',
       env_production: {
-        INFERENCE_HOST: '0.0.0.0',
+        INFERENCE_HOST: '127.0.0.1',
         // Cap glibc malloc arenas — multithreaded torch fragments across the
         // default 8×cores arenas, inflating RSS without real usage.
         MALLOC_ARENA_MAX: '2',
