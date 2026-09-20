@@ -2,7 +2,7 @@
 title: "MT Platform Changelog"
 en_title: "MT Platform Changelog"
 version: "1.0.0"
-last_updated: "2026-09-06"
+last_updated: "2026-09-20"
 status: "active"
 maintainer: "MT Team"
 reviewers:
@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### 2026-09-20 — round-173：服务器空间维护——cron-cleanup /tmp 目录清理缺口修复 + §六½ 存储策略复测校准
+
+运维轮：前半手工整理释放 ~537M（journal 14d vacuum 128M、npm 缓存 180M、apt 归档 141M、/tmp 旧轮工作目录 88M；pnpm store 4.0G 按 AGENTS §七.3 红线不动），后半把"手工清过的东西"里属于自动化缺口的修成 cron 长效覆盖。
+
+- **cron-cleanup.sh 缺口修复（scripts/cron-cleanup.sh）**：① /tmp 清理原为 `-maxdepth 1 -type f`——只清顶层**文件**从不清**目录**，审计轮工作目录（design_audit*、mt-shots、jest_0、comex_js、playwright 临时 profile）三周静默积累 88M；补目录清理行（`-mtime +7`，干跑验证后排除隐藏目录/`systemd-private-*`/`snap-private-tmp`/`torchinductor_root`，`rm -rf -- {} +` 因 `-delete` 在 `-maxdepth 1` 下无法清非空目录）。② `/root/logs`（winston 换 PM2 cwd 布局前死残留，`logger.ts:24` 相对路径现写 `backend/logs`，2026-07-13 后零写入）纳入既有 30 天保留策略并当场清除。补丁后 `bash -n` + 双 dry-run + 全脚本实跑 exit 0，三端点 200 无扰动。
+- **AUTOMATION-STATUS.md §六½ 校准（2026-08-15 → 2026-09-20）**：pnpm store 3.6G→4.0G、huggingface 879M→1.4G、backups 184M→536M（60-66M/天，KEEP_COUNT=7 策略未动）、npm 缓存 225M 静默回涨观测、`.zcode` 1.2G→2.1G；分级响应常规步清单同步本轮两处修复。附属设施核实仍健康：journald 200M drop-in、logrotate 每日轮转（当日 00:00 实转）、80%/90% 分级阈值。
+- 同日早前：AGENTS.md §五目录树数字对齐实测（25 注册爬虫→29、25 模型→26，§五漏改自 round-150s），头部核实日期刷新 09-20（commit 147100b）。
 
 ### 2026-09-20 — round-172：交付差距审计 + 可自动化整改（四路审计 → 5 项落地 + 延后登记）
 

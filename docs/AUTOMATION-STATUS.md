@@ -322,28 +322,28 @@ CI 自 round-74（pnpm 9 迁移）起持续红，2026-08-15 推送时实测暴�
 | ruff | inference Python | pyproject.toml（py310, 100 列, E/W/F/I/UP） | ✅ test-inference job（round-25） |
 | husky + lint-staged | 根级 pre-commit | .husky/pre-commit → biome check --write | 本地 commit 时 |
 
-## 六½、存储管理策略（2026-08-15 制定，当日实测 28G/75% → 22G/58%）
+## 六½、存储管理策略（2026-08-15 制定，当日实测 28G/75% → 22G/58%；2026-09-20 round-173 复测校准：手工整理 ~537M 至 23G/62%，并修复 /tmp 目录清理缺口）
 
 **清单与处置**（40G 根分区）：
 
 | 目录 | 体积 | 处置 |
 |---|---|---|
-| `~/.local/share/pnpm`（store v3） | 3.6G | 🔴 **红线不动**（AGENTS.md §七.3：`store prune` 曾三次损坏 store） |
-| `~/.cache/huggingface` | 879M | 🔴 红线不动（chronos 权重，重启即用） |
+| `~/.local/share/pnpm`（store v3） | 4.0G（2026-09-20 实测） | 🔴 **红线不动**（AGENTS.md §七.3：`store prune` 曾三次损坏 store） |
+| `~/.cache/huggingface` | 1.4G（2026-09-20 实测） | 🔴 红线不动（chronos 权重，重启即用） |
 | `~/.vscode-server/extensions` + `data` | ~1G | 🔴 不动（用户工具链）；`cli/servers` 旧构建 **keep-1**（每个 ~400M，重连自动重下） |
 | 项目本体（backend/frontend/inference venv/node_modules/`dist`） | ~4.4G | 🔴 依赖不动；round-108 压缩制品层：venv 2.1G→1.4G（卸载 triton 689M——GPU 编译器，CPU torch 不加载，pip check/pytest 60/全链预测验证）、`.next/cache` 412M 清除（构建缓存，`next start` 不读）、backend/logs 215M→10M + winston 上限 10M×3（原无界，且无日期命名不匹配 cron 30d 规则）、coverage 19M、`.git` 43M→13M（gc） |
 | `~/.cache/ms-playwright` | 259M | round-108 去重 521M→259M（删 1234 版 + npx 副本，e2e 脚本改经 frontend `@playwright/test` 解析只用 1208 版）；本就属 cron 常规清理项（每日 3AM 全删、按需重下） |
-| `/root/backups` | 184M | ✅ 有界：backup-db.sh `KEEP_COUNT=7`（26M/天压缩） |
-| `~/.npm`（_cacache+_npx） | 曾 1.9G | ✅ 2026-08-15 清后**回涨至 626M**（_cacache 349M 自然回填 + `npx prisma@7` 残留 253M——与项目 prisma 5 大版本漂移，勿用）；round-108 再清至 7M。≥80% 阈值清理覆盖复发 |
+| `/root/backups` | 536M（2026-09-20 实测） | ✅ 有界：backup-db.sh `KEEP_COUNT=7`（备份体积随库容涨至 60-66M/天压缩，策略本身未动） |
+| `~/.npm`（_cacache+_npx） | 曾 1.9G | ✅ 2026-08-15 清后**回涨至 626M**（_cacache 349M 自然回填 + `npx prisma@7` 残留 253M——与项目 prisma 5 大版本漂移，勿用）；round-108 再清至 7M。≥80% 阈值清理覆盖复发；2026-09-20 实测又自然回涨至 225M（63% 使用率不触发阈值——属已知静默回涨面，不构成压力），手工 `npm cache clean --force` 清至 45M |
 | `/opt/iotdb` | 曾 2.2G | ✅ **已移除**（2026-08-15 审计：零进程/零服务/7 月后零修改/代码零引用——纯对标研究残留；data 目录 5M 已压缩归档至 `backups/iotdb-data-archive-20260815.tar.gz` 72K） |
 | systemd journal | 曾 312M | ✅ 上限 200M：`/etc/systemd/journald.conf.d/mt-storage.conf` + cron 每日 `--vacuum-size=200M` |
 | `/var/cache/apt` | 曾 164M | ✅ 已清 + 纳入分级阈值 |
 | PostgreSQL | 412M→**335M** | ✅ datapoints/timeseries 历史测试数据膨胀 77M 经 `VACUUM FULL` 回收（两表 0-2 活行）；prediction_logs 263M 保留（业务数据，增长 ~1.2k 行/天，年增 ~250M，暂无需归档） |
-| `.logs/` 应用日志 | 1.6M | ✅ 30 天保留；修复了原脚本漏匹配带日期轮转文件（`*-YYYYMMDD[.gz]` 不以 `.log` 结尾）的堆积漏洞 |
+| `.logs/` 应用日志 | 1.6M | ✅ 30 天保留；修复了原脚本漏匹配带日期轮转文件（`*-YYYYMMDD[.gz]` 不以 `.log` 结尾）的堆积漏洞；round-173 纳入 `/root/logs`（winston 换 PM2 cwd 布局前的死残留 1.2M，2026-07-13 后零写入——`logger.ts:24` 相对路径现写 `backend/logs`）并当场清除 |
 
-**cron-cleanup.sh 分级响应**（每日 3AM）：<80% 仅常规清理；≥80% 清 `_npx` + apt 缓存；≥90% 追加 `_cacache`（紧急）。常规步：/tmp>7d、core dumps、playwright、日志 30d、journal vacuum、vscode 旧构建 keep-1。
+**cron-cleanup.sh 分级响应**（每日 3AM）：<80% 仅常规清理；≥80% 清 `_npx` + apt 缓存；≥90% 追加 `_cacache`（紧急）。常规步：/tmp **文件+目录**>7d（round-173 修缺口：原 `-type f` 只清顶层文件，审计轮工作目录 design_audit*/mt-shots/jest_*/playwright profile 三周静默积累 88M；目录清理干跑验证后排除隐藏目录/`systemd-private-*`/`snap-private-tmp`/`torchinductor_root`）、core dumps、playwright、`.logs`+`/root/logs` 30d、journal vacuum、vscode 旧构建 keep-1。round-173 当日手工整理另清：journal vacuum 14d（200M→72M）、apt 归档 141M、npm 缓存 180M、/tmp 旧目录 88M，合计 ~537M。
 
-**遗留观察**：prediction_logs 与 sessions（7.8k 行）的归档策略待数据量翻倍后评估（当前不构成压力）；`~/.zcode`(1.2G)/`.claude`/`.codex` 为 AI 工具链，随会话自管理。
+**遗留观察**：prediction_logs 与 sessions（7.8k 行）的归档策略待数据量翻倍后评估（当前不构成压力）；`~/.zcode`(2.1G，2026-09-20 实测，cli/agents 会话转录为大头)/`.claude`/`.codex` 为 AI 工具链，随会话自管理；`~/.vscode-server` 1.6G 同属用户工具链（cli/servers 已有 keep-1 回收）。
 
 ## 七、已知限制与待办
 

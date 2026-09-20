@@ -19,9 +19,20 @@ NOW=$(date '+%Y-%m-%d %H:%M:%S')
 
 # 1. (REMOVED) pnpm store prune — see header. Causes more harm than it saves.
 
-# 2. Remove temp files older than 7 days (scoped to /tmp top-level files only)
+# 2. Remove temp files AND stale top-level directories older than 7 days.
+#    round-173 (2026-09-20): the original `-type f` never matched directories,
+#    so audit-round working dirs (design_audit*/mt-shots/jest_*/playwright
+#    profiles) accumulated ~88M over 3 weeks. systemd-private-*/snap-private-tmp
+#    are live service sandboxes, excluded by name; -type d skips sockets; rm -rf
+#    is needed because -delete cannot empty a dir under -maxdepth 1. Hidden
+#    dot-dirs (X11 socket scaffolding) and torchinductor_root (torch compile
+#    cache, tool-owned) are excluded; round artifacts all use plain names.
 find /tmp -maxdepth 1 -type f -mtime +7 -delete 2>/dev/null || true
-echo "[$NOW] /tmp cleaned (files >7d)"
+find /tmp -mindepth 1 -maxdepth 1 -type d -mtime +7 \
+    ! -name '.*' ! -name 'systemd-private-*' ! -name 'snap-private-tmp' \
+    ! -name 'torchinductor_root' \
+    -exec rm -rf -- {} + 2>/dev/null || true
+echo "[$NOW] /tmp cleaned (files + dirs >7d)"
 
 # 3. Remove old core dumps (scoped: only files literally named core.* under /root,
 #    never a recursive scan that could follow symlinks into node_modules/venv)
@@ -33,9 +44,12 @@ rm -rf /root/.cache/ms-playwright/ 2>/dev/null || true
 # 5. App log retention (30d). Two patterns: active *.log files, AND dated
 #    rotations (*-YYYYMMDD and *-YYYYMMDD.gz) — the dated files don't end in
 #    .log, so the original single pattern let them accumulate forever.
-find /root/.logs -name "*.log" -type f -mtime +30 -delete 2>/dev/null || true
-find /root/.logs -name "*-20*" -type f -mtime +30 -delete 2>/dev/null || true
-echo "[$NOW] .logs retention applied (30d)"
+# /root/logs is the pre-PM2-cwd-layout leftover of the same winston logger
+# (backend/src/utils/logger.ts:24 relative path now resolves to backend/logs,
+# alive; /root/logs untouched since 2026-07-13) — folded into the same policy.
+find /root/.logs /root/logs -name "*.log" -type f -mtime +30 -delete 2>/dev/null || true
+find /root/.logs /root/logs -name "*-20*" -type f -mtime +30 -delete 2>/dev/null || true
+echo "[$NOW] .logs + root/logs retention applied (30d)"
 
 # 6. journald: enforce the 200M cap actively (the drop-in
 #    /etc/systemd/journald.conf.d/mt-storage.conf caps growth between runs)
