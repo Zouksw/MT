@@ -89,6 +89,15 @@ describe("resolveBeefSpotCut", () => {
 		expect(resolveBeefSpotCut("牛副产品一批")).toBeNull();
 	});
 
+	test("quarter shorthands map; longer canonical shank terms still win (round-174)", () => {
+		// Observed live 2026-09-20: "4490牛前" (plant 4490's forequarter).
+		expect(resolveBeefSpotCut("4490牛前")).toEqual({ cutCode: "QUARTER_FRONT", term: "牛前" });
+		expect(resolveBeefSpotCut("牛后")).toEqual({ cutCode: "QUARTER_HIND", term: "牛后" });
+		// Longest-first: the 3-char canonical shank terms beat the 2-char alias.
+		expect(resolveBeefSpotCut("4490牛前腱")).toEqual({ cutCode: "FORESHANK", term: "牛前腱" });
+		expect(resolveBeefSpotCut("巴西牛后腱")).toEqual({ cutCode: "HINDSHANK", term: "牛后腱" });
+	});
+
 	test("the term table is canonical-only, Chinese, longest-first", () => {
 		expect(BEEF_SPOT_TERMS.length).toBeGreaterThan(50);
 		for (const { term } of BEEF_SPOT_TERMS) {

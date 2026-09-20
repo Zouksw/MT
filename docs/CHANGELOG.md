@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-20 — round-174：roujiaosuo 观察窗闭环 + 定向扩词（牛前/牛后 → 四分体）
+
+数据资产线轮：round-165 上线的 CNY 现货通道观察窗到期（~09-21），本轮出证据化闭环报告并执行最小安全扩词。
+
+- **观察窗证据（全部实测）**：日更零缺天（9-19 起每日 19 行，09-20 晚 38 行/22 部位/38 源行含 BR-SIF2543、NZ-30 两真实厂行）；价格带 10 次拦截留痕；幂等重跑无抖动；live 探针 8 页 × 20 条全解析。未映射普查（跨日志 12h 累积 ~17 个去重标题）：大头是诚实门禁本应拦下的（牛鞭族无 taxonomy 码、脂肪族无诚实码、脸腩腮/公牛板混合体、牛/牛肉泛称）。
+- **扩词（beefCutNormalizer ALIASES +2）**：「牛前」→QUARTER_FRONT（live 实见 "4490牛前"）+「牛后」→QUARTER_HIND。安全性双保证：spot 词表最长优先（牛前腱/牛后腱 3 字 canonical 先命中）+ CSV 路径 nameToCode canonical 先插入；新增回归测试 4 断言钉死，dist 级双路径 7 断言 live 验证全对。
+- **明确不扩（宁缺勿错，判据留档 KNOWN-ISSUES D1 round-174 块）**：PIZZLE 码缺失留待专门 taxonomy 轮；牛板筋/牛肉筋 vs TENDON、牛腹肉条 vs 腩/裙 属近邻不冒认。
+- **验证**：定向 28/28 → tsc 双绿 → biome 干净 → backend 全量 **1208 passed + 1 skipped**（基线 1207，+1 零回退）→ build + pm2 restart + /health 200。下一调度周期起自动用新词表。
+
 ### 2026-09-20 — round-173：服务器空间维护——cron-cleanup /tmp 目录清理缺口修复 + §六½ 存储策略复测校准
 
 运维轮：前半手工整理释放 ~537M（journal 14d vacuum 128M、npm 缓存 180M、apt 归档 141M、/tmp 旧轮工作目录 88M；pnpm store 4.0G 按 AGENTS §七.3 红线不动），后半把"手工清过的东西"里属于自动化缺口的修成 cron 长效覆盖。

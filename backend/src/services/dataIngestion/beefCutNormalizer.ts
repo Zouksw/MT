@@ -753,6 +753,12 @@ export const ALIASES: Record<string, string> = {
 	金钱腱: "FORESHANK",
 	腱子肉: "FORESHANK",
 	牛骨髓: "MARROW",
+	// Carcass-quarter trade shorthands (round-174, roujiaosuo 观察窗扩词).
+	// Safe against the 3-char canonical shank terms (牛前腱/牛后腱): the spot
+	// vocabulary matches longest-first, and normalizeBeefCut's map inserts
+	// canonical names before aliases — both paths resolve the shank first.
+	牛前: "QUARTER_FRONT",
+	牛后: "QUARTER_HIND",
 
 	// English aliases
 	"cube roll": "RIB_EYE_ROLL",
